@@ -86,14 +86,6 @@ export default function ProfileScreen() {
             about your board games including player counts, play times, and images.
           </Text>
         </View>
-        
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>How it works</Text>
-          <Text style={styles.infoText}>
-            We use the BoardGameGeek XML API2 to fetch your collection data.
-            Your collection must be set to public on BoardGameGeek for this app to work.
-          </Text>
-        </View>
 
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>Contact & Support</Text>
