@@ -76,7 +76,9 @@ export async function fetchGames(username: string): Promise<Game[]> {
         image: item.image || 'https://via.placeholder.com/300?text=No+Image',
         minPlayers: parseInt(stats.minplayers || '0'),
         maxPlayers: parseInt(stats.maxplayers || '0'),
-        playingTime: parseInt(stats.playingtime || '0'),
+        minplaytime: parseInt(stats.minplaytime || '0'),
+        maxplaytime: parseInt(stats.maxplaytime || '0'),
+        playingTime: stats.minplaytime === stats.maxplaytime ? stats.minplaytime : stats.mintime + '-' + stats.maxtime,
         description: '',
       };
       
