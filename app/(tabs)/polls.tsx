@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, Share2, Trash2 } from 'lucide-react-native';
+import { Plus, Share2, Trash2, X, Copy, Check } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { supabase } from '@/services/supabase';
@@ -17,6 +17,8 @@ export default function PollsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
+  const [showShareLink, setShowShareLink] = useState<string | null>(null);
+  const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -52,20 +54,24 @@ export default function PollsScreen() {
 
   const handleShare = async (pollId: string) => {
     const shareUrl = `${window.location.origin}/poll/${pollId}`;
+    setShowShareLink(shareUrl);
     
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: 'Vote on which game to play!',
           text: 'Help us decide which game to play by voting in this poll.',
           url: shareUrl,
         });
-      } catch (err) {
-        console.log('Error sharing:', err);
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        setShowCopiedConfirmation(true);
+        setTimeout(() => {
+          setShowCopiedConfirmation(false);
+        }, 2000);
       }
-    } else {
-      await navigator.clipboard.writeText(shareUrl);
-      // Show a toast or notification that the link was copied
+    } catch (err) {
+      console.log('Error sharing:', err);
     }
   };
 
@@ -108,6 +114,52 @@ export default function PollsScreen() {
           <Text style={styles.createButtonText}>Create Poll</Text>
         </TouchableOpacity>
       </View>
+
+      {showShareLink && (
+        <Animated.View 
+          entering={FadeIn.duration(200)}
+          style={styles.shareLinkContainer}
+        >
+          <View style={styles.shareLinkHeader}>
+            <Text style={styles.shareLinkTitle}>Share Link</Text>
+            <TouchableOpacity 
+              onPress={() => setShowShareLink(null)}
+              style={styles.closeShareLinkButton}
+            >
+              <X size={20} color="#666666" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.shareLinkContent}>
+            <TextInput
+              style={styles.shareLinkInput}
+              value={showShareLink}
+              editable={false}
+              selectTextOnFocus
+            />
+            <TouchableOpacity 
+              style={styles.copyButton}
+              onPress={() => {
+                navigator.clipboard.writeText(showShareLink);
+                setShowCopiedConfirmation(true);
+                setTimeout(() => {
+                  setShowCopiedConfirmation(false);
+                }, 2000);
+              }}
+            >
+              {showCopiedConfirmation ? (
+                <Check size={20} color="#4CAF50" />
+              ) : (
+                <Copy size={20} color="#ff9654" />
+              )}
+            </TouchableOpacity>
+          </View>
+          
+          {showCopiedConfirmation && (
+            <Text style={styles.copiedConfirmation}>Link copied to clipboard!</Text>
+          )}
+        </Animated.View>
+      )}
 
       <FlatList
         data={polls}
@@ -199,6 +251,58 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#ffffff',
+  },
+  shareLinkContainer: {
+    margin: 20,
+    marginTop: 0,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  shareLinkHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  shareLinkTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+  },
+  closeShareLinkButton: {
+    padding: 4,
+  },
+  shareLinkContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  shareLinkInput: {
+    flex: 1,
+    backgroundColor: '#f7f9fc',
+    borderRadius: 8,
+    padding: 12,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#333333',
+  },
+  copyButton: {
+    padding: 8,
+    backgroundColor: '#fff5ef',
+    borderRadius: 8,
+  },
+  copiedConfirmation: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#4CAF50',
+    marginTop: 8,
+    textAlign: 'center',
   },
   listContent: {
     padding: 20,
