@@ -15,7 +15,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [maxVotes, setMaxVotes] = useState(1);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
@@ -64,11 +63,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       setLoading(true);
       setError(null);
 
-      if (!title.trim()) {
-        setError('Please enter a title');
-        return;
-      }
-
       if (selectedGames.length === 0) {
         setError('Please select at least one game');
         return;
@@ -77,12 +71,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Create the poll with a default title based on selected games
+      const title = selectedGames.length === 1 
+        ? `Vote on ${selectedGames[0].name}`
+        : `Vote on ${selectedGames.length} games`;
+
       // Create the poll
       const { data: poll, error: pollError } = await supabase
         .from('polls')
         .insert({
           user_id: user.id,
-          title: title.trim(),
+          title,
           description: description.trim() || null,
           max_votes: allowMultipleVotes ? maxVotes : 1,
         })
@@ -114,7 +113,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   const resetForm = () => {
-    setTitle('');
     setDescription('');
     setMaxVotes(1);
     setSelectedGames([]);
@@ -150,22 +148,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
       <ScrollView style={styles.content}>
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Poll Title</Text>
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Enter a title for your poll"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Description (Optional)</Text>
+          <Text style={styles.label}>Note (Optional)</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={description}
             onChangeText={setDescription}
-            placeholder="Add a description"
+            placeholder="Add a note"
             multiline
             numberOfLines={3}
           />
