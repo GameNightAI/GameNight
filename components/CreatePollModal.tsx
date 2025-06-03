@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, Clock, Brain, Users2, Baby } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
