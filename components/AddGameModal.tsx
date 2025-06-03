@@ -75,6 +75,25 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       setAdding(true);
       setError('');
 
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Check if the game already exists in the collection
+      const { data: existingGame } = await supabase
+        .from('collections')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('bgg_game_id', game.id)
+        .single();
+
+      if (existingGame) {
+        setError(`${game.name} is already in your collection`);
+        return;
+      }
+
       // Fetch detailed game info
       const response = await fetch(`https://boardgamegeek.com/xmlapi2/thing?id=${game.id}&stats=1`);
       const xmlText = await response.text();
@@ -86,12 +105,6 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
       const result = parser.parse(xmlText);
       const gameInfo = result.items.item;
-
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
 
       const gameData = {
         user_id: user.id,
@@ -138,7 +151,10 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           style={styles.input}
           placeholder="Search for games..."
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={(text) => {
+            setSearchQuery(text);
+            setError('');
+          }}
           onSubmitEditing={handleSearch}
           autoCapitalize="none"
           autoCorrect={false}
@@ -149,7 +165,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           disabled={searching}
         >
           {searching ? (
-            <ActivityIndicator color="#ffffff\" size="small" />
+            <ActivityIndicator color="#ffffff" size="small" />
           ) : (
             <Search size={20} color="#ffffff" />
           )}
