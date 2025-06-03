@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ScrollView, Switch } from 'react-native';
-import { X, Plus, Check, Info } from 'lucide-react-native';
+import { X, Plus, Check, Users } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
@@ -19,15 +19,21 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [maxVotes, setMaxVotes] = useState(1);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
+  const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [allowMultipleVotes, setAllowMultipleVotes] = useState(false);
+  const [playerCount, setPlayerCount] = useState<string>('');
 
   useEffect(() => {
     if (isVisible) {
       loadGames();
     }
   }, [isVisible]);
+
+  useEffect(() => {
+    filterGames();
+  }, [availableGames, playerCount]);
 
   const loadGames = async () => {
     try {
@@ -41,7 +47,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
       if (error) throw error;
 
-      setAvailableGames(data.map(game => ({
+      const games = data.map(game => ({
         id: game.bgg_game_id,
         name: game.name,
         thumbnail: game.thumbnail,
@@ -51,11 +57,34 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         yearPublished: game.year_published,
         description: '',
         image: game.thumbnail,
-      })));
+      }));
+
+      setAvailableGames(games);
+      setFilteredGames(games);
     } catch (err) {
       console.error('Error loading games:', err);
       setError('Failed to load games');
     }
+  };
+
+  const filterGames = () => {
+    if (!playerCount) {
+      setFilteredGames(availableGames);
+      return;
+    }
+
+    const count = parseInt(playerCount);
+    const filtered = availableGames.filter(game => 
+      game.minPlayers <= count && game.maxPlayers >= count
+    );
+    setFilteredGames(filtered);
+
+    // Remove any selected games that don't match the filter
+    setSelectedGames(prev => 
+      prev.filter(game => 
+        game.minPlayers <= count && game.maxPlayers >= count
+      )
+    );
   };
 
   const handleCreatePoll = async () => {
@@ -118,6 +147,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setSelectedGames([]);
     setError(null);
     setAllowMultipleVotes(false);
+    setPlayerCount('');
   };
 
   const toggleGameSelection = (game: Game) => {
@@ -187,27 +217,56 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           )}
         </View>
 
+        <View style={styles.filterSection}>
+          <Text style={styles.label}>Filter Games</Text>
+          <View style={styles.filterContainer}>
+            <Users size={20} color="#666666" />
+            <TextInput
+              style={styles.filterInput}
+              value={playerCount}
+              onChangeText={setPlayerCount}
+              placeholder="Enter number of players"
+              keyboardType="number-pad"
+            />
+          </View>
+        </View>
+
         <View style={styles.gamesSection}>
           <Text style={styles.label}>Select Games</Text>
           <Text style={styles.sublabel}>
-            Choose games from your collection to include in the poll
+            {playerCount 
+              ? `Games that support ${playerCount} players`
+              : 'Choose games from your collection to include in the poll'}
           </Text>
 
-          {availableGames.map(game => (
-            <TouchableOpacity
-              key={game.id}
-              style={[
-                styles.gameItem,
-                selectedGames.some(g => g.id === game.id) && styles.gameItemSelected
-              ]}
-              onPress={() => toggleGameSelection(game)}
-            >
-              <Text style={styles.gameName}>{game.name}</Text>
-              {selectedGames.some(g => g.id === game.id) && (
-                <Check size={20} color="#ff9654" />
-              )}
-            </TouchableOpacity>
-          ))}
+          {filteredGames.length === 0 ? (
+            <Text style={styles.noGamesText}>
+              {playerCount 
+                ? `No games found that support ${playerCount} players`
+                : 'No games found in your collection'}
+            </Text>
+          ) : (
+            filteredGames.map(game => (
+              <TouchableOpacity
+                key={game.id}
+                style={[
+                  styles.gameItem,
+                  selectedGames.some(g => g.id === game.id) && styles.gameItemSelected
+                ]}
+                onPress={() => toggleGameSelection(game)}
+              >
+                <View style={styles.gameInfo}>
+                  <Text style={styles.gameName}>{game.name}</Text>
+                  <Text style={styles.playerCount}>
+                    {game.minPlayers}-{game.maxPlayers} players
+                  </Text>
+                </View>
+                {selectedGames.some(g => g.id === game.id) && (
+                  <Check size={20} color="#ff9654" />
+                )}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -344,6 +403,26 @@ const styles = StyleSheet.create({
   numberInput: {
     width: 80,
   },
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  filterInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+  },
   gamesSection: {
     marginTop: 8,
   },
@@ -362,10 +441,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff5ef',
     borderColor: '#ff9654',
   },
+  gameInfo: {
+    flex: 1,
+  },
   gameName: {
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: '#333333',
+    marginBottom: 4,
+  },
+  playerCount: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+  },
+  noGamesText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    marginTop: 20,
+    fontStyle: 'italic',
   },
   errorText: {
     fontFamily: 'Poppins-Regular',
