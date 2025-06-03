@@ -236,11 +236,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <TouchableOpacity
               style={styles.dropdownButton}
               onPress={() => {
-                setShowPlayerDropdown(!showPlayerDropdown);
-                setShowTimeDropdown(false);
-                setShowAgeDropdown(false);
-                setShowTypeDropdown(false);
-                setShowComplexityDropdown(false);
+                if (showPlayerDropdown && playerCount) {
+                  setPlayerCount('');
+                } else {
+                  setShowPlayerDropdown(!showPlayerDropdown);
+                  setShowTimeDropdown(false);
+                  setShowAgeDropdown(false);
+                  setShowTypeDropdown(false);
+                  setShowComplexityDropdown(false);
+                }
               }}
             >
               <View style={styles.dropdownButtonContent}>
@@ -249,7 +253,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   {playerCount ? `${playerCount} players` : 'Select player count'}
                 </Text>
               </View>
-              <ChevronDown size={20} color="#666666" />
+              {playerCount ? (
+                <X size={20} color="#666666" onPress={(e) => {
+                  e.stopPropagation();
+                  setPlayerCount('');
+                  setShowPlayerDropdown(false);
+                }} />
+              ) : (
+                <ChevronDown size={20} color="#666666" />
+              )}
             </TouchableOpacity>
 
             {showPlayerDropdown && (
@@ -282,11 +294,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <TouchableOpacity
               style={[styles.dropdownButton, { marginTop: 12 }]}
               onPress={() => {
-                setShowTimeDropdown(!showTimeDropdown);
-                setShowPlayerDropdown(false);
-                setShowAgeDropdown(false);
-                setShowTypeDropdown(false);
-                setShowComplexityDropdown(false);
+                if (showTimeDropdown && playTime) {
+                  setPlayTime('');
+                } else {
+                  setShowTimeDropdown(!showTimeDropdown);
+                  setShowPlayerDropdown(false);
+                  setShowAgeDropdown(false);
+                  setShowTypeDropdown(false);
+                  setShowComplexityDropdown(false);
+                }
               }}
             >
               <View style={styles.dropdownButtonContent}>
@@ -295,7 +311,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   {playTime ? `${playTime} minutes${playTime === '120+' ? ' or more' : ''}` : 'Select play time'}
                 </Text>
               </View>
-              <ChevronDown size={20} color="#666666" />
+              {playTime ? (
+                <X size={20} color="#666666" onPress={(e) => {
+                  e.stopPropagation();
+                  setPlayTime('');
+                  setShowTimeDropdown(false);
+                }} />
+              ) : (
+                <ChevronDown size={20} color="#666666" />
+              )}
             </TouchableOpacity>
 
             {showTimeDropdown && (
@@ -328,11 +352,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <TouchableOpacity
               style={[styles.dropdownButton, { marginTop: 12 }]}
               onPress={() => {
-                setShowAgeDropdown(!showAgeDropdown);
-                setShowPlayerDropdown(false);
-                setShowTimeDropdown(false);
-                setShowTypeDropdown(false);
-                setShowComplexityDropdown(false);
+                if (showAgeDropdown && minAge) {
+                  setMinAge('');
+                } else {
+                  setShowAgeDropdown(!showAgeDropdown);
+                  setShowPlayerDropdown(false);
+                  setShowTimeDropdown(false);
+                  setShowTypeDropdown(false);
+                  setShowComplexityDropdown(false);
+                }
               }}
             >
               <View style={styles.dropdownButtonContent}>
@@ -341,7 +369,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   {minAge ? `${minAge} years` : 'Youngest player age'}
                 </Text>
               </View>
-              <ChevronDown size={20} color="#666666" />
+              {minAge ? (
+                <X size={20} color="#666666" onPress={(e) => {
+                  e.stopPropagation();
+                  setMinAge('');
+                  setShowAgeDropdown(false);
+                }} />
+              ) : (
+                <ChevronDown size={20} color="#666666" />
+              )}
             </TouchableOpacity>
 
             {showAgeDropdown && (
@@ -374,11 +410,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <TouchableOpacity
               style={[styles.dropdownButton, { marginTop: 12 }]}
               onPress={() => {
-                setShowTypeDropdown(!showTypeDropdown);
-                setShowPlayerDropdown(false);
-                setShowTimeDropdown(false);
-                setShowAgeDropdown(false);
-                setShowComplexityDropdown(false);
+                if (showTypeDropdown && gameType) {
+                  setGameType('');
+                } else {
+                  setShowTypeDropdown(!showTypeDropdown);
+                  setShowPlayerDropdown(false);
+                  setShowTimeDropdown(false);
+                  setShowAgeDropdown(false);
+                  setShowComplexityDropdown(false);
+                }
               }}
             >
               <View style={styles.dropdownButtonContent}>
@@ -387,7 +427,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   {gameType || 'Game type'}
                 </Text>
               </View>
-              <ChevronDown size={20} color="#666666" />
+              {gameType ? (
+                <X size={20} color="#666666" onPress={(e) => {
+                  e.stopPropagation();
+                  setGameType('');
+                  setShowTypeDropdown(false);
+                }} />
+              ) : (
+                <ChevronDown size={20} color="#666666" />
+              )}
             </TouchableOpacity>
 
             {showTypeDropdown && (
@@ -420,11 +468,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <TouchableOpacity
               style={[styles.dropdownButton, { marginTop: 12 }]}
               onPress={() => {
-                setShowComplexityDropdown(!showComplexityDropdown);
-                setShowPlayerDropdown(false);
-                setShowTimeDropdown(false);
-                setShowAgeDropdown(false);
-                setShowTypeDropdown(false);
+                if (showComplexityDropdown && complexity) {
+                  setComplexity('');
+                } else {
+                  setShowComplexityDropdown(!showComplexityDropdown);
+                  setShowPlayerDropdown(false);
+                  setShowTimeDropdown(false);
+                  setShowAgeDropdown(false);
+                  setShowTypeDropdown(false);
+                }
               }}
             >
               <View style={styles.dropdownButtonContent}>
@@ -433,7 +485,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   {complexity || 'Game complexity'}
                 </Text>
               </View>
-              <ChevronDown size={20} color="#666666" />
+              {complexity ? (
+                <X size={20} color="#666666" onPress={(e) => {
+                  e.stopPropagation();
+                  setComplexity('');
+                  setShowComplexityDropdown(false);
+                }} />
+              ) : (
+                <ChevronDown size={20} color="#666666" />
+              )}
             </TouchableOpacity>
 
             {showComplexityDropdown && (
@@ -737,3 +797,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
+
+export { CreatePollModal }
