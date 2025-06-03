@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, Share2 } from 'lucide-react-native';
+import { Plus, Share2, Trash2 } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { supabase } from '@/services/supabase';
@@ -9,12 +9,14 @@ import { Poll } from '@/types/poll';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { CreatePollModal } from '@/components/CreatePollModal';
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
 export default function PollsScreen() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -67,6 +69,25 @@ export default function PollsScreen() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!pollToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('polls')
+        .delete()
+        .eq('id', pollToDelete.id);
+
+      if (error) throw error;
+
+      setPolls(prevPolls => prevPolls.filter(poll => poll.id !== pollToDelete.id));
+      setPollToDelete(null);
+    } catch (err) {
+      console.error('Error deleting poll:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete poll');
+    }
+  };
+
   if (loading) {
     return <LoadingState />;
   }
@@ -105,12 +126,20 @@ export default function PollsScreen() {
                 Created {new Date(item.created_at).toLocaleDateString()}
               </Text>
             </View>
-            <TouchableOpacity 
-              style={styles.shareButton}
-              onPress={() => handleShare(item.id)}
-            >
-              <Share2 size={20} color="#ff9654" />
-            </TouchableOpacity>
+            <View style={styles.pollActions}>
+              <TouchableOpacity 
+                style={styles.deleteButton}
+                onPress={() => setPollToDelete(item)}
+              >
+                <Trash2 size={20} color="#e74c3c" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.shareButton}
+                onPress={() => handleShare(item.id)}
+              >
+                <Share2 size={20} color="#ff9654" />
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         )}
         contentContainerStyle={styles.listContent}
@@ -128,6 +157,14 @@ export default function PollsScreen() {
           setCreateModalVisible(false);
           loadPolls();
         }}
+      />
+
+      <ConfirmationDialog
+        isVisible={pollToDelete !== null}
+        title="Delete Poll"
+        message={`Are you sure you want to delete "${pollToDelete?.title}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => setPollToDelete(null)}
       />
     </View>
   );
@@ -200,11 +237,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8d8d8d',
   },
+  pollActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteButton: {
+    padding: 8,
+    backgroundColor: '#fff5f5',
+    borderRadius: 8,
+  },
   shareButton: {
     padding: 8,
     backgroundColor: '#fff5ef',
     borderRadius: 8,
-    marginLeft: 16,
   },
   emptyText: {
     fontFamily: 'Poppins-Regular',
