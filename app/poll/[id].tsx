@@ -39,9 +39,19 @@ export default function PollScreen() {
         .from('polls')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (pollError) throw pollError;
+      if (pollError) {
+        if (pollError.code === 'PGRST116') {
+          throw new Error('Poll not found or has been deleted');
+        }
+        throw pollError;
+      }
+
+      if (!pollData) {
+        throw new Error('Poll not found or has been deleted');
+      }
+
       setPoll(pollData);
 
       // Check if current user is the creator
