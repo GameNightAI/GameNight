@@ -254,11 +254,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </Text>
               </View>
               {playerCount ? (
-                <X size={20} color="#666666" onPress={(e) => {
-                  e.stopPropagation();
-                  setPlayerCount('');
-                  setShowPlayerDropdown(false);
-                }} />
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setPlayerCount('');
+                    setShowPlayerDropdown(false);
+                  }}
+                >
+                  <X size={20} color="#666666" />
+                </TouchableOpacity>
               ) : (
                 <ChevronDown size={20} color="#666666" />
               )}
@@ -312,11 +316,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </Text>
               </View>
               {playTime ? (
-                <X size={20} color="#666666" onPress={(e) => {
-                  e.stopPropagation();
-                  setPlayTime('');
-                  setShowTimeDropdown(false);
-                }} />
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setPlayTime('');
+                    setShowTimeDropdown(false);
+                  }}
+                >
+                  <X size={20} color="#666666" />
+                </TouchableOpacity>
               ) : (
                 <ChevronDown size={20} color="#666666" />
               )}
@@ -370,11 +378,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </Text>
               </View>
               {minAge ? (
-                <X size={20} color="#666666" onPress={(e) => {
-                  e.stopPropagation();
-                  setMinAge('');
-                  setShowAgeDropdown(false);
-                }} />
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setMinAge('');
+                    setShowAgeDropdown(false);
+                  }}
+                >
+                  <X size={20} color="#666666" />
+                </TouchableOpacity>
               ) : (
                 <ChevronDown size={20} color="#666666" />
               )}
@@ -428,11 +440,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </Text>
               </View>
               {gameType ? (
-                <X size={20} color="#666666" onPress={(e) => {
-                  e.stopPropagation();
-                  setGameType('');
-                  setShowTypeDropdown(false);
-                }} />
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setGameType('');
+                    setShowTypeDropdown(false);
+                  }}
+                >
+                  <X size={20} color="#666666" />
+                </TouchableOpacity>
               ) : (
                 <ChevronDown size={20} color="#666666" />
               )}
@@ -486,11 +502,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </Text>
               </View>
               {complexity ? (
-                <X size={20} color="#666666" onPress={(e) => {
-                  e.stopPropagation();
-                  setComplexity('');
-                  setShowComplexityDropdown(false);
-                }} />
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setComplexity('');
+                    setShowComplexityDropdown(false);
+                  }}
+                >
+                  <X size={20} color="#666666" />
+                </TouchableOpacity>
               ) : (
                 <ChevronDown size={20} color="#666666" />
               )}
