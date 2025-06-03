@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ScrollView, Switch } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
+import { X, Plus, Check, Users, ChevronDown, Clock } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
@@ -15,18 +15,18 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [description, setDescription] = useState('');
-  const [maxVotes, setMaxVotes] = useState(1);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [allowMultipleVotes, setAllowMultipleVotes] = useState(false);
   const [playerCount, setPlayerCount] = useState<string>('');
+  const [playTime, setPlayTime] = useState<string>('');
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
+  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
 
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
+  const timeOptions = ['30', '60', '90', '120+'];
 
   useEffect(() => {
     if (isVisible) {
@@ -36,7 +36,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   useEffect(() => {
     filterGames();
-  }, [availableGames, playerCount]);
+  }, [availableGames, playerCount, playTime]);
 
   const loadGames = async () => {
     try {
@@ -71,21 +71,26 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   const filterGames = () => {
-    if (!playerCount) {
-      setFilteredGames(availableGames);
-      return;
+    let filtered = [...availableGames];
+
+    if (playerCount) {
+      const count = parseInt(playerCount === '15+' ? '15' : playerCount);
+      filtered = filtered.filter(game => 
+        game.minPlayers <= count && game.maxPlayers >= count
+      );
     }
 
-    const count = parseInt(playerCount === '15+' ? '15' : playerCount);
-    const filtered = availableGames.filter(game => 
-      game.minPlayers <= count && game.maxPlayers >= count
-    );
-    setFilteredGames(filtered);
+    if (playTime) {
+      const maxTime = parseInt(playTime === '120+' ? '120' : playTime);
+      filtered = filtered.filter(game => 
+        game.playingTime <= maxTime || (playTime === '120+' && game.playingTime >= 120)
+      );
+    }
 
-    // Remove any selected games that don't match the filter
+    setFilteredGames(filtered);
     setSelectedGames(prev => 
       prev.filter(game => 
-        game.minPlayers <= count && game.maxPlayers >= count
+        filtered.some(g => g.id === game.id)
       )
     );
   };
@@ -103,26 +108,22 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Create the poll with a default title based on selected games
       const title = selectedGames.length === 1 
         ? `Vote on ${selectedGames[0].name}`
         : `Vote on ${selectedGames.length} games`;
 
-      // Create the poll
       const { data: poll, error: pollError } = await supabase
         .from('polls')
         .insert({
           user_id: user.id,
           title,
-          description: description.trim() || null,
-          max_votes: allowMultipleVotes ? maxVotes : 1,
+          max_votes: 1,
         })
         .select()
         .single();
 
       if (pollError) throw pollError;
 
-      // Add games to the poll
       const pollGames = selectedGames.map(game => ({
         poll_id: poll.id,
         game_id: game.id,
@@ -145,13 +146,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   const resetForm = () => {
-    setDescription('');
-    setMaxVotes(1);
     setSelectedGames([]);
     setError(null);
-    setAllowMultipleVotes(false);
     setPlayerCount('');
+    setPlayTime('');
     setShowPlayerDropdown(false);
+    setShowTimeDropdown(false);
   };
 
   const toggleGameSelection = (game: Game) => {
@@ -181,52 +181,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Note (Optional)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Add a note"
-            multiline
-            numberOfLines={3}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <View style={styles.switchContainer}>
-            <Text style={styles.label}>Allow Multiple Votes</Text>
-            <Switch
-              value={allowMultipleVotes}
-              onValueChange={setAllowMultipleVotes}
-              trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
-            />
-          </View>
-          
-          {allowMultipleVotes && (
-            <View style={styles.maxVotesContainer}>
-              <Text style={styles.sublabel}>Maximum votes per person:</Text>
-              <TextInput
-                style={[styles.input, styles.numberInput]}
-                value={String(maxVotes)}
-                onChangeText={(text) => {
-                  const num = parseInt(text);
-                  if (!isNaN(num) && num > 0) {
-                    setMaxVotes(num);
-                  }
-                }}
-                keyboardType="number-pad"
-              />
-            </View>
-          )}
-        </View>
-
         <View style={styles.filterSection}>
           <Text style={styles.label}>Filter Games</Text>
           <View style={styles.filterContainer}>
             <TouchableOpacity
               style={styles.dropdownButton}
-              onPress={() => setShowPlayerDropdown(!showPlayerDropdown)}
+              onPress={() => {
+                setShowPlayerDropdown(!showPlayerDropdown);
+                setShowTimeDropdown(false);
+              }}
             >
               <View style={styles.dropdownButtonContent}>
                 <Users size={20} color="#666666" />
@@ -263,22 +226,63 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </ScrollView>
               </View>
             )}
+
+            <TouchableOpacity
+              style={[styles.dropdownButton, { marginTop: 12 }]}
+              onPress={() => {
+                setShowTimeDropdown(!showTimeDropdown);
+                setShowPlayerDropdown(false);
+              }}
+            >
+              <View style={styles.dropdownButtonContent}>
+                <Clock size={20} color="#666666" />
+                <Text style={styles.dropdownButtonText}>
+                  {playTime ? `${playTime} minutes${playTime === '120+' ? ' or more' : ''}` : 'Select play time'}
+                </Text>
+              </View>
+              <ChevronDown size={20} color="#666666" />
+            </TouchableOpacity>
+
+            {showTimeDropdown && (
+              <View style={styles.dropdown}>
+                <ScrollView style={styles.dropdownScroll}>
+                  {timeOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.dropdownItem,
+                        playTime === option && styles.dropdownItemSelected
+                      ]}
+                      onPress={() => {
+                        setPlayTime(option);
+                        setShowTimeDropdown(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.dropdownItemText,
+                        playTime === option && styles.dropdownItemTextSelected
+                      ]}>
+                        {option} minutes{option === '120+' ? ' or more' : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
         </View>
 
         <View style={styles.gamesSection}>
           <Text style={styles.label}>Select Games</Text>
           <Text style={styles.sublabel}>
-            {playerCount 
-              ? `Games that support ${playerCount} players`
+            {(playerCount || playTime) 
+              ? `Games that match your filters`
               : 'Choose games from your collection to include in the poll'}
           </Text>
 
           {filteredGames.length === 0 ? (
             <Text style={styles.noGamesText}>
-              {playerCount 
-                ? `No games found that support ${playerCount} players`
-                : 'No games found in your collection'}
+              No games found matching your filters
             </Text>
           ) : (
             filteredGames.map(game => (
@@ -293,7 +297,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 <View style={styles.gameInfo}>
                   <Text style={styles.gameName}>{game.name}</Text>
                   <Text style={styles.playerCount}>
-                    {game.minPlayers}-{game.maxPlayers} players
+                    {game.minPlayers}-{game.maxPlayers} players • {game.playingTime} min
                   </Text>
                 </View>
                 {selectedGames.some(g => g.id === game.id) && (
@@ -396,9 +400,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
-  inputContainer: {
-    marginBottom: 20,
-  },
   label: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
@@ -410,33 +411,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     marginBottom: 12,
-  },
-  input: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  maxVotesContainer: {
-    marginTop: 12,
-  },
-  numberInput: {
-    width: 80,
   },
   filterSection: {
     marginBottom: 20,
