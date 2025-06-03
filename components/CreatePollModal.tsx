@@ -653,7 +653,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: 1,
+    position: 'relative',
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -673,7 +674,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    zIndex: 1,
+    position: 'relative',
   },
   label: {
     fontFamily: 'Poppins-SemiBold',
@@ -689,11 +690,12 @@ const styles = StyleSheet.create({
   },
   filterSection: {
     marginBottom: 20,
+    position: 'relative',
     zIndex: 50,
   },
   filterContainer: {
     position: 'relative',
-    zIndex: 5,
+    zIndex: 50,
   },
   dropdownButton: {
     flexDirection: 'row',
@@ -705,7 +707,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     height: 48,
-    zIndex: 5,
+    position: 'relative',
+    zIndex: 50,
   },
   dropdownButtonContent: {
     flexDirection: 'row',
@@ -732,7 +735,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    zIndex: 10,
+    zIndex: 100,
   },
   dropdownScroll: {
     maxHeight: 200,
@@ -756,6 +759,7 @@ const styles = StyleSheet.create({
   },
   gamesSection: {
     marginTop: 8,
+    position: 'relative',
     zIndex: 1,
   },
   gameItem: {
@@ -822,7 +826,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
-
-export { CreatePollModal }
 
 export { CreatePollModal }
