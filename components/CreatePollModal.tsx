@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ScrollView, Switch } from 'react-native';
-import { X, Plus, Check, Users } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
@@ -24,6 +24,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [allowMultipleVotes, setAllowMultipleVotes] = useState(false);
   const [playerCount, setPlayerCount] = useState<string>('');
+  const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
+
+  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
 
   useEffect(() => {
     if (isVisible) {
@@ -73,7 +76,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       return;
     }
 
-    const count = parseInt(playerCount);
+    const count = parseInt(playerCount === '15+' ? '15' : playerCount);
     const filtered = availableGames.filter(game => 
       game.minPlayers <= count && game.maxPlayers >= count
     );
@@ -148,6 +151,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setError(null);
     setAllowMultipleVotes(false);
     setPlayerCount('');
+    setShowPlayerDropdown(false);
   };
 
   const toggleGameSelection = (game: Game) => {
@@ -220,14 +224,45 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         <View style={styles.filterSection}>
           <Text style={styles.label}>Filter Games</Text>
           <View style={styles.filterContainer}>
-            <Users size={20} color="#666666" />
-            <TextInput
-              style={styles.filterInput}
-              value={playerCount}
-              onChangeText={setPlayerCount}
-              placeholder="Enter number of players"
-              keyboardType="number-pad"
-            />
+            <TouchableOpacity
+              style={styles.dropdownButton}
+              onPress={() => setShowPlayerDropdown(!showPlayerDropdown)}
+            >
+              <View style={styles.dropdownButtonContent}>
+                <Users size={20} color="#666666" />
+                <Text style={styles.dropdownButtonText}>
+                  {playerCount ? `${playerCount} players` : 'Select player count'}
+                </Text>
+              </View>
+              <ChevronDown size={20} color="#666666" />
+            </TouchableOpacity>
+
+            {showPlayerDropdown && (
+              <View style={styles.dropdown}>
+                <ScrollView style={styles.dropdownScroll}>
+                  {playerOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.dropdownItem,
+                        playerCount === option && styles.dropdownItemSelected
+                      ]}
+                      onPress={() => {
+                        setPlayerCount(option);
+                        setShowPlayerDropdown(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.dropdownItemText,
+                        playerCount === option && styles.dropdownItemTextSelected
+                      ]}>
+                        {option} {option === '1' ? 'player' : 'players'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
         </View>
 
@@ -405,23 +440,68 @@ const styles = StyleSheet.create({
   },
   filterSection: {
     marginBottom: 20,
+    zIndex: 1,
   },
   filterContainer: {
+    position: 'relative',
+  },
+  dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
     borderRadius: 12,
-    paddingHorizontal: 16,
+    padding: 12,
     height: 48,
   },
-  filterInput: {
-    flex: 1,
-    marginLeft: 12,
+  dropdownButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dropdownButtonText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: '#333333',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 1000,
+  },
+  dropdownScroll: {
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownItemSelected: {
+    backgroundColor: '#fff5ef',
+  },
+  dropdownItemText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+  },
+  dropdownItemTextSelected: {
+    color: '#ff9654',
+    fontFamily: 'Poppins-SemiBold',
   },
   gamesSection: {
     marginTop: 8,
