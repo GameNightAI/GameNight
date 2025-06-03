@@ -172,7 +172,7 @@ export default function PollScreen() {
   }
 
   if (!poll) {
-    return <ErrorState message="Poll not found" onRetry={loadPoll} />;
+    return <ErrorState message="Poll not found\" onRetry={loadPoll} />;
   }
 
   return (
