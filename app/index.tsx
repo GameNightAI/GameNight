@@ -30,6 +30,5 @@ export default function Index() {
     return <Redirect href="/auth/login" />;
   }
 
-  // Changed the redirect path to point to the collection tab
   return <Redirect href="/(tabs)/collection" />;
 }
