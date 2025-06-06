@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
-    color: '#1a2b5f',
+    color: '#4CAF50',
     marginBottom: 16,
   },
   infoCard: {

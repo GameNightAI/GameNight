@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Shuffle, Library, User } from 'lucide-react-native';
+import { Shuffle, Library, User, Vote } from 'lucide-react-native';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -38,6 +38,16 @@ export default function TabLayout() {
             <Shuffle color={color} size={size} />
           ),
           headerTitle: 'Select First Player',
+        }}
+      />
+      <Tabs.Screen
+        name="polls"
+        options={{
+          title: 'Polls',
+          tabBarIcon: ({ color, size }) => (
+            <Vote color={color} size={size} />
+          ),
+          headerTitle: 'Game Polls',
         }}
       />
       <Tabs.Screen
