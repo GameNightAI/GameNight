@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { RefreshCw, X, Search } from 'lucide-react-native';
+import { RefreshCw, X, Search, Plus } from 'lucide-react-native';
 
 import { supabase } from '@/services/supabase';
 import { fetchGames } from '@/services/bggApi';
@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
 import { FindGameModal } from '@/components/FindGameModal';
+import { AddGameModal } from '@/components/AddGameModal';
 import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
@@ -23,6 +24,7 @@ export default function CollectionScreen() {
   const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [findModalVisible, setFindModalVisible] = useState(false);
+  const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
   const { players, time, unlimited } = useLocalSearchParams<{ 
@@ -233,6 +235,12 @@ export default function CollectionScreen() {
             <Search size={20} color="#ff9654" />
           </TouchableOpacity>
           <TouchableOpacity 
+            style={styles.findButton}
+            onPress={() => setAddGameModalVisible(true)}
+          >
+            <Plus size={20} color="#ff9654" />
+          </TouchableOpacity>
+          <TouchableOpacity 
             style={styles.syncButton}
             onPress={() => setSyncModalVisible(true)}
           >
@@ -296,6 +304,12 @@ export default function CollectionScreen() {
         isVisible={findModalVisible}
         onClose={() => setFindModalVisible(false)}
         onSearch={handleFind}
+      />
+
+      <AddGameModal
+        isVisible={addGameModalVisible}
+        onClose={() => setAddGameModalVisible(false)}
+        onGameAdded={loadGames}
       />
     </View>
   );
