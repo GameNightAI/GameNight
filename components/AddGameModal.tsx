@@ -165,7 +165,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           disabled={searching}
         >
           {searching ? (
-            <ActivityIndicator color="#ffffff\" size="small" />
+            <ActivityIndicator color="#ffffff" size="small" />
           ) : (
             <Search size={20} color="#ffffff" />
           )}
