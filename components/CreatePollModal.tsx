@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
@@ -214,6 +214,60 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     });
   };
 
+  const closeAllDropdowns = () => {
+    setShowPlayerDropdown(false);
+    setShowTimeDropdown(false);
+    setShowAgeDropdown(false);
+    setShowTypeDropdown(false);
+    setShowComplexityDropdown(false);
+  };
+
+  const toggleDropdown = (dropdown: string) => {
+    closeAllDropdowns();
+    switch (dropdown) {
+      case 'player':
+        setShowPlayerDropdown(true);
+        break;
+      case 'time':
+        setShowTimeDropdown(true);
+        break;
+      case 'age':
+        setShowAgeDropdown(true);
+        break;
+      case 'type':
+        setShowTypeDropdown(true);
+        break;
+      case 'complexity':
+        setShowComplexityDropdown(true);
+        break;
+    }
+  };
+
+  const clearFilter = (filterType: string) => {
+    switch (filterType) {
+      case 'player':
+        setPlayerCount('');
+        setShowPlayerDropdown(false);
+        break;
+      case 'time':
+        setPlayTime('');
+        setShowTimeDropdown(false);
+        break;
+      case 'age':
+        setMinAge('');
+        setShowAgeDropdown(false);
+        break;
+      case 'type':
+        setGameType('');
+        setShowTypeDropdown(false);
+        break;
+      case 'complexity':
+        setComplexity('');
+        setShowComplexityDropdown(false);
+        break;
+    }
+  };
+
   const content = (
     <View style={styles.dialog}>
       <View style={styles.header}>
@@ -232,45 +286,48 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       <ScrollView style={styles.content}>
         <View style={styles.filterSection}>
           <Text style={styles.label}>Filter Games</Text>
-          <View style={styles.filterContainer}>
+          
+          {/* Player Count Filter */}
+          <View style={styles.filterItem}>
             <TouchableOpacity
-              style={styles.dropdownButton}
+              style={[styles.filterButton, playerCount && styles.filterButtonActive]}
               onPress={() => {
                 if (showPlayerDropdown && playerCount) {
-                  setPlayerCount('');
+                  clearFilter('player');
                 } else {
-                  setShowPlayerDropdown(!showPlayerDropdown);
-                  setShowTimeDropdown(false);
-                  setShowAgeDropdown(false);
-                  setShowTypeDropdown(false);
-                  setShowComplexityDropdown(false);
+                  toggleDropdown('player');
                 }
               }}
             >
-              <View style={styles.dropdownButtonContent}>
-                <Users size={20} color="#666666" />
-                <Text style={styles.dropdownButtonText}>
-                  {playerCount ? `${playerCount} players` : 'Select player count'}
+              <View style={styles.filterButtonContent}>
+                <Users size={20} color={playerCount ? "#ff9654" : "#666666"} />
+                <Text style={[styles.filterButtonText, playerCount && styles.filterButtonTextActive]}>
+                  {playerCount ? `${playerCount} players` : 'Player count'}
                 </Text>
               </View>
-              {playerCount ? (
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setPlayerCount('');
-                    setShowPlayerDropdown(false);
-                  }}
-                >
-                  <X size={20} color="#666666" />
-                </TouchableOpacity>
-              ) : (
-                <ChevronDown size={20} color="#666666" />
-              )}
+              <View style={styles.filterButtonRight}>
+                {playerCount && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      clearFilter('player');
+                    }}
+                    style={styles.clearButton}
+                  >
+                    <X size={16} color="#ff9654" />
+                  </TouchableOpacity>
+                )}
+                {showPlayerDropdown ? (
+                  <ChevronUp size={20} color="#666666" />
+                ) : (
+                  <ChevronDown size={20} color="#666666" />
+                )}
+              </View>
             </TouchableOpacity>
 
             {showPlayerDropdown && (
               <View style={styles.dropdown}>
-                <ScrollView style={styles.dropdownScroll}>
+                <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                   {playerOptions.map((option) => (
                     <TouchableOpacity
                       key={option}
@@ -294,45 +351,49 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </ScrollView>
               </View>
             )}
+          </View>
 
+          {/* Play Time Filter */}
+          <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.dropdownButton, { marginTop: 12 }]}
+              style={[styles.filterButton, playTime && styles.filterButtonActive]}
               onPress={() => {
                 if (showTimeDropdown && playTime) {
-                  setPlayTime('');
+                  clearFilter('time');
                 } else {
-                  setShowTimeDropdown(!showTimeDropdown);
-                  setShowPlayerDropdown(false);
-                  setShowAgeDropdown(false);
-                  setShowTypeDropdown(false);
-                  setShowComplexityDropdown(false);
+                  toggleDropdown('time');
                 }
               }}
             >
-              <View style={styles.dropdownButtonContent}>
-                <Clock size={20} color="#666666" />
-                <Text style={styles.dropdownButtonText}>
-                  {playTime ? `${playTime} minutes${playTime === '120+' ? ' or more' : ''}` : 'Select play time'}
+              <View style={styles.filterButtonContent}>
+                <Clock size={20} color={playTime ? "#ff9654" : "#666666"} />
+                <Text style={[styles.filterButtonText, playTime && styles.filterButtonTextActive]}>
+                  {playTime ? `${playTime} minutes${playTime === '120+' ? ' or more' : ''}` : 'Play time'}
                 </Text>
               </View>
-              {playTime ? (
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setPlayTime('');
-                    setShowTimeDropdown(false);
-                  }}
-                >
-                  <X size={20} color="#666666" />
-                </TouchableOpacity>
-              ) : (
-                <ChevronDown size={20} color="#666666" />
-              )}
+              <View style={styles.filterButtonRight}>
+                {playTime && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      clearFilter('time');
+                    }}
+                    style={styles.clearButton}
+                  >
+                    <X size={16} color="#ff9654" />
+                  </TouchableOpacity>
+                )}
+                {showTimeDropdown ? (
+                  <ChevronUp size={20} color="#666666" />
+                ) : (
+                  <ChevronDown size={20} color="#666666" />
+                )}
+              </View>
             </TouchableOpacity>
 
             {showTimeDropdown && (
               <View style={styles.dropdown}>
-                <ScrollView style={styles.dropdownScroll}>
+                <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                   {timeOptions.map((option) => (
                     <TouchableOpacity
                       key={option}
@@ -356,45 +417,49 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </ScrollView>
               </View>
             )}
+          </View>
 
+          {/* Minimum Age Filter */}
+          <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.dropdownButton, { marginTop: 12 }]}
+              style={[styles.filterButton, minAge && styles.filterButtonActive]}
               onPress={() => {
                 if (showAgeDropdown && minAge) {
-                  setMinAge('');
+                  clearFilter('age');
                 } else {
-                  setShowAgeDropdown(!showAgeDropdown);
-                  setShowPlayerDropdown(false);
-                  setShowTimeDropdown(false);
-                  setShowTypeDropdown(false);
-                  setShowComplexityDropdown(false);
+                  toggleDropdown('age');
                 }
               }}
             >
-              <View style={styles.dropdownButtonContent}>
-                <Baby size={20} color="#666666" />
-                <Text style={styles.dropdownButtonText}>
+              <View style={styles.filterButtonContent}>
+                <Baby size={20} color={minAge ? "#ff9654" : "#666666"} />
+                <Text style={[styles.filterButtonText, minAge && styles.filterButtonTextActive]}>
                   {minAge ? `${minAge} years` : 'Youngest player age'}
                 </Text>
               </View>
-              {minAge ? (
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setMinAge('');
-                    setShowAgeDropdown(false);
-                  }}
-                >
-                  <X size={20} color="#666666" />
-                </TouchableOpacity>
-              ) : (
-                <ChevronDown size={20} color="#666666" />
-              )}
+              <View style={styles.filterButtonRight}>
+                {minAge && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      clearFilter('age');
+                    }}
+                    style={styles.clearButton}
+                  >
+                    <X size={16} color="#ff9654" />
+                  </TouchableOpacity>
+                )}
+                {showAgeDropdown ? (
+                  <ChevronUp size={20} color="#666666" />
+                ) : (
+                  <ChevronDown size={20} color="#666666" />
+                )}
+              </View>
             </TouchableOpacity>
 
             {showAgeDropdown && (
               <View style={styles.dropdown}>
-                <ScrollView style={styles.dropdownScroll}>
+                <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                   {ageOptions.map((option) => (
                     <TouchableOpacity
                       key={option}
@@ -418,45 +483,49 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </ScrollView>
               </View>
             )}
+          </View>
 
+          {/* Game Type Filter */}
+          <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.dropdownButton, { marginTop: 12 }]}
+              style={[styles.filterButton, gameType && styles.filterButtonActive]}
               onPress={() => {
                 if (showTypeDropdown && gameType) {
-                  setGameType('');
+                  clearFilter('type');
                 } else {
-                  setShowTypeDropdown(!showTypeDropdown);
-                  setShowPlayerDropdown(false);
-                  setShowTimeDropdown(false);
-                  setShowAgeDropdown(false);
-                  setShowComplexityDropdown(false);
+                  toggleDropdown('type');
                 }
               }}
             >
-              <View style={styles.dropdownButtonContent}>
-                <Users2 size={20} color="#666666" />
-                <Text style={styles.dropdownButtonText}>
+              <View style={styles.filterButtonContent}>
+                <Users2 size={20} color={gameType ? "#ff9654" : "#666666"} />
+                <Text style={[styles.filterButtonText, gameType && styles.filterButtonTextActive]}>
                   {gameType || 'Game type'}
                 </Text>
               </View>
-              {gameType ? (
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setGameType('');
-                    setShowTypeDropdown(false);
-                  }}
-                >
-                  <X size={20} color="#666666" />
-                </TouchableOpacity>
-              ) : (
-                <ChevronDown size={20} color="#666666" />
-              )}
+              <View style={styles.filterButtonRight}>
+                {gameType && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      clearFilter('type');
+                    }}
+                    style={styles.clearButton}
+                  >
+                    <X size={16} color="#ff9654" />
+                  </TouchableOpacity>
+                )}
+                {showTypeDropdown ? (
+                  <ChevronUp size={20} color="#666666" />
+                ) : (
+                  <ChevronDown size={20} color="#666666" />
+                )}
+              </View>
             </TouchableOpacity>
 
             {showTypeDropdown && (
               <View style={styles.dropdown}>
-                <ScrollView style={styles.dropdownScroll}>
+                <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                   {typeOptions.map((option) => (
                     <TouchableOpacity
                       key={option}
@@ -480,45 +549,49 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </ScrollView>
               </View>
             )}
+          </View>
 
+          {/* Complexity Filter */}
+          <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.dropdownButton, { marginTop: 12 }]}
+              style={[styles.filterButton, complexity && styles.filterButtonActive]}
               onPress={() => {
                 if (showComplexityDropdown && complexity) {
-                  setComplexity('');
+                  clearFilter('complexity');
                 } else {
-                  setShowComplexityDropdown(!showComplexityDropdown);
-                  setShowPlayerDropdown(false);
-                  setShowTimeDropdown(false);
-                  setShowAgeDropdown(false);
-                  setShowTypeDropdown(false);
+                  toggleDropdown('complexity');
                 }
               }}
             >
-              <View style={styles.dropdownButtonContent}>
-                <Brain size={20} color="#666666" />
-                <Text style={styles.dropdownButtonText}>
+              <View style={styles.filterButtonContent}>
+                <Brain size={20} color={complexity ? "#ff9654" : "#666666"} />
+                <Text style={[styles.filterButtonText, complexity && styles.filterButtonTextActive]}>
                   {complexity || 'Game complexity'}
                 </Text>
               </View>
-              {complexity ? (
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setComplexity('');
-                    setShowComplexityDropdown(false);
-                  }}
-                >
-                  <X size={20} color="#666666" />
-                </TouchableOpacity>
-              ) : (
-                <ChevronDown size={20} color="#666666" />
-              )}
+              <View style={styles.filterButtonRight}>
+                {complexity && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      clearFilter('complexity');
+                    }}
+                    style={styles.clearButton}
+                  >
+                    <X size={16} color="#ff9654" />
+                  </TouchableOpacity>
+                )}
+                {showComplexityDropdown ? (
+                  <ChevronUp size={20} color="#666666" />
+                ) : (
+                  <ChevronDown size={20} color="#666666" />
+                )}
+              </View>
             </TouchableOpacity>
 
             {showComplexityDropdown && (
               <View style={styles.dropdown}>
-                <ScrollView style={styles.dropdownScroll}>
+                <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                   {complexityOptions.map((option) => (
                     <TouchableOpacity
                       key={option}
@@ -674,7 +747,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    position: 'relative',
   },
   label: {
     fontFamily: 'Poppins-SemiBold',
@@ -690,14 +762,12 @@ const styles = StyleSheet.create({
   },
   filterSection: {
     marginBottom: 20,
-    position: 'relative',
-    zIndex: 50,
   },
-  filterContainer: {
+  filterItem: {
+    marginBottom: 12,
     position: 'relative',
-    zIndex: 50,
   },
-  dropdownButton: {
+  filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -706,25 +776,36 @@ const styles = StyleSheet.create({
     borderColor: '#e1e5ea',
     borderRadius: 12,
     padding: 12,
-    height: 48,
-    position: 'relative',
-    zIndex: 50,
+    minHeight: 48,
   },
-  dropdownButtonContent: {
+  filterButtonActive: {
+    borderColor: '#ff9654',
+    backgroundColor: '#fff5ef',
+  },
+  filterButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
   },
-  dropdownButtonText: {
+  filterButtonText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: '#333333',
   },
+  filterButtonTextActive: {
+    color: '#ff9654',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  filterButtonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  clearButton: {
+    padding: 2,
+  },
   dropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     marginTop: 4,
@@ -735,7 +816,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    zIndex: 100,
+    maxHeight: 200,
   },
   dropdownScroll: {
     maxHeight: 200,
@@ -759,8 +840,6 @@ const styles = StyleSheet.create({
   },
   gamesSection: {
     marginTop: 8,
-    position: 'relative',
-    zIndex: 1,
   },
   gameItem: {
     flexDirection: 'row',
