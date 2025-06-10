@@ -53,7 +53,8 @@ export default function PollsScreen() {
   };
 
   const handleShare = async (pollId: string) => {
-    const shareUrl = `${window.location.origin}/poll/${pollId}`;
+    // const shareUrl = `${window.location.origin}/poll/${pollId}`;
+    const shareUrl = `https://rszliwvoybdxipidynob.supabase.co/rest/v1/polls`;
     setShowShareLink(shareUrl);
     
     try {
