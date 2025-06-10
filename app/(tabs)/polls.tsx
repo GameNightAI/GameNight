@@ -135,8 +135,8 @@ export default function PollsScreen() {
               style={styles.shareLinkInput}
               value={showShareLink}
               editable={false}
-              selectTextOnFocus
-            /><TouchableOpacity 
+              selectTextOnFocus/>
+            <TouchableOpacity 
               style={styles.copyButton}
               onPress={() => {
                 navigator.clipboard.writeText(showShareLink);
