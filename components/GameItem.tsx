@@ -10,6 +10,12 @@ interface GameItemProps {
   onDelete: (id: number) => void;
 }
 
+function decodeHTML(html) {
+    var txt = document.createElement("textarea");
+    txt.innerHTML = html;
+    return txt.value;
+}
+
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   return (
     <Animated.View 
@@ -31,28 +37,31 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       
       <View style={styles.contentContainer}>
         <Text style={styles.title} numberOfLines={2}>
-          {game.name}
+          {decodeHTML(game.name)}
         </Text>
         
         <View style={styles.infoRow}>
           <View style={styles.infoItem}>
             <Users size={16} color="#666666" />
             <Text style={styles.infoText}>
-              {game.minPlayers}-{game.maxPlayers} players
+              {game.maxplayers ?
+                game.minplayers + (game.minplayers === game.maxplayers ? '' : '-' + game.maxplayers ) + ' player' + (game.maxplayers === 1 ? '' : 's')
+                : 'N/A'}
             </Text>
           </View>
           
           <View style={styles.infoItem}>
             <Clock size={16} color="#666666" />
             <Text style={styles.infoText}>
-              {game.playingTime} min
+              {game.maxplaytime === 0 ? 'N/A'
+              : game.minplaytime + (game.minplaytime === game.maxplaytime ? '' : '-' + game.maxplaytime) + ' min'}
             </Text>
           </View>
         </View>
         
         {game.yearPublished && (
           <Text style={styles.yearText}>
-            {game.yearPublished}
+            {game.yearPublished > 0 ? game.yearPublished : -game.yearPublished + ' BCE'}
           </Text>
         )}
       </View>
