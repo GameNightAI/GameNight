@@ -49,7 +49,7 @@ export default function CollectionScreen() {
         .from('collections')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('name', { ascending: true });
 
       if (error) throw error;
 
@@ -59,10 +59,12 @@ export default function CollectionScreen() {
         yearPublished: game.year_published,
         thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
         image: game.thumbnail || 'https://via.placeholder.com/300?text=No+Image',
-        minPlayers: game.min_players,
-        maxPlayers: game.max_players,
+        minplayers: game.min_players,
+        maxplayers: game.max_players,
         playingTime: game.playing_time,
-        description: '',
+        minplaytime: game.minplaytime,
+        maxplaytime: game.maxplaytime,
+        description: game.description || '',
       }));
 
       // Filter games based on player count and play time
@@ -71,7 +73,7 @@ export default function CollectionScreen() {
         
         if (players) {
           const playerCount = parseInt(players);
-          matches = matches && game.minPlayers <= playerCount && game.maxPlayers >= playerCount;
+          matches = matches && game.minplayers <= playerCount && game.maxplayers >= playerCount;
         }
         
         if (time && unlimited !== '1') {
@@ -144,9 +146,11 @@ export default function CollectionScreen() {
           bgg_game_id: game.id,
           name: game.name,
           thumbnail: game.thumbnail,
-          min_players: game.minPlayers,
-          max_players: game.maxPlayers,
+          min_players: game.minplayers,
+          max_players: game.maxplayers,
           playing_time: game.playingTime,
+          minplaytime: game.minplaytime,
+          maxplaytime: game.maxplaytime,
           year_published: game.yearPublished,
         });
       });
