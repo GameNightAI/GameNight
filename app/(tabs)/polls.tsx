@@ -29,7 +29,7 @@ export default function PollsScreen() {
     try {
       setError(null);
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         router.replace('/auth/login');
         return;
@@ -54,9 +54,10 @@ export default function PollsScreen() {
 
   const handleShare = async (pollId: string) => {
     // const shareUrl = `${window.location.origin}/poll/${pollId}`;
+    //test
     const shareUrl = `https://rszliwvoybdxipidynob.supabase.co/rest/v1/polls`;
     setShowShareLink(shareUrl);
-    
+
     try {
       if (navigator.share) {
         await navigator.share({
@@ -107,7 +108,7 @@ export default function PollsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Game Polls</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.createButton}
           onPress={() => setCreateModalVisible(true)}
         >
@@ -117,20 +118,20 @@ export default function PollsScreen() {
       </View>
 
       {showShareLink && (
-        <Animated.View 
+        <Animated.View
           entering={FadeIn.duration(200)}
           style={styles.shareLinkContainer}
         >
           <View style={styles.shareLinkHeader}>
             <Text style={styles.shareLinkTitle}>Share Link</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowShareLink(null)}
               style={styles.closeShareLinkButton}
             >
               <X size={20} color="#666666" />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.shareLinkContent}>
             <TextInput
               style={styles.shareLinkInput}
@@ -138,7 +139,7 @@ export default function PollsScreen() {
               editable={false}
               selectTextOnFocus
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.copyButton}
               onPress={() => {
                 navigator.clipboard.writeText(showShareLink);
@@ -155,7 +156,7 @@ export default function PollsScreen() {
               )}
             </TouchableOpacity>
           </View>
-          
+
           {showCopiedConfirmation && (
             <Text style={styles.copiedConfirmation}>Link copied to clipboard!</Text>
           )}
@@ -166,7 +167,7 @@ export default function PollsScreen() {
         data={polls}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <Animated.View 
+          <Animated.View
             entering={FadeIn.delay(index * 100)}
             style={styles.pollCard}
           >
@@ -180,13 +181,13 @@ export default function PollsScreen() {
               </Text>
             </View>
             <View style={styles.pollActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => setPollToDelete(item)}
               >
                 <Trash2 size={20} color="#e74c3c" />
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.shareButton}
                 onPress={() => handleShare(item.id)}
               >
