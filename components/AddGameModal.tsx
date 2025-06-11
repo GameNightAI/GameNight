@@ -82,14 +82,13 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       }
 
       // Check if the game already exists in the collection
-      const { data: existingGame } = await supabase
+      const { data: existingGames } = await supabase
         .from('collections')
         .select('id')
         .eq('user_id', user.id)
-        .eq('bgg_game_id', game.id)
-        .single();
+        .eq('bgg_game_id', game.id);
 
-      if (existingGame) {
+      if (existingGames && existingGames.length > 0) {
         setError(`${game.name} is already in your collection`);
         return;
       }
