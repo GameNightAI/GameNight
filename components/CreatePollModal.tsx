@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
+
 
 interface CreatePollModalProps {
   isVisible: boolean;
@@ -20,14 +21,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter states
   const [playerCount, setPlayerCount] = useState<string>('');
   const [playTime, setPlayTime] = useState<string>('');
   const [minAge, setMinAge] = useState<string>('');
   const [gameType, setGameType] = useState<string>('');
   const [complexity, setComplexity] = useState<string>('');
-  
+
   // Dropdown visibility states
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
@@ -57,7 +58,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('collections_games')
+        .from('collections')
         .select('*')
         .eq('user_id', user.id);
 
@@ -67,15 +68,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         id: game.bgg_game_id,
         name: game.name,
         thumbnail: game.thumbnail,
-        minPlayers: game.min_players,
-        maxPlayers: game.max_players,
-        playingTime: game.playing_time,
+        min_players: game.min_players,
+        max_players: game.max_players,
+        playing_time: game.playing_time,
         yearPublished: game.year_published,
         description: '',
         image: game.thumbnail,
         minAge: game.min_age,
-        isCooperative: game.is_cooperative,
+        is_cooperative: game.is_cooperative,
         complexity: game.complexity,
+        minPlaytime: game.minplaytime || 0,
+        maxPlaytime: game.maxplaytime || 0
       }));
 
       setAvailableGames(games);
@@ -91,28 +94,28 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
     if (playerCount) {
       const count = parseInt(playerCount === '15+' ? '15' : playerCount);
-      filtered = filtered.filter(game => 
-        game.minPlayers <= count && game.maxPlayers >= count
+      filtered = filtered.filter(game =>
+        game.min_players <= count && game.max_players >= count
       );
     }
 
     if (playTime) {
       const maxTime = parseInt(playTime === '120+' ? '120' : playTime);
-      filtered = filtered.filter(game => 
-        game.playingTime <= maxTime || (playTime === '120+' && game.playingTime >= 120)
+      filtered = filtered.filter(game =>
+        game.playing_time <= maxTime || (playTime === '120+' && game.playing_time >= 120)
       );
     }
 
     if (minAge) {
       const age = parseInt(minAge.replace('+', ''));
-      filtered = filtered.filter(game => 
+      filtered = filtered.filter(game =>
         !game.minAge || game.minAge <= age
       );
     }
 
     if (gameType && gameType !== 'Any') {
-      filtered = filtered.filter(game => 
-        gameType === 'Cooperative' ? game.isCooperative : !game.isCooperative
+      filtered = filtered.filter(game =>
+        gameType === 'Cooperative' ? game.is_cooperative : !game.is_cooperative
       );
     }
 
@@ -131,8 +134,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     }
 
     setFilteredGames(filtered);
-    setSelectedGames(prev => 
-      prev.filter(game => 
+    setSelectedGames(prev =>
+      prev.filter(game =>
         filtered.some(g => g.id === game.id)
       )
     );
@@ -151,7 +154,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const title = selectedGames.length === 1 
+      const title = selectedGames.length === 1
         ? `Vote on ${selectedGames[0].name}`
         : `Vote on ${selectedGames.length} games`;
 
@@ -272,8 +275,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     <View style={styles.dialog}>
       <View style={styles.header}>
         <Text style={styles.title}>Create Poll</Text>
-        <TouchableOpacity 
-          style={styles.closeButton} 
+        <TouchableOpacity
+          style={styles.closeButton}
           onPress={() => {
             onClose();
             resetForm();
@@ -286,11 +289,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       <ScrollView style={styles.content}>
         <View style={styles.filterSection}>
           <Text style={styles.label}>Filter Games</Text>
-          
+
           {/* Player Count Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, playerCount && styles.filterButtonActive]}
+              style={[styles.filterButton, playerCount ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showPlayerDropdown && playerCount) {
                   clearFilter('player');
@@ -301,7 +304,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Users size={20} color={playerCount ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, playerCount && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, playerCount ? styles.filterButtonTextActive : undefined]}>
                   {playerCount ? `${playerCount} players` : 'Player count'}
                 </Text>
               </View>
@@ -356,7 +359,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Play Time Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, playTime && styles.filterButtonActive]}
+              style={[styles.filterButton, playTime ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showTimeDropdown && playTime) {
                   clearFilter('time');
@@ -367,7 +370,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Clock size={20} color={playTime ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, playTime && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, playTime ? styles.filterButtonTextActive : undefined]}>
                   {playTime ? `${playTime} minutes${playTime === '120+' ? ' or more' : ''}` : 'Play time'}
                 </Text>
               </View>
@@ -422,7 +425,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Minimum Age Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, minAge && styles.filterButtonActive]}
+              style={[styles.filterButton, minAge ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showAgeDropdown && minAge) {
                   clearFilter('age');
@@ -433,7 +436,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Baby size={20} color={minAge ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, minAge && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, minAge ? styles.filterButtonTextActive : undefined]}>
                   {minAge ? `${minAge} years` : 'Youngest player age'}
                 </Text>
               </View>
@@ -488,7 +491,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Game Type Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, gameType && styles.filterButtonActive]}
+              style={[styles.filterButton, gameType ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showTypeDropdown && gameType) {
                   clearFilter('type');
@@ -499,7 +502,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Users2 size={20} color={gameType ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, gameType && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, gameType ? styles.filterButtonTextActive : undefined]}>
                   {gameType || 'Game type'}
                 </Text>
               </View>
@@ -554,7 +557,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Complexity Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, complexity && styles.filterButtonActive]}
+              style={[styles.filterButton, complexity ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showComplexityDropdown && complexity) {
                   clearFilter('complexity');
@@ -565,7 +568,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Brain size={20} color={complexity ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, complexity && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, complexity ? styles.filterButtonTextActive : undefined]}>
                   {complexity || 'Game complexity'}
                 </Text>
               </View>
@@ -621,7 +624,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         <View style={styles.gamesSection}>
           <Text style={styles.label}>Select Games</Text>
           <Text style={styles.sublabel}>
-            {(playerCount || playTime || minAge || gameType || complexity) 
+            {(playerCount || playTime || minAge || gameType || complexity)
               ? `Games that match your filters`
               : 'Choose games from your collection to include in the poll'}
           </Text>
@@ -643,7 +646,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 <View style={styles.gameInfo}>
                   <Text style={styles.gameName}>{game.name}</Text>
                   <Text style={styles.playerCount}>
-                    {game.minPlayers}-{game.maxPlayers} players • {game.playingTime} min
+                    {game.min_players}-{game.max_players} players • {game.playing_time} min
                   </Text>
                 </View>
                 {selectedGames.some(g => g.id === game.id) && (
@@ -694,8 +697,47 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     </Modal>
   );
 };
+type Styles = {
+  overlay: ViewStyle;
+  webOverlay: ViewStyle;
+  dialog: ViewStyle;
+  header: ViewStyle;
+  closeButton: ViewStyle;
+  title: TextStyle;
+  content: ViewStyle;
+  label: TextStyle;
+  sublabel: TextStyle;
+  filterSection: ViewStyle;
+  filterItem: ViewStyle;
+  filterButton: ViewStyle;
+  filterButtonActive: ViewStyle;
+  filterButtonContent: ViewStyle;
+  filterButtonText: TextStyle;
+  filterButtonTextActive: TextStyle;
+  filterButtonRight: ViewStyle;
+  clearButton: ViewStyle;
+  dropdown: ViewStyle;
+  dropdownScroll: ViewStyle;
+  dropdownItem: ViewStyle;
+  dropdownItemSelected: ViewStyle;
+  dropdownItemText: TextStyle;
+  dropdownItemTextSelected: TextStyle;
+  gamesSection: ViewStyle;
+  gameItem: ViewStyle;
+  gameItemSelected: ViewStyle;
+  gameInfo: ViewStyle;
+  gameName: TextStyle;
+  playerCount: TextStyle;
+  noGamesText: TextStyle;
+  errorText: TextStyle;
+  createButton: ViewStyle;
+  createButtonDisabled: ViewStyle;
+  createButtonText: TextStyle;
+};
 
-const styles = StyleSheet.create({
+const screenHeight = Dimensions.get('window').height;
+
+const styles = StyleSheet.create<Styles>({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -720,7 +762,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90vh',
+    maxHeight: screenHeight * 0.9,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -905,5 +947,3 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
-
-export { CreatePollModal }

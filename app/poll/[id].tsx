@@ -33,7 +33,7 @@ export default function PollScreen() {
   const loadPoll = async () => {
     try {
       setError(null);
-      
+
       // Get the poll details
       const { data: pollData, error: pollError } = await supabase
         .from('polls')
@@ -91,9 +91,14 @@ export default function PollScreen() {
           id: game.bgg_game_id,
           name: game.name,
           thumbnail: game.thumbnail,
-          minPlayers: game.min_players,
-          maxPlayers: game.max_players,
-          playingTime: game.playing_time,
+          min_players: game.min_players,
+          max_players: game.max_players,
+          minPlaytime: game.minplaytime,
+          maxPlaytime: game.maxplaytime,
+          minAge: game.minAge || 0,
+          is_cooperative: game.is_cooperative || false,
+          complexity: game.complexity || 1,
+          playing_time: game.playing_time,
           yearPublished: game.year_published,
           description: '',
           image: game.thumbnail,
@@ -212,7 +217,7 @@ export default function PollScreen() {
               <View style={styles.gameInfo}>
                 <Text style={styles.gameName}>{game.name}</Text>
                 <Text style={styles.gameDetails}>
-                  {game.minPlayers}-{game.maxPlayers} players • {game.playingTime} min
+                  {game.min_players}-{game.max_players} players • {game.playing_time} min
                 </Text>
                 {isCreator && (
                   <>

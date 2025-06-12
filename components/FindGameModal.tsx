@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
 import { Search, X, ChevronDown, Clock } from 'lucide-react-native';
 
 interface FindGameModalProps {
@@ -50,9 +50,9 @@ export const FindGameModal: React.FC<FindGameModalProps> = ({
 
       <View style={[styles.inputSection, { zIndex: 2 }]}>
         <Text style={styles.label}>How many players?</Text>
-        
+
         <View style={styles.dropdownContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.dropdownButton}
             onPress={() => {
               setShowPlayerDropdown(!showPlayerDropdown);
@@ -67,7 +67,7 @@ export const FindGameModal: React.FC<FindGameModalProps> = ({
 
           {showPlayerDropdown && (
             <View style={[styles.dropdown, styles.dropdownAbsolute]}>
-              <ScrollView 
+              <ScrollView
                 style={styles.dropdownScroll}
                 showsVerticalScrollIndicator={true}
                 nestedScrollEnabled={true}
@@ -101,9 +101,9 @@ export const FindGameModal: React.FC<FindGameModalProps> = ({
       <View style={[styles.inputSection, { zIndex: 1 }]}>
         <Text style={styles.label}>How much time do you have?</Text>
         <Text style={styles.sublabel}>(Optional)</Text>
-        
+
         <View style={styles.dropdownContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.dropdownButton}
             onPress={() => {
               setShowTimeDropdown(!showTimeDropdown);
@@ -118,7 +118,7 @@ export const FindGameModal: React.FC<FindGameModalProps> = ({
 
           {showTimeDropdown && (
             <View style={[styles.dropdown, styles.dropdownAbsolute]}>
-              <ScrollView 
+              <ScrollView
                 style={styles.dropdownScroll}
                 showsVerticalScrollIndicator={true}
                 nestedScrollEnabled={true}
@@ -183,6 +183,8 @@ export const FindGameModal: React.FC<FindGameModalProps> = ({
   );
 };
 
+const screenHeight = Dimensions.get('window').height;
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -209,7 +211,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    maxHeight: '90vh',
+    maxHeight: screenHeight * 0.9,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,

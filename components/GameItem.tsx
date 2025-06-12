@@ -11,54 +11,54 @@ interface GameItemProps {
 }
 
 function decodeHTML(html) {
-    var txt = document.createElement("textarea");
-    txt.innerHTML = html;
-    return txt.value;
+  var txt = document.createElement("textarea");
+  txt.innerHTML = html;
+  return txt.value;
 }
 
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   return (
-    <Animated.View 
+    <Animated.View
       style={styles.container}
       exiting={FadeOut.duration(200)}
     >
-      <TouchableOpacity 
-        style={styles.deleteButton} 
+      <TouchableOpacity
+        style={styles.deleteButton}
         onPress={() => onDelete(game.id)}
       >
         <X size={16} color="#e74c3c" />
       </TouchableOpacity>
 
-      <Image 
-        source={{ uri: game.thumbnail }} 
+      <Image
+        source={{ uri: game.thumbnail }}
         style={styles.thumbnail}
         resizeMode="cover"
       />
-      
+
       <View style={styles.contentContainer}>
         <Text style={styles.title} numberOfLines={2}>
           {decodeHTML(game.name)}
         </Text>
-        
+
         <View style={styles.infoRow}>
           <View style={styles.infoItem}>
             <Users size={16} color="#666666" />
             <Text style={styles.infoText}>
-              {game.maxplayers ?
-                game.minplayers + (game.minplayers === game.maxplayers ? '' : '-' + game.maxplayers ) + ' player' + (game.maxplayers === 1 ? '' : 's')
+              {game.min_players ?
+                game.min_players + (game.min_players === game.min_players ? '' : '-' + game.max_players) + ' player' + (game.min_players === 1 ? '' : 's')
                 : 'N/A'}
             </Text>
           </View>
-          
+
           <View style={styles.infoItem}>
             <Clock size={16} color="#666666" />
             <Text style={styles.infoText}>
-              {game.maxplaytime === 0 ? 'N/A'
-              : game.minplaytime + (game.minplaytime === game.maxplaytime ? '' : '-' + game.maxplaytime) + ' min'}
+              {game.maxPlaytime === 0 ? 'N/A'
+                : game.minPlaytime + (game.minPlaytime === game.maxPlaytime ? '' : '-' + game.maxPlaytime) + ' min'}
             </Text>
           </View>
         </View>
-        
+
         {game.yearPublished && (
           <Text style={styles.yearText}>
             {game.yearPublished > 0 ? game.yearPublished : -game.yearPublished + ' BCE'}
