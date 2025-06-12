@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
+
 
 interface CreatePollModalProps {
   isVisible: boolean;
@@ -74,7 +75,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         description: '',
         image: game.thumbnail,
         minAge: game.min_age,
-        isCooperative: game.is_cooperative,
+        is_cooperative: game.is_cooperative,
         complexity: game.complexity,
         minPlaytime: game.minplaytime || 0,
         maxPlaytime: game.maxplaytime || 0
@@ -114,7 +115,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
     if (gameType && gameType !== 'Any') {
       filtered = filtered.filter(game =>
-        gameType === 'Cooperative' ? game.isCooperative : !game.isCooperative
+        gameType === 'Cooperative' ? game.is_cooperative : !game.is_cooperative
       );
     }
 
@@ -292,7 +293,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Player Count Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, playerCount && styles.filterButtonActive]}
+              style={[styles.filterButton, playerCount ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showPlayerDropdown && playerCount) {
                   clearFilter('player');
@@ -303,7 +304,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Users size={20} color={playerCount ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, playerCount && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, playerCount ? styles.filterButtonTextActive : undefined]}>
                   {playerCount ? `${playerCount} players` : 'Player count'}
                 </Text>
               </View>
@@ -358,7 +359,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Play Time Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, playTime && styles.filterButtonActive]}
+              style={[styles.filterButton, playTime ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showTimeDropdown && playTime) {
                   clearFilter('time');
@@ -369,7 +370,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Clock size={20} color={playTime ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, playTime && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, playTime ? styles.filterButtonTextActive : undefined]}>
                   {playTime ? `${playTime} minutes${playTime === '120+' ? ' or more' : ''}` : 'Play time'}
                 </Text>
               </View>
@@ -424,7 +425,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Minimum Age Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, minAge && styles.filterButtonActive]}
+              style={[styles.filterButton, minAge ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showAgeDropdown && minAge) {
                   clearFilter('age');
@@ -435,7 +436,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Baby size={20} color={minAge ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, minAge && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, minAge ? styles.filterButtonTextActive : undefined]}>
                   {minAge ? `${minAge} years` : 'Youngest player age'}
                 </Text>
               </View>
@@ -490,7 +491,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Game Type Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, gameType && styles.filterButtonActive]}
+              style={[styles.filterButton, gameType ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showTypeDropdown && gameType) {
                   clearFilter('type');
@@ -501,7 +502,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Users2 size={20} color={gameType ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, gameType && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, gameType ? styles.filterButtonTextActive : undefined]}>
                   {gameType || 'Game type'}
                 </Text>
               </View>
@@ -556,7 +557,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Complexity Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
-              style={[styles.filterButton, complexity && styles.filterButtonActive]}
+              style={[styles.filterButton, complexity ? styles.filterButtonActive : undefined]}
               onPress={() => {
                 if (showComplexityDropdown && complexity) {
                   clearFilter('complexity');
@@ -567,7 +568,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             >
               <View style={styles.filterButtonContent}>
                 <Brain size={20} color={complexity ? "#ff9654" : "#666666"} />
-                <Text style={[styles.filterButtonText, complexity && styles.filterButtonTextActive]}>
+                <Text style={[styles.filterButtonText, complexity ? styles.filterButtonTextActive : undefined]}>
                   {complexity || 'Game complexity'}
                 </Text>
               </View>
@@ -696,8 +697,47 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     </Modal>
   );
 };
+type Styles = {
+  overlay: ViewStyle;
+  webOverlay: ViewStyle;
+  dialog: ViewStyle;
+  header: ViewStyle;
+  closeButton: ViewStyle;
+  title: TextStyle;
+  content: ViewStyle;
+  label: TextStyle;
+  sublabel: TextStyle;
+  filterSection: ViewStyle;
+  filterItem: ViewStyle;
+  filterButton: ViewStyle;
+  filterButtonActive: ViewStyle;
+  filterButtonContent: ViewStyle;
+  filterButtonText: TextStyle;
+  filterButtonTextActive: TextStyle;
+  filterButtonRight: ViewStyle;
+  clearButton: ViewStyle;
+  dropdown: ViewStyle;
+  dropdownScroll: ViewStyle;
+  dropdownItem: ViewStyle;
+  dropdownItemSelected: ViewStyle;
+  dropdownItemText: TextStyle;
+  dropdownItemTextSelected: TextStyle;
+  gamesSection: ViewStyle;
+  gameItem: ViewStyle;
+  gameItemSelected: ViewStyle;
+  gameInfo: ViewStyle;
+  gameName: TextStyle;
+  playerCount: TextStyle;
+  noGamesText: TextStyle;
+  errorText: TextStyle;
+  createButton: ViewStyle;
+  createButtonDisabled: ViewStyle;
+  createButtonText: TextStyle;
+};
 
-const styles = StyleSheet.create({
+const screenHeight = Dimensions.get('window').height;
+
+const styles = StyleSheet.create<Styles>({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -722,7 +762,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90vh',
+    maxHeight: screenHeight * 0.9,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
