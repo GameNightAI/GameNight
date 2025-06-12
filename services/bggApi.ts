@@ -4,17 +4,17 @@ import { Game } from '@/types/game';
 export async function fetchGames(username: string): Promise<Game[]> {
   try {
     console.log('Fetching games for username:', username);
-    
+
     // First request to trigger collection fetch
     const response = await fetch(`https://boardgamegeek.com/xmlapi2/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch collection: ${response.status}`);
     }
-    
+
     let xmlText = await response.text();
     console.log('Initial XML response:', xmlText.substring(0, 200) + '...');
-    
+
     // If BGG returns a "please wait" message, retry after a delay
     if (xmlText.includes('Please wait')) {
       console.log('Received "Please wait" message, retrying in 2 seconds...');
@@ -23,34 +23,34 @@ export async function fetchGames(username: string): Promise<Game[]> {
       xmlText = await retryResponse.text();
       console.log('Retry XML response:', xmlText.substring(0, 200) + '...');
     }
-    
+
     // Parse the XML response
     const parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '',
       textNodeName: 'value',
     });
-    
+
     const result = parser.parse(xmlText);
     console.log('Parsed result structure:', JSON.stringify(result, null, 2).substring(0, 200) + '...');
     console.log(result);
-    
+
     // Check if the collection exists and has items
     if (!result.items) {
       console.log('No items found in response');
       return [];
     }
-    
+
     // Handle empty collection
     if (!result.items.item) {
       console.log('Collection is empty');
       return [];
     }
-    
+
     // Ensure we have an array even if there's only one item
     const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
     console.log(`Found ${items.length} items in collection`);
-    
+
     // Map the raw data to our Game type
     return items.map((item: any) => {
       // Find the name - it could be in different formats depending on the XML structure
@@ -69,21 +69,21 @@ export async function fetchGames(username: string): Promise<Game[]> {
       // Extract stats from the XML
       const stats = item.stats || {};
       console.log(item);
-      
+
       const game = {
         id: parseInt(item.objectid),
         name: name || 'Unknown Game',
         yearPublished: item.yearpublished ? parseInt(item.yearpublished) : null,
         thumbnail: item.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
         image: item.image || 'https://via.placeholder.com/300?text=No+Image',
-        minplayers: parseInt(stats.minplayers),
-        maxplayers: parseInt(stats.maxplayers),
+        min_players: parseInt(stats.min_players),
+        max_players: parseInt(stats.max_players),
         playingTime: parseInt(stats.playingtime || '0'),
         minplaytime: parseInt(stats.minplaytime || '0'),
         maxplaytime: parseInt(stats.maxplaytime || '0'),
         description: '',
       };
-      
+
       console.log('Processed game:', game);
       return game;
     });

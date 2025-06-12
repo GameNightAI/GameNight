@@ -20,14 +20,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter states
   const [playerCount, setPlayerCount] = useState<string>('');
   const [playTime, setPlayTime] = useState<string>('');
   const [minAge, setMinAge] = useState<string>('');
   const [gameType, setGameType] = useState<string>('');
   const [complexity, setComplexity] = useState<string>('');
-  
+
   // Dropdown visibility states
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
@@ -67,8 +67,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         id: game.bgg_game_id,
         name: game.name,
         thumbnail: game.thumbnail,
-        minPlayers: game.min_players,
-        maxPlayers: game.max_players,
+        min_players: game.min_players,
+        max_players: game.max_players,
         playingTime: game.playing_time,
         yearPublished: game.year_published,
         description: '',
@@ -91,27 +91,27 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
     if (playerCount) {
       const count = parseInt(playerCount === '15+' ? '15' : playerCount);
-      filtered = filtered.filter(game => 
-        game.minPlayers <= count && game.maxPlayers >= count
+      filtered = filtered.filter(game =>
+        game.min_players <= count && game.max_players >= count
       );
     }
 
     if (playTime) {
       const maxTime = parseInt(playTime === '120+' ? '120' : playTime);
-      filtered = filtered.filter(game => 
+      filtered = filtered.filter(game =>
         game.playingTime <= maxTime || (playTime === '120+' && game.playingTime >= 120)
       );
     }
 
     if (minAge) {
       const age = parseInt(minAge.replace('+', ''));
-      filtered = filtered.filter(game => 
+      filtered = filtered.filter(game =>
         !game.minAge || game.minAge <= age
       );
     }
 
     if (gameType && gameType !== 'Any') {
-      filtered = filtered.filter(game => 
+      filtered = filtered.filter(game =>
         gameType === 'Cooperative' ? game.isCooperative : !game.isCooperative
       );
     }
@@ -131,8 +131,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     }
 
     setFilteredGames(filtered);
-    setSelectedGames(prev => 
-      prev.filter(game => 
+    setSelectedGames(prev =>
+      prev.filter(game =>
         filtered.some(g => g.id === game.id)
       )
     );
@@ -151,7 +151,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const title = selectedGames.length === 1 
+      const title = selectedGames.length === 1
         ? `Vote on ${selectedGames[0].name}`
         : `Vote on ${selectedGames.length} games`;
 
@@ -272,8 +272,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     <View style={styles.dialog}>
       <View style={styles.header}>
         <Text style={styles.title}>Create Poll</Text>
-        <TouchableOpacity 
-          style={styles.closeButton} 
+        <TouchableOpacity
+          style={styles.closeButton}
           onPress={() => {
             onClose();
             resetForm();
@@ -286,7 +286,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       <ScrollView style={styles.content}>
         <View style={styles.filterSection}>
           <Text style={styles.label}>Filter Games</Text>
-          
+
           {/* Player Count Filter */}
           <View style={styles.filterItem}>
             <TouchableOpacity
@@ -621,7 +621,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         <View style={styles.gamesSection}>
           <Text style={styles.label}>Select Games</Text>
           <Text style={styles.sublabel}>
-            {(playerCount || playTime || minAge || gameType || complexity) 
+            {(playerCount || playTime || minAge || gameType || complexity)
               ? `Games that match your filters`
               : 'Choose games from your collection to include in the poll'}
           </Text>
@@ -643,7 +643,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 <View style={styles.gameInfo}>
                   <Text style={styles.gameName}>{game.name}</Text>
                   <Text style={styles.playerCount}>
-                    {game.minPlayers}-{game.maxPlayers} players • {game.playingTime} min
+                    {game.min_players}-{game.max_players} players • {game.playingTime} min
                   </Text>
                 </View>
                 {selectedGames.some(g => g.id === game.id) && (

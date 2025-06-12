@@ -27,7 +27,7 @@ export default function CollectionScreen() {
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
-  const { players, time, unlimited } = useLocalSearchParams<{ 
+  const { players, time, unlimited } = useLocalSearchParams<{
     players?: string;
     time?: string;
     unlimited?: string;
@@ -39,7 +39,7 @@ export default function CollectionScreen() {
     try {
       setError(null);
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         router.replace('/auth/login');
         return;
@@ -59,28 +59,28 @@ export default function CollectionScreen() {
         yearPublished: game.year_published,
         thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
         image: game.thumbnail || 'https://via.placeholder.com/300?text=No+Image',
-        minplayers: game.min_players,
-        maxplayers: game.max_players,
-        playingTime: game.playing_time,
-        minplaytime: game.minplaytime,
-        maxplaytime: game.maxplaytime,
+        min_players: game.min_players,
+        max_players: game.max_players,
+        playingTime: game.playingTime,
+        minPlaytime: game.minPlaytime,
+        maxPlaytime: game.maxPlaytime,
         description: game.description || '',
       }));
 
       // Filter games based on player count and play time
       const filteredGames = mappedGames.filter(game => {
         let matches = true;
-        
+
         if (players) {
           const playerCount = parseInt(players);
-          matches = matches && game.minplayers <= playerCount && game.maxplayers >= playerCount;
+          matches = matches && game.min_players <= playerCount && game.max_players >= playerCount;
         }
-        
+
         if (time && unlimited !== '1') {
           const maxTime = parseInt(time);
           matches = matches && game.playingTime <= maxTime;
         }
-        
+
         return matches;
       });
 
@@ -121,9 +121,9 @@ export default function CollectionScreen() {
     try {
       setSyncing(true);
       setError(null);
-      
+
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         router.replace('/auth/login');
         return;
@@ -138,7 +138,7 @@ export default function CollectionScreen() {
 
       // Create a Map to store unique games, using bgg_game_id as the key
       const uniqueGames = new Map();
-      
+
       // Only keep the last occurrence of each game ID
       bggGames.forEach(game => {
         uniqueGames.set(game.id, {
@@ -146,11 +146,11 @@ export default function CollectionScreen() {
           bgg_game_id: game.id,
           name: game.name,
           thumbnail: game.thumbnail,
-          min_players: game.minplayers,
-          max_players: game.maxplayers,
+          min_players: game.min_players,
+          max_players: game.max_players,
           playing_time: game.playingTime,
-          minplaytime: game.minplaytime,
-          maxplaytime: game.maxplaytime,
+          minPlaytime: game.minPlaytime,
+          maxPlaytime: game.maxPlaytime,
           year_published: game.yearPublished,
         });
       });
@@ -205,11 +205,11 @@ export default function CollectionScreen() {
 
   if (games.length === 0 && !loading) {
     return (
-      <EmptyState 
-        username={null} 
+      <EmptyState
+        username={null}
         onRefresh={handleSync}
         message={
-          isFiltered 
+          isFiltered
             ? `No games found for ${players} players${time ? ` within ${time}${unlimited === '1' ? '+' : ''} minutes` : ''}`
             : undefined
         }
@@ -224,27 +224,27 @@ export default function CollectionScreen() {
       <View style={styles.header}>
         <View style={styles.titleSection}>
           <Text style={styles.title}>
-            {isFiltered ? 
-              `Games for ${players} Players${time ? ` (${time}${unlimited === '1' ? '+' : ''} min)` : ''}` 
+            {isFiltered ?
+              `Games for ${players} Players${time ? ` (${time}${unlimited === '1' ? '+' : ''} min)` : ''}`
               : 'My Collection'}
           </Text>
           <Text style={styles.countText}>{games.length} games</Text>
         </View>
-        
+
         <View style={styles.actionsSection}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.findButton}
             onPress={() => setFindModalVisible(true)}
           >
             <Search size={20} color="#ff9654" />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.findButton}
             onPress={() => setAddGameModalVisible(true)}
           >
             <Plus size={20} color="#ff9654" />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.syncButton}
             onPress={() => setSyncModalVisible(true)}
           >
@@ -256,7 +256,7 @@ export default function CollectionScreen() {
 
       {isFiltered && (
         <View style={styles.filterBanner}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.clearButton}
             onPress={clearFilters}
           >
@@ -271,8 +271,8 @@ export default function CollectionScreen() {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeIn.delay(index * 100).duration(300)}>
-            <GameItem 
-              game={item} 
+            <GameItem
+              game={item}
               onDelete={() => setGameToDelete(item)}
             />
           </Animated.View>
