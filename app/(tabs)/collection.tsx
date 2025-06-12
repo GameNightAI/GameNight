@@ -46,7 +46,7 @@ export default function CollectionScreen() {
       }
 
       const { data, error } = await supabase
-        .from('collections')
+        .from('collections_games')
         .select('*')
         .eq('user_id', user.id)
         .order('name', { ascending: true });
