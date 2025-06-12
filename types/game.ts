@@ -11,6 +11,6 @@ export interface Game {
   maxPlaytime: number;
   description: string;
   minAge: number;
-  isCooperative: string;
+  is_cooperative: Boolean;
   complexity: number;
 }
