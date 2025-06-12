@@ -37,10 +37,10 @@ def parse_xml(text):
             
     yield dict(
       id = item.attrib['id'],
-      minplaytime = item.find('minplaytime').attrib['value'],
-      maxplaytime = item.find('maxplaytime').attrib['value'],
-      min_players = item.find('minplayers').attrib['value'],
-      max_players = item.find('maxplayers').attrib['value'],
+      minPlaytime = item.find('minPlaytime').attrib['value'],
+      maxPlaytime = item.find('maxPlaytime').attrib['value'],
+      min_players = item.find('min_players').attrib['value'],
+      max_players = item.find('max_players').attrib['value'],
       best_players = best_players,
       rec_players = rec_players,
       image_url = item.findtext('image', default=''),
