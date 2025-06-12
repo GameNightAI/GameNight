@@ -43,15 +43,16 @@ export const PollTypeModal: React.FC<PollTypeModalProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.optionButton}
+          style={[styles.optionButton, styles.optionButtonDisabled]}
           onPress={onSelectDate}
+          disabled={true}
         >
-          <View style={styles.optionIcon}>
-            <Calendar size={32} color="#ff9654" />
+          <View style={[styles.optionIcon, styles.optionIconDisabled]}>
+            <Calendar size={32} color="#cccccc" />
           </View>
-          <Text style={styles.optionTitle}>Select Date</Text>
-          <Text style={styles.optionDescription}>
-            Let your group vote on when to play
+          <Text style={[styles.optionTitle, styles.optionTitleDisabled]}>Select Date</Text>
+          <Text style={[styles.optionDescription, styles.optionDescriptionDisabled]}>
+            Let your group vote on when to play (Coming Soon)
           </Text>
         </TouchableOpacity>
       </View>
@@ -150,6 +151,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  optionButtonDisabled: {
+    backgroundColor: '#f8f9fa',
+    borderColor: '#e9ecef',
+  },
   optionIcon: {
     width: 64,
     height: 64,
@@ -159,11 +164,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  optionIconDisabled: {
+    backgroundColor: '#f5f5f5',
+  },
   optionTitle: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
     color: '#1a2b5f',
     marginBottom: 8,
+  },
+  optionTitleDisabled: {
+    color: '#999999',
   },
   optionDescription: {
     fontFamily: 'Poppins-Regular',
@@ -171,5 +182,8 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  optionDescriptionDisabled: {
+    color: '#999999',
   },
 });

@@ -10,7 +10,6 @@ import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { PollTypeModal } from '@/components/PollTypeModal';
 import { CreatePollModal } from '@/components/CreatePollModal';
-import { DatePollModal } from '@/components/DatePollModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
 export default function PollsScreen() {
@@ -19,7 +18,6 @@ export default function PollsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pollTypeModalVisible, setPollTypeModalVisible] = useState(false);
   const [createPollModalVisible, setCreatePollModalVisible] = useState(false);
-  const [datePollModalVisible, setDatePollModalVisible] = useState(false);
   const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
   const [showShareLink, setShowShareLink] = useState<string | null>(null);
   const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
@@ -107,7 +105,8 @@ export default function PollsScreen() {
 
   const handleSelectDate = () => {
     setPollTypeModalVisible(false);
-    setDatePollModalVisible(true);
+    // TODO: Implement date poll creation in the future
+    console.log('Date poll creation coming soon!');
   };
 
   if (loading) {
@@ -230,15 +229,6 @@ export default function PollsScreen() {
         onClose={() => setCreatePollModalVisible(false)}
         onSuccess={() => {
           setCreatePollModalVisible(false);
-          loadPolls();
-        }}
-      />
-
-      <DatePollModal
-        isVisible={datePollModalVisible}
-        onClose={() => setDatePollModalVisible(false)}
-        onSuccess={() => {
-          setDatePollModalVisible(false);
           loadPolls();
         }}
       />
