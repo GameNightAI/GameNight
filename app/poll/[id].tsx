@@ -93,7 +93,7 @@ export default function PollScreen() {
           thumbnail: game.thumbnail,
           min_players: game.min_players,
           max_players: game.max_players,
-          playingTime: game.playing_time,
+          playing_time: game.playing_time,
           yearPublished: game.year_published,
           description: '',
           image: game.thumbnail,
@@ -212,7 +212,7 @@ export default function PollScreen() {
               <View style={styles.gameInfo}>
                 <Text style={styles.gameName}>{game.name}</Text>
                 <Text style={styles.gameDetails}>
-                  {game.min_players}-{game.max_players} players • {game.playingTime} min
+                  {game.min_players}-{game.max_players} players • {game.playing_time} min
                 </Text>
                 {isCreator && (
                   <>

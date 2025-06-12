@@ -61,7 +61,7 @@ export default function CollectionScreen() {
         image: game.thumbnail || 'https://via.placeholder.com/300?text=No+Image',
         min_players: game.min_players,
         max_players: game.max_players,
-        playingTime: game.playingTime,
+        playing_time: game.playing_time,
         minPlaytime: game.minPlaytime,
         maxPlaytime: game.maxPlaytime,
         description: game.description || '',
@@ -78,7 +78,7 @@ export default function CollectionScreen() {
 
         if (time && unlimited !== '1') {
           const maxTime = parseInt(time);
-          matches = matches && game.playingTime <= maxTime;
+          matches = matches && game.playing_time <= maxTime;
         }
 
         return matches;
@@ -148,7 +148,7 @@ export default function CollectionScreen() {
           thumbnail: game.thumbnail,
           min_players: game.min_players,
           max_players: game.max_players,
-          playing_time: game.playingTime,
+          playing_time: game.playing_time,
           minPlaytime: game.minPlaytime,
           maxPlaytime: game.maxPlaytime,
           year_published: game.yearPublished,

@@ -69,13 +69,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         thumbnail: game.thumbnail,
         min_players: game.min_players,
         max_players: game.max_players,
-        playingTime: game.playing_time,
+        playing_time: game.playing_time,
         yearPublished: game.year_published,
         description: '',
         image: game.thumbnail,
         minAge: game.min_age,
         isCooperative: game.is_cooperative,
         complexity: game.complexity,
+        minPlaytime: game.minplaytime || 0,
+        maxPlaytime: game.maxplaytime || 0
       }));
 
       setAvailableGames(games);
@@ -99,7 +101,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     if (playTime) {
       const maxTime = parseInt(playTime === '120+' ? '120' : playTime);
       filtered = filtered.filter(game =>
-        game.playingTime <= maxTime || (playTime === '120+' && game.playingTime >= 120)
+        game.playing_time <= maxTime || (playTime === '120+' && game.playing_time >= 120)
       );
     }
 
@@ -643,7 +645,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 <View style={styles.gameInfo}>
                   <Text style={styles.gameName}>{game.name}</Text>
                   <Text style={styles.playerCount}>
-                    {game.min_players}-{game.max_players} players • {game.playingTime} min
+                    {game.min_players}-{game.max_players} players • {game.playing_time} min
                   </Text>
                 </View>
                 {selectedGames.some(g => g.id === game.id) && (
@@ -905,5 +907,3 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
-
-export { CreatePollModal }

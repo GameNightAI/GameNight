@@ -54,7 +54,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       }
 
       const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
-      
+
       const games = items.map((item: any) => ({
         id: item.id,
         name: Array.isArray(item.name) ? item.name[0].value : item.name.value,
@@ -76,7 +76,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       setError('');
 
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -113,7 +113,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         thumbnail: gameInfo.thumbnail,
         min_players: parseInt(gameInfo.minplayers.value) || 1,
         max_players: parseInt(gameInfo.maxplayers.value) || 1,
-        playing_time: parseInt(gameInfo.playingtime.value) || 30,
+        playing_time: parseInt(gameInfo.playing_time.value) || 30,
         year_published: game.yearPublished ? parseInt(game.yearPublished) : null,
       };
 
