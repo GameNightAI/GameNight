@@ -11,7 +11,7 @@ export interface Poll {
 export interface PollGame {
   id: string;
   poll_id: string;
-  game_id: number;  // Changed from string to number to match BGG game IDs
+  game_id: string;
   created_at: string;
 }
 

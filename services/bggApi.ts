@@ -33,7 +33,6 @@ export async function fetchGames(username: string): Promise<Game[]> {
     
     const result = parser.parse(xmlText);
     console.log('Parsed result structure:', JSON.stringify(result, null, 2).substring(0, 200) + '...');
-    console.log(result);
     
     // Check if the collection exists and has items
     if (!result.items) {
@@ -68,7 +67,6 @@ export async function fetchGames(username: string): Promise<Game[]> {
 
       // Extract stats from the XML
       const stats = item.stats || {};
-      console.log(item);
       
       const game = {
         id: parseInt(item.objectid),
@@ -76,11 +74,9 @@ export async function fetchGames(username: string): Promise<Game[]> {
         yearPublished: item.yearpublished ? parseInt(item.yearpublished) : null,
         thumbnail: item.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
         image: item.image || 'https://via.placeholder.com/300?text=No+Image',
-        minplayers: parseInt(stats.minplayers),
-        maxplayers: parseInt(stats.maxplayers),
+        minPlayers: parseInt(stats.minplayers || '0'),
+        maxPlayers: parseInt(stats.maxplayers || '0'),
         playingTime: parseInt(stats.playingtime || '0'),
-        minplaytime: parseInt(stats.minplaytime || '0'),
-        maxplaytime: parseInt(stats.maxplaytime || '0'),
         description: '',
       };
       

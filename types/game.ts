@@ -4,10 +4,8 @@ export interface Game {
   yearPublished: number | null;
   thumbnail: string;
   image: string;
-  minplayers: number;
-  maxplayers: number;
+  minPlayers: number;
+  maxPlayers: number;
   playingTime: number;
-  minplaytime: number;
-  maxplaytime: number;
   description: string;
 }

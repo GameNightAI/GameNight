@@ -39,19 +39,9 @@ export default function PollScreen() {
         .from('polls')
         .select('*')
         .eq('id', id)
-        .maybeSingle();
+        .single();
 
-      if (pollError) {
-        if (pollError.code === 'PGRST116') {
-          throw new Error('Poll not found or has been deleted');
-        }
-        throw pollError;
-      }
-
-      if (!pollData) {
-        throw new Error('Poll not found or has been deleted');
-      }
-
+      if (pollError) throw pollError;
       setPoll(pollData);
 
       // Check if current user is the creator
@@ -171,15 +161,19 @@ export default function PollScreen() {
     return <ErrorState message={error} onRetry={loadPoll} />;
   }
 
+  if (!poll) {
+    return <ErrorState message="Poll not found" onRetry={loadPoll} />;
+  }
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{poll?.title}</Text>
-        {poll?.description && (
+        <Text style={styles.title}>{poll.title}</Text>
+        {poll.description && (
           <Text style={styles.description}>{poll.description}</Text>
         )}
         <Text style={styles.subtitle}>
-          {isCreator ? 'View results below' : `Vote for up to ${poll?.max_votes} ${poll?.max_votes === 1 ? 'game' : 'games'}`}
+          {isCreator ? 'View results below' : `Vote for up to ${poll.max_votes} ${poll.max_votes === 1 ? 'game' : 'games'}`}
         </Text>
       </View>
 

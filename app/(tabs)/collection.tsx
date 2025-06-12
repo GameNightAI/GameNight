@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { RefreshCw, X, Search, Plus } from 'lucide-react-native';
+import { RefreshCw, X, Search } from 'lucide-react-native';
 
 import { supabase } from '@/services/supabase';
 import { fetchGames } from '@/services/bggApi';
@@ -13,7 +13,6 @@ import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
 import { FindGameModal } from '@/components/FindGameModal';
-import { AddGameModal } from '@/components/AddGameModal';
 import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
@@ -24,7 +23,6 @@ export default function CollectionScreen() {
   const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [findModalVisible, setFindModalVisible] = useState(false);
-  const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
   const { players, time, unlimited } = useLocalSearchParams<{ 
@@ -46,10 +44,10 @@ export default function CollectionScreen() {
       }
 
       const { data, error } = await supabase
-        .from('collections_games')
+        .from('collections')
         .select('*')
         .eq('user_id', user.id)
-        .order('name', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -59,12 +57,10 @@ export default function CollectionScreen() {
         yearPublished: game.year_published,
         thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
         image: game.thumbnail || 'https://via.placeholder.com/300?text=No+Image',
-        minplayers: game.min_players,
-        maxplayers: game.max_players,
+        minPlayers: game.min_players,
+        maxPlayers: game.max_players,
         playingTime: game.playing_time,
-        minplaytime: game.minplaytime,
-        maxplaytime: game.maxplaytime,
-        description: game.description || '',
+        description: '',
       }));
 
       // Filter games based on player count and play time
@@ -73,7 +69,7 @@ export default function CollectionScreen() {
         
         if (players) {
           const playerCount = parseInt(players);
-          matches = matches && game.minplayers <= playerCount && game.maxplayers >= playerCount;
+          matches = matches && game.minPlayers <= playerCount && game.maxPlayers >= playerCount;
         }
         
         if (time && unlimited !== '1') {
@@ -146,11 +142,9 @@ export default function CollectionScreen() {
           bgg_game_id: game.id,
           name: game.name,
           thumbnail: game.thumbnail,
-          min_players: game.minplayers,
-          max_players: game.maxplayers,
+          min_players: game.minPlayers,
+          max_players: game.maxPlayers,
           playing_time: game.playingTime,
-          minplaytime: game.minplaytime,
-          maxplaytime: game.maxplaytime,
           year_published: game.yearPublished,
         });
       });
@@ -239,12 +233,6 @@ export default function CollectionScreen() {
             <Search size={20} color="#ff9654" />
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.findButton}
-            onPress={() => setAddGameModalVisible(true)}
-          >
-            <Plus size={20} color="#ff9654" />
-          </TouchableOpacity>
-          <TouchableOpacity 
             style={styles.syncButton}
             onPress={() => setSyncModalVisible(true)}
           >
@@ -308,12 +296,6 @@ export default function CollectionScreen() {
         isVisible={findModalVisible}
         onClose={() => setFindModalVisible(false)}
         onSearch={handleFind}
-      />
-
-      <AddGameModal
-        isVisible={addGameModalVisible}
-        onClose={() => setAddGameModalVisible(false)}
-        onGameAdded={loadGames}
       />
     </View>
   );

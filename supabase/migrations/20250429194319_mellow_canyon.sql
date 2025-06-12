@@ -12,10 +12,7 @@
       - `min_players` (integer)
       - `max_players` (integer)
       - `playing_time` (integer)
-      - `minplaytime` (integer)
-      - `maxplaytime` (integer)
       - `year_published` (integer)
-      - `description` (text)
 
   2. Security
     - Enable RLS on `collections` table
@@ -35,10 +32,7 @@ CREATE TABLE collections (
   min_players integer,
   max_players integer,
   playing_time integer,
-  minplaytime integer,
-  maxplaytime integer,
   year_published integer,
-  description text,
   UNIQUE(user_id, bgg_game_id)
 );
 
