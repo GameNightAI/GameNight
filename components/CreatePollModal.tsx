@@ -57,7 +57,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('collections_games')
+        .from('collections')
         .select('*')
         .eq('user_id', user.id);
 
@@ -76,6 +76,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         minAge: game.min_age,
         isCooperative: game.is_cooperative,
         complexity: game.complexity,
+        minPlaytime: game.minplaytime || 0,
+        maxPlaytime: game.maxplaytime || 0,
       }));
 
       setAvailableGames(games);
@@ -905,5 +907,3 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
-
-export { CreatePollModal }
