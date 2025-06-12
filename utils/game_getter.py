@@ -10,6 +10,7 @@ INPUT_PATH = 'boardgames_ranks.csv'
 OUTPUT_PATH = 'output.csv'
 SLEEP_TIME = 10 # seconds to wait after receiving a urllib.request error
 DASH = '–' # NOT the hyphen character on the keyboard
+DESCRIPTION_NCHARS = 100 # number of description characters to store in the output, since we currently have a database size limit
 
 def parse_xml(text):
   root = ET.fromstring(text)
@@ -39,14 +40,16 @@ def parse_xml(text):
       id = item.attrib['id'],
       minplaytime = item.find('minplaytime').attrib['value'],
       maxplaytime = item.find('maxplaytime').attrib['value'],
+      playing_time = item.find('playingtime').attrib['value'],
       min_players = item.find('minplayers').attrib['value'],
       max_players = item.find('maxplayers').attrib['value'],
       best_players = best_players,
       rec_players = rec_players,
       image_url = item.findtext('image', default=''),
       complexity = item.find('statistics').find('ratings').find('averageweight').attrib['value'],
-      description = item.findtext('description', default=''),
+      description = item.findtext('description', default='')[:DESCRIPTION_NCHARS],
       is_cooperative = any(link.attrib['type'] == 'boardgamemechanic' and link.attrib['value'] == 'Cooperative Game' for link in item.findall('link')),
+      is_teambased = any(link.attrib['type'] == 'boardgamemechanic' and link.attrib['value'] == 'Team-Based Game' for link in item.findall('link')),
       min_age = item.find('minage').attrib['value'],
       suggested_playerage = suggested_playerage
     )
