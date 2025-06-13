@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, TextInput } from 'react-native';
-import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3, Clock, ChevronDown, MapPin } from 'lucide-react-native';
+import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3, Clock, ChevronDown, MapPin, Gamepad2, Check } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface CreateDatePollModalProps {
@@ -21,6 +21,8 @@ interface TimeOption {
   label: string;
 }
 
+type GamePollOption = 'no' | 'suggest' | null;
+
 export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   isVisible,
   onClose,
@@ -36,6 +38,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   const [location, setLocation] = useState('');
   const [showStartTimeDropdown, setShowStartTimeDropdown] = useState(false);
   const [showEndTimeDropdown, setShowEndTimeDropdown] = useState(false);
+  const [gamePollOption, setGamePollOption] = useState<GamePollOption>('no');
+  const [allowGuestSuggestions, setAllowGuestSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +92,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     setLocation('');
     setShowStartTimeDropdown(false);
     setShowEndTimeDropdown(false);
+    setGamePollOption('no');
+    setAllowGuestSuggestions(false);
     setError(null);
     setCurrentDate(new Date());
   };
@@ -221,6 +227,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
         startTime: startTime || null,
         endTime: endTime || null,
         location: location.trim() || null,
+        gamePollOption,
+        allowGuestSuggestions: gamePollOption === 'suggest' ? allowGuestSuggestions : false,
       });
 
       // Simulate API call
@@ -275,6 +283,13 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     if (!timeValue) return '';
     const option = timeOptions.find(opt => opt.value === timeValue);
     return option ? option.label : timeValue;
+  };
+
+  const handleGamePollOptionChange = (option: GamePollOption) => {
+    setGamePollOption(option);
+    if (option !== 'suggest') {
+      setAllowGuestSuggestions(false);
+    }
   };
 
   const calendarDates = generateCalendarDates();
@@ -517,6 +532,50 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
             />
           </View>
           <Text style={styles.locationHint}>Help your group know where to meet for game night</Text>
+        </View>
+
+        <View style={styles.gamePollSection}>
+          <Text style={styles.label}>Game Selection</Text>
+          <Text style={styles.sublabel}>Would you also like to create a poll for what game to play?</Text>
+          
+          <View style={styles.radioGroup}>
+            <TouchableOpacity
+              style={styles.radioOption}
+              onPress={() => handleGamePollOptionChange('no')}
+            >
+              <View style={[styles.radioButton, gamePollOption === 'no' && styles.radioButtonSelected]}>
+                {gamePollOption === 'no' && <View style={styles.radioButtonInner} />}
+              </View>
+              <Text style={styles.radioLabel}>No</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.radioOption}
+              onPress={() => handleGamePollOptionChange('suggest')}
+            >
+              <View style={[styles.radioButton, gamePollOption === 'suggest' && styles.radioButtonSelected]}>
+                {gamePollOption === 'suggest' && <View style={styles.radioButtonInner} />}
+              </View>
+              <Text style={styles.radioLabel}>Yes, I'll suggest the games</Text>
+            </TouchableOpacity>
+          </View>
+
+          {gamePollOption === 'suggest' && (
+            <Animated.View 
+              entering={FadeIn.duration(300)}
+              style={styles.checkboxContainer}
+            >
+              <TouchableOpacity
+                style={styles.checkboxOption}
+                onPress={() => setAllowGuestSuggestions(!allowGuestSuggestions)}
+              >
+                <View style={[styles.checkbox, allowGuestSuggestions && styles.checkboxSelected]}>
+                  {allowGuestSuggestions && <Check size={16} color="#ffffff" />}
+                </View>
+                <Text style={styles.checkboxLabel}>Let guests suggest games</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
         </View>
 
         <View style={styles.inputSection}>
@@ -890,6 +949,71 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 12,
     color: '#8d8d8d',
+  },
+  gamePollSection: {
+    marginBottom: 24,
+  },
+  radioGroup: {
+    gap: 16,
+  },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#e1e5ea',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: '#ff9654',
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ff9654',
+  },
+  radioLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+    flex: 1,
+  },
+  checkboxContainer: {
+    marginTop: 16,
+    paddingLeft: 32,
+  },
+  checkboxOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#e1e5ea',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#ff9654',
+    borderColor: '#ff9654',
+  },
+  checkboxLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+    flex: 1,
   },
   inputSection: {
     marginBottom: 20,
