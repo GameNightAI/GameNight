@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, TextInput } from 'react-native';
-import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3, Clock, ChevronDown } from 'lucide-react-native';
+import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3, Clock, ChevronDown, MapPin } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface CreateDatePollModalProps {
@@ -33,6 +33,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   const [description, setDescription] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [location, setLocation] = useState('');
   const [showStartTimeDropdown, setShowStartTimeDropdown] = useState(false);
   const [showEndTimeDropdown, setShowEndTimeDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -84,6 +85,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     setDescription('');
     setStartTime('');
     setEndTime('');
+    setLocation('');
     setShowStartTimeDropdown(false);
     setShowEndTimeDropdown(false);
     setError(null);
@@ -218,6 +220,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
         selectedDates,
         startTime: startTime || null,
         endTime: endTime || null,
+        location: location.trim() || null,
       });
 
       // Simulate API call
@@ -498,6 +501,22 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
           </View>
           
           <Text style={styles.timeHint}>Choose from available time slots in 15-minute increments</Text>
+        </View>
+
+        <View style={styles.locationSection}>
+          <Text style={styles.label}>Location (Optional)</Text>
+          <Text style={styles.sublabel}>Where will you be playing?</Text>
+          <View style={styles.locationInputContainer}>
+            <MapPin size={16} color="#666666" style={styles.locationIcon} />
+            <TextInput
+              style={styles.locationInput}
+              value={location}
+              onChangeText={setLocation}
+              placeholder="Enter location (e.g., John's house, Local game store)"
+              editable={!loading}
+            />
+          </View>
+          <Text style={styles.locationHint}>Help your group know where to meet for game night</Text>
         </View>
 
         <View style={styles.inputSection}>
@@ -843,6 +862,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8d8d8d',
     marginTop: 4,
+  },
+  locationSection: {
+    marginBottom: 24,
+  },
+  locationInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  locationIcon: {
+    marginRight: 12,
+  },
+  locationInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333333',
+  },
+  locationHint: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#8d8d8d',
   },
   inputSection: {
     marginBottom: 20,
