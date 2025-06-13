@@ -62,8 +62,8 @@ export default function CollectionScreen() {
         min_players: game.min_players,
         max_players: game.max_players,
         playing_time: game.playing_time,
-        minPlaytime: game.minPlaytime,
-        maxPlaytime: game.maxPlaytime,
+        minPlaytime: game.minplaytime,
+        maxPlaytime: game.maxplaytime,
         description: game.description || '',
       }));
 
@@ -149,8 +149,8 @@ export default function CollectionScreen() {
           min_players: game.min_players,
           max_players: game.max_players,
           playing_time: game.playing_time,
-          minPlaytime: game.minPlaytime,
-          maxPlaytime: game.maxPlaytime,
+          minplaytime: game.minPlaytime,
+          maxplaytime: game.maxPlaytime,
           year_published: game.yearPublished,
         });
       });
