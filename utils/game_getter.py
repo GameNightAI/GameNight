@@ -32,9 +32,9 @@ def parse_xml(text):
       if summary.attrib['name'] == 'suggested_numplayers':
         for result in summary.findall('result'):
           if result.attrib['name'] == 'bestwith':
-            best_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+'))
+            best_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+')).replace(DASH, '-')
           elif result.attrib['name'] == 'recommmendedwith':
-            rec_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+'))
+            rec_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+')).replace(DASH, '-')
             
     yield dict(
       id = item.attrib['id'],
@@ -45,13 +45,19 @@ def parse_xml(text):
       best_players = best_players,
       rec_players = rec_players,
       image_url = item.findtext('image', default=''),
-      complexity = item.find('statistics').find('ratings').find('averageweight').attrib['value'],
+      # NULL out complexity=0 for filtering purposes, and in case we ever decide to do some math (0 means no votes)
+      complexity = float(item.find('statistics').find('ratings').find('averageweight').attrib['value']) or '',
       description = item.findtext('description', default='')[:DESCRIPTION_NCHARS],
       is_cooperative = any(link.attrib['type'] == 'boardgamemechanic' and link.attrib['value'] == 'Cooperative Game' for link in item.findall('link')),
       is_teambased = any(link.attrib['type'] == 'boardgamemechanic' and link.attrib['value'] == 'Team-Based Game' for link in item.findall('link')),
       min_age = item.find('minage').attrib['value'],
       suggested_playerage = suggested_playerage
     )
+
+def urllib_error_handler(err):
+  print(err)
+  print(f'Waiting {SLEEP_TIME} seconds before resubmitting request...')
+  time.sleep(SLEEP_TIME)
 
 def main():
   reader = csv.DictReader(open(INPUT_PATH, 'r', encoding='utf-8'))
@@ -75,15 +81,11 @@ def main():
         response = urllib.request.urlopen(url)
       except urllib.error.HTTPError as err:
         if err.code == 429: # Too many requests
-          print(err)
-          print(f'Waiting {SLEEP_TIME} seconds before resubmitting request...')
-          time.sleep(SLEEP_TIME)
+          urllib_error_handler(err)
         else:
           raise
       except urllib.error.URLError as err:
-        print(err)
-        print(f'Waiting {SLEEP_TIME} seconds before resubmitting request...')
-        time.sleep(SLEEP_TIME)
+        urllib_error_handler(err)
       else:
         break
     
@@ -91,6 +93,5 @@ def main():
       items[item['id']].update(item)
       print(items[item['id']])
       writer.writerow(items[item['id']])
-
 if __name__ == '__main__':
   main()
