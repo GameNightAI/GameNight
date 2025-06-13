@@ -46,7 +46,7 @@ export default function CollectionScreen() {
       }
 
       const { data, error } = await supabase
-        .from('collections_games')
+        .from('collections')
         .select('*')
         .eq('user_id', user.id)
         .order('name', { ascending: true });
@@ -62,9 +62,12 @@ export default function CollectionScreen() {
         min_players: game.min_players,
         max_players: game.max_players,
         playing_time: game.playing_time,
-        minPlaytime: game.minPlaytime,
-        maxPlaytime: game.maxPlaytime,
+        minPlaytime: game.minplaytime || 0,
+        maxPlaytime: game.maxplaytime || 0,
         description: game.description || '',
+        minAge: game.min_age || 0,
+        is_cooperative: game.is_cooperative || false,
+        complexity: game.complexity || 1,
       }));
 
       // Filter games based on player count and play time
@@ -149,9 +152,13 @@ export default function CollectionScreen() {
           min_players: game.min_players,
           max_players: game.max_players,
           playing_time: game.playing_time,
-          minPlaytime: game.minPlaytime,
-          maxPlaytime: game.maxPlaytime,
+          minplaytime: game.minPlaytime,
+          maxplaytime: game.maxPlaytime,
           year_published: game.yearPublished,
+          description: game.description,
+          min_age: game.minAge,
+          is_cooperative: game.is_cooperative,
+          complexity: game.complexity,
         });
       });
 
