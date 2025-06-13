@@ -614,7 +614,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
               <View style={[styles.radioButton, gamePollOption === 'suggest' && styles.radioButtonSelected]}>
                 {gamePollOption === 'suggest' && <View style={styles.radioButtonInner} />}
               </View>
-              <Text style={styles.radioLabel}>Yes, I'll suggest the games</Text>
+              <Text style={styles.radioLabel}>Yes</Text>
             </TouchableOpacity>
           </View>
 
