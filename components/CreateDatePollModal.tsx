@@ -1,0 +1,534 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, TextInput } from 'react-native';
+import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus } from 'lucide-react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+
+interface CreateDatePollModalProps {
+  isVisible: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+interface CalendarDate {
+  date: Date;
+  isSelected: boolean;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+}
+
+export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
+  isVisible,
+  onClose,
+  onSuccess,
+}) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const resetForm = () => {
+    setSelectedDates([]);
+    setTitle('');
+    setDescription('');
+    setError(null);
+    setCurrentDate(new Date());
+  };
+
+  const generateCalendarDates = (): CalendarDate[] => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // Start from the first Sunday of the week containing the first day
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+    
+    // End at the last Saturday of the week containing the last day
+    const endDate = new Date(lastDay);
+    endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+    
+    const dates: CalendarDate[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+      const currentDateCopy = new Date(date);
+      currentDateCopy.setHours(0, 0, 0, 0);
+      
+      dates.push({
+        date: new Date(currentDateCopy),
+        isSelected: selectedDates.some(selectedDate => 
+          selectedDate.getTime() === currentDateCopy.getTime()
+        ),
+        isCurrentMonth: currentDateCopy.getMonth() === month,
+        isToday: currentDateCopy.getTime() === today.getTime(),
+      });
+    }
+    
+    return dates;
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const toggleDateSelection = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Don't allow selecting past dates
+    if (date < today) return;
+    
+    const dateTime = date.getTime();
+    const isSelected = selectedDates.some(selectedDate => 
+      selectedDate.getTime() === dateTime
+    );
+    
+    if (isSelected) {
+      setSelectedDates(selectedDates.filter(selectedDate => 
+        selectedDate.getTime() !== dateTime
+      ));
+    } else {
+      setSelectedDates([...selectedDates, new Date(date)]);
+    }
+  };
+
+  const handleCreatePoll = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (selectedDates.length === 0) {
+        setError('Please select at least one date');
+        return;
+      }
+
+      if (!title.trim()) {
+        setError('Please enter a title for your poll');
+        return;
+      }
+
+      // TODO: Implement actual poll creation with Supabase
+      // This is a placeholder for the actual implementation
+      console.log('Creating date poll:', {
+        title: title.trim(),
+        description: description.trim(),
+        selectedDates,
+      });
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      onSuccess();
+      resetForm();
+    } catch (err) {
+      console.error('Error creating date poll:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create poll');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatSelectedDates = () => {
+    if (selectedDates.length === 0) return 'No dates selected';
+    
+    const sortedDates = [...selectedDates].sort((a, b) => a.getTime() - b.getTime());
+    
+    if (sortedDates.length <= 3) {
+      return sortedDates.map(date => 
+        date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      ).join(', ');
+    }
+    
+    return `${sortedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} and ${sortedDates.length - 1} more`;
+  };
+
+  const calendarDates = generateCalendarDates();
+
+  const content = (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Schedule Game Night</Text>
+        <TouchableOpacity 
+          style={styles.closeButton} 
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.inputSection}>
+          <Text style={styles.label}>Poll Title</Text>
+          <TextInput
+            style={styles.input}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g., Weekly Game Night"
+            editable={!loading}
+          />
+        </View>
+
+        <View style={styles.inputSection}>
+          <Text style={styles.label}>Description (Optional)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Add any additional details..."
+            multiline
+            numberOfLines={3}
+            editable={!loading}
+          />
+        </View>
+
+        <View style={styles.calendarSection}>
+          <Text style={styles.label}>Select Available Dates</Text>
+          <Text style={styles.sublabel}>Tap dates when you're available to play</Text>
+          
+          <View style={styles.calendarContainer}>
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity 
+                style={styles.navButton}
+                onPress={() => navigateMonth('prev')}
+              >
+                <ChevronLeft size={20} color="#1a2b5f" />
+              </TouchableOpacity>
+              
+              <Text style={styles.monthYear}>
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </Text>
+              
+              <TouchableOpacity 
+                style={styles.navButton}
+                onPress={() => navigateMonth('next')}
+              >
+                <ChevronRight size={20} color="#1a2b5f" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dayNamesRow}>
+              {dayNames.map(day => (
+                <Text key={day} style={styles.dayName}>{day}</Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {calendarDates.map((calendarDate, index) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isPast = calendarDate.date < today;
+                
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.dateCell,
+                      !calendarDate.isCurrentMonth && styles.dateCellInactive,
+                      calendarDate.isSelected && styles.dateCellSelected,
+                      calendarDate.isToday && styles.dateCellToday,
+                      isPast && styles.dateCellPast,
+                    ]}
+                    onPress={() => toggleDateSelection(calendarDate.date)}
+                    disabled={isPast || !calendarDate.isCurrentMonth}
+                  >
+                    <Text style={[
+                      styles.dateText,
+                      !calendarDate.isCurrentMonth && styles.dateTextInactive,
+                      calendarDate.isSelected && styles.dateTextSelected,
+                      calendarDate.isToday && styles.dateTextToday,
+                      isPast && styles.dateTextPast,
+                    ]}>
+                      {calendarDate.date.getDate()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {selectedDates.length > 0 && (
+          <Animated.View 
+            entering={FadeIn.duration(300)}
+            style={styles.selectedDatesContainer}
+          >
+            <Text style={styles.selectedDatesLabel}>Selected Dates:</Text>
+            <Text style={styles.selectedDatesText}>{formatSelectedDates()}</Text>
+          </Animated.View>
+        )}
+
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.createButton, loading && styles.createButtonDisabled]}
+        onPress={handleCreatePoll}
+        disabled={loading}
+      >
+        <Plus color="#fff" size={20} />
+        <Text style={styles.createButtonText}>
+          {loading ? 'Creating Poll...' : 'Create Date Poll'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    if (!isVisible) return null;
+    return (
+      <View style={styles.webOverlay}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <Modal
+      visible={isVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        {content}
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  webOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    padding: 20,
+  },
+  dialog: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90vh',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e5ea',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  title: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
+    color: '#1a2b5f',
+  },
+  content: {
+    padding: 24,
+    maxHeight: 500,
+  },
+  inputSection: {
+    marginBottom: 20,
+  },
+  label: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 8,
+  },
+  sublabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 16,
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333333',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  calendarSection: {
+    marginBottom: 20,
+  },
+  calendarContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  navButton: {
+    padding: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  monthYear: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#1a2b5f',
+  },
+  dayNamesRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  dayName: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    color: '#666666',
+    paddingVertical: 8,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dateCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  dateCellInactive: {
+    opacity: 0.3,
+  },
+  dateCellSelected: {
+    backgroundColor: '#ff9654',
+  },
+  dateCellToday: {
+    backgroundColor: '#e3f2fd',
+    borderWidth: 2,
+    borderColor: '#2196f3',
+  },
+  dateCellPast: {
+    opacity: 0.3,
+  },
+  dateText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#333333',
+  },
+  dateTextInactive: {
+    color: '#999999',
+  },
+  dateTextSelected: {
+    color: '#ffffff',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  dateTextToday: {
+    color: '#2196f3',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  dateTextPast: {
+    color: '#cccccc',
+  },
+  selectedDatesContainer: {
+    backgroundColor: '#fff5ef',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  selectedDatesLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  selectedDatesText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#ff9654',
+  },
+  errorText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff9654',
+    padding: 16,
+    margin: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  createButtonDisabled: {
+    opacity: 0.7,
+  },
+  createButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
+  },
+});

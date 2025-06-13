@@ -10,6 +10,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { CreatePollModal } from '@/components/CreatePollModal';
 import { PollTypeModal } from '@/components/PollTypeModal';
+import { CreateDatePollModal } from '@/components/CreateDatePollModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
 export default function PollsScreen() {
@@ -18,6 +19,7 @@ export default function PollsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pollTypeModalVisible, setPollTypeModalVisible] = useState(false);
   const [createGamePollModalVisible, setCreateGamePollModalVisible] = useState(false);
+  const [createDatePollModalVisible, setCreateDatePollModalVisible] = useState(false);
   const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
   const router = useRouter();
 
@@ -101,13 +103,16 @@ export default function PollsScreen() {
 
   const handleSelectDatePoll = () => {
     setPollTypeModalVisible(false);
-    // TODO: Implement date poll creation
-    // For now, this is a placeholder that does nothing
-    console.log('Date poll creation coming soon!');
+    setCreateDatePollModalVisible(true);
   };
 
   const handleGamePollSuccess = () => {
     setCreateGamePollModalVisible(false);
+    loadPolls();
+  };
+
+  const handleDatePollSuccess = () => {
+    setCreateDatePollModalVisible(false);
     loadPolls();
   };
 
@@ -184,6 +189,12 @@ export default function PollsScreen() {
         isVisible={createGamePollModalVisible}
         onClose={() => setCreateGamePollModalVisible(false)}
         onSuccess={handleGamePollSuccess}
+      />
+
+      <CreateDatePollModal
+        isVisible={createDatePollModalVisible}
+        onClose={() => setCreateDatePollModalVisible(false)}
+        onSuccess={handleDatePollSuccess}
       />
 
       <ConfirmationDialog

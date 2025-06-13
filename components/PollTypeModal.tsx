@@ -49,7 +49,7 @@ export const PollTypeModal: React.FC<PollTypeModalProps> = ({
 
         <Animated.View entering={FadeIn.delay(200).duration(400)}>
           <TouchableOpacity
-            style={[styles.optionCard, styles.disabledCard]}
+            style={styles.optionCard}
             onPress={onSelectDatePoll}
           >
             <View style={[styles.iconContainer, styles.dateIconContainer]}>
@@ -60,7 +60,6 @@ export const PollTypeModal: React.FC<PollTypeModalProps> = ({
               <Text style={styles.optionDescription}>
                 Schedule when to meet for your game night
               </Text>
-              <Text style={styles.comingSoonText}>Coming Soon</Text>
             </View>
           </TouchableOpacity>
         </Animated.View>
@@ -161,9 +160,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  disabledCard: {
-    opacity: 0.7,
-  },
   iconContainer: {
     width: 60,
     height: 60,
@@ -192,13 +188,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     lineHeight: 20,
-  },
-  comingSoonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 12,
-    color: '#4CAF50',
-    marginTop: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });
