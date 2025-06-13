@@ -9,13 +9,15 @@ import { Poll } from '@/types/poll';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { CreatePollModal } from '@/components/CreatePollModal';
+import { PollTypeModal } from '@/components/PollTypeModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
 export default function PollsScreen() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [pollTypeModalVisible, setPollTypeModalVisible] = useState(false);
+  const [createGamePollModalVisible, setCreateGamePollModalVisible] = useState(false);
   const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
   const router = useRouter();
 
@@ -88,6 +90,27 @@ export default function PollsScreen() {
     }
   };
 
+  const handleCreatePoll = () => {
+    setPollTypeModalVisible(true);
+  };
+
+  const handleSelectGamePoll = () => {
+    setPollTypeModalVisible(false);
+    setCreateGamePollModalVisible(true);
+  };
+
+  const handleSelectDatePoll = () => {
+    setPollTypeModalVisible(false);
+    // TODO: Implement date poll creation
+    // For now, this is a placeholder that does nothing
+    console.log('Date poll creation coming soon!');
+  };
+
+  const handleGamePollSuccess = () => {
+    setCreateGamePollModalVisible(false);
+    loadPolls();
+  };
+
   if (loading) {
     return <LoadingState />;
   }
@@ -102,7 +125,7 @@ export default function PollsScreen() {
         <Text style={styles.title}>Game Polls</Text>
         <TouchableOpacity 
           style={styles.createButton}
-          onPress={() => setCreateModalVisible(true)}
+          onPress={handleCreatePoll}
         >
           <Plus size={20} color="#ffffff" />
           <Text style={styles.createButtonText}>Create Poll</Text>
@@ -150,13 +173,17 @@ export default function PollsScreen() {
         }
       />
 
+      <PollTypeModal
+        isVisible={pollTypeModalVisible}
+        onClose={() => setPollTypeModalVisible(false)}
+        onSelectGamePoll={handleSelectGamePoll}
+        onSelectDatePoll={handleSelectDatePoll}
+      />
+
       <CreatePollModal
-        isVisible={createModalVisible}
-        onClose={() => setCreateModalVisible(false)}
-        onSuccess={() => {
-          setCreateModalVisible(false);
-          loadPolls();
-        }}
+        isVisible={createGamePollModalVisible}
+        onClose={() => setCreateGamePollModalVisible(false)}
+        onSuccess={handleGamePollSuccess}
       />
 
       <ConfirmationDialog
