@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, TextInput } from 'react-native';
-import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, Edit3 } from 'lucide-react-native';
+import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3 } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface CreateDatePollModalProps {
