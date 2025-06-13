@@ -395,105 +395,109 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
           )}
         </View>
 
-        <View style={[styles.timeSection, { position: 'relative', zIndex: 10 }]}>
+        <View style={styles.timeSection}>
           <Text style={styles.label}>Event Time (Optional)</Text>
           <Text style={styles.sublabel}>Set a specific time for your game night</Text>
           
           <View style={styles.timeInputsContainer}>
-            <View style={[styles.timeInputGroup, { position: 'relative', zIndex: 20 }]}>
+            <View style={styles.timeInputGroup}>
               <Text style={styles.timeLabel}>Start Time</Text>
-              <TouchableOpacity
-                style={styles.timeDropdownButton}
-                onPress={() => {
-                  setShowStartTimeDropdown(!showStartTimeDropdown);
-                  setShowEndTimeDropdown(false);
-                }}
-              >
-                <Clock size={16} color="#666666" />
-                <Text style={[
-                  styles.timeDropdownText,
-                  !startTime && styles.timeDropdownPlaceholder
-                ]}>
-                  {startTime ? getTimeLabel(startTime) : 'Select time'}
-                </Text>
-                <ChevronDown size={16} color="#666666" />
-              </TouchableOpacity>
+              <View style={styles.timeDropdownContainer}>
+                <TouchableOpacity
+                  style={styles.timeDropdownButton}
+                  onPress={() => {
+                    setShowStartTimeDropdown(!showStartTimeDropdown);
+                    setShowEndTimeDropdown(false);
+                  }}
+                >
+                  <Clock size={16} color="#666666" />
+                  <Text style={[
+                    styles.timeDropdownText,
+                    !startTime && styles.timeDropdownPlaceholder
+                  ]}>
+                    {startTime ? getTimeLabel(startTime) : 'Select time'}
+                  </Text>
+                  <ChevronDown size={16} color="#666666" />
+                </TouchableOpacity>
 
-              {showStartTimeDropdown && (
-                <View style={[styles.timeDropdown, styles.timeDropdownAbsolute]}>
-                  <ScrollView 
-                    style={styles.timeDropdownScroll}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                  >
-                    {timeOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        style={[
-                          styles.timeDropdownItem,
-                          startTime === option.value && styles.timeDropdownItemSelected
-                        ]}
-                        onPress={() => handleStartTimeSelect(option.value)}
-                      >
-                        <Text style={[
-                          styles.timeDropdownItemText,
-                          startTime === option.value && styles.timeDropdownItemTextSelected
-                        ]}>
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+                {showStartTimeDropdown && (
+                  <View style={styles.timeDropdown}>
+                    <ScrollView 
+                      style={styles.timeDropdownScroll}
+                      showsVerticalScrollIndicator={true}
+                      nestedScrollEnabled={true}
+                    >
+                      {timeOptions.map((option) => (
+                        <TouchableOpacity
+                          key={option.value}
+                          style={[
+                            styles.timeDropdownItem,
+                            startTime === option.value && styles.timeDropdownItemSelected
+                          ]}
+                          onPress={() => handleStartTimeSelect(option.value)}
+                        >
+                          <Text style={[
+                            styles.timeDropdownItemText,
+                            startTime === option.value && styles.timeDropdownItemTextSelected
+                          ]}>
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
             </View>
 
-            <View style={[styles.timeInputGroup, { position: 'relative', zIndex: 10 }]}>
+            <View style={styles.timeInputGroup}>
               <Text style={styles.timeLabel}>End Time</Text>
-              <TouchableOpacity
-                style={styles.timeDropdownButton}
-                onPress={() => {
-                  setShowEndTimeDropdown(!showEndTimeDropdown);
-                  setShowStartTimeDropdown(false);
-                }}
-              >
-                <Clock size={16} color="#666666" />
-                <Text style={[
-                  styles.timeDropdownText,
-                  !endTime && styles.timeDropdownPlaceholder
-                ]}>
-                  {endTime ? getTimeLabel(endTime) : 'Select time'}
-                </Text>
-                <ChevronDown size={16} color="#666666" />
-              </TouchableOpacity>
+              <View style={styles.timeDropdownContainer}>
+                <TouchableOpacity
+                  style={styles.timeDropdownButton}
+                  onPress={() => {
+                    setShowEndTimeDropdown(!showEndTimeDropdown);
+                    setShowStartTimeDropdown(false);
+                  }}
+                >
+                  <Clock size={16} color="#666666" />
+                  <Text style={[
+                    styles.timeDropdownText,
+                    !endTime && styles.timeDropdownPlaceholder
+                  ]}>
+                    {endTime ? getTimeLabel(endTime) : 'Select time'}
+                  </Text>
+                  <ChevronDown size={16} color="#666666" />
+                </TouchableOpacity>
 
-              {showEndTimeDropdown && (
-                <View style={[styles.timeDropdown, styles.timeDropdownAbsolute]}>
-                  <ScrollView 
-                    style={styles.timeDropdownScroll}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                  >
-                    {timeOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        style={[
-                          styles.timeDropdownItem,
-                          endTime === option.value && styles.timeDropdownItemSelected
-                        ]}
-                        onPress={() => handleEndTimeSelect(option.value)}
-                      >
-                        <Text style={[
-                          styles.timeDropdownItemText,
-                          endTime === option.value && styles.timeDropdownItemTextSelected
-                        ]}>
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+                {showEndTimeDropdown && (
+                  <View style={styles.timeDropdown}>
+                    <ScrollView 
+                      style={styles.timeDropdownScroll}
+                      showsVerticalScrollIndicator={true}
+                      nestedScrollEnabled={true}
+                    >
+                      {timeOptions.map((option) => (
+                        <TouchableOpacity
+                          key={option.value}
+                          style={[
+                            styles.timeDropdownItem,
+                            endTime === option.value && styles.timeDropdownItemSelected
+                          ]}
+                          onPress={() => handleEndTimeSelect(option.value)}
+                        >
+                          <Text style={[
+                            styles.timeDropdownItemText,
+                            endTime === option.value && styles.timeDropdownItemTextSelected
+                          ]}>
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
           
@@ -778,6 +782,10 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginBottom: 8,
   },
+  timeDropdownContainer: {
+    position: 'relative',
+    zIndex: 1000,
+  },
   timeDropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -800,23 +808,25 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   timeDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     marginTop: 4,
     borderWidth: 1,
     borderColor: '#e1e5ea',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  timeDropdownAbsolute: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    ...(Platform.OS === 'web' ? { zIndex: 999 } : {}),
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+    zIndex: 10000,
+    ...(Platform.OS === 'web' ? {
+      position: 'fixed' as any,
+      zIndex: 99999,
+    } : {}),
   },
   timeDropdownScroll: {
     maxHeight: 200,
