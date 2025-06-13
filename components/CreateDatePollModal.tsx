@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, TextInput } from 'react-native';
 import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3, Clock, ChevronDown, MapPin, Gamepad2, Check } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { supabase } from '@/services/supabase';
+import { Game } from '@/types/game';
 
 interface CreateDatePollModalProps {
   isVisible: boolean;
@@ -40,6 +42,9 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   const [showEndTimeDropdown, setShowEndTimeDropdown] = useState(false);
   const [gamePollOption, setGamePollOption] = useState<GamePollOption>('no');
   const [allowGuestSuggestions, setAllowGuestSuggestions] = useState(false);
+  const [selectedGames, setSelectedGames] = useState<Game[]>([]);
+  const [availableGames, setAvailableGames] = useState<Game[]>([]);
+  const [loadingGames, setLoadingGames] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +84,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   useEffect(() => {
     if (isVisible) {
       resetForm();
+      loadGames();
     }
   }, [isVisible]);
 
@@ -94,8 +100,44 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     setShowEndTimeDropdown(false);
     setGamePollOption('no');
     setAllowGuestSuggestions(false);
+    setSelectedGames([]);
+    setAvailableGames([]);
     setError(null);
     setCurrentDate(new Date());
+  };
+
+  const loadGames = async () => {
+    try {
+      setLoadingGames(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('collections')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      const games = data.map(game => ({
+        id: game.bgg_game_id,
+        name: game.name,
+        thumbnail: game.thumbnail,
+        minPlayers: game.min_players,
+        maxPlayers: game.max_players,
+        playingTime: game.playing_time,
+        yearPublished: game.year_published,
+        description: '',
+        image: game.thumbnail,
+      }));
+
+      setAvailableGames(games);
+    } catch (err) {
+      console.error('Error loading games:', err);
+    } finally {
+      setLoadingGames(false);
+    }
   };
 
   const generateCalendarDates = (): CalendarDate[] => {
@@ -167,6 +209,15 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     }
   };
 
+  const toggleGameSelection = (game: Game) => {
+    const isSelected = selectedGames.some(g => g.id === game.id);
+    if (isSelected) {
+      setSelectedGames(selectedGames.filter(g => g.id !== game.id));
+    } else {
+      setSelectedGames([...selectedGames, game]);
+    }
+  };
+
   const convertTo24Hour = (time12h: string): string => {
     if (!time12h) return '';
     
@@ -218,6 +269,11 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
         return;
       }
 
+      if (gamePollOption === 'suggest' && selectedGames.length === 0) {
+        setError('Please select at least one game for the poll');
+        return;
+      }
+
       // TODO: Implement actual poll creation with Supabase
       // This is a placeholder for the actual implementation
       console.log('Creating date poll:', {
@@ -229,6 +285,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
         location: location.trim() || null,
         gamePollOption,
         allowGuestSuggestions: gamePollOption === 'suggest' ? allowGuestSuggestions : false,
+        selectedGames: gamePollOption === 'suggest' ? selectedGames : [],
       });
 
       // Simulate API call
@@ -289,6 +346,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     setGamePollOption(option);
     if (option !== 'suggest') {
       setAllowGuestSuggestions(false);
+      setSelectedGames([]);
     }
   };
 
@@ -563,17 +621,74 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
           {gamePollOption === 'suggest' && (
             <Animated.View 
               entering={FadeIn.duration(300)}
-              style={styles.checkboxContainer}
+              style={styles.gameSelectionContainer}
             >
-              <TouchableOpacity
-                style={styles.checkboxOption}
-                onPress={() => setAllowGuestSuggestions(!allowGuestSuggestions)}
-              >
-                <View style={[styles.checkbox, allowGuestSuggestions && styles.checkboxSelected]}>
-                  {allowGuestSuggestions && <Check size={16} color="#ffffff" />}
-                </View>
-                <Text style={styles.checkboxLabel}>Let guests suggest games</Text>
-              </TouchableOpacity>
+              <View style={styles.checkboxContainer}>
+                <TouchableOpacity
+                  style={styles.checkboxOption}
+                  onPress={() => setAllowGuestSuggestions(!allowGuestSuggestions)}
+                >
+                  <View style={[styles.checkbox, allowGuestSuggestions && styles.checkboxSelected]}>
+                    {allowGuestSuggestions && <Check size={16} color="#ffffff" />}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Let guests suggest games</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.gameListSection}>
+                <Text style={styles.gameListLabel}>Select Games for the Poll</Text>
+                <Text style={styles.gameListSublabel}>
+                  Choose games from your collection to include in the voting
+                </Text>
+
+                {loadingGames ? (
+                  <Text style={styles.loadingText}>Loading your games...</Text>
+                ) : availableGames.length === 0 ? (
+                  <Text style={styles.noGamesText}>
+                    No games found in your collection. Sync your BoardGameGeek collection first.
+                  </Text>
+                ) : (
+                  <View style={styles.gamesList}>
+                    {availableGames.slice(0, 10).map(game => (
+                      <TouchableOpacity
+                        key={game.id}
+                        style={[
+                          styles.gameItem,
+                          selectedGames.some(g => g.id === game.id) && styles.gameItemSelected
+                        ]}
+                        onPress={() => toggleGameSelection(game)}
+                      >
+                        <View style={styles.gameInfo}>
+                          <Text style={styles.gameName}>{game.name}</Text>
+                          <Text style={styles.gameDetails}>
+                            {game.minPlayers}-{game.maxPlayers} players • {game.playingTime} min
+                          </Text>
+                        </View>
+                        {selectedGames.some(g => g.id === game.id) && (
+                          <Check size={20} color="#ff9654" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                    
+                    {availableGames.length > 10 && (
+                      <Text style={styles.moreGamesText}>
+                        Showing first 10 games. {availableGames.length - 10} more available.
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+                {selectedGames.length > 0 && (
+                  <View style={styles.selectedGamesContainer}>
+                    <Text style={styles.selectedGamesLabel}>
+                      Selected Games ({selectedGames.length}):
+                    </Text>
+                    <Text style={styles.selectedGamesText}>
+                      {selectedGames.map(g => g.name).join(', ')}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </Animated.View>
           )}
         </View>
@@ -955,6 +1070,7 @@ const styles = StyleSheet.create({
   },
   radioGroup: {
     gap: 16,
+    marginBottom: 16,
   },
   radioOption: {
     flexDirection: 'row',
@@ -986,9 +1102,12 @@ const styles = StyleSheet.create({
     color: '#333333',
     flex: 1,
   },
-  checkboxContainer: {
+  gameSelectionContainer: {
     marginTop: 16,
+  },
+  checkboxContainer: {
     paddingLeft: 32,
+    marginBottom: 20,
   },
   checkboxOption: {
     flexDirection: 'row',
@@ -1014,6 +1133,95 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
     flex: 1,
+  },
+  gameListSection: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+  },
+  gameListLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  gameListSublabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingVertical: 20,
+  },
+  noGamesText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingVertical: 20,
+  },
+  gamesList: {
+    gap: 8,
+  },
+  gameItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+  },
+  gameItemSelected: {
+    backgroundColor: '#fff5ef',
+    borderColor: '#ff9654',
+  },
+  gameInfo: {
+    flex: 1,
+  },
+  gameName: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  gameDetails: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+  },
+  moreGamesText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#8d8d8d',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  selectedGamesContainer: {
+    backgroundColor: '#fff5ef',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+  },
+  selectedGamesLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  selectedGamesText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#ff9654',
   },
   inputSection: {
     marginBottom: 20,
