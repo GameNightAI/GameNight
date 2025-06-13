@@ -67,10 +67,10 @@ export default function PollScreen() {
 
       if (gamesError) throw gamesError;
 
-      // Get the actual game details from collections table
+      // Get the actual game details from collections_games view
       const gameIds = pollGames.map(pg => pg.game_id);
       const { data: games, error: gameDetailsError } = await supabase
-        .from('collections')
+        .from('collections_games')
         .select('*')
         .eq('user_id', pollData.user_id)
         .in('bgg_game_id', gameIds);
