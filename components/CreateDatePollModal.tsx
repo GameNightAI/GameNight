@@ -23,7 +23,7 @@ interface TimeOption {
   label: string;
 }
 
-type GamePollOption = 'no' | 'suggest' | null;
+type GamePollOption = 'no' | 'suggest' | 'both' | null;
 
 export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   isVisible,
@@ -269,7 +269,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
         return;
       }
 
-      if (gamePollOption === 'suggest' && selectedGames.length === 0) {
+      if ((gamePollOption === 'suggest' || gamePollOption === 'both') && selectedGames.length === 0) {
         setError('Please select at least one game for the poll');
         return;
       }
@@ -284,8 +284,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
         endTime: endTime || null,
         location: location.trim() || null,
         gamePollOption,
-        allowGuestSuggestions: gamePollOption === 'suggest' ? allowGuestSuggestions : false,
-        selectedGames: gamePollOption === 'suggest' ? selectedGames : [],
+        allowGuestSuggestions: gamePollOption !== 'no' ? allowGuestSuggestions : false,
+        selectedGames: (gamePollOption === 'suggest' || gamePollOption === 'both') ? selectedGames : [],
       });
 
       // Simulate API call
@@ -344,9 +344,11 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
 
   const handleGamePollOptionChange = (option: GamePollOption) => {
     setGamePollOption(option);
-    if (option !== 'suggest') {
+    if (option === 'no') {
       setAllowGuestSuggestions(false);
       setSelectedGames([]);
+    } else if (option === 'both') {
+      setAllowGuestSuggestions(true); // Automatically enable guest suggestions for "both" option
     }
   };
 
@@ -616,24 +618,44 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
               </View>
               <Text style={styles.radioLabel}>Yes, I'll suggest the games</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.radioOption}
+              onPress={() => handleGamePollOptionChange('both')}
+            >
+              <View style={[styles.radioButton, gamePollOption === 'both' && styles.radioButtonSelected]}>
+                {gamePollOption === 'both' && <View style={styles.radioButtonInner} />}
+              </View>
+              <Text style={styles.radioLabel}>Yes, guests and I can both suggest games</Text>
+            </TouchableOpacity>
           </View>
 
-          {gamePollOption === 'suggest' && (
+          {(gamePollOption === 'suggest' || gamePollOption === 'both') && (
             <Animated.View 
               entering={FadeIn.duration(300)}
               style={styles.gameSelectionContainer}
             >
-              <View style={styles.checkboxContainer}>
-                <TouchableOpacity
-                  style={styles.checkboxOption}
-                  onPress={() => setAllowGuestSuggestions(!allowGuestSuggestions)}
-                >
-                  <View style={[styles.checkbox, allowGuestSuggestions && styles.checkboxSelected]}>
-                    {allowGuestSuggestions && <Check size={16} color="#ffffff" />}
-                  </View>
-                  <Text style={styles.checkboxLabel}>Let guests suggest games</Text>
-                </TouchableOpacity>
-              </View>
+              {gamePollOption === 'suggest' && (
+                <View style={styles.checkboxContainer}>
+                  <TouchableOpacity
+                    style={styles.checkboxOption}
+                    onPress={() => setAllowGuestSuggestions(!allowGuestSuggestions)}
+                  >
+                    <View style={[styles.checkbox, allowGuestSuggestions && styles.checkboxSelected]}>
+                      {allowGuestSuggestions && <Check size={16} color="#ffffff" />}
+                    </View>
+                    <Text style={styles.checkboxLabel}>Let guests suggest games</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {gamePollOption === 'both' && (
+                <View style={styles.bothOptionInfo}>
+                  <Text style={styles.bothOptionText}>
+                    ✨ Guests will be able to suggest games in addition to your selections
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.gameListSection}>
                 <Text style={styles.gameListLabel}>Select Games for the Poll</Text>
@@ -1133,6 +1155,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
     flex: 1,
+  },
+  bothOptionInfo: {
+    backgroundColor: '#f0f8f0',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  bothOptionText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#4CAF50',
+    textAlign: 'center',
   },
   gameListSection: {
     backgroundColor: '#f8f9fa',
