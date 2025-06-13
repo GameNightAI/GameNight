@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, TextInput } from 'react-native';
-import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3, Clock } from 'lucide-react-native';
+import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3, Clock, ChevronDown } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface CreateDatePollModalProps {
@@ -16,6 +16,11 @@ interface CalendarDate {
   isToday: boolean;
 }
 
+interface TimeOption {
+  value: string;
+  label: string;
+}
+
 export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   isVisible,
   onClose,
@@ -28,6 +33,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   const [description, setDescription] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [showStartTimeDropdown, setShowStartTimeDropdown] = useState(false);
+  const [showEndTimeDropdown, setShowEndTimeDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +44,31 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   ];
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Generate time options in 15-minute increments (12-hour format)
+  const generateTimeOptions = (): TimeOption[] => {
+    const options: TimeOption[] = [];
+    
+    for (let hour = 1; hour <= 12; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const minuteStr = minute.toString().padStart(2, '0');
+        
+        // AM times
+        const amValue = `${hour.toString().padStart(2, '0')}:${minuteStr}:AM`;
+        const amLabel = `${hour}:${minuteStr} AM`;
+        options.push({ value: amValue, label: amLabel });
+        
+        // PM times
+        const pmValue = `${hour.toString().padStart(2, '0')}:${minuteStr}:PM`;
+        const pmLabel = `${hour}:${minuteStr} PM`;
+        options.push({ value: pmValue, label: pmLabel });
+      }
+    }
+    
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
 
   // Reset form when modal opens
   useEffect(() => {
@@ -52,6 +84,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     setDescription('');
     setStartTime('');
     setEndTime('');
+    setShowStartTimeDropdown(false);
+    setShowEndTimeDropdown(false);
     setError(null);
     setCurrentDate(new Date());
   };
@@ -125,6 +159,37 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     }
   };
 
+  const convertTo24Hour = (time12h: string): string => {
+    if (!time12h) return '';
+    
+    const [time, period] = time12h.split(':');
+    const [hour, minute] = time.split(':');
+    
+    let hour24 = parseInt(hour);
+    if (period === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (period === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    
+    return `${hour24.toString().padStart(2, '0')}:${minute}`;
+  };
+
+  const isValidTimeRange = (start: string, end: string): boolean => {
+    if (!start || !end) return true;
+    
+    const start24 = convertTo24Hour(start);
+    const end24 = convertTo24Hour(end);
+    
+    const [startHour, startMin] = start24.split(':').map(Number);
+    const [endHour, endMin] = end24.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    return endMinutes > startMinutes;
+  };
+
   const handleCreatePoll = async () => {
     try {
       setLoading(true);
@@ -137,17 +202,6 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
 
       if (!title.trim()) {
         setError('Please enter a title for your poll');
-        return;
-      }
-
-      // Validate time format if provided
-      if (startTime && !isValidTimeFormat(startTime)) {
-        setError('Please enter start time in HH:MM format (e.g., 19:00)');
-        return;
-      }
-
-      if (endTime && !isValidTimeFormat(endTime)) {
-        setError('Please enter end time in HH:MM format (e.g., 22:00)');
         return;
       }
 
@@ -179,21 +233,6 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     }
   };
 
-  const isValidTimeFormat = (time: string): boolean => {
-    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return timeRegex.test(time);
-  };
-
-  const isValidTimeRange = (start: string, end: string): boolean => {
-    const [startHour, startMin] = start.split(':').map(Number);
-    const [endHour, endMin] = end.split(':').map(Number);
-    
-    const startMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-    
-    return endMinutes > startMinutes;
-  };
-
   const formatSelectedDates = () => {
     if (selectedDates.length === 0) return 'No dates selected';
     
@@ -215,6 +254,24 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
       setTitle('Game Night');
       setIsEditingTitle(false);
     }
+  };
+
+  const handleStartTimeSelect = (timeValue: string) => {
+    setStartTime(timeValue);
+    setShowStartTimeDropdown(false);
+    setShowEndTimeDropdown(false);
+  };
+
+  const handleEndTimeSelect = (timeValue: string) => {
+    setEndTime(timeValue);
+    setShowEndTimeDropdown(false);
+    setShowStartTimeDropdown(false);
+  };
+
+  const getTimeLabel = (timeValue: string) => {
+    if (!timeValue) return '';
+    const option = timeOptions.find(opt => opt.value === timeValue);
+    return option ? option.label : timeValue;
   };
 
   const calendarDates = generateCalendarDates();
@@ -338,43 +395,109 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
           )}
         </View>
 
-        <View style={styles.timeSection}>
+        <View style={[styles.timeSection, { position: 'relative', zIndex: 10 }]}>
           <Text style={styles.label}>Event Time (Optional)</Text>
           <Text style={styles.sublabel}>Set a specific time for your game night</Text>
           
           <View style={styles.timeInputsContainer}>
-            <View style={styles.timeInputGroup}>
+            <View style={[styles.timeInputGroup, { position: 'relative', zIndex: 20 }]}>
               <Text style={styles.timeLabel}>Start Time</Text>
-              <View style={styles.timeInputContainer}>
+              <TouchableOpacity
+                style={styles.timeDropdownButton}
+                onPress={() => {
+                  setShowStartTimeDropdown(!showStartTimeDropdown);
+                  setShowEndTimeDropdown(false);
+                }}
+              >
                 <Clock size={16} color="#666666" />
-                <TextInput
-                  style={styles.timeInput}
-                  value={startTime}
-                  onChangeText={setStartTime}
-                  placeholder="19:00"
-                  editable={!loading}
-                  maxLength={5}
-                />
-              </View>
+                <Text style={[
+                  styles.timeDropdownText,
+                  !startTime && styles.timeDropdownPlaceholder
+                ]}>
+                  {startTime ? getTimeLabel(startTime) : 'Select time'}
+                </Text>
+                <ChevronDown size={16} color="#666666" />
+              </TouchableOpacity>
+
+              {showStartTimeDropdown && (
+                <View style={[styles.timeDropdown, styles.timeDropdownAbsolute]}>
+                  <ScrollView 
+                    style={styles.timeDropdownScroll}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {timeOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.timeDropdownItem,
+                          startTime === option.value && styles.timeDropdownItemSelected
+                        ]}
+                        onPress={() => handleStartTimeSelect(option.value)}
+                      >
+                        <Text style={[
+                          styles.timeDropdownItemText,
+                          startTime === option.value && styles.timeDropdownItemTextSelected
+                        ]}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
 
-            <View style={styles.timeInputGroup}>
+            <View style={[styles.timeInputGroup, { position: 'relative', zIndex: 10 }]}>
               <Text style={styles.timeLabel}>End Time</Text>
-              <View style={styles.timeInputContainer}>
+              <TouchableOpacity
+                style={styles.timeDropdownButton}
+                onPress={() => {
+                  setShowEndTimeDropdown(!showEndTimeDropdown);
+                  setShowStartTimeDropdown(false);
+                }}
+              >
                 <Clock size={16} color="#666666" />
-                <TextInput
-                  style={styles.timeInput}
-                  value={endTime}
-                  onChangeText={setEndTime}
-                  placeholder="22:00"
-                  editable={!loading}
-                  maxLength={5}
-                />
-              </View>
+                <Text style={[
+                  styles.timeDropdownText,
+                  !endTime && styles.timeDropdownPlaceholder
+                ]}>
+                  {endTime ? getTimeLabel(endTime) : 'Select time'}
+                </Text>
+                <ChevronDown size={16} color="#666666" />
+              </TouchableOpacity>
+
+              {showEndTimeDropdown && (
+                <View style={[styles.timeDropdown, styles.timeDropdownAbsolute]}>
+                  <ScrollView 
+                    style={styles.timeDropdownScroll}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {timeOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.timeDropdownItem,
+                          endTime === option.value && styles.timeDropdownItemSelected
+                        ]}
+                        onPress={() => handleEndTimeSelect(option.value)}
+                      >
+                        <Text style={[
+                          styles.timeDropdownItemText,
+                          endTime === option.value && styles.timeDropdownItemTextSelected
+                        ]}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
           </View>
           
-          <Text style={styles.timeHint}>Use 24-hour format (e.g., 19:00 for 7:00 PM)</Text>
+          <Text style={styles.timeHint}>Choose from available time slots in 15-minute increments</Text>
         </View>
 
         <View style={styles.inputSection}>
@@ -655,9 +778,10 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginBottom: 8,
   },
-  timeInputContainer: {
+  timeDropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
@@ -666,11 +790,53 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
   },
-  timeInput: {
+  timeDropdownText: {
     flex: 1,
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
     color: '#333333',
+  },
+  timeDropdownPlaceholder: {
+    color: '#999999',
+  },
+  timeDropdown: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  timeDropdownAbsolute: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    ...(Platform.OS === 'web' ? { zIndex: 999 } : {}),
+  },
+  timeDropdownScroll: {
+    maxHeight: 200,
+  },
+  timeDropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  timeDropdownItemSelected: {
+    backgroundColor: '#fff5ef',
+  },
+  timeDropdownItemText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+  },
+  timeDropdownItemTextSelected: {
+    color: '#ff9654',
+    fontFamily: 'Poppins-SemiBold',
   },
   timeHint: {
     fontFamily: 'Poppins-Regular',
