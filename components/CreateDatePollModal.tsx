@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, TextInput } from 'react-native';
-import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus } from 'lucide-react-native';
+import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, Edit3 } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface CreateDatePollModalProps {
@@ -23,7 +23,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState('Game Night');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +36,17 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isVisible) {
+      resetForm();
+    }
+  }, [isVisible]);
+
   const resetForm = () => {
     setSelectedDates([]);
-    setTitle('');
+    setTitle('Game Night');
+    setIsEditingTitle(false);
     setDescription('');
     setError(null);
     setCurrentDate(new Date());
@@ -162,6 +171,15 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     return `${sortedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} and ${sortedDates.length - 1} more`;
   };
 
+  const handleTitleSubmit = () => {
+    if (title.trim()) {
+      setIsEditingTitle(false);
+    } else {
+      setTitle('Game Night');
+      setIsEditingTitle(false);
+    }
+  };
+
   const calendarDates = generateCalendarDates();
 
   const content = (
@@ -180,15 +198,31 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.inputSection}>
+        <View style={styles.titleSection}>
           <Text style={styles.label}>Poll Title</Text>
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="e.g., Weekly Game Night"
-            editable={!loading}
-          />
+          {isEditingTitle ? (
+            <View style={styles.titleEditContainer}>
+              <TextInput
+                style={styles.titleInput}
+                value={title}
+                onChangeText={setTitle}
+                onSubmitEditing={handleTitleSubmit}
+                onBlur={handleTitleSubmit}
+                autoFocus
+                editable={!loading}
+                placeholder="Enter poll title"
+              />
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.titleDisplay}
+              onPress={() => setIsEditingTitle(true)}
+            >
+              <Text style={styles.titleDisplayText}>{title}</Text>
+              <Edit3 size={16} color="#666666" />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.titleHint}>Tap to edit the poll title</Text>
         </View>
 
         <View style={styles.inputSection}>
@@ -197,7 +231,7 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
             style={[styles.input, styles.textArea]}
             value={description}
             onChangeText={setDescription}
-            placeholder="Add any additional details..."
+            placeholder="Add any additional details about your game night..."
             multiline
             numberOfLines={3}
             editable={!loading}
@@ -373,6 +407,45 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
     maxHeight: 500,
+  },
+  titleSection: {
+    marginBottom: 20,
+  },
+  titleEditContainer: {
+    marginBottom: 4,
+  },
+  titleInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#ff9654',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
+  },
+  titleDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 4,
+  },
+  titleDisplayText: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
+    flex: 1,
+  },
+  titleHint: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#8d8d8d',
+    marginTop: 4,
   },
   inputSection: {
     marginBottom: 20,
