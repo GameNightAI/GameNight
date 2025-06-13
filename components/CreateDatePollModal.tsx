@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, TextInput } from 'react-native';
-import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3 } from 'lucide-react-native';
+import { X, Calendar, ChevronLeft, ChevronRight, Share2, Plus, CreditCard as Edit3, Clock } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface CreateDatePollModalProps {
@@ -26,6 +26,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
   const [title, setTitle] = useState('Game Night');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [description, setDescription] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +50,8 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     setTitle('Game Night');
     setIsEditingTitle(false);
     setDescription('');
+    setStartTime('');
+    setEndTime('');
     setError(null);
     setCurrentDate(new Date());
   };
@@ -136,12 +140,30 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
         return;
       }
 
+      // Validate time format if provided
+      if (startTime && !isValidTimeFormat(startTime)) {
+        setError('Please enter start time in HH:MM format (e.g., 19:00)');
+        return;
+      }
+
+      if (endTime && !isValidTimeFormat(endTime)) {
+        setError('Please enter end time in HH:MM format (e.g., 22:00)');
+        return;
+      }
+
+      if (startTime && endTime && !isValidTimeRange(startTime, endTime)) {
+        setError('End time must be after start time');
+        return;
+      }
+
       // TODO: Implement actual poll creation with Supabase
       // This is a placeholder for the actual implementation
       console.log('Creating date poll:', {
         title: title.trim(),
         description: description.trim(),
         selectedDates,
+        startTime: startTime || null,
+        endTime: endTime || null,
       });
 
       // Simulate API call
@@ -155,6 +177,21 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const isValidTimeFormat = (time: string): boolean => {
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    return timeRegex.test(time);
+  };
+
+  const isValidTimeRange = (start: string, end: string): boolean => {
+    const [startHour, startMin] = start.split(':').map(Number);
+    const [endHour, endMin] = end.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    return endMinutes > startMinutes;
   };
 
   const formatSelectedDates = () => {
@@ -225,19 +262,6 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
           <Text style={styles.titleHint}>Tap to edit the poll title</Text>
         </View>
 
-        <View style={styles.inputSection}>
-          <Text style={styles.label}>Description (Optional)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Add any additional details about your game night..."
-            multiline
-            numberOfLines={3}
-            editable={!loading}
-          />
-        </View>
-
         <View style={styles.calendarSection}>
           <Text style={styles.label}>Select Available Dates</Text>
           <Text style={styles.sublabel}>Tap dates when you're available to play</Text>
@@ -302,17 +326,69 @@ export const CreateDatePollModal: React.FC<CreateDatePollModalProps> = ({
               })}
             </View>
           </View>
+
+          {selectedDates.length > 0 && (
+            <Animated.View 
+              entering={FadeIn.duration(300)}
+              style={styles.selectedDatesContainer}
+            >
+              <Text style={styles.selectedDatesLabel}>Selected Dates:</Text>
+              <Text style={styles.selectedDatesText}>{formatSelectedDates()}</Text>
+            </Animated.View>
+          )}
         </View>
 
-        {selectedDates.length > 0 && (
-          <Animated.View 
-            entering={FadeIn.duration(300)}
-            style={styles.selectedDatesContainer}
-          >
-            <Text style={styles.selectedDatesLabel}>Selected Dates:</Text>
-            <Text style={styles.selectedDatesText}>{formatSelectedDates()}</Text>
-          </Animated.View>
-        )}
+        <View style={styles.timeSection}>
+          <Text style={styles.label}>Event Time (Optional)</Text>
+          <Text style={styles.sublabel}>Set a specific time for your game night</Text>
+          
+          <View style={styles.timeInputsContainer}>
+            <View style={styles.timeInputGroup}>
+              <Text style={styles.timeLabel}>Start Time</Text>
+              <View style={styles.timeInputContainer}>
+                <Clock size={16} color="#666666" />
+                <TextInput
+                  style={styles.timeInput}
+                  value={startTime}
+                  onChangeText={setStartTime}
+                  placeholder="19:00"
+                  editable={!loading}
+                  maxLength={5}
+                />
+              </View>
+            </View>
+
+            <View style={styles.timeInputGroup}>
+              <Text style={styles.timeLabel}>End Time</Text>
+              <View style={styles.timeInputContainer}>
+                <Clock size={16} color="#666666" />
+                <TextInput
+                  style={styles.timeInput}
+                  value={endTime}
+                  onChangeText={setEndTime}
+                  placeholder="22:00"
+                  editable={!loading}
+                  maxLength={5}
+                />
+              </View>
+            </View>
+          </View>
+          
+          <Text style={styles.timeHint}>Use 24-hour format (e.g., 19:00 for 7:00 PM)</Text>
+        </View>
+
+        <View style={styles.inputSection}>
+          <Text style={styles.label}>Description (Optional)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Add any additional details about your game night..."
+            multiline
+            numberOfLines={3}
+            editable={!loading}
+          />
+        </View>
 
         {error && (
           <Text style={styles.errorText}>{error}</Text>
@@ -409,7 +485,7 @@ const styles = StyleSheet.create({
     maxHeight: 500,
   },
   titleSection: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   titleEditContainer: {
     marginBottom: 4,
@@ -447,8 +523,8 @@ const styles = StyleSheet.create({
     color: '#8d8d8d',
     marginTop: 4,
   },
-  inputSection: {
-    marginBottom: 20,
+  calendarSection: {
+    marginBottom: 24,
   },
   label: {
     fontFamily: 'Poppins-SemiBold',
@@ -462,27 +538,11 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginBottom: 16,
   },
-  input: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  calendarSection: {
-    marginBottom: 20,
-  },
   calendarContainer: {
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 16,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -566,7 +626,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff5ef',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
   },
   selectedDatesLabel: {
     fontFamily: 'Poppins-SemiBold',
@@ -578,6 +637,63 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#ff9654',
+  },
+  timeSection: {
+    marginBottom: 24,
+  },
+  timeInputsContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 8,
+  },
+  timeInputGroup: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    marginBottom: 8,
+  },
+  timeInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  timeInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333333',
+  },
+  timeHint: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#8d8d8d',
+    marginTop: 4,
+  },
+  inputSection: {
+    marginBottom: 20,
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333333',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
   },
   errorText: {
     fontFamily: 'Poppins-Regular',
