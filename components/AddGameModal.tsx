@@ -190,7 +190,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         style={styles.resultsList}
         renderItem={({ item }) => (
           <View style={styles.resultItem}>
-            <span>
+            <div>
               <Image
                 source={{ uri: item.image_url }}
                 style={styles.thumbnail}
@@ -209,7 +209,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             >
               <Plus size={20} color="#ffffff" />
             </TouchableOpacity>
-            </span>
+            </div>
           </View>
         )}
         ListEmptyComponent={
