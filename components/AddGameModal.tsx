@@ -110,9 +110,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         bgg_game_id: parseInt(game.id),
         name: game.name,
         thumbnail: gameInfo.thumbnail,
-        min_players: parseInt(gameInfo.minplayers.value) || 1,
-        max_players: parseInt(gameInfo.maxplayers.value) || 1,
-        playing_time: parseInt(gameInfo.playing_time.value) || 30,
+        min_players: parseInt(gameInfo.minplayers.value),
+        max_players: parseInt(gameInfo.maxplayers.value),
+        playing_time: parseInt(gameInfo.playingtime.value),
         year_published: game.yearPublished ? parseInt(game.yearPublished) : null,
       };
 
