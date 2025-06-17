@@ -44,8 +44,8 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
           <View style={styles.infoItem}>
             <Users size={16} color="#666666" />
             <Text style={styles.infoText}>
-              {game.min_players ?
-                game.min_players + (game.min_players === game.min_players ? '' : '-' + game.max_players) + ' player' + (game.min_players === 1 ? '' : 's')
+              {game.max_players ?
+                game.min_players + (game.min_players === game.max_players ? '' : '-' + game.max_players) + ' player' + (game.max_players === 1 ? '' : 's')
                 : 'N/A'}
             </Text>
           </View>
