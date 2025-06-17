@@ -1,6 +1,9 @@
 # dependencies
 node_modules/
 
+# scratch
+scratch.tsx
+
 # expo
 .expo/
 dist/

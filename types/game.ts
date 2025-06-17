@@ -13,4 +13,5 @@ export interface Game {
   minAge: number;
   is_cooperative: Boolean;
   complexity: number;
+  complexity_desc: string;
 }

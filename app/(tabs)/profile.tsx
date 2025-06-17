@@ -22,12 +22,12 @@ export default function ProfileScreen() {
     const loadUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setEmail(user.email);
+        setEmail(user.email ?? null);
       } else {
         router.replace('/auth/login');
       }
     };
-    
+
     loadUserData();
   }, [router]);
 
@@ -52,12 +52,12 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View 
+      <Animated.View
         entering={FadeIn.duration(400)}
         style={styles.profileHeader}
       >
@@ -65,8 +65,8 @@ export default function ProfileScreen() {
           <Text style={styles.avatarLetter}>{email.charAt(0).toUpperCase()}</Text>
         </View>
         <Text style={styles.username}>{email}</Text>
-        <TouchableOpacity 
-          style={styles.bggLink} 
+        <TouchableOpacity
+          style={styles.bggLink}
           onPress={handleViewOnBGG}
         >
           <Text style={styles.bggLinkText}>View on BoardGameGeek</Text>
@@ -74,7 +74,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         entering={FadeIn.delay(200).duration(400)}
         style={styles.statsContainer}
       >
@@ -106,11 +106,11 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         entering={FadeIn.delay(400).duration(400)}
         style={styles.actionsContainer}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionButton, styles.logoutButton]}
           onPress={handleLogout}
           disabled={loading}

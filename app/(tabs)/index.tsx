@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
 import { Plus, Shuffle, X } from 'lucide-react-native';
-import Animated, { 
-  FadeIn, 
+import Animated, {
+  FadeIn,
   FadeOut,
   ZoomIn,
   ZoomOut,
@@ -22,7 +22,7 @@ export default function FirstPlayerScreen() {
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
-  
+
   const opacity = useSharedValue(0);
 
   const addPlayer = () => {
@@ -51,7 +51,7 @@ export default function FirstPlayerScreen() {
     if (players.length > 0) {
       setIsSelecting(true);
       setSelectedPlayer(null);
-      
+
       const finalIndex = Math.floor(Math.random() * players.length);
       const finalPlayer = players[finalIndex];
 
@@ -76,14 +76,14 @@ export default function FirstPlayerScreen() {
         style={styles.backgroundImage}
       />
       <View style={styles.overlay} />
-      
+
       {countdown !== null && (
-        <Animated.View 
+        <Animated.View
           entering={FadeIn.duration(150)}
           exiting={FadeOut.duration(150)}
           style={styles.countdownOverlay}
         >
-          <Animated.Text 
+          <Animated.Text
             entering={ZoomIn.duration(200)}
             exiting={ZoomOut.duration(200)}
             style={styles.countdownText}
@@ -94,7 +94,7 @@ export default function FirstPlayerScreen() {
       )}
 
       {selectedPlayer && !isSelecting && (
-        <Animated.View 
+        <Animated.View
           entering={FadeIn.duration(500)}
           style={styles.revealOverlay}
         >
@@ -118,7 +118,7 @@ export default function FirstPlayerScreen() {
           </Animated.View>
         </Animated.View>
       )}
-      
+
       <View style={styles.header}>
         <Text style={styles.title}>Who's Going First?</Text>
         <Text style={styles.subtitle}>Add players and randomly select who starts</Text>
@@ -134,9 +134,9 @@ export default function FirstPlayerScreen() {
             placeholderTextColor="#666666"
             onSubmitEditing={addPlayer}
           />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.addButton, !newPlayer.trim() && styles.addButtonDisabled]}
-            onPress={addPlayer}
+            onPress={() => addPlayer()}
             disabled={!newPlayer.trim()}
           >
             <Plus color="#fff" size={24} />
@@ -148,8 +148,8 @@ export default function FirstPlayerScreen() {
           keyExtractor={(_, index) => index.toString()}
           style={styles.list}
           renderItem={({ item, index }) => (
-            <Animated.View 
-              entering={FadeIn.duration(300)} 
+            <Animated.View
+              entering={FadeIn.duration(300)}
               exiting={FadeOut.duration(300)}
               style={styles.playerItem}
             >

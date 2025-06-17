@@ -10,7 +10,7 @@ interface GameItemProps {
   onDelete: (id: number) => void;
 }
 
-function decodeHTML(html: string) {
+function decodeHTML(html: string): string {
   var txt = document.createElement("textarea");
   txt.innerHTML = html;
   return txt.value;
