@@ -64,6 +64,32 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
       if (error) throw error;
 
+      /*
+            // Get the complexity tiers from the complexity_tiers view
+            const { data: complexity, error: complexityError } = await supabase
+              .from('complexity_view')
+              .select('max_complexity,description')
+      
+            if (complexityError) throw complexityError;
+      
+      
+            const { data, error } = await supabase
+        .from('complexity_comparisons')
+        .select('complexity, description') // only get what you need
+        .eq('poll_id', id); // optional filter if needed
+      
+      if (error) {
+        console.error('Error fetching complexity data:', error);
+      } else if (data) {
+        const complexityInfo = data.map(row => ({
+          complexity: row.complexity,
+          description: row.description
+        }));
+      
+        console.log('Mapped data:', complexityInfo);
+      }
+            */
+
       const games = data.map(game => ({
         id: game.bgg_game_id,
         name: game.name,
@@ -78,7 +104,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         is_cooperative: game.is_cooperative,
         complexity: game.complexity,
         minPlaytime: game.minplaytime || 0,
-        maxPlaytime: game.maxplaytime || 0
+        maxPlaytime: game.maxplaytime || 0,
+        complexity_desc: game.complexity_desc
       }));
 
       setAvailableGames(games);
@@ -121,13 +148,13 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
     if (complexity) {
       filtered = filtered.filter(game => {
-        if (!game.complexity) return false;
+        if (!game.complexity_desc) return false;
         switch (complexity) {
-          case 'Light': return game.complexity < 1;
-          case 'Medium Light': return game.complexity >= 1 && game.complexity < 2;
-          case 'Medium': return game.complexity >= 2 && game.complexity < 3;
-          case 'Medium Heavy': return game.complexity >= 3 && game.complexity < 4;
-          case 'Heavy': return game.complexity >= 4;
+          case 'Light': return game.complexity_desc === 'Light';
+          case 'Medium Light': return game.complexity_desc === 'Medium Light';
+          case 'Medium': return game.complexity_desc === 'Medium';
+          case 'Medium Heavy': return game.complexity_desc === 'Medium Heavy';
+          case 'Heavy': return game.complexity_desc === 'Heavy';
           default: return true;
         }
       });

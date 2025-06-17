@@ -5,14 +5,14 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface EmptyStateProps {
   username: string | null;
-  onRefresh: (username?: string) => void;
+  onRefresh: (username?: string) => void | Promise<void>;
   message?: string;
   buttonText?: string;
   showSyncButton?: boolean;
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ 
-  username, 
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  username,
   onRefresh,
   message,
   buttonText = "Refresh",
@@ -32,21 +32,21 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   };
 
   return (
-    <Animated.View 
+    <Animated.View
       entering={FadeIn.duration(500)}
       style={styles.container}
     >
       <Package size={48} color="#8d8d8d" />
       <Text style={styles.emptyTitle}>No Games Found</Text>
       <Text style={styles.emptyMessage}>
-        {message || (showSyncButton ? 
-          'Enter your BoardGameGeek username to import your collection' : 
-          username ? 
-            `We couldn't find any games in ${username}'s collection.` : 
+        {message || (showSyncButton ?
+          'Enter your BoardGameGeek username to import your collection' :
+          username ?
+            `We couldn't find any games in ${username}'s collection.` :
             'We couldn\'t find any games in your collection.'
         )}
       </Text>
-      
+
       {showSyncButton && (
         <View style={styles.inputContainer}>
           <TextInput
@@ -62,7 +62,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             autoCorrect={false}
           />
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.importButton}
             onPress={handleSubmit}
           >
@@ -71,9 +71,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           </TouchableOpacity>
         </View>
       )}
-      
+
       {!showSyncButton && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.refreshButton}
           onPress={() => onRefresh()}
         >
@@ -81,9 +81,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           <Text style={styles.refreshText}>{buttonText}</Text>
         </TouchableOpacity>
       )}
-      
+
       <Text style={styles.helpText}>
-        {showSyncButton ? 
+        {showSyncButton ?
           'Your BoardGameGeek collection must be public to sync games.' :
           'Make sure your BoardGameGeek collection is public and contains board games.'
         }

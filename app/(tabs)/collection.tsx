@@ -68,6 +68,7 @@ export default function CollectionScreen() {
         minAge: game.min_age || 0,
         is_cooperative: game.is_cooperative || false,
         complexity: game.complexity || 1,
+        complexity_desc: game.complexity_desc || '',
       }));
 
       // Filter games based on player count and play time
@@ -120,7 +121,7 @@ export default function CollectionScreen() {
     }
   }, [gameToDelete]);
 
-  const handleSync = async (username: string) => {
+  const handleSync = async (username?: string) => {
     try {
       setSyncing(true);
       setError(null);
@@ -130,6 +131,11 @@ export default function CollectionScreen() {
       if (!user) {
         router.replace('/auth/login');
         return;
+      }
+
+      if (!username || !username.trim()) {
+        setError('Please enter a valid BoardGameGeek username');
+        return;  // Exit early since username is invalid
       }
 
       const bggGames = await fetchGames(username);
@@ -159,6 +165,7 @@ export default function CollectionScreen() {
           min_age: game.minAge,
           is_cooperative: game.is_cooperative,
           complexity: game.complexity,
+          complexity_desc: game.complexity_desc || '',
         });
       });
 
