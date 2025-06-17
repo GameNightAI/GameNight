@@ -193,7 +193,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             <Image
               source={{ uri: item.image_url }}
               style={styles.thumbnail}
-              resizeMode="cover"
+              resizeMode="contain"
             />
             <View style={styles.resultInfo}>
               <Text style={styles.resultTitle}>{item.name}</Text>
