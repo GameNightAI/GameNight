@@ -188,14 +188,15 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         data={searchResults}
         keyExtractor={(item) => item.id}
         style={styles.resultsList}
-        renderItem={({ item }) => (
-          <View style={styles.resultItem}>
-            <span>
-              <Image
+        renderItem={({ item }) => (  <span>
+          <Image
                 source={{ uri: item.image_url }}
                 style={styles.thumbnail}
                 resizeMode="cover"
               />
+          <View style={styles.resultItem}>
+          
+              
             <View style={styles.resultInfo}>
               <Text style={styles.resultTitle}>{item.name}</Text>
               {item.year_published && (
@@ -209,8 +210,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             >
               <Plus size={20} color="#ffffff" />
             </TouchableOpacity>
-            </span>
+            
           </View>
+          </span>
         )}
         ListEmptyComponent={
           <Text style={styles.emptyText}>
