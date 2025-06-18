@@ -3,6 +3,7 @@ import { Redirect, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
+import Toast from 'react-native-toast-message';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -28,6 +29,7 @@ export default function RootLayout() {
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
       </Stack>
+      <Toast />
       <StatusBar style="light" />
     </>
   );

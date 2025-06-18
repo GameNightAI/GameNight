@@ -1,26 +1,28 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThumbsUp, Heart, ThumbsDown } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-
+import { getOrCreateAnonId } from '@/utils/anon';
 import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
+import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Vote types enum
 enum VoteType {
+  THUMBS_DOWN = 'thumbs_down',
   THUMBS_UP = 'thumbs_up',
-  DOUBLE_THUMBS_UP = 'double_thumbs_up',
-  THUMBS_DOWN = 'thumbs_down'
+  DOUBLE_THUMBS_UP = 'double_thumbs_up'
 }
 
 interface GameVotes {
+  thumbs_down: number;
   thumbs_up: number;
   double_thumbs_up: number;
-  thumbs_down: number;
   voters: { name: string; vote_type: VoteType }[];
 }
 
@@ -30,6 +32,7 @@ interface PollGame extends Game {
 }
 
 export default function PollScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams();
   const [poll, setPoll] = useState<Poll | null>(null);
   const [games, setGames] = useState<PollGame[]>([]);
@@ -41,6 +44,8 @@ export default function PollScreen() {
   const [isCreator, setIsCreator] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   //  const [hasVoted, setHasVoted] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [checkingVote, setCheckingVote] = useState(true);
 
   useEffect(() => {
     loadPoll();
@@ -100,14 +105,20 @@ export default function PollScreen() {
 
       if (votesError) throw votesError;
 
+      const anonId = await getOrCreateAnonId(); // get anonymous identifier
+      const voterIdentifier = user?.email || anonId;
+
+      const userVotes = votes.filter(v => v.voter_name === voterIdentifier);
+      setHasVoted(userVotes.length > 0);
+
       // Combine game data with vote counts and user votes
       const gamesWithVotes = games.map(game => {
         const gameVotes = votes.filter(v => v.game_id === game.bgg_game_id);
 
         const voteData: GameVotes = {
+          thumbs_down: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_DOWN).length,
           thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_UP).length,
           double_thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.DOUBLE_THUMBS_UP).length,
-          thumbs_down: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_DOWN).length,
           voters: gameVotes.map(v => ({
             name: v.voter_name,
             vote_type: v.vote_type as VoteType
@@ -203,6 +214,16 @@ export default function PollScreen() {
 
       // Reload poll data to show updated results
       await loadPoll();
+
+      await AsyncStorage.setItem(`voted_${id}`, 'true'); // Save local voted flag
+
+      // View Results button will appear dynamically after reload
+      Toast.show({
+        type: 'success',
+        text1: 'Vote submitted!',
+        text2: 'Tap below to see results',
+      });
+
     } catch (err) {
       console.error('Error submitting vote:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit vote');
@@ -218,9 +239,9 @@ export default function PollScreen() {
     return [
       styles.voteButton,
       isSelected && styles.voteButtonSelected,
+      voteType === VoteType.THUMBS_DOWN && isSelected && styles.thumbsDownSelected,
       voteType === VoteType.THUMBS_UP && isSelected && styles.thumbsUpSelected,
       voteType === VoteType.DOUBLE_THUMBS_UP && isSelected && styles.doubleThumbsUpSelected,
-      voteType === VoteType.THUMBS_DOWN && isSelected && styles.thumbsDownSelected,
     ];
   };
 
@@ -230,12 +251,12 @@ export default function PollScreen() {
 
     if (isSelected) {
       switch (voteType) {
+        case VoteType.THUMBS_DOWN:
+          return '#ef4444';
         case VoteType.THUMBS_UP:
           return '#10b981';
         case VoteType.DOUBLE_THUMBS_UP:
-          return '#f59e0b';
-        case VoteType.THUMBS_DOWN:
-          return '#ef4444';
+          return '#ec4899';
       }
     }
     return '#666666';
@@ -289,67 +310,69 @@ export default function PollScreen() {
                 <Text style={styles.gameDetails}>
                   {game.min_players}-{game.max_players} players • {game.playing_time} min
                 </Text>
-
-                <View style={styles.voteStats}>
-                  <Text style={styles.voteStatItem}>
-                    Up: {game.votes.thumbs_up}
-                  </Text>
-                  <Text style={styles.voteStatItem}>
-                    Love: {game.votes.double_thumbs_up}
-                  </Text>
-                  <Text style={styles.voteStatItem}>
-                    Down: {game.votes.thumbs_down}
-                  </Text>
-                </View>
-
-                {game.votes.voters.length > 0 && (
-                  <Text style={styles.voters}>
-                    Recent voters: {game.votes.voters.slice(-3).map(v => `${v.name} (${v.vote_type.replace(/_/g, ' ')})`).join(', ')}
-                  </Text>
-                )}
               </View>
 
-              {!isCreator && (
-                <View style={styles.voteButtons}>
-                  <TouchableOpacity
-                    style={getVoteButtonStyle(game.id, VoteType.THUMBS_UP)}
-                    onPress={() => handleVote(game.id, VoteType.THUMBS_UP)}
-                    disabled={submitting}
-                  >
-                    <ThumbsUp
-                      size={20}
-                      color={getVoteIconColor(game.id, VoteType.THUMBS_UP)}
-                    />
-                  </TouchableOpacity>
+              <View style={styles.voteButtons}>
+                <TouchableOpacity
+                  style={getVoteButtonStyle(game.id, VoteType.THUMBS_DOWN)}
+                  onPress={() => handleVote(game.id, VoteType.THUMBS_DOWN)}
+                  disabled={submitting}
+                >
+                  <ThumbsDown
+                    size={20}
+                    color={getVoteIconColor(game.id, VoteType.THUMBS_DOWN)}
+                  />
+                </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={getVoteButtonStyle(game.id, VoteType.DOUBLE_THUMBS_UP)}
-                    onPress={() => handleVote(game.id, VoteType.DOUBLE_THUMBS_UP)}
-                    disabled={submitting}
-                  >
-                    <Heart
-                      size={20}
-                      color={getVoteIconColor(game.id, VoteType.DOUBLE_THUMBS_UP)}
-                      fill={game.userVote === VoteType.DOUBLE_THUMBS_UP ? getVoteIconColor(game.id, VoteType.DOUBLE_THUMBS_UP) : 'transparent'}
-                    />
-                  </TouchableOpacity>
+                <TouchableOpacity
+                  style={getVoteButtonStyle(game.id, VoteType.THUMBS_UP)}
+                  onPress={() => handleVote(game.id, VoteType.THUMBS_UP)}
+                  disabled={submitting}
+                >
+                  <ThumbsUp
+                    size={20}
+                    color={getVoteIconColor(game.id, VoteType.THUMBS_UP)}
+                  />
+                </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={getVoteButtonStyle(game.id, VoteType.THUMBS_DOWN)}
-                    onPress={() => handleVote(game.id, VoteType.THUMBS_DOWN)}
-                    disabled={submitting}
-                  >
-                    <ThumbsDown
-                      size={20}
-                      color={getVoteIconColor(game.id, VoteType.THUMBS_DOWN)}
-                    />
-                  </TouchableOpacity>
-                </View>
-              )}
+                <TouchableOpacity
+                  style={getVoteButtonStyle(game.id, VoteType.DOUBLE_THUMBS_UP)}
+                  onPress={() => handleVote(game.id, VoteType.DOUBLE_THUMBS_UP)}
+                  disabled={submitting}
+                >
+                  <Heart
+                    size={20}
+                    color={getVoteIconColor(game.id, VoteType.DOUBLE_THUMBS_UP)}
+                    fill={game.userVote === VoteType.DOUBLE_THUMBS_UP ? getVoteIconColor(game.id, VoteType.DOUBLE_THUMBS_UP) : 'transparent'}
+                  />
+                </TouchableOpacity>
+
+              </View>
+
             </View>
           </Animated.View>
         ))}
       </View>
+
+      {hasVoted && (
+        <View style={styles.viewResultsContainer}>
+          <TouchableOpacity
+            style={styles.viewResultsButton}
+            onPress={() => {
+              if (poll?.id) {
+                router.push({
+                  pathname: '/poll/[id]/results',
+                  params: { id: poll.id },
+                });
+              }
+            }}
+          >
+            <Text style={styles.viewResultsButtonText}>
+              View Results
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -435,6 +458,21 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginBottom: 8,
   },
+  viewResultsContainer: {
+    padding: 20,
+  },
+  viewResultsButton: {
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  viewResultsButtonText: {
+    color: '#ffffff',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+  },
   voteStats: {
     flexDirection: 'row',
     marginBottom: 8,
@@ -473,11 +511,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#ecfdf5',
   },
   doubleThumbsUpSelected: {
-    borderColor: '#f59e0b',
-    backgroundColor: '#fffbeb',
+    borderColor: '#ec4899',
+    backgroundColor: '#fff7f9',
   },
   thumbsDownSelected: {
     borderColor: '#ef4444',
     backgroundColor: '#fef2f2',
   },
 });
+
+/* removed from view window, under <View style={styles.gameContent}>, around line 293
+                <View style={styles.voteStats}>
+                  <Text style={styles.voteStatItem}>
+                    Up: {game.votes.thumbs_up}
+                  </Text>
+                  <Text style={styles.voteStatItem}>
+                    Love: {game.votes.double_thumbs_up}
+                  </Text>
+                  <Text style={styles.voteStatItem}>
+                    Down: {game.votes.thumbs_down}
+                  </Text>
+                </View>
+
+                {game.votes.voters.length > 0 && (
+                  <Text style={styles.voters}>
+                    Recent voters: {game.votes.voters.slice(-3).map(v => `${v.name} (${v.vote_type.replace(/_/g, ' ')})`).join(', ')}
+                  </Text>
+                )}
+*/
