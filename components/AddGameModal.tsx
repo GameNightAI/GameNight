@@ -48,6 +48,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
       const result = parser.parse(xmlText);
 
+      // No search results returned by API
       if (!result.items || !result.items.item) {
         setSearchResults([]);
         return;
@@ -55,11 +56,21 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
       const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
 
-      const games = items.map((item: any) => ({
+      const ids = items.map((item: any) => item.id);
+      console.log(ids);
+
+      const {data: games } = await supabase
+        .from('games')
+        .select()
+        .in('id', ids)
+        .order('rank');
+      console.log(games);
+      
+      /* const games = items.map((item: any) => ({
         id: item.id,
         name: Array.isArray(item.name) ? item.name[0].value : item.name.value,
         yearPublished: item.yearpublished?.value,
-      }));
+      })); */
 
       setSearchResults(games);
     } catch (err) {
@@ -110,9 +121,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         bgg_game_id: parseInt(game.id),
         name: game.name,
         thumbnail: gameInfo.thumbnail,
-        min_players: parseInt(gameInfo.minplayers.value) || 1,
-        max_players: parseInt(gameInfo.maxplayers.value) || 1,
-        playing_time: parseInt(gameInfo.playing_time.value) || 30,
+        min_players: parseInt(gameInfo.minplayers.value),
+        max_players: parseInt(gameInfo.maxplayers.value),
+        playing_time: parseInt(gameInfo.playingtime.value),
         year_published: game.yearPublished ? parseInt(game.yearPublished) : null,
       };
 
@@ -179,10 +190,15 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         style={styles.resultsList}
         renderItem={({ item }) => (
           <View style={styles.resultItem}>
+            <Image
+              source={{ uri: item.image_url }}
+              style={styles.thumbnail}
+              resizeMode="contain"
+            />
             <View style={styles.resultInfo}>
               <Text style={styles.resultTitle}>{item.name}</Text>
-              {item.yearPublished && (
-                <Text style={styles.resultYear}>({item.yearPublished})</Text>
+              {item.year_published && (
+                <Text style={styles.resultYear}>({item.year_published})</Text>
               )}
             </View>
             <TouchableOpacity
@@ -357,5 +373,11 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     marginTop: 20,
+  },
+  thumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
   },
 });
