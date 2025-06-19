@@ -70,10 +70,14 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         .eq('user_id', pollData.user_id)
         .in('bgg_game_id', gameIds);
 
+      if (!gamesData) throw new Error('Could not load games');
+
       const { data: votes } = await supabase
         .from('votes')
         .select('*')
         .eq('poll_id', id);
+
+      if (!votes) throw new Error('Could not load votes');
 
       const anonId = await getOrCreateAnonId();
       const identifier = user?.email || anonId;
