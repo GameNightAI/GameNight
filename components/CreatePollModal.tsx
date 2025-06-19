@@ -72,13 +72,13 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         max_players: game.max_players,
         playing_time: game.playing_time,
         yearPublished: game.year_published,
-        description: '',
+        description: game.description,
         image: game.thumbnail,
         minAge: game.min_age,
         is_cooperative: game.is_cooperative,
         complexity: game.complexity,
-        minPlaytime: game.minplaytime || 0,
-        maxPlaytime: game.maxplaytime || 0,
+        minPlaytime: game.minplaytime,
+        maxPlaytime: game.maxplaytime,
         complexity_desc: game.complexity_desc
       }));
 
