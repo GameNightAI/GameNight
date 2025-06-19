@@ -140,7 +140,7 @@ export default function PollScreen() {
         const userVote = gameVotes.find(v => v.voter_name === voterIdentifier)?.vote_type as VoteType || null;
 
         return {
-          id: game.bgg_game_id,
+          id: game.id,
           name: game.name,
           thumbnail: game.thumbnail,
           min_players: game.min_players,
