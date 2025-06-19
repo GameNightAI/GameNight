@@ -64,32 +64,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
       if (error) throw error;
 
-      /*
-            // Get the complexity tiers from the complexity_tiers view
-            const { data: complexity, error: complexityError } = await supabase
-              .from('complexity_view')
-              .select('max_complexity,description')
-      
-            if (complexityError) throw complexityError;
-      
-      
-            const { data, error } = await supabase
-        .from('complexity_comparisons')
-        .select('complexity, description') // only get what you need
-        .eq('poll_id', id); // optional filter if needed
-      
-      if (error) {
-        console.error('Error fetching complexity data:', error);
-      } else if (data) {
-        const complexityInfo = data.map(row => ({
-          complexity: row.complexity,
-          description: row.description
-        }));
-      
-        console.log('Mapped data:', complexityInfo);
-      }
-            */
-
       const games = data.map(game => ({
         id: game.bgg_game_id,
         name: game.name,
