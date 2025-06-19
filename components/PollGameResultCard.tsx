@@ -7,7 +7,7 @@ export function GameResultCard({ game }: { game: GameResult }) {
     <View style={styles.card}>
       <Text style={styles.name}>{game.name}</Text>
       <Text>👍: {game.thumbs_up}</Text>
-      <Text>👍👍: {game.double_thumbs_up}</Text>
+      <Text>❤️: {game.double_thumbs_up}</Text>
       <Text>👎: {game.thumbs_down}</Text>
       <Text style={styles.voters}>Voters: {game.voters.join(', ')}</Text>
     </View>
