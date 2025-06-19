@@ -119,7 +119,7 @@ export default function PollScreen() {
           : null;
 
         return {
-          id: game.bgg_game_id,
+          id: game.id,
           name: game.name,
           thumbnail: game.thumbnail,
           min_players: game.min_players,
