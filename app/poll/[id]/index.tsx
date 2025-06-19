@@ -45,11 +45,19 @@ export default function PollScreen() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   //  const [hasVoted, setHasVoted] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
-  const [checkingVote, setCheckingVote] = useState(true);
+  //  const [checkingVote, setCheckingVote] = useState(true);
+  const [nameError, setNameError] = useState(false);
+  const [pendingVotes, setPendingVotes] = useState<Record<number, VoteType>>({});
 
   useEffect(() => {
     loadPoll();
+    loadSavedName();
   }, [id]);
+
+  const loadSavedName = async () => {
+    const savedName = await AsyncStorage.getItem('voter_name');
+    if (savedName) setVoterName(savedName);
+  };
 
   const loadPoll = async () => {
     try {
@@ -77,6 +85,7 @@ export default function PollScreen() {
 
       // Check if current user is the creator
       const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
       setIsCreator(user?.id === pollData.user_id);
 
       // Get the games in this poll
@@ -109,7 +118,10 @@ export default function PollScreen() {
       const voterIdentifier = user?.email || anonId;
 
       const userVotes = votes.filter(v => v.voter_name === voterIdentifier);
-      setHasVoted(userVotes.length > 0);
+
+      // Allow creator to see results even if they haven’t voted
+      const isPollCreator = user?.id === pollData.user_id;
+      setHasVoted(userVotes.length > 0 || isPollCreator);
 
       // Combine game data with vote counts and user votes
       const gamesWithVotes = games.map(game => {
@@ -126,9 +138,7 @@ export default function PollScreen() {
         };
 
         // Find current user's vote for this game
-        const userVote = user ?
-          gameVotes.find(v => v.voter_name === user.email)?.vote_type as VoteType || null
-          : null;
+        const userVote = gameVotes.find(v => v.voter_name === voterIdentifier)?.vote_type as VoteType || null;
 
         return {
           id: game.bgg_game_id,
@@ -151,6 +161,12 @@ export default function PollScreen() {
         };
       });
 
+      const initialVotes: Record<number, VoteType> = {};
+      userVotes.forEach(vote => {
+        initialVotes[vote.game_id] = vote.vote_type as VoteType;
+      });
+      setPendingVotes(initialVotes);
+
       // removed the sorting function. we can re-implement later
       setGames(gamesWithVotes);
     } catch (err) {
@@ -161,104 +177,98 @@ export default function PollScreen() {
     }
   };
 
-  const handleVote = async (gameId: number, voteType: VoteType) => {
+  const handleVote = (gameId: number, voteType: VoteType) => {
+    setPendingVotes(prev => {
+      const updated = { ...prev };
+      if (updated[gameId] === voteType) {
+        delete updated[gameId]; // toggle off
+      } else {
+        updated[gameId] = voteType;
+      }
+      return updated;
+    });
+  };
+
+  const submitAllVotes = async () => {
     try {
       setSubmitting(true);
       setError(null);
 
-      // Get current user for voter identification
       const { data: { user } } = await supabase.auth.getUser();
-      const finalVoterName = user?.email || voterName.trim() || 'Anonymous';
+      const finalVoterName = user?.email || voterName.trim();
 
-      // Check if user has already voted for this specific game
-      const { data: existingVotes } = await supabase
-        .from('votes')
-        .select('id, vote_type')
-        .eq('poll_id', id)
-        .eq('game_id', gameId)
-        .eq('voter_name', finalVoterName);
-
-      if (existingVotes && existingVotes.length > 0) {
-        // Update existing vote if it's different
-        const existingVote = existingVotes[0];
-        if (existingVote.vote_type === voteType) {
-          // Same vote - remove it (toggle off)
-          const { error: deleteError } = await supabase
-            .from('votes')
-            .delete()
-            .eq('id', existingVote.id);
-
-          if (deleteError) throw deleteError;
-        } else {
-          // Different vote - update it
-          const { error: updateError } = await supabase
-            .from('votes')
-            .update({ vote_type: voteType })
-            .eq('id', existingVote.id);
-
-          if (updateError) throw updateError;
-        }
-      } else {
-        // No existing vote - create new one
-        const { error: insertError } = await supabase
-          .from('votes')
-          .insert({
-            poll_id: id,
-            game_id: gameId,
-            voter_name: finalVoterName,
-            vote_type: voteType
-          });
-
-        if (insertError) throw insertError;
+      if (!finalVoterName) {
+        setNameError(true);
+        Toast.show({
+          type: 'error',
+          text1: 'Please enter your name',
+        });
+        setSubmitting(false);
+        return;
       }
 
-      // Reload poll data to show updated results
-      await loadPoll();
+      for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
+        const gameId = parseInt(gameIdStr, 10);
 
-      await AsyncStorage.setItem(`voted_${id}`, 'true'); // Save local voted flag
+        // Check for existing vote
+        const { data: existingVotes } = await supabase
+          .from('votes')
+          .select('id, vote_type')
+          .eq('poll_id', id)
+          .eq('game_id', gameId)
+          .eq('voter_name', finalVoterName);
 
-      // View Results button will appear dynamically after reload
-      Toast.show({
-        type: 'success',
-        text1: 'Vote submitted!',
-        text2: 'Tap below to see results',
-      });
+        if (existingVotes && existingVotes.length > 0) {
+          const existingVote = existingVotes[0];
 
+          if (existingVote.vote_type !== voteType) {
+            await supabase.from('votes').update({ vote_type: voteType }).eq('id', existingVote.id);
+          }
+        } else {
+          await supabase.from('votes').insert({
+            poll_id: id,
+            game_id: gameId,
+            vote_type: voteType,
+            voter_name: finalVoterName,
+          });
+        }
+      }
+
+      await AsyncStorage.setItem('voter_name', finalVoterName);
+      await loadPoll(); // Refresh results after submit
+      setHasVoted(true); // Mark that user has voted
     } catch (err) {
-      console.error('Error submitting vote:', err);
-      setError(err instanceof Error ? err.message : 'Failed to submit vote');
+      setError(err instanceof Error ? err.message : 'Failed to submit votes');
     } finally {
       setSubmitting(false);
     }
   };
 
   const getVoteButtonStyle = (gameId: number, voteType: VoteType) => {
-    const game = games.find(g => g.id === gameId);
-    const isSelected = game?.userVote === voteType;
+    const selectedVote = pendingVotes[gameId] ?? games.find(g => g.id === gameId)?.userVote;
+
+    const isSelected = selectedVote === voteType;
 
     return [
       styles.voteButton,
       isSelected && styles.voteButtonSelected,
-      voteType === VoteType.THUMBS_DOWN && isSelected && styles.thumbsDownSelected,
-      voteType === VoteType.THUMBS_UP && isSelected && styles.thumbsUpSelected,
-      voteType === VoteType.DOUBLE_THUMBS_UP && isSelected && styles.doubleThumbsUpSelected,
+      isSelected && voteType === VoteType.THUMBS_DOWN && styles.thumbsDownSelected,
+      isSelected && voteType === VoteType.THUMBS_UP && styles.thumbsUpSelected,
+      isSelected && voteType === VoteType.DOUBLE_THUMBS_UP && styles.doubleThumbsUpSelected,
     ];
   };
 
   const getVoteIconColor = (gameId: number, voteType: VoteType) => {
-    const game = games.find(g => g.id === gameId);
-    const isSelected = game?.userVote === voteType;
+    const selectedVote = pendingVotes[gameId] ?? games.find(g => g.id === gameId)?.userVote;
 
-    if (isSelected) {
+    if (selectedVote === voteType) {
       switch (voteType) {
-        case VoteType.THUMBS_DOWN:
-          return '#ef4444';
-        case VoteType.THUMBS_UP:
-          return '#10b981';
-        case VoteType.DOUBLE_THUMBS_UP:
-          return '#ec4899';
+        case VoteType.THUMBS_DOWN: return '#ef4444';
+        case VoteType.THUMBS_UP: return '#10b981';
+        case VoteType.DOUBLE_THUMBS_UP: return '#ec4899';
       }
     }
+
     return '#666666';
   };
 
@@ -287,11 +297,15 @@ export default function PollScreen() {
 
       {!currentUser && (
         <View style={styles.nameInput}>
+          <Text style={styles.inputLabel}>Your name (required):</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, nameError && styles.inputError]}
             value={voterName}
-            onChangeText={setVoterName}
-            placeholder="Enter your name (optional)"
+            onChangeText={(text) => {
+              setNameError(false); // reset when user starts typing
+              setVoterName(text);
+            }}
+            placeholder="Enter your name to vote"
             placeholderTextColor="#999"
           />
         </View>
@@ -311,6 +325,7 @@ export default function PollScreen() {
                   {game.min_players}-{game.max_players} players • {game.playing_time} min
                 </Text>
               </View>
+
 
               <View style={styles.voteButtons}>
                 <TouchableOpacity
@@ -354,6 +369,22 @@ export default function PollScreen() {
         ))}
       </View>
 
+      {/* Vote submission button */}
+      {Object.keys(pendingVotes).length > 0 && (
+        <View style={styles.submitVotesContainer}>
+          <TouchableOpacity
+            style={styles.submitVotesButton}
+            onPress={submitAllVotes}
+            disabled={submitting}
+          >
+            <Text style={styles.viewResultsButtonText}>
+              Submit My Votes
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* View results button, only after submitting votes */}
       {hasVoted && (
         <View style={styles.viewResultsContainer}>
           <TouchableOpacity
@@ -410,6 +441,12 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     marginTop: -20,
   },
+  nameLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    marginBottom: 6,
+  },
   input: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -422,6 +459,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    marginBottom: 8,
+    color: '#1a2b5f',
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    borderWidth: 1,
   },
   gamesContainer: {
     padding: 20,
@@ -457,6 +504,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     marginBottom: 8,
+  },
+  submitVotesContainer: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  submitVotesButton: {
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
   },
   viewResultsContainer: {
     padding: 20,

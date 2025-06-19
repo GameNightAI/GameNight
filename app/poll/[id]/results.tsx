@@ -52,13 +52,29 @@ export default function PollResultsScreen() {
       // Fetch poll title (optional, for display)
       const { data: pollData, error: pollError } = await supabase
         .from('polls')
-        .select('title')
+        .select('title, user_id')
         .eq('id', id)
         .single();
 
       if (pollError) throw pollError;
       console.log('Poll title fetched:', pollData?.title);
       setPollTitle(pollData.title);
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user?.id === pollData.user_id) {
+        setHasVoted(true);
+        setPollTitle(pollData.title);
+        // skip AsyncStorage check and go straight to fetching votes
+      } else {
+        // proceed with existing local AsyncStorage check
+        const votedFlag = await AsyncStorage.getItem(`voted_${id}`);
+        if (votedFlag !== 'true') {
+          setHasVoted(false);
+          setCheckingVote(false);
+          return;
+        }
+      }
 
       // Fetch vote summary grouped by game and vote type
       const { data: votes, error: votesError } = await supabase
