@@ -86,22 +86,39 @@ export function usePollResults(pollId?: string) {
           }
         });
 
-        // Fetch game details
+        /*        // Fetch game details
+                const gameIds = Object.keys(resultsMap).map(Number);
+                const { data: gamesData, error: gamesError } = await supabase
+                  .from('collections_games')
+                  .select('bgg_game_id, name')
+                  .in('bgg_game_id', gameIds);
+        
+                if (gamesError) throw gamesError;
+        
+                const combinedResults: GameResult[] = gamesData.map((game) => ({
+                  id: game.bgg_game_id,
+                  name: game.name,
+                  thumbs_up: resultsMap[game.bgg_game_id]?.thumbs_up || 0,
+                  double_thumbs_up: resultsMap[game.bgg_game_id]?.double_thumbs_up || 0,
+                  thumbs_down: resultsMap[game.bgg_game_id]?.thumbs_down || 0,
+                  voters: resultsMap[game.bgg_game_id]?.voters || [],
+                }));
+        */
         const gameIds = Object.keys(resultsMap).map(Number);
         const { data: gamesData, error: gamesError } = await supabase
-          .from('collections_games')
-          .select('bgg_game_id, name')
-          .in('bgg_game_id', gameIds);
+          .from('games')
+          .select('id, name')
+          .in('id', gameIds);
 
         if (gamesError) throw gamesError;
 
         const combinedResults: GameResult[] = gamesData.map((game) => ({
-          id: game.bgg_game_id,
+          id: game.id,
           name: game.name,
-          thumbs_up: resultsMap[game.bgg_game_id]?.thumbs_up || 0,
-          double_thumbs_up: resultsMap[game.bgg_game_id]?.double_thumbs_up || 0,
-          thumbs_down: resultsMap[game.bgg_game_id]?.thumbs_down || 0,
-          voters: resultsMap[game.bgg_game_id]?.voters || [],
+          thumbs_up: resultsMap[game.id]?.thumbs_up || 0,
+          double_thumbs_up: resultsMap[game.id]?.double_thumbs_up || 0,
+          thumbs_down: resultsMap[game.id]?.thumbs_down || 0,
+          voters: resultsMap[game.id]?.voters || [],
         }));
 
         setGameResults(combinedResults);

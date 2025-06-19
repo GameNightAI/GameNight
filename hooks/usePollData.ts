@@ -65,10 +65,14 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       const gameIds = pollGames?.map(pg => pg.game_id) || [];
 
       const { data: gamesData } = await supabase
-        .from('collections_games')
+        //        .from('collections_games')
+        //        .select('*')
+        //        .eq('user_id', pollData.user_id)
+        //        .in('bgg_game_id', gameIds);
+
+        .from('games')
         .select('*')
-        .eq('user_id', pollData.user_id)
-        .in('bgg_game_id', gameIds);
+        .in('id', gameIds);
 
       if (!gamesData) throw new Error('Could not load games');
 
@@ -99,7 +103,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
         return {
           ...game,
-          id: game.bgg_game_id,
+          id: game.id,
           votes: voteData,
           userVote: gameVotes.find(v => v.voter_name === identifier)?.vote_type || null,
         };
