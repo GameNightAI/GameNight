@@ -11,6 +11,7 @@ import { GameCard } from '@/components/PollGameCard';
 import { PollResultsButton } from '@/components/PollResultsButton';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
+import { getOrCreateAnonId } from '@/utils/anon';
 
 export default function PollScreen() {
   const { id } = useLocalSearchParams();
@@ -55,42 +56,89 @@ export default function PollScreen() {
   const submitAllVotes = async () => {
     try {
       setSubmitting(true);
-      const finalName = user?.email || voterName.trim();
-
-      if (!finalName) {
-        setNameError(true);
-        Toast.show({ type: 'error', text1: 'Please enter your name' });
-        return;
+      
+      // Get user identifier
+      let finalName = '';
+      if (user?.email) {
+        finalName = user.email;
+      } else {
+        const trimmedName = voterName.trim();
+        if (!trimmedName) {
+          setNameError(true);
+          Toast.show({ type: 'error', text1: 'Please enter your name' });
+          return;
+        }
+        finalName = trimmedName;
       }
 
+      console.log('Submitting votes with name:', finalName);
+      console.log('Pending votes:', pendingVotes);
+
+      // Submit each vote
       for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
-        const { data: existing } = await supabase
+        
+        console.log(`Processing vote for game ${gameId}: ${voteType}`);
+
+        // Check for existing vote
+        const { data: existing, error: selectError } = await supabase
           .from('votes')
           .select('id, vote_type')
           .eq('poll_id', id)
           .eq('game_id', gameId)
           .eq('voter_name', finalName);
 
+        if (selectError) {
+          console.error('Error checking existing votes:', selectError);
+          throw selectError;
+        }
+
+        console.log('Existing votes found:', existing);
+
         if (existing && existing.length > 0) {
           const vote = existing[0];
           if (vote.vote_type !== voteType) {
-            await supabase.from('votes').update({ vote_type: voteType }).eq('id', vote.id);
+            console.log(`Updating existing vote ${vote.id} from ${vote.vote_type} to ${voteType}`);
+            const { error: updateError } = await supabase
+              .from('votes')
+              .update({ vote_type: voteType })
+              .eq('id', vote.id);
+
+            if (updateError) {
+              console.error('Error updating vote:', updateError);
+              throw updateError;
+            }
+          } else {
+            console.log('Vote already exists with same type, skipping');
           }
         } else {
-          await supabase.from('votes').insert({
+          console.log(`Creating new vote for game ${gameId}`);
+          const { error: insertError } = await supabase.from('votes').insert({
             poll_id: id,
             game_id: gameId,
             vote_type: voteType,
             voter_name: finalName,
           });
+
+          if (insertError) {
+            console.error('Error inserting vote:', insertError);
+            throw insertError;
+          }
         }
       }
 
-      await AsyncStorage.setItem('voter_name', finalName);
+      // Save voter name for future use
+      if (!user?.email) {
+        await AsyncStorage.setItem('voter_name', finalName);
+      }
+
+      // Mark as voted in local storage for results access
+      await AsyncStorage.setItem(`voted_${id}`, 'true');
+
       await reload();
       Toast.show({ type: 'success', text1: 'Votes submitted!' });
     } catch (err) {
+      console.error('Error submitting votes:', err);
       Toast.show({ type: 'error', text1: 'Failed to submit votes' });
     } finally {
       setSubmitting(false);
@@ -125,16 +173,20 @@ export default function PollScreen() {
       )}
 
       <View style={styles.gamesContainer}>
-        {games.map((game, i) => (
-          <GameCard
-            key={game.id}
-            game={game}
-            index={i}
-            selectedVote={pendingVotes[game.id] ?? game.userVote}
-            onVote={handleVote}
-            disabled={submitting}
-          />
-        ))}
+        {games.length === 0 ? (
+          <Text style={styles.noGamesText}>No games found in this poll.</Text>
+        ) : (
+          games.map((game, i) => (
+            <GameCard
+              key={game.id}
+              game={game}
+              index={i}
+              selectedVote={pendingVotes[game.id] ?? game.userVote}
+              onVote={handleVote}
+              disabled={submitting}
+            />
+          ))
+        )}
       </View>
 
       {Object.keys(pendingVotes).length > 0 && (
@@ -144,7 +196,9 @@ export default function PollScreen() {
             onPress={submitAllVotes}
             disabled={submitting}
           >
-            <Text style={styles.submitVotesButtonText}>Submit My Votes</Text>
+            <Text style={styles.submitVotesButtonText}>
+              {submitting ? 'Submitting...' : 'Submit My Votes'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -169,6 +223,13 @@ const styles = StyleSheet.create({
   description: { fontSize: 16, fontFamily: 'Poppins-Regular', color: '#fff', marginBottom: 12 },
   subtitle: { fontSize: 14, fontFamily: 'Poppins-Regular', color: '#fff', opacity: 0.8 },
   gamesContainer: { padding: 20 },
+  noGamesText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#666666',
+    textAlign: 'center',
+    marginTop: 32,
+  },
   submitVotesContainer: { padding: 20, paddingTop: 0 },
   submitVotesButton: {
     backgroundColor: '#1d4ed8',

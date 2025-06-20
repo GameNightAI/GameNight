@@ -43,81 +43,166 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       setLoading(true);
       setError(null);
 
+      console.log('Loading poll with ID:', id);
+
+      // Get the poll details
       const { data: pollData, error: pollError } = await supabase
         .from('polls')
         .select('*')
         .eq('id', id)
         .maybeSingle();
 
-      if (pollError || !pollData) throw new Error('Poll not found');
+      if (pollError) {
+        console.error('Poll error:', pollError);
+        throw new Error('Poll not found or has been deleted');
+      }
 
+      if (!pollData) {
+        throw new Error('Poll not found');
+      }
+
+      console.log('Poll data loaded:', pollData);
       setPoll(pollData);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get current user (may be null for anonymous users)
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.warn('User auth error (continuing as anonymous):', userError);
+      }
+      
       setUser(user);
       setIsCreator(user?.id === pollData.user_id);
 
-      const { data: pollGames } = await supabase
+      // Get the games in this poll
+      const { data: pollGames, error: gamesError } = await supabase
         .from('poll_games')
         .select('game_id')
         .eq('poll_id', id);
 
-      const gameIds = pollGames?.map(pg => pg.game_id) || [];
+      if (gamesError) {
+        console.error('Poll games error:', gamesError);
+        throw gamesError;
+      }
 
-      const { data: gamesData } = await supabase
-        //        .from('collections_games')
-        //        .select('*')
-        //        .eq('user_id', pollData.user_id)
-        //        .in('bgg_game_id', gameIds);
+      console.log('Poll games:', pollGames);
 
+      if (!pollGames || pollGames.length === 0) {
+        console.log('No games found in poll');
+        setGames([]);
+        setLoading(false);
+        return;
+      }
+
+      const gameIds = pollGames.map(pg => pg.game_id);
+      console.log('Game IDs to fetch:', gameIds);
+
+      // Get the actual game details from games table
+      const { data: gamesData, error: gameDetailsError } = await supabase
         .from('games')
         .select('*')
         .in('id', gameIds);
 
-      if (!gamesData) throw new Error('Could not load games');
+      if (gameDetailsError) {
+        console.error('Game details error:', gameDetailsError);
+        throw gameDetailsError;
+      }
 
-      const { data: votes } = await supabase
+      console.log('Games data loaded:', gamesData);
+
+      if (!gamesData || gamesData.length === 0) {
+        console.log('No game details found');
+        setGames([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get votes for this poll
+      const { data: votes, error: votesError } = await supabase
         .from('votes')
         .select('*')
         .eq('poll_id', id);
 
-      if (!votes) throw new Error('Could not load votes');
+      if (votesError) {
+        console.error('Votes error:', votesError);
+        throw votesError;
+      }
 
-      const anonId = await getOrCreateAnonId();
-      const identifier = user?.email || anonId;
-      const userVotes = votes.filter(v => v.voter_name === identifier);
+      console.log('Votes loaded:', votes);
+
+      // Get user identifier for vote checking
+      let identifier = null;
+      if (user?.email) {
+        identifier = user.email;
+      } else {
+        try {
+          const anonId = await getOrCreateAnonId();
+          identifier = anonId;
+        } catch (anonError) {
+          console.warn('Could not get anonymous ID:', anonError);
+        }
+      }
+
+      console.log('User identifier:', identifier);
+
+      const userVotes = votes?.filter(v => v.voter_name === identifier) || [];
       setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
 
+      // Map games data to the expected format
       const formattedGames = gamesData.map(game => {
-        const gameVotes = votes.filter(v => v.game_id === game.bgg_game_id);
+        // Find votes for this specific game using the game's ID
+        const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
         const voteData: GameVotes = {
           thumbs_down: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_DOWN).length,
           thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_UP).length,
           double_thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.DOUBLE_THUMBS_UP).length,
           voters: gameVotes.map(v => ({
-            name: v.voter_name,
+            name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type as VoteType,
           })),
         };
 
+        // Find user's vote for this game
+        const userVote = identifier ? 
+          gameVotes.find(v => v.voter_name === identifier)?.vote_type as VoteType || null 
+          : null;
+
         return {
-          ...game,
           id: game.id,
+          name: game.name || 'Unknown Game',
+          yearPublished: game.year_published || null,
+          thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
+          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+          min_players: game.min_players || 1,
+          max_players: game.max_players || 1,
+          playing_time: game.playing_time || 0,
+          minPlaytime: game.minplaytime || 0,
+          maxPlaytime: game.maxplaytime || 0,
+          description: game.description || '',
+          minAge: game.min_age || 0,
+          is_cooperative: game.is_cooperative || false,
+          complexity: game.complexity || 1,
+          complexity_desc: game.complexity_desc || '',
           votes: voteData,
-          userVote: gameVotes.find(v => v.voter_name === identifier)?.vote_type || null,
+          userVote,
         };
       });
 
+      console.log('Formatted games:', formattedGames);
+
+      // Set initial pending votes from user's existing votes
       const initialVotes: Record<number, VoteType> = {};
       userVotes.forEach(v => {
-        initialVotes[v.game_id] = v.vote_type as VoteType;
+        if (v.game_id && v.vote_type) {
+          initialVotes[v.game_id] = v.vote_type as VoteType;
+        }
       });
 
       setGames(formattedGames);
       setPendingVotes(initialVotes);
     } catch (err) {
-      setError((err as Error).message);
+      console.error('Error in loadPoll:', err);
+      setError((err as Error).message || 'Failed to load poll');
     } finally {
       setLoading(false);
     }
