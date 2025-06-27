@@ -60,7 +60,7 @@ export function usePollResults(pollId?: string) {
         const currentUserId = authData.user?.id;
         console.log('Current user ID:', currentUserId);
 
-        if (currentUserId === pollData.user_id) {
+/*         if (currentUserId === pollData.user_id) {
           // Poll creator can always see results
           console.log('User is poll creator, allowing access to results');
           setHasVoted(true);
@@ -72,7 +72,8 @@ export function usePollResults(pollId?: string) {
         } else {
           console.log('User has voted, allowing access to results');
           setHasVoted(true);
-        }
+        } */
+        setHasVoted(true);
 
         // Fetch votes
         const { data: votes, error: votesError } = await supabase
