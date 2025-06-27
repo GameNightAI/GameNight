@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
-import { Dice6, RotateCcw, Plus, Minus } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal } from 'react-native';
+import { Dice6, RotateCcw, Plus, Minus, X } from 'lucide-react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -23,12 +23,16 @@ interface DiceResult {
   sides: number;
 }
 
+const STANDARD_DICE_SIDES = [2, 4, 6, 8, 10, 12, 20, 100];
+
 export default function DigitalDiceScreen() {
   const [sides, setSides] = useState(6);
   const [numberOfDice, setNumberOfDice] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const [results, setResults] = useState<DiceResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customSides, setCustomSides] = useState('');
 
   const rollDice = useCallback(() => {
     setIsRolling(true);
@@ -58,11 +62,16 @@ export default function DigitalDiceScreen() {
     setShowResults(false);
   };
 
-  const adjustSides = (increment: boolean) => {
-    if (increment && sides < 100) {
-      setSides(sides + 1);
-    } else if (!increment && sides > 2) {
-      setSides(sides - 1);
+  const handleSidesSelection = (selectedSides: number) => {
+    setSides(selectedSides);
+  };
+
+  const handleCustomSides = () => {
+    const customValue = parseInt(customSides);
+    if (customValue && customValue >= 2 && customValue <= 1000) {
+      setSides(customValue);
+      setShowCustomModal(false);
+      setCustomSides('');
     }
   };
 
@@ -83,6 +92,61 @@ export default function DigitalDiceScreen() {
         style={styles.backgroundImage}
       />
       <View style={styles.overlay} />
+
+      {/* Custom Sides Modal */}
+      <Modal
+        visible={showCustomModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCustomModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Custom Dice Sides</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowCustomModal(false)}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.modalDescription}>
+              Enter the number of sides (2-1000):
+            </Text>
+            
+            <TextInput
+              style={styles.customInput}
+              value={customSides}
+              onChangeText={setCustomSides}
+              placeholder="Enter number of sides"
+              keyboardType="numeric"
+              autoFocus
+            />
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowCustomModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmButton,
+                  (!customSides || parseInt(customSides) < 2 || parseInt(customSides) > 1000) && styles.modalConfirmButtonDisabled
+                ]}
+                onPress={handleCustomSides}
+                disabled={!customSides || parseInt(customSides) < 2 || parseInt(customSides) > 1000}
+              >
+                <Text style={styles.modalConfirmText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Rolling Animation Overlay */}
       {isRolling && (
@@ -162,26 +226,39 @@ export default function DigitalDiceScreen() {
         {/* Dice Sides Configuration */}
         <View style={styles.configSection}>
           <Text style={styles.configLabel}>Number of Sides</Text>
-          <View style={styles.configRow}>
-            <TouchableOpacity
-              style={[styles.adjustButton, sides <= 2 && styles.adjustButtonDisabled]}
-              onPress={() => adjustSides(false)}
-              disabled={sides <= 2}
-            >
-              <Minus size={20} color={sides <= 2 ? "#cccccc" : "#10b981"} />
-            </TouchableOpacity>
+          <View style={styles.sidesGrid}>
+            {STANDARD_DICE_SIDES.map((sideOption) => (
+              <TouchableOpacity
+                key={sideOption}
+                style={[
+                  styles.sideOption,
+                  sides === sideOption && styles.sideOptionSelected
+                ]}
+                onPress={() => handleSidesSelection(sideOption)}
+              >
+                <Text style={[
+                  styles.sideOptionText,
+                  sides === sideOption && styles.sideOptionTextSelected
+                ]}>
+                  d{sideOption}
+                </Text>
+              </TouchableOpacity>
+            ))}
             
-            <View style={styles.valueContainer}>
-              <Text style={styles.valueText}>{sides}</Text>
-              <Text style={styles.valueSubtext}>sides</Text>
-            </View>
-            
             <TouchableOpacity
-              style={[styles.adjustButton, sides >= 100 && styles.adjustButtonDisabled]}
-              onPress={() => adjustSides(true)}
-              disabled={sides >= 100}
+              style={[
+                styles.sideOption,
+                styles.customSideOption,
+                !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionSelected
+              ]}
+              onPress={() => setShowCustomModal(true)}
             >
-              <Plus size={20} color={sides >= 100 ? "#cccccc" : "#10b981"} />
+              <Text style={[
+                styles.sideOptionText,
+                !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionTextSelected
+              ]}>
+                {!STANDARD_DICE_SIDES.includes(sides) ? `d${sides}` : 'Other'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -347,6 +424,42 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
+  sidesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  sideOption: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    minWidth: 60,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sideOptionSelected: {
+    borderColor: '#10b981',
+    backgroundColor: '#ecfdf5',
+  },
+  customSideOption: {
+    minWidth: 80,
+  },
+  sideOptionText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#666666',
+  },
+  sideOptionTextSelected: {
+    color: '#10b981',
+  },
   configRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -441,6 +554,87 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#ffffff',
     marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 20,
+    color: '#1a2b5f',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    marginBottom: 20,
+  },
+  customInput: {
+    backgroundColor: '#f7f9fc',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333333',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#666666',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    backgroundColor: '#10b981',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  modalConfirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  modalConfirmText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
   },
   rollingOverlay: {
     ...StyleSheet.absoluteFillObject,
