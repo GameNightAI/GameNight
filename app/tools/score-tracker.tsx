@@ -57,17 +57,21 @@ export default function ScoreTrackerScreen() {
   }, [players]);
 
   const updateRoundScore = useCallback((playerId: string, score: string) => {
-    setRoundScores(prev => ({
-      ...prev,
-      [playerId]: score,
-    }));
+    // Allow negative numbers by accepting minus sign
+    if (score === '' || score === '-' || /^-?\d*$/.test(score)) {
+      setRoundScores(prev => ({
+        ...prev,
+        [playerId]: score,
+      }));
+    }
   }, []);
 
   const submitRound = useCallback(() => {
     // Validate all scores are entered
     const allScoresEntered = players.every(player => 
       roundScores[player.id] !== undefined && 
-      roundScores[player.id].trim() !== ''
+      roundScores[player.id].trim() !== '' &&
+      roundScores[player.id] !== '-'
     );
 
     if (!allScoresEntered) {
@@ -88,7 +92,7 @@ export default function ScoreTrackerScreen() {
       return {
         ...player,
         scores: [...player.scores, score],
-        total: player.total + score,
+        total: player.total + score, // This will handle negative numbers correctly
       };
     });
 
@@ -321,13 +325,14 @@ export default function ScoreTrackerScreen() {
                 <View style={styles.historyTable}>
                   {/* Header Row */}
                   <View style={styles.historyHeaderRow}>
-                    <Text style={styles.historyHeaderCell}>Player</Text>
-                    {rounds.map(round => (
+                    <Text style={styles.historyHeaderCellPlayer}>Player</Text>
+                    <Text style={styles.historyHeaderCellTotal}>Total</Text>
+                    {/* Show rounds in reverse order (latest first) */}
+                    {[...rounds].reverse().map(round => (
                       <Text key={round.roundNumber} style={styles.historyHeaderCell}>
                         R{round.roundNumber}
                       </Text>
                     ))}
-                    <Text style={styles.historyHeaderCell}>Total</Text>
                   </View>
 
                   {/* Player Rows */}
@@ -343,7 +348,14 @@ export default function ScoreTrackerScreen() {
                         {player.name}
                         {index === 0 && ' 👑'}
                       </Text>
-                      {player.scores.map((score, scoreIndex) => (
+                      <Text style={[
+                        styles.historyTotalCell,
+                        index === 0 && styles.historyLeaderText
+                      ]}>
+                        {player.total}
+                      </Text>
+                      {/* Show scores in reverse order (latest first) */}
+                      {[...player.scores].reverse().map((score, scoreIndex) => (
                         <Text key={scoreIndex} style={[
                           styles.historyScoreCell,
                           index === 0 && styles.historyLeaderText
@@ -351,12 +363,6 @@ export default function ScoreTrackerScreen() {
                           {score}
                         </Text>
                       ))}
-                      <Text style={[
-                        styles.historyTotalCell,
-                        index === 0 && styles.historyLeaderText
-                      ]}>
-                        {player.total}
-                      </Text>
                     </View>
                   ))}
                 </View>
@@ -417,13 +423,14 @@ export default function ScoreTrackerScreen() {
               {/* Header */}
               <View style={styles.finalHeaderRow}>
                 <Text style={styles.finalHeaderCell}>Rank</Text>
-                <Text style={styles.finalHeaderCell}>Player</Text>
-                {rounds.map(round => (
+                <Text style={styles.finalHeaderCellPlayer}>Player</Text>
+                <Text style={styles.finalHeaderCellTotal}>Total</Text>
+                {/* Show rounds in reverse order (latest first) */}
+                {[...rounds].reverse().map(round => (
                   <Text key={round.roundNumber} style={styles.finalHeaderCell}>
                     R{round.roundNumber}
                   </Text>
                 ))}
-                <Text style={styles.finalHeaderCell}>Total</Text>
               </View>
 
               {/* Player Rows */}
@@ -431,12 +438,13 @@ export default function ScoreTrackerScreen() {
                 <View key={player.id} style={styles.finalPlayerRow}>
                   <Text style={styles.finalRankCell}>#{index + 1}</Text>
                   <Text style={styles.finalPlayerNameCell}>{player.name}</Text>
-                  {player.scores.map((score, scoreIndex) => (
+                  <Text style={styles.finalTotalCell}>{player.total}</Text>
+                  {/* Show scores in reverse order (latest first) */}
+                  {[...player.scores].reverse().map((score, scoreIndex) => (
                     <Text key={scoreIndex} style={styles.finalScoreCell}>
                       {score}
                     </Text>
                   ))}
-                  <Text style={styles.finalTotalCell}>{player.total}</Text>
                 </View>
               ))}
             </View>
@@ -780,11 +788,25 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     marginBottom: 8,
   },
-  historyHeaderCell: {
+  historyHeaderCellPlayer: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    width: 80,
+    textAlign: 'center',
+  },
+  historyHeaderCellTotal: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#1a2b5f',
     width: 60,
+    textAlign: 'center',
+  },
+  historyHeaderCell: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    width: 50,
     textAlign: 'center',
   },
   historyPlayerRow: {
@@ -803,14 +825,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#333333',
-    width: 60,
+    width: 80,
     textAlign: 'center',
   },
   historyScoreCell: {
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#333333',
-    width: 60,
+    width: 50,
     textAlign: 'center',
   },
   historyTotalCell: {
@@ -951,6 +973,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#1a2b5f',
+    width: 50,
+    textAlign: 'center',
+  },
+  finalHeaderCellPlayer: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    width: 80,
+    textAlign: 'center',
+  },
+  finalHeaderCellTotal: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
     width: 60,
     textAlign: 'center',
   },
@@ -964,21 +1000,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Bold',
     fontSize: 14,
     color: '#8b5cf6',
-    width: 60,
+    width: 50,
     textAlign: 'center',
   },
   finalPlayerNameCell: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#333333',
-    width: 60,
+    width: 80,
     textAlign: 'center',
   },
   finalScoreCell: {
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#333333',
-    width: 60,
+    width: 50,
     textAlign: 'center',
   },
   finalTotalCell: {
