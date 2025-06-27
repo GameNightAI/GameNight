@@ -14,6 +14,13 @@ export default function ToolsLayout() {
           headerShown: true,
         }}
       />
+      <Stack.Screen
+        name="digital-dice"
+        options={{
+          title: 'Digital Dice',
+          headerShown: true,
+        }}
+      />
     </Stack>
   );
 }

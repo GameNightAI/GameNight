@@ -23,10 +23,7 @@ export default function ToolsScreen() {
       icon: Dice6,
       color: '#10b981',
       backgroundColor: '#ecfdf5',
-      onPress: () => {
-        // TODO: Implement digital dice functionality
-        console.log('Digital Dice coming soon!');
-      },
+      onPress: () => router.push('/tools/digital-dice'),
     },
     {
       id: 'score-tracker',
