@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Alert } from 'react-native';
-import { Plus, Minus, Trophy, Users, RotateCcw, X, CreditCard as Edit3, Check } from 'lucide-react-native';
+import { Plus, Minus, Trophy, Users, RotateCcw, X, Pen, Check } from 'lucide-react-native';
 import Animated, { FadeIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 
 interface Player {
@@ -219,14 +219,13 @@ export default function ScoreTrackerScreen() {
                     <>
                       <View style={styles.playerInfo}>
                         <Text style={styles.playerName}>{player.name}</Text>
-                        <Text style={styles.playerNumber}>Player {index + 1}</Text>
                       </View>
                       <View style={styles.playerActions}>
                         <TouchableOpacity
                           style={styles.editPlayerButton}
                           onPress={() => startEditingPlayer(player)}
                         >
-                          <Edit3 size={16} color="#ff9654" />
+                          <Pen size={16} color="#ff9654" />
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.removeButton}
@@ -559,8 +558,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -607,12 +606,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#333333',
-  },
-  playerNumber: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-    marginTop: 2,
   },
   playerActions: {
     flexDirection: 'row',
