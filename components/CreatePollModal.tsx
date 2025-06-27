@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions, Image } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, UserCheck, Globe, Shuffle, ChartBar as BarChart3, Trophy } from 'lucide-react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence,
+  withDelay,
+  FadeIn,
+  FadeOut,
+  ZoomIn,
+  SlideInDown,
+  runOnJS,
+  Easing
+} from 'react-native-reanimated';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
@@ -10,7 +24,7 @@ interface CreatePollModalProps {
   onSuccess: () => void;
 }
 
-type PollStep = 'type-selection' | 'game-selection' | 'in-person-type-selection' | 'random-result';
+type PollStep = 'type-selection' | 'game-selection' | 'in-person-type-selection' | 'random-animation' | 'random-result';
 type PollType = 'remote' | 'in-person';
 
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
@@ -217,12 +231,18 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setCurrentStep('in-person-type-selection');
   };
 
-  const handleRandomSelection = () => {
+  const handleRandomSelection = async () => {
     if (selectedGames.length > 0) {
-      const randomIndex = Math.floor(Math.random() * selectedGames.length);
-      const selectedGame = selectedGames[randomIndex];
-      setRandomlySelectedGame(selectedGame);
-      setCurrentStep('random-result');
+      // Start the animation phase
+      setCurrentStep('random-animation');
+      
+      // After 2 seconds of animation, show the result
+      setTimeout(() => {
+        const randomIndex = Math.floor(Math.random() * selectedGames.length);
+        const selectedGame = selectedGames[randomIndex];
+        setRandomlySelectedGame(selectedGame);
+        runOnJS(setCurrentStep)('random-result');
+      }, 2000);
     }
   };
 
@@ -370,6 +390,30 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     </View>
   );
 
+  const renderRandomAnimation = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Selecting Game...</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.animationContainer}>
+        <RandomSelectionAnimation />
+        <Text style={styles.animationText}>
+          Randomly selecting from {selectedGames.length} games...
+        </Text>
+      </View>
+    </View>
+  );
+
   const renderRandomResult = () => (
     <View style={styles.dialog}>
       <View style={styles.header}>
@@ -393,7 +437,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         <Text style={styles.randomResultTitle}>Selected Game:</Text>
         
         {randomlySelectedGame && (
-          <View style={styles.selectedGameCard}>
+          <Animated.View 
+            entering={ZoomIn.delay(300).duration(600).springify()}
+            style={styles.selectedGameCard}
+          >
             <Image
               source={{ uri: randomlySelectedGame.thumbnail }}
               style={styles.selectedGameImage}
@@ -410,7 +457,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </Text>
               )}
             </View>
-          </View>
+          </Animated.View>
         )}
 
         <Text style={styles.randomResultSubtext}>
@@ -936,6 +983,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         return renderGameSelection();
       case 'in-person-type-selection':
         return renderInPersonTypeSelection();
+      case 'random-animation':
+        return renderRandomAnimation();
       case 'random-result':
         return renderRandomResult();
       default:
@@ -968,6 +1017,108 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   );
 };
 
+// Random Selection Animation Component
+function RandomSelectionAnimation() {
+  const rotation = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { rotate: `${rotation.value}deg` },
+        { scale: scale.value },
+      ],
+      opacity: opacity.value,
+    };
+  });
+
+  React.useEffect(() => {
+    // Continuous rotation
+    rotation.value = withRepeat(
+      withTiming(360, { duration: 1000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    
+    // Pulsing scale animation
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.2, { duration: 500 }),
+        withTiming(1, { duration: 500 })
+      ),
+      -1,
+      true
+    );
+
+    // Subtle opacity animation
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.7, { duration: 800 }),
+        withTiming(1, { duration: 800 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  return (
+    <View style={styles.animationIconContainer}>
+      <Animated.View style={[styles.animationIcon, animatedStyle]}>
+        <Shuffle size={64} color="#10b981" />
+      </Animated.View>
+      
+      {/* Surrounding animated dots */}
+      <AnimatedDot delay={0} />
+      <AnimatedDot delay={200} />
+      <AnimatedDot delay={400} />
+      <AnimatedDot delay={600} />
+    </View>
+  );
+}
+
+function AnimatedDot({ delay }: { delay: number }) {
+  const scale = useSharedValue(0.5);
+  const opacity = useSharedValue(0.3);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+      opacity: opacity.value,
+    };
+  });
+
+  React.useEffect(() => {
+    scale.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 600 }),
+          withTiming(0.5, { duration: 600 })
+        ),
+        -1,
+        true
+      )
+    );
+
+    opacity.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(0.8, { duration: 600 }),
+          withTiming(0.3, { duration: 600 })
+        ),
+        -1,
+        true
+      )
+    );
+  }, [delay]);
+
+  return (
+    <Animated.View style={[styles.animationDot, animatedStyle]} />
+  );
+}
+
 type Styles = {
   overlay: ViewStyle;
   webOverlay: ViewStyle;
@@ -982,6 +1133,11 @@ type Styles = {
   pollTypeTitle: TextStyle;
   pollTypeDescription: TextStyle;
   comingSoonText: TextStyle;
+  animationContainer: ViewStyle;
+  animationIconContainer: ViewStyle;
+  animationIcon: ViewStyle;
+  animationDot: ViewStyle;
+  animationText: TextStyle;
   randomResultContainer: ViewStyle;
   randomResultIcon: ViewStyle;
   randomResultTitle: TextStyle;
@@ -1140,6 +1296,37 @@ const styles = StyleSheet.create<Styles>({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  animationContainer: {
+    padding: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  animationIconContainer: {
+    position: 'relative',
+    width: 160,
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  animationIcon: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animationDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10b981',
+  },
+  animationText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#1a2b5f',
+    textAlign: 'center',
+    lineHeight: 24,
   },
   randomResultContainer: {
     padding: 32,
