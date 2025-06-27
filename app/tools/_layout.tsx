@@ -21,6 +21,13 @@ export default function ToolsLayout() {
           headerShown: true,
         }}
       />
+      <Stack.Screen
+        name="score-tracker"
+        options={{
+          title: 'Score Tracker',
+          headerShown: true,
+        }}
+      />
     </Stack>
   );
 }

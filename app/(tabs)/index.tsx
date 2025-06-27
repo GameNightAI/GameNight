@@ -32,10 +32,7 @@ export default function ToolsScreen() {
       icon: Trophy,
       color: '#8b5cf6',
       backgroundColor: '#f3f4f6',
-      onPress: () => {
-        // TODO: Implement score tracker functionality
-        console.log('Score Tracker coming soon!');
-      },
+      onPress: () => router.push('/tools/score-tracker'),
     },
   ];
 
