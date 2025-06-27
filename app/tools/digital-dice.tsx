@@ -49,12 +49,12 @@ export default function DigitalDiceScreen() {
       });
     }
 
-    // Simulate rolling animation duration
+    // Simulate rolling animation duration - cut in half from 2000ms to 1000ms
     setTimeout(() => {
       runOnJS(setResults)(newResults);
       runOnJS(setIsRolling)(false);
       runOnJS(setShowResults)(true);
-    }, 2000);
+    }, 1000);
   }, [sides, numberOfDice]);
 
   const resetDice = () => {
@@ -155,7 +155,7 @@ export default function DigitalDiceScreen() {
           exiting={FadeOut.duration(200)}
           style={styles.rollingOverlay}
         >
-          <RollingDiceAnimation numberOfDice={numberOfDice} />
+          <RollingDiceAnimation />
           <Text style={styles.rollingText}>Rolling...</Text>
         </Animated.View>
       )}
@@ -321,18 +321,16 @@ export default function DigitalDiceScreen() {
   );
 }
 
-// Rolling Animation Component
-function RollingDiceAnimation({ numberOfDice }: { numberOfDice: number }) {
+// Rolling Animation Component - now only shows one die
+function RollingDiceAnimation() {
   return (
     <View style={styles.rollingDiceContainer}>
-      {Array.from({ length: numberOfDice }, (_, index) => (
-        <RollingDice key={index} delay={index * 100} />
-      ))}
+      <RollingDice />
     </View>
   );
 }
 
-function RollingDice({ delay }: { delay: number }) {
+function RollingDice() {
   const rotation = useSharedValue(0);
   const scale = useSharedValue(1);
 
@@ -346,16 +344,18 @@ function RollingDice({ delay }: { delay: number }) {
   });
 
   React.useEffect(() => {
+    // Faster rotation animation - cut duration in half from 500ms to 250ms
     rotation.value = withRepeat(
-      withTiming(360, { duration: 500, easing: Easing.linear }),
+      withTiming(360, { duration: 250, easing: Easing.linear }),
       -1,
       false
     );
     
+    // Faster scale animation - cut duration in half from 250ms to 125ms
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.2, { duration: 250 }),
-        withTiming(1, { duration: 250 })
+        withTiming(1.2, { duration: 125 }),
+        withTiming(1, { duration: 125 })
       ),
       -1,
       true
@@ -363,7 +363,7 @@ function RollingDice({ delay }: { delay: number }) {
   }, []);
 
   return (
-    <Animated.View style={[styles.rollingDice, animatedStyle, { marginLeft: delay }]}>
+    <Animated.View style={[styles.rollingDice, animatedStyle]}>
       <Dice6 size={48} color="#10b981" />
     </Animated.View>
   );
@@ -644,13 +644,12 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   rollingDiceContainer: {
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   rollingDice: {
-    marginHorizontal: 8,
+    // Removed marginHorizontal since we only have one die now
   },
   rollingText: {
     fontFamily: 'Poppins-Bold',
