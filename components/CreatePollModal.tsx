@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions, Image } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, UserCheck, Globe, Shuffle, ChartBar as BarChart3, Trophy } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
@@ -10,7 +10,7 @@ interface CreatePollModalProps {
   onSuccess: () => void;
 }
 
-type PollStep = 'type-selection' | 'game-selection' | 'in-person-type-selection';
+type PollStep = 'type-selection' | 'game-selection' | 'in-person-type-selection' | 'random-result';
 type PollType = 'remote' | 'in-person';
 
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
@@ -25,6 +25,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [randomlySelectedGame, setRandomlySelectedGame] = useState<Game | null>(null);
 
   // Filter states
   const [playerCount, setPlayerCount] = useState<string>('');
@@ -220,13 +221,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     if (selectedGames.length > 0) {
       const randomIndex = Math.floor(Math.random() * selectedGames.length);
       const selectedGame = selectedGames[randomIndex];
-      
-      // Show alert with the selected game
-      alert(`Random Selection Result:\n\n${selectedGame.name}`);
-      
-      // Close modal and reset
-      onClose();
-      resetForm();
+      setRandomlySelectedGame(selectedGame);
+      setCurrentStep('random-result');
     }
   };
 
@@ -257,6 +253,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setShowAgeDropdown(false);
     setShowTypeDropdown(false);
     setShowComplexityDropdown(false);
+    setRandomlySelectedGame(null);
   };
 
   const toggleGameSelection = (game: Game) => {
@@ -368,6 +365,76 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           <Text style={styles.pollTypeDescription}>
             Share a link for others to vote on games remotely
           </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderRandomResult = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Random Selection Result</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.randomResultContainer}>
+        <View style={styles.randomResultIcon}>
+          <Shuffle size={48} color="#10b981" />
+        </View>
+        
+        <Text style={styles.randomResultTitle}>Selected Game:</Text>
+        
+        {randomlySelectedGame && (
+          <View style={styles.selectedGameCard}>
+            <Image
+              source={{ uri: randomlySelectedGame.thumbnail }}
+              style={styles.selectedGameImage}
+              resizeMode="cover"
+            />
+            <View style={styles.selectedGameInfo}>
+              <Text style={styles.selectedGameName}>{randomlySelectedGame.name}</Text>
+              <Text style={styles.selectedGameDetails}>
+                {randomlySelectedGame.min_players}-{randomlySelectedGame.max_players} players • {randomlySelectedGame.playing_time} min
+              </Text>
+              {randomlySelectedGame.yearPublished && (
+                <Text style={styles.selectedGameYear}>
+                  Published: {randomlySelectedGame.yearPublished}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+
+        <Text style={styles.randomResultSubtext}>
+          Enjoy your game!
+        </Text>
+      </View>
+
+      <View style={styles.randomResultActions}>
+        <TouchableOpacity
+          style={styles.selectAgainButton}
+          onPress={handleRandomSelection}
+        >
+          <Shuffle size={20} color="#10b981" />
+          <Text style={styles.selectAgainText}>Select Again</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.doneButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <Text style={styles.doneButtonText}>Done</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -869,6 +936,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         return renderGameSelection();
       case 'in-person-type-selection':
         return renderInPersonTypeSelection();
+      case 'random-result':
+        return renderRandomResult();
       default:
         return renderTypeSelection();
     }
@@ -913,6 +982,21 @@ type Styles = {
   pollTypeTitle: TextStyle;
   pollTypeDescription: TextStyle;
   comingSoonText: TextStyle;
+  randomResultContainer: ViewStyle;
+  randomResultIcon: ViewStyle;
+  randomResultTitle: TextStyle;
+  randomResultSubtext: TextStyle;
+  selectedGameCard: ViewStyle;
+  selectedGameImage: ViewStyle;
+  selectedGameInfo: ViewStyle;
+  selectedGameName: TextStyle;
+  selectedGameDetails: TextStyle;
+  selectedGameYear: TextStyle;
+  randomResultActions: ViewStyle;
+  selectAgainButton: ViewStyle;
+  selectAgainText: TextStyle;
+  doneButton: ViewStyle;
+  doneButtonText: TextStyle;
   content: ViewStyle;
   label: TextStyle;
   sublabel: TextStyle;
@@ -1056,6 +1140,116 @@ const styles = StyleSheet.create<Styles>({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  randomResultContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  randomResultIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#ecfdf5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  randomResultTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 24,
+    color: '#1a2b5f',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  randomResultSubtext: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginTop: 24,
+  },
+  selectedGameCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#10b981',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    width: '100%',
+    maxWidth: 300,
+  },
+  selectedGameImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  selectedGameInfo: {
+    alignItems: 'center',
+  },
+  selectedGameName: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 20,
+    color: '#1a2b5f',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 26,
+  },
+  selectedGameDetails: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  selectedGameYear: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#8d8d8d',
+    textAlign: 'center',
+  },
+  randomResultActions: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+  },
+  selectAgainButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ecfdf5',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#10b981',
+  },
+  selectAgainText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#10b981',
+    marginLeft: 8,
+  },
+  doneButton: {
+    backgroundColor: '#10b981',
+    borderRadius: 12,
+    padding: 16,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
   },
   content: {
     padding: 20,
