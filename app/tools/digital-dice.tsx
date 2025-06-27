@@ -49,7 +49,7 @@ export default function DigitalDiceScreen() {
       });
     }
 
-    // Simulate rolling animation duration - cut in half from 2000ms to 1000ms
+    // Keep the same rolling screen duration (1000ms)
     setTimeout(() => {
       runOnJS(setResults)(newResults);
       runOnJS(setIsRolling)(false);
@@ -344,18 +344,18 @@ function RollingDice() {
   });
 
   React.useEffect(() => {
-    // Faster rotation animation - cut duration in half from 500ms to 250ms
+    // Slower rotation animation - increased duration from 250ms to 800ms
     rotation.value = withRepeat(
-      withTiming(360, { duration: 250, easing: Easing.linear }),
+      withTiming(360, { duration: 800, easing: Easing.linear }),
       -1,
       false
     );
     
-    // Faster scale animation - cut duration in half from 250ms to 125ms
+    // Slower scale animation - increased duration from 125ms to 400ms per cycle
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.2, { duration: 125 }),
-        withTiming(1, { duration: 125 })
+        withTiming(1.2, { duration: 400 }),
+        withTiming(1, { duration: 400 })
       ),
       -1,
       true
