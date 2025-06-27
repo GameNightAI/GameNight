@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Alert } from 'react-native';
-import { Plus, Minus, Trophy, Users, RotateCcw, X, Edit3, Check } from 'lucide-react-native';
+import { Plus, Minus, Trophy, Users, RotateCcw, X, CreditCard as Edit3, Check } from 'lucide-react-native';
 import Animated, { FadeIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 
 interface Player {
