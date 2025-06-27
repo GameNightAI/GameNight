@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, UserCheck, Globe } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
-
 
 interface CreatePollModalProps {
   isVisible: boolean;
@@ -11,11 +10,14 @@ interface CreatePollModalProps {
   onSuccess: () => void;
 }
 
+type PollStep = 'type-selection' | 'game-selection';
+
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   isVisible,
   onClose,
   onSuccess,
 }) => {
+  const [currentStep, setCurrentStep] = useState<PollStep>('type-selection');
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
@@ -43,14 +45,16 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'];
 
   useEffect(() => {
-    if (isVisible) {
+    if (isVisible && currentStep === 'game-selection') {
       loadGames();
     }
-  }, [isVisible]);
+  }, [isVisible, currentStep]);
 
   useEffect(() => {
-    filterGames();
-  }, [availableGames, playerCount, playTime, minAge, gameType, complexity]);
+    if (currentStep === 'game-selection') {
+      filterGames();
+    }
+  }, [availableGames, playerCount, playTime, minAge, gameType, complexity, currentStep]);
 
   const loadGames = async () => {
     try {
@@ -142,7 +146,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     );
   };
 
-  const handleCreatePoll = async () => {
+  const handleInPersonPoll = () => {
+    // For now, just close the modal since in-person polls aren't implemented yet
+    onClose();
+    resetForm();
+  };
+
+  const handleRemotePoll = () => {
+    setCurrentStep('game-selection');
+  };
+
+  const handleCreateRemotePoll = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -193,6 +207,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   const resetForm = () => {
+    setCurrentStep('type-selection');
     setSelectedGames([]);
     setError(null);
     setPlayerCount('');
@@ -272,10 +287,60 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     }
   };
 
-  const content = (
+  const renderTypeSelection = () => (
     <View style={styles.dialog}>
       <View style={styles.header}>
         <Text style={styles.title}>Create Poll</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.description}>
+        Choose the type of poll you want to create
+      </Text>
+
+      <View style={styles.pollTypeContainer}>
+        <TouchableOpacity
+          style={styles.pollTypeOption}
+          onPress={handleInPersonPoll}
+        >
+          <View style={styles.pollTypeIcon}>
+            <UserCheck size={32} color="#8b5cf6" />
+          </View>
+          <Text style={styles.pollTypeTitle}>In-person</Text>
+          <Text style={styles.pollTypeDescription}>
+            For players deciding what to play together in person
+          </Text>
+          <Text style={styles.comingSoonText}>Coming Soon</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.pollTypeOption}
+          onPress={handleRemotePoll}
+        >
+          <View style={styles.pollTypeIcon}>
+            <Globe size={32} color="#10b981" />
+          </View>
+          <Text style={styles.pollTypeTitle}>Remote Poll</Text>
+          <Text style={styles.pollTypeDescription}>
+            Share a link for others to vote on games remotely
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderGameSelection = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Create Remote Poll</Text>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => {
@@ -663,18 +728,29 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         <Text style={styles.errorText}>{error}</Text>
       )}
 
-      <TouchableOpacity
-        style={[styles.createButton, loading && styles.createButtonDisabled]}
-        onPress={handleCreatePoll}
-        disabled={loading}
-      >
-        <Plus color="#fff" size={20} />
-        <Text style={styles.createButtonText}>
-          {loading ? 'Creating Poll...' : 'Create Poll'}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setCurrentStep('type-selection')}
+        >
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.createButton, loading && styles.createButtonDisabled]}
+          onPress={handleCreateRemotePoll}
+          disabled={loading}
+        >
+          <Plus color="#fff" size={20} />
+          <Text style={styles.createButtonText}>
+            {loading ? 'Creating Poll...' : 'Create Poll'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
+
+  const content = currentStep === 'type-selection' ? renderTypeSelection() : renderGameSelection();
 
   if (Platform.OS === 'web') {
     if (!isVisible) return null;
@@ -698,6 +774,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     </Modal>
   );
 };
+
 type Styles = {
   overlay: ViewStyle;
   webOverlay: ViewStyle;
@@ -705,6 +782,13 @@ type Styles = {
   header: ViewStyle;
   closeButton: ViewStyle;
   title: TextStyle;
+  description: TextStyle;
+  pollTypeContainer: ViewStyle;
+  pollTypeOption: ViewStyle;
+  pollTypeIcon: ViewStyle;
+  pollTypeTitle: TextStyle;
+  pollTypeDescription: TextStyle;
+  comingSoonText: TextStyle;
   content: ViewStyle;
   label: TextStyle;
   sublabel: TextStyle;
@@ -731,6 +815,9 @@ type Styles = {
   playerCount: TextStyle;
   noGamesText: TextStyle;
   errorText: TextStyle;
+  actionButtons: ViewStyle;
+  backButton: ViewStyle;
+  backButtonText: TextStyle;
   createButton: ViewStyle;
   createButtonDisabled: ViewStyle;
   createButtonText: TextStyle;
@@ -787,6 +874,64 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 20,
     color: '#1a2b5f',
+  },
+  description: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 32,
+    paddingHorizontal: 20,
+  },
+  pollTypeContainer: {
+    padding: 20,
+    paddingTop: 0,
+    gap: 16,
+  },
+  pollTypeOption: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  pollTypeIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f7f9fc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pollTypeTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 20,
+    color: '#1a2b5f',
+    marginBottom: 8,
+  },
+  pollTypeDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  comingSoonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    color: '#ff9654',
+    marginTop: 8,
+    backgroundColor: '#fff5ef',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   content: {
     padding: 20,
@@ -929,14 +1074,33 @@ const styles = StyleSheet.create<Styles>({
     marginTop: 8,
     paddingHorizontal: 20,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+  },
+  backButton: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#666666',
+  },
   createButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ff9654',
-    padding: 16,
-    margin: 20,
     borderRadius: 12,
+    padding: 16,
     gap: 8,
   },
   createButtonDisabled: {
