@@ -9,6 +9,10 @@ export type GameResult = {
   double_thumbs_up: number;
   thumbs_down: number;
   voters: string[];
+  voterDetails: Array<{
+    name: string;
+    vote_type: 'thumbs_up' | 'double_thumbs_up' | 'thumbs_down';
+  }>;
 };
 
 export function usePollResults(pollId?: string) {
@@ -60,22 +64,9 @@ export function usePollResults(pollId?: string) {
         const currentUserId = authData.user?.id;
         console.log('Current user ID:', currentUserId);
 
-/*         if (currentUserId === pollData.user_id) {
-          // Poll creator can always see results
-          console.log('User is poll creator, allowing access to results');
-          setHasVoted(true);
-        } else if (votedFlag !== 'true') {
-          console.log('User has not voted, denying access to results');
-          setHasVoted(false);
-          setLoading(false);
-          return;
-        } else {
-          console.log('User has voted, allowing access to results');
-          setHasVoted(true);
-        } */
         setHasVoted(true);
 
-        // Fetch votes
+        // Fetch votes with detailed information
         const { data: votes, error: votesError } = await supabase
           .from('votes')
           .select('game_id, vote_type, voter_name')
@@ -91,23 +82,45 @@ export function usePollResults(pollId?: string) {
         // Aggregate votes by game
         const resultsMap: Record<
           number,
-          { thumbs_up: number; double_thumbs_up: number; thumbs_down: number; voters: string[] }
+          { 
+            thumbs_up: number; 
+            double_thumbs_up: number; 
+            thumbs_down: number; 
+            voters: string[];
+            voterDetails: Array<{
+              name: string;
+              vote_type: 'thumbs_up' | 'double_thumbs_up' | 'thumbs_down';
+            }>;
+          }
         > = {};
-        console.log('Results map init:', resultsMap);
 
         votes?.forEach(({ game_id, vote_type, voter_name }) => {
           if (!game_id) return; // Skip votes without game_id
           
           if (!resultsMap[game_id]) {
-            resultsMap[game_id] = { thumbs_up: 0, double_thumbs_up: 0, thumbs_down: 0, voters: [] };
+            resultsMap[game_id] = { 
+              thumbs_up: 0, 
+              double_thumbs_up: 0, 
+              thumbs_down: 0, 
+              voters: [],
+              voterDetails: []
+            };
           }
           
           if (vote_type === 'thumbs_up') resultsMap[game_id].thumbs_up++;
           else if (vote_type === 'double_thumbs_up') resultsMap[game_id].double_thumbs_up++;
           else if (vote_type === 'thumbs_down') resultsMap[game_id].thumbs_down++;
 
-          if (voter_name && !resultsMap[game_id].voters.includes(voter_name)) {
-            resultsMap[game_id].voters.push(voter_name);
+          if (voter_name) {
+            if (!resultsMap[game_id].voters.includes(voter_name)) {
+              resultsMap[game_id].voters.push(voter_name);
+            }
+            
+            // Add detailed voter information
+            resultsMap[game_id].voterDetails.push({
+              name: voter_name,
+              vote_type: vote_type as 'thumbs_up' | 'double_thumbs_up' | 'thumbs_down'
+            });
           }
         });
 
@@ -143,6 +156,7 @@ export function usePollResults(pollId?: string) {
           double_thumbs_up: resultsMap[game.id]?.double_thumbs_up || 0,
           thumbs_down: resultsMap[game.id]?.thumbs_down || 0,
           voters: resultsMap[game.id]?.voters || [],
+          voterDetails: resultsMap[game.id]?.voterDetails || [],
         })) || [];
 
         console.log('Combined results:', combinedResults);
