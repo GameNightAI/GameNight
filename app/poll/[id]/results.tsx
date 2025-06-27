@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, Text, StyleSheet } from 'react-native';
+import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
@@ -29,27 +29,84 @@ export default function PollResultsScreen() {
         message={error}
         onRetry={() => {
           router.replace({ pathname: '/poll/[id]', params: { id: id as string } });
-
         }}
       />
     );
   }
 
+  // Sort games by total positive votes (heart votes count double)
+  const sortedResults = [...gameResults].sort((a, b) => {
+    const aScore = (a.double_thumbs_up * 2) + a.thumbs_up - a.thumbs_down;
+    const bScore = (b.double_thumbs_up * 2) + b.thumbs_up - b.thumbs_down;
+    return bScore - aScore;
+  });
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.heading}>Poll Results: {pollTitle}</Text>
-      {gameResults.map((game) => (
-        <GameResultCard key={game.id} game={game} />
-      ))}
-    </ScrollView>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Poll Results</Text>
+        <Text style={styles.subtitle}>{pollTitle}</Text>
+      </View>
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {sortedResults.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No votes have been cast yet.</Text>
+          </View>
+        ) : (
+          sortedResults.map((game) => (
+            <GameResultCard key={game.id} game={game} />
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20 },
-  heading: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 20,
+  container: {
+    flex: 1,
+    backgroundColor: '#f7f9fc',
+  },
+  header: {
+    backgroundColor: '#1a2b5f',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#ffffff',
+    opacity: 0.9,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
   },
 });
