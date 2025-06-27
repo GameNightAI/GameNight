@@ -1,73 +1,46 @@
-import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
-import { Plus, Shuffle, X } from 'lucide-react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  ZoomIn,
-  ZoomOut,
-  SlideInDown,
-  SlideOutUp,
-  withSequence,
-  withTiming,
-  withDelay,
-  useAnimatedStyle,
-  useSharedValue,
-  runOnJS
-} from 'react-native-reanimated';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Shuffle, Dice6, Trophy } from 'lucide-react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
-export default function FirstPlayerScreen() {
-  const [players, setPlayers] = useState<string[]>([]);
-  const [newPlayer, setNewPlayer] = useState('');
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
+export default function ToolsScreen() {
+  const router = useRouter();
 
-  const opacity = useSharedValue(0);
-
-  const addPlayer = () => {
-    if (newPlayer.trim() && !players.includes(newPlayer.trim())) {
-      setPlayers([...players, newPlayer.trim()]);
-      setNewPlayer('');
-    }
-  };
-
-  const removePlayer = (index: number) => {
-    setPlayers(players.filter((_, i) => i !== index));
-    setSelectedPlayer(null);
-  };
-
-  const updateCountdown = useCallback((value: number | null) => {
-    setCountdown(value);
-  }, []);
-
-  const finishSelection = useCallback((finalPlayer: string) => {
-    setIsSelecting(false);
-    setSelectedPlayer(finalPlayer);
-    setCountdown(null);
-  }, []);
-
-  const selectRandomPlayer = async () => {
-    if (players.length > 0) {
-      setIsSelecting(true);
-      setSelectedPlayer(null);
-
-      const finalIndex = Math.floor(Math.random() * players.length);
-      const finalPlayer = players[finalIndex];
-
-      // Start countdown with faster timing (700ms per number)
-      for (let i = 3; i > 0; i--) {
-        runOnJS(updateCountdown)(i);
-        await new Promise(resolve => setTimeout(resolve, 700));
-      }
-
-      // Show the reveal animation slightly faster
-      runOnJS(updateCountdown)(null);
-      setTimeout(() => {
-        runOnJS(finishSelection)(finalPlayer);
-      }, 300);
-    }
-  };
+  const tools = [
+    {
+      id: 'first-player',
+      title: 'First Player Select',
+      description: 'Randomly select who goes first',
+      icon: Shuffle,
+      color: '#ff9654',
+      backgroundColor: '#fff5ef',
+      onPress: () => router.push('/tools/first-player'),
+    },
+    {
+      id: 'digital-dice',
+      title: 'Digital Dice',
+      description: 'Roll virtual dice for your games',
+      icon: Dice6,
+      color: '#10b981',
+      backgroundColor: '#ecfdf5',
+      onPress: () => {
+        // TODO: Implement digital dice functionality
+        console.log('Digital Dice coming soon!');
+      },
+    },
+    {
+      id: 'score-tracker',
+      title: 'Score Tracker',
+      description: 'Keep track of player scores',
+      icon: Trophy,
+      color: '#8b5cf6',
+      backgroundColor: '#f3f4f6',
+      onPress: () => {
+        // TODO: Implement score tracker functionality
+        console.log('Score Tracker coming soon!');
+      },
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -77,110 +50,42 @@ export default function FirstPlayerScreen() {
       />
       <View style={styles.overlay} />
 
-      {countdown !== null && (
-        <Animated.View
-          entering={FadeIn.duration(150)}
-          exiting={FadeOut.duration(150)}
-          style={styles.countdownOverlay}
-        >
-          <Animated.Text
-            entering={ZoomIn.duration(200)}
-            exiting={ZoomOut.duration(200)}
-            style={styles.countdownText}
-          >
-            {countdown}
-          </Animated.Text>
-        </Animated.View>
-      )}
-
-      {selectedPlayer && !isSelecting && (
-        <Animated.View
-          entering={FadeIn.duration(500)}
-          style={styles.revealOverlay}
-        >
-          <Animated.View
-            entering={SlideInDown.duration(800).springify()}
-            exiting={SlideOutUp.duration(300)}
-            style={styles.revealCard}
-          >
-            <Text style={styles.revealText}>
-              {selectedPlayer}
-            </Text>
-            <Text style={styles.revealSubtext}>
-              goes first!
-            </Text>
-            <TouchableOpacity
-              style={styles.closeRevealButton}
-              onPress={() => setSelectedPlayer(null)}
-            >
-              <Text style={styles.closeRevealText}>Close</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </Animated.View>
-      )}
-
       <View style={styles.header}>
-        <Text style={styles.title}>Who's Going First?</Text>
-        <Text style={styles.subtitle}>Add players and randomly select who starts</Text>
+        <Text style={styles.title}>Game Tools</Text>
+        <Text style={styles.subtitle}>Essential utilities for your board game sessions</Text>
       </View>
 
       <View style={styles.content}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={newPlayer}
-            onChangeText={setNewPlayer}
-            placeholder="Enter player name"
-            placeholderTextColor="#666666"
-            onSubmitEditing={addPlayer}
-          />
-          <TouchableOpacity
-            style={[styles.addButton, !newPlayer.trim() && styles.addButtonDisabled]}
-            onPress={() => addPlayer()}
-            disabled={!newPlayer.trim()}
-          >
-            <Plus color="#fff" size={24} />
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          data={players}
-          keyExtractor={(_, index) => index.toString()}
-          style={styles.list}
-          renderItem={({ item, index }) => (
+        {tools.map((tool, index) => {
+          const IconComponent = tool.icon;
+          
+          return (
             <Animated.View
-              entering={FadeIn.duration(300)}
-              exiting={FadeOut.duration(300)}
-              style={styles.playerItem}
+              key={tool.id}
+              entering={FadeIn.delay(index * 150).duration(400)}
+              style={styles.toolCard}
             >
-              <Text style={styles.playerName}>{item}</Text>
               <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => removePlayer(index)}
+                style={[styles.toolButton, { backgroundColor: tool.backgroundColor }]}
+                onPress={tool.onPress}
+                activeOpacity={0.7}
               >
-                <X size={16} color="#e74c3c" />
+                <View style={styles.toolIconContainer}>
+                  <IconComponent size={32} color={tool.color} />
+                </View>
+                
+                <View style={styles.toolContent}>
+                  <Text style={styles.toolTitle}>{tool.title}</Text>
+                  <Text style={styles.toolDescription}>{tool.description}</Text>
+                </View>
+                
+                <View style={styles.toolArrow}>
+                  <View style={[styles.arrowIcon, { backgroundColor: tool.color }]} />
+                </View>
               </TouchableOpacity>
             </Animated.View>
-          )}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              Add some players to get started
-            </Text>
-          }
-        />
-
-        {players.length > 1 && (
-          <TouchableOpacity
-            style={[styles.shuffleButton, isSelecting && styles.shuffleButtonDisabled]}
-            onPress={selectRandomPlayer}
-            disabled={isSelecting}
-          >
-            <Shuffle size={24} color="#fff" />
-            <Text style={styles.shuffleText}>
-              {isSelecting ? 'Selecting...' : 'Select Random Player'}
-            </Text>
-          </TouchableOpacity>
-        )}
+          );
+        })}
       </View>
     </View>
   );
@@ -230,147 +135,60 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     marginTop: 20,
     padding: 20,
+    paddingTop: 30,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+  toolCard: {
+    marginBottom: 16,
   },
-  input: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  addButton: {
-    width: 56,
-    height: 56,
-    backgroundColor: '#ff9654',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonDisabled: {
-    opacity: 0.7,
-  },
-  list: {
-    flex: 1,
-  },
-  playerItem: {
+  toolButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  playerName: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#fff0f0',
+    padding: 20,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    textAlign: 'center',
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
-    marginTop: 32,
-  },
-  shuffleButton: {
-    backgroundColor: '#ff9654',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  shuffleButtonDisabled: {
-    opacity: 0.7,
-  },
-  shuffleText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    marginLeft: 8,
-  },
-  countdownOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 43, 95, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  countdownText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 120,
-    color: '#ffffff',
-  },
-  revealOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 43, 95, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  revealCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 32,
-    width: '80%',
-    maxWidth: 400,
-    alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  revealText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 32,
-    color: '#1a2b5f',
-    textAlign: 'center',
-    marginBottom: 8,
+  toolIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  revealSubtext: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 20,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 24,
+  toolContent: {
+    flex: 1,
   },
-  closeRevealButton: {
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  closeRevealText: {
+  toolTitle: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: 18,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  toolDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 20,
+  },
+  toolArrow: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrowIcon: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });
