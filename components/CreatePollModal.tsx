@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, UserCheck, Globe } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, UserCheck, Globe, Shuffle, BarChart3, Trophy } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
@@ -10,7 +10,8 @@ interface CreatePollModalProps {
   onSuccess: () => void;
 }
 
-type PollStep = 'type-selection' | 'game-selection';
+type PollStep = 'type-selection' | 'game-selection' | 'in-person-type-selection';
+type PollType = 'remote' | 'in-person';
 
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   isVisible,
@@ -18,6 +19,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   onSuccess,
 }) => {
   const [currentStep, setCurrentStep] = useState<PollStep>('type-selection');
+  const [pollType, setPollType] = useState<PollType>('remote');
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
@@ -147,12 +149,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   const handleInPersonPoll = () => {
-    // For now, just close the modal since in-person polls aren't implemented yet
-    onClose();
-    resetForm();
+    setPollType('in-person');
+    setCurrentStep('game-selection');
   };
 
   const handleRemotePoll = () => {
+    setPollType('remote');
     setCurrentStep('game-selection');
   };
 
@@ -206,8 +208,43 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     }
   };
 
+  const handleCreateInPersonPoll = () => {
+    if (selectedGames.length === 0) {
+      setError('Please select at least one game');
+      return;
+    }
+    setCurrentStep('in-person-type-selection');
+  };
+
+  const handleRandomSelection = () => {
+    if (selectedGames.length > 0) {
+      const randomIndex = Math.floor(Math.random() * selectedGames.length);
+      const selectedGame = selectedGames[randomIndex];
+      
+      // Show alert with the selected game
+      alert(`Random Selection Result:\n\n${selectedGame.name}`);
+      
+      // Close modal and reset
+      onClose();
+      resetForm();
+    }
+  };
+
+  const handleRankedChoice = () => {
+    // For now, just close the modal
+    onClose();
+    resetForm();
+  };
+
+  const handleScoreBased = () => {
+    // For now, just close the modal
+    onClose();
+    resetForm();
+  };
+
   const resetForm = () => {
     setCurrentStep('type-selection');
+    setPollType('remote');
     setSelectedGames([]);
     setError(null);
     setPlayerCount('');
@@ -318,7 +355,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           <Text style={styles.pollTypeDescription}>
             For players deciding what to play together in person
           </Text>
-          <Text style={styles.comingSoonText}>Coming Soon</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -337,10 +373,85 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     </View>
   );
 
+  const renderInPersonTypeSelection = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Choose Selection Method</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.description}>
+        How would you like to select a game from your chosen options?
+      </Text>
+
+      <View style={styles.pollTypeContainer}>
+        <TouchableOpacity
+          style={styles.pollTypeOption}
+          onPress={handleRandomSelection}
+        >
+          <View style={styles.pollTypeIcon}>
+            <Shuffle size={32} color="#10b981" />
+          </View>
+          <Text style={styles.pollTypeTitle}>Random Selection</Text>
+          <Text style={styles.pollTypeDescription}>
+            Randomly pick one game from your selected options
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.pollTypeOption}
+          onPress={handleRankedChoice}
+        >
+          <View style={styles.pollTypeIcon}>
+            <BarChart3 size={32} color="#8b5cf6" />
+          </View>
+          <Text style={styles.pollTypeTitle}>Ranked Choice</Text>
+          <Text style={styles.pollTypeDescription}>
+            Players rank games in order of preference
+          </Text>
+          <Text style={styles.comingSoonText}>Coming Soon</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.pollTypeOption}
+          onPress={handleScoreBased}
+        >
+          <View style={styles.pollTypeIcon}>
+            <Trophy size={32} color="#ff9654" />
+          </View>
+          <Text style={styles.pollTypeTitle}>Score Based</Text>
+          <Text style={styles.pollTypeDescription}>
+            Players give scores to each game option
+          </Text>
+          <Text style={styles.comingSoonText}>Coming Soon</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setCurrentStep('game-selection')}
+        >
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const renderGameSelection = () => (
     <View style={styles.dialog}>
       <View style={styles.header}>
-        <Text style={styles.title}>Create Remote Poll</Text>
+        <Text style={styles.title}>
+          {pollType === 'remote' ? 'Create Remote Poll' : 'Create In-person Poll'}
+        </Text>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => {
@@ -738,19 +849,32 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
         <TouchableOpacity
           style={[styles.createButton, loading && styles.createButtonDisabled]}
-          onPress={handleCreateRemotePoll}
+          onPress={pollType === 'remote' ? handleCreateRemotePoll : handleCreateInPersonPoll}
           disabled={loading}
         >
           <Plus color="#fff" size={20} />
           <Text style={styles.createButtonText}>
-            {loading ? 'Creating Poll...' : 'Create Poll'}
+            {loading ? 'Creating Poll...' : pollType === 'remote' ? 'Create Poll' : 'Continue'}
           </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  const content = currentStep === 'type-selection' ? renderTypeSelection() : renderGameSelection();
+  const getCurrentContent = () => {
+    switch (currentStep) {
+      case 'type-selection':
+        return renderTypeSelection();
+      case 'game-selection':
+        return renderGameSelection();
+      case 'in-person-type-selection':
+        return renderInPersonTypeSelection();
+      default:
+        return renderTypeSelection();
+    }
+  };
+
+  const content = getCurrentContent();
 
   if (Platform.OS === 'web') {
     if (!isVisible) return null;
