@@ -72,6 +72,8 @@ export default function PollScreen() {
           .eq('game_id', gameId)
           .eq('voter_name', finalName);
 
+        console.log(existing);
+        
         if (existing && existing.length > 0) {
           const vote = existing[0];
           if (vote.vote_type !== voteType) {
