@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions, Image } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, Shuffle, Heart, ThumbsUp, ThumbsDown, Crown, Eye, EyeOff } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, Shuffle, Heart, ThumbsUp, ThumbsDown, Crown, Eye, EyeOff, Trophy } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
