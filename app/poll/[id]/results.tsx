@@ -58,8 +58,13 @@ export default function PollResultsScreen() {
             <Text style={styles.emptyText}>No votes have been cast yet.</Text>
           </View>
         ) : (
-          sortedResults.map((game) => (
-            <GameResultCard key={game.id} game={game} />
+          sortedResults.map((game, index) => (
+            <View key={game.id} style={styles.gameResultContainer}>
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankText}>#{index + 1}</Text>
+              </View>
+              <GameResultCard game={game} />
+            </View>
           ))
         )}
       </ScrollView>
@@ -108,5 +113,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
+  },
+  gameResultContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  rankBadge: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    backgroundColor: '#ff9654',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  rankText: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 12,
+    color: '#ffffff',
   },
 });

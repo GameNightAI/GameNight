@@ -140,12 +140,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    marginLeft: 8, // Add margin to account for rank badge
   },
   name: {
     fontFamily: 'Poppins-SemiBold',
