@@ -26,6 +26,13 @@ interface ScoreVotingGame extends Game {
 
 type VoteType = 'veto' | 'ok' | 'excited';
 
+interface GameResult {
+  game: Game;
+  score: number;
+  vetoCount: number;
+  hasVeto: boolean;
+}
+
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   isVisible,
   onClose,
@@ -58,7 +65,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   // Score-based voting states
   const [currentGameIndex, setCurrentGameIndex] = useState(0);
   const [gameVotes, setGameVotes] = useState<{ [gameId: number]: Array<VoteType> }>({});
-  const [totalVoteCount, setTotalVoteCount] = useState(0);
+  const [currentGameVoteCount, setCurrentGameVoteCount] = useState(0);
+
+  // Results display
+  const [showResults, setShowResults] = useState(false);
+  const [finalResults, setFinalResults] = useState<GameResult[]>([]);
 
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
   const timeOptions = ['30', '60', '90', '120+'];
@@ -261,7 +272,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setSelectedVotingMethod(null);
     setCurrentGameIndex(0);
     setGameVotes({});
-    setTotalVoteCount(0);
+    setCurrentGameVoteCount(0);
+    setShowResults(false);
+    setFinalResults([]);
   };
 
   const toggleGameSelection = (game: Game) => {
@@ -340,16 +353,23 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         initialVotes[game.id] = [];
       });
       setGameVotes(initialVotes);
-      setTotalVoteCount(0);
+      setCurrentGameVoteCount(0);
     } else if (methodId === 'random') {
       // Handle random selection
       if (selectedGames.length > 0) {
         const randomIndex = Math.floor(Math.random() * selectedGames.length);
         const selectedGame = selectedGames[randomIndex];
-        alert(`Random Selection Result:\n\n${selectedGame.name}`);
+        
+        // Show results in native display
+        const randomResult: GameResult[] = [{
+          game: selectedGame,
+          score: 0,
+          vetoCount: 0,
+          hasVeto: false
+        }];
+        setFinalResults(randomResult);
+        setShowResults(true);
       }
-      onClose();
-      resetForm();
     }
   };
 
@@ -361,7 +381,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       ...prev,
       [currentGame.id]: [...(prev[currentGame.id] || []), voteType]
     }));
-    setTotalVoteCount(prev => prev + 1);
+    setCurrentGameVoteCount(prev => prev + 1);
   };
 
   const removeLastVote = () => {
@@ -375,12 +395,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       ...prev,
       [currentGame.id]: currentVotes.slice(0, -1)
     }));
-    setTotalVoteCount(prev => Math.max(0, prev - 1));
+    setCurrentGameVoteCount(prev => Math.max(0, prev - 1));
   };
 
   const nextGame = () => {
     if (currentGameIndex < selectedGames.length - 1) {
       setCurrentGameIndex(prev => prev + 1);
+      // Reset vote count for the next game
+      setCurrentGameVoteCount(0);
     } else {
       // Calculate results and finish
       calculateScoreResults();
@@ -408,34 +430,182 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     // Filter out games with vetos
     const validGames = results.filter(r => !r.hasVeto);
     
+    let finalResults: GameResult[];
+    
     if (validGames.length === 0) {
       // All games have vetos, show ranking by fewest vetos
-      const sortedByVetos = results.sort((a, b) => a.vetoCount - b.vetoCount);
-      const message = `All games received vetos!\n\nRanking by fewest vetos:\n${sortedByVetos.map((r, i) => `${i + 1}. ${r.game.name} (${r.vetoCount} vetos)`).join('\n')}`;
-      alert(message);
+      finalResults = results.sort((a, b) => a.vetoCount - b.vetoCount);
     } else {
       // Sort by score (highest first)
-      const sortedGames = validGames.sort((a, b) => b.score - a.score);
-      
-      // Check for ties at the top
-      const topScore = sortedGames[0].score;
-      const topGames = sortedGames.filter(r => r.score === topScore);
-      
-      if (topGames.length > 1) {
-        // There's a tie, offer random selection
-        const randomWinner = topGames[Math.floor(Math.random() * topGames.length)];
-        const message = `Tie between top games!\n\nRandom selection from tied games:\n${randomWinner.game.name}\n\nFull ranking:\n${sortedGames.map((r, i) => `${i + 1}. ${r.game.name} (${r.score} points)`).join('\n')}`;
-        alert(message);
-      } else {
-        // Clear winner
-        const message = `Results:\n\n${sortedGames.map((r, i) => `${i + 1}. ${r.game.name} (${r.score} points)`).join('\n')}`;
-        alert(message);
-      }
+      finalResults = validGames.sort((a, b) => b.score - a.score);
     }
 
-    onClose();
-    resetForm();
+    setFinalResults(finalResults);
+    setShowResults(true);
   };
+
+  // Results display screen
+  if (showResults) {
+    const allHaveVetos = finalResults.every(r => r.hasVeto);
+    const topScore = finalResults[0]?.score || 0;
+    const topGames = finalResults.filter(r => r.score === topScore);
+    const hasTie = topGames.length > 1 && !allHaveVetos;
+
+    const content = (
+      <View style={styles.resultsContainer}>
+        <View style={styles.resultsHeader}>
+          <Text style={styles.resultsTitle}>
+            {selectedVotingMethod === 'random' ? 'Random Selection' : 'Voting Results'}
+          </Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => {
+              setShowResults(false);
+              onClose();
+              resetForm();
+            }}
+          >
+            <X size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.resultsContent} showsVerticalScrollIndicator={false}>
+          {selectedVotingMethod === 'random' ? (
+            <View style={styles.randomResultSection}>
+              <Text style={styles.randomResultLabel}>Selected Game:</Text>
+              <View style={styles.winnerCard}>
+                <Image
+                  source={{ uri: finalResults[0].game.thumbnail || 'https://via.placeholder.com/150?text=No+Image' }}
+                  style={styles.winnerImage}
+                  resizeMode="cover"
+                />
+                <Text style={styles.winnerName}>{finalResults[0].game.name}</Text>
+                <Text style={styles.winnerDetails}>
+                  {finalResults[0].game.min_players}-{finalResults[0].game.max_players} players • {finalResults[0].game.playing_time} min
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              {allHaveVetos && (
+                <View style={styles.statusSection}>
+                  <Text style={styles.statusText}>All games received vetos!</Text>
+                  <Text style={styles.statusSubtext}>Ranking by fewest vetos:</Text>
+                </View>
+              )}
+
+              {hasTie && !allHaveVetos && (
+                <View style={styles.statusSection}>
+                  <Text style={styles.statusText}>We have a tie!</Text>
+                  <Text style={styles.statusSubtext}>Top games with {topScore} points each:</Text>
+                </View>
+              )}
+
+              <View style={styles.rankingSection}>
+                {finalResults.map((result, index) => (
+                  <View 
+                    key={result.game.id} 
+                    style={[
+                      styles.rankingCard,
+                      index === 0 && !allHaveVetos && styles.winnerRankingCard
+                    ]}
+                  >
+                    <View style={styles.rankingPosition}>
+                      <Text style={[
+                        styles.rankingNumber,
+                        index === 0 && !allHaveVetos && styles.winnerRankingNumber
+                      ]}>
+                        #{index + 1}
+                      </Text>
+                      {index === 0 && !allHaveVetos && (
+                        <Text style={styles.crownEmoji}>👑</Text>
+                      )}
+                    </View>
+                    
+                    <Image
+                      source={{ uri: result.game.thumbnail || 'https://via.placeholder.com/150?text=No+Image' }}
+                      style={styles.rankingImage}
+                      resizeMode="cover"
+                    />
+                    
+                    <View style={styles.rankingInfo}>
+                      <Text style={[
+                        styles.rankingGameName,
+                        index === 0 && !allHaveVetos && styles.winnerRankingText
+                      ]}>
+                        {result.game.name}
+                      </Text>
+                      <Text style={styles.rankingGameDetails}>
+                        {result.game.min_players}-{result.game.max_players} players • {result.game.playing_time} min
+                      </Text>
+                      <Text style={[
+                        styles.rankingScore,
+                        index === 0 && !allHaveVetos && styles.winnerRankingScore
+                      ]}>
+                        {allHaveVetos 
+                          ? `${result.vetoCount} veto${result.vetoCount !== 1 ? 's' : ''}`
+                          : `${result.score} point${result.score !== 1 ? 's' : ''}`
+                        }
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {hasTie && (
+                <TouchableOpacity
+                  style={styles.randomTiebreakerButton}
+                  onPress={() => {
+                    const randomWinner = topGames[Math.floor(Math.random() * topGames.length)];
+                    const tiebreakerResult: GameResult[] = [randomWinner];
+                    setFinalResults(tiebreakerResult);
+                    setSelectedVotingMethod('random');
+                  }}
+                >
+                  <Text style={styles.randomTiebreakerText}>Random Tiebreaker</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </ScrollView>
+
+        <View style={styles.resultsFooter}>
+          <TouchableOpacity
+            style={styles.doneButton}
+            onPress={() => {
+              setShowResults(false);
+              onClose();
+              resetForm();
+            }}
+          >
+            <Text style={styles.doneButtonText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+
+    if (Platform.OS === 'web') {
+      if (!isVisible) return null;
+      return (
+        <View style={styles.webOverlay}>
+          {content}
+        </View>
+      );
+    }
+
+    return (
+      <Modal
+        visible={isVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.overlay}>
+          {content}
+        </View>
+      </Modal>
+    );
+  }
 
   // If we're in score-based voting mode
   if (selectedVotingMethod === 'score' && selectedGames.length > 0) {
@@ -452,7 +622,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
               setShowVotingMethods(true);
             }}
           >
-            <X size={20} color="#666666" />
+            <X size={20} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.scoreVotingProgress}>
             Game {currentGameIndex + 1} of {selectedGames.length}
@@ -504,7 +674,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
           <View style={styles.voteCountSection}>
             <Text style={styles.voteCountText}>
-              Total votes recorded: {totalVoteCount}
+              Total votes recorded: {currentGameVoteCount}
             </Text>
           </View>
 
@@ -1127,6 +1297,38 @@ type Styles = {
   removeVoteText: TextStyle;
   nextGameButton: ViewStyle;
   nextGameText: TextStyle;
+  resultsContainer: ViewStyle;
+  resultsHeader: ViewStyle;
+  resultsTitle: TextStyle;
+  resultsContent: ViewStyle;
+  randomResultSection: ViewStyle;
+  randomResultLabel: TextStyle;
+  winnerCard: ViewStyle;
+  winnerImage: ViewStyle;
+  winnerName: TextStyle;
+  winnerDetails: TextStyle;
+  statusSection: ViewStyle;
+  statusText: TextStyle;
+  statusSubtext: TextStyle;
+  rankingSection: ViewStyle;
+  rankingCard: ViewStyle;
+  winnerRankingCard: ViewStyle;
+  rankingPosition: ViewStyle;
+  rankingNumber: TextStyle;
+  winnerRankingNumber: TextStyle;
+  crownEmoji: TextStyle;
+  rankingImage: ViewStyle;
+  rankingInfo: ViewStyle;
+  rankingGameName: TextStyle;
+  winnerRankingText: TextStyle;
+  rankingGameDetails: TextStyle;
+  rankingScore: TextStyle;
+  winnerRankingScore: TextStyle;
+  randomTiebreakerButton: ViewStyle;
+  randomTiebreakerText: TextStyle;
+  resultsFooter: ViewStyle;
+  doneButton: ViewStyle;
+  doneButtonText: TextStyle;
 };
 
 const screenHeight = Dimensions.get('window').height;
@@ -1545,6 +1747,198 @@ const styles = StyleSheet.create<Styles>({
     alignItems: 'center',
   },
   nextGameText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  resultsContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: screenHeight * 0.9,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  resultsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#10b981',
+  },
+  resultsTitle: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
+    color: '#ffffff',
+    flex: 1,
+    textAlign: 'center',
+  },
+  resultsContent: {
+    flex: 1,
+    padding: 20,
+  },
+  randomResultSection: {
+    alignItems: 'center',
+  },
+  randomResultLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#1a2b5f',
+    marginBottom: 20,
+  },
+  winnerCard: {
+    backgroundColor: '#fff5ef',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ff9654',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  winnerImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+    marginBottom: 16,
+  },
+  winnerName: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
+    color: '#1a2b5f',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  winnerDetails: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+  },
+  statusSection: {
+    backgroundColor: '#f7f9fc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  statusText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  statusSubtext: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+  },
+  rankingSection: {
+    gap: 12,
+  },
+  rankingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  winnerRankingCard: {
+    backgroundColor: '#fff5ef',
+    borderColor: '#ff9654',
+    borderWidth: 2,
+  },
+  rankingPosition: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 60,
+    justifyContent: 'center',
+  },
+  rankingNumber: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 18,
+    color: '#666666',
+  },
+  winnerRankingNumber: {
+    color: '#ff9654',
+  },
+  crownEmoji: {
+    fontSize: 16,
+    marginLeft: 4,
+  },
+  rankingImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    marginRight: 16,
+  },
+  rankingInfo: {
+    flex: 1,
+  },
+  rankingGameName: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  winnerRankingText: {
+    color: '#ff9654',
+  },
+  rankingGameDetails: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  rankingScore: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#10b981',
+  },
+  winnerRankingScore: {
+    color: '#ff9654',
+  },
+  randomTiebreakerButton: {
+    backgroundColor: '#8b5cf6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  randomTiebreakerText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  resultsFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+  },
+  doneButton: {
+    backgroundColor: '#1a2b5f',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  doneButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#ffffff',
