@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions, Image } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, Heart, ThumbsUp } from 'lucide-react-native';
-import Animated, { FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, UserCheck, Globe, Shuffle, ChartBar as BarChart3, Trophy, Heart, ThumbsUp } from 'lucide-react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence,
+  withDelay,
+  FadeIn,
+  FadeOut,
+  ZoomIn,
+  SlideInDown,
+  runOnJS,
+  Easing
+} from 'react-native-reanimated';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 
@@ -11,609 +24,50 @@ interface CreatePollModalProps {
   onSuccess: () => void;
 }
 
-interface SelectionMethodModalProps {
-  isVisible: boolean;
-  onClose: () => void;
-  selectedGames: Game[];
-  onRandomSelection: (game: Game) => void;
-  onScoreBasedStart: () => void;
+type PollStep = 'type-selection' | 'game-selection' | 'in-person-type-selection' | 'random-animation' | 'random-result' | 'score-based-voting' | 'score-based-results' | 'score-based-tie-breaker';
+type PollType = 'remote' | 'in-person';
+
+interface GameVote {
+  gameId: number;
+  vetos: number;
+  oks: number;
+  excited: number;
+  voters: Array<{
+    name: string;
+    vote: 'veto' | 'ok' | 'excited';
+  }>;
 }
 
-interface ScoreBasedVotingProps {
-  isVisible: boolean;
-  onClose: () => void;
-  games: Game[];
-  onComplete: (results: GameResult[]) => void;
-}
-
-interface Vote {
-  type: 'veto' | 'ok' | 'excited';
-  voter: string;
-}
-
-interface GameVotes {
-  [gameId: number]: Vote[];
-}
-
-interface GameResult {
+interface GameScore {
   game: Game;
-  score: number;
-  votes: Vote[];
-  vetoed: boolean;
+  vetos: number;
+  score: number; // excited = 2, ok = 1
+  voters: Array<{
+    name: string;
+    vote: 'veto' | 'ok' | 'excited';
+  }>;
 }
-
-interface RandomSelectionModalProps {
-  isVisible: boolean;
-  onClose: () => void;
-  selectedGame: Game;
-}
-
-interface ScoreBasedResultsProps {
-  isVisible: boolean;
-  onClose: () => void;
-  results: GameResult[];
-  onRandomTieBreaker?: (tiedGames: GameResult[]) => void;
-}
-
-// Random Selection Modal Component
-const RandomSelectionModal: React.FC<RandomSelectionModalProps> = ({
-  isVisible,
-  onClose,
-  selectedGame,
-}) => {
-  const [showAnimation, setShowAnimation] = useState(true);
-  const [countdown, setCountdown] = useState<number | null>(3);
-
-  useEffect(() => {
-    if (isVisible) {
-      setShowAnimation(true);
-      setCountdown(3);
-      
-      // Countdown animation
-      const countdownInterval = setInterval(() => {
-        setCountdown(prev => {
-          if (prev === null || prev <= 1) {
-            clearInterval(countdownInterval);
-            setTimeout(() => setShowAnimation(false), 300);
-            return null;
-          }
-          return prev - 1;
-        });
-      }, 700);
-
-      return () => clearInterval(countdownInterval);
-    }
-  }, [isVisible]);
-
-  if (!isVisible) return null;
-
-  const content = (
-    <View style={styles.randomSelectionOverlay}>
-      {showAnimation && countdown !== null && (
-        <Animated.View
-          entering={FadeIn.duration(150)}
-          exiting={FadeIn.duration(150)}
-          style={styles.countdownContainer}
-        >
-          <Animated.Text
-            key={countdown}
-            entering={FadeIn.duration(200)}
-            exiting={FadeIn.duration(200)}
-            style={styles.countdownText}
-          >
-            {countdown}
-          </Animated.Text>
-        </Animated.View>
-      )}
-
-      {!showAnimation && (
-        <Animated.View
-          entering={SlideInDown.duration(800).springify()}
-          style={styles.randomResultCard}
-        >
-          <Text style={styles.randomResultTitle}>Selected Game</Text>
-          
-          <View style={styles.selectedGameContainer}>
-            <Image
-              source={{ uri: selectedGame.thumbnail }}
-              style={styles.selectedGameImage}
-              resizeMode="cover"
-            />
-            <Text style={styles.selectedGameName}>{selectedGame.name}</Text>
-            <Text style={styles.selectedGameDetails}>
-              {selectedGame.min_players}-{selectedGame.max_players} players • {selectedGame.playing_time} min
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.randomCloseButton}
-            onPress={onClose}
-          >
-            <Text style={styles.randomCloseText}>Close</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-    </View>
-  );
-
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.webOverlay}>
-        {content}
-      </View>
-    );
-  }
-
-  return (
-    <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        {content}
-      </View>
-    </Modal>
-  );
-};
-
-// Score Based Results Modal Component
-const ScoreBasedResultsModal: React.FC<ScoreBasedResultsProps> = ({
-  isVisible,
-  onClose,
-  results,
-  onRandomTieBreaker,
-}) => {
-  // Sort results by score (descending), then by fewest vetos if all are vetoed
-  const sortedResults = [...results].sort((a, b) => {
-    // If both are vetoed, sort by fewest vetos (count veto votes)
-    if (a.vetoed && b.vetoed) {
-      const aVetos = a.votes.filter(v => v.type === 'veto').length;
-      const bVetos = b.votes.filter(v => v.type === 'veto').length;
-      return aVetos - bVetos; // Fewer vetos = better rank
-    }
-    
-    // Non-vetoed games always rank higher than vetoed games
-    if (a.vetoed && !b.vetoed) return 1;
-    if (!a.vetoed && b.vetoed) return -1;
-    
-    // Both non-vetoed, sort by score
-    return b.score - a.score;
-  });
-
-  // Check for ties at the top
-  const topScore = sortedResults[0]?.score || 0;
-  const topVetoed = sortedResults[0]?.vetoed || false;
-  const tiedGames = sortedResults.filter(result => 
-    result.score === topScore && result.vetoed === topVetoed
-  );
-
-  const hasTie = tiedGames.length > 1;
-
-  if (!isVisible) return null;
-
-  const content = (
-    <View style={styles.dialog}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Final Results</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={20} color="#666666" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.resultsScrollView} showsVerticalScrollIndicator={false}>
-        {sortedResults.map((result, index) => (
-          <View
-            key={result.game.id}
-            style={[
-              styles.resultItem,
-              index === 0 && !result.vetoed && styles.winnerItem,
-              result.vetoed && styles.vetoedItem,
-            ]}
-          >
-            <View style={styles.resultRank}>
-              <Text style={[
-                styles.resultRankText,
-                index === 0 && !result.vetoed && styles.winnerText,
-              ]}>
-                #{index + 1}
-                {index === 0 && !result.vetoed && ' 👑'}
-              </Text>
-            </View>
-            
-            <View style={styles.resultInfo}>
-              <Text style={[
-                styles.resultGameName,
-                index === 0 && !result.vetoed && styles.winnerText,
-                result.vetoed && styles.vetoedText,
-              ]}>
-                {result.game.name}
-              </Text>
-              
-              <View style={styles.resultVotes}>
-                <View style={styles.voteTypeCount}>
-                  <Heart size={16} color="#ec4899" fill="#ec4899" />
-                  <Text style={styles.voteCountText}>
-                    {result.votes.filter(v => v.type === 'excited').length}
-                  </Text>
-                </View>
-                <View style={styles.voteTypeCount}>
-                  <ThumbsUp size={16} color="#10b981" />
-                  <Text style={styles.voteCountText}>
-                    {result.votes.filter(v => v.type === 'ok').length}
-                  </Text>
-                </View>
-                <View style={styles.voteTypeCount}>
-                  <X size={16} color="#ef4444" />
-                  <Text style={styles.voteCountText}>
-                    {result.votes.filter(v => v.type === 'veto').length}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            <View style={styles.resultScore}>
-              <Text style={[
-                styles.resultScoreText,
-                index === 0 && !result.vetoed && styles.winnerText,
-                result.vetoed && styles.vetoedText,
-              ]}>
-                {result.vetoed ? 'VETOED' : `${result.score} pts`}
-              </Text>
-            </View>
-          </View>
-        ))}
-
-        {hasTie && !sortedResults[0].vetoed && onRandomTieBreaker && (
-          <View style={styles.tieSection}>
-            <Text style={styles.tieText}>
-              There's a tie for first place! Would you like to randomly select between the tied games?
-            </Text>
-            <TouchableOpacity
-              style={styles.tieBreakerButton}
-              onPress={() => onRandomTieBreaker(tiedGames)}
-            >
-              <Text style={styles.tieBreakerText}>Random Tie Breaker</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
-
-  if (Platform.OS === 'web') {
-    if (!isVisible) return null;
-    return (
-      <View style={styles.webOverlay}>
-        {content}
-      </View>
-    );
-  }
-
-  return (
-    <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        {content}
-      </View>
-    </Modal>
-  );
-};
-
-// Score Based Voting Component
-const ScoreBasedVotingModal: React.FC<ScoreBasedVotingProps> = ({
-  isVisible,
-  onClose,
-  games,
-  onComplete,
-}) => {
-  const [currentGameIndex, setCurrentGameIndex] = useState(0);
-  const [gameVotes, setGameVotes] = useState<GameVotes>({});
-  const [voterName, setVoterName] = useState('');
-
-  const currentGame = games[currentGameIndex];
-  const currentVotes = gameVotes[currentGame?.id] || [];
-  const progress = ((currentGameIndex + 1) / games.length) * 100;
-
-  const addVote = (type: 'veto' | 'ok' | 'excited', voter: string) => {
-    if (!currentGame || !voter.trim()) return;
-
-    setGameVotes(prev => {
-      const gameId = currentGame.id;
-      const existingVotes = prev[gameId] || [];
-      
-      // Check if this voter already voted for this game
-      const existingVoteIndex = existingVotes.findIndex(v => v.voter === voter);
-      
-      let newVotes;
-      if (existingVoteIndex >= 0) {
-        // Replace existing vote
-        newVotes = [...existingVotes];
-        newVotes[existingVoteIndex] = { type, voter };
-      } else {
-        // Add new vote
-        newVotes = [...existingVotes, { type, voter }];
-      }
-      
-      return {
-        ...prev,
-        [gameId]: newVotes,
-      };
-    });
-  };
-
-  const removeVote = (voteIndex: number) => {
-    if (!currentGame) return;
-
-    setGameVotes(prev => {
-      const gameId = currentGame.id;
-      const existingVotes = prev[gameId] || [];
-      const newVotes = existingVotes.filter((_, index) => index !== voteIndex);
-      
-      return {
-        ...prev,
-        [gameId]: newVotes,
-      };
-    });
-  };
-
-  const nextGame = () => {
-    if (currentGameIndex < games.length - 1) {
-      setCurrentGameIndex(prev => prev + 1);
-      setVoterName('');
-    } else {
-      // Calculate final results
-      const results: GameResult[] = games.map(game => {
-        const votes = gameVotes[game.id] || [];
-        const vetoCount = votes.filter(v => v.type === 'veto').length;
-        const okCount = votes.filter(v => v.type === 'ok').length;
-        const excitedCount = votes.filter(v => v.type === 'excited').length;
-        
-        const score = (excitedCount * 2) + okCount;
-        const vetoed = vetoCount > 0;
-        
-        return {
-          game,
-          score,
-          votes,
-          vetoed,
-        };
-      });
-      
-      onComplete(results);
-    }
-  };
-
-  if (!isVisible || !currentGame) return null;
-
-  const content = (
-    <View style={styles.scoreBasedContainer}>
-      {/* Header with progress */}
-      <View style={styles.scoreBasedHeader}>
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>
-            Game {currentGameIndex + 1} of {games.length}
-          </Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress}%` }]} />
-          </View>
-        </View>
-        
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={24} color="#666666" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Game Display */}
-      <View style={styles.gameDisplayContainer}>
-        <Image
-          source={{ uri: currentGame.thumbnail }}
-          style={styles.gameImage}
-          resizeMode="cover"
-        />
-        <Text style={styles.gameTitle}>{currentGame.name}</Text>
-        <Text style={styles.gameDetails}>
-          {currentGame.min_players}-{currentGame.max_players} players • {currentGame.playing_time} min
-        </Text>
-      </View>
-
-      {/* Instructions */}
-      <Text style={styles.instructionText}>
-        Ask your players their preferences and record them or pass the phone around for a secret ballot
-      </Text>
-
-      {/* Voting Buttons */}
-      <View style={styles.votingSection}>
-        <View style={styles.voteButtonsContainer}>
-          <TouchableOpacity
-            style={[styles.voteButton, styles.vetoButton]}
-            onPress={() => addVote('veto', `Voter ${currentVotes.length + 1}`)}
-          >
-            <X size={32} color="#ffffff" />
-            <Text style={styles.voteButtonText}>Veto</Text>
-            <Text style={styles.voteButtonSubtext}>Don't want to play</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.voteButton, styles.okButton]}
-            onPress={() => addVote('ok', `Voter ${currentVotes.length + 1}`)}
-          >
-            <ThumbsUp size={32} color="#ffffff" />
-            <Text style={styles.voteButtonText}>OK</Text>
-            <Text style={styles.voteButtonSubtext}>Would play</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.voteButton, styles.excitedButton]}
-            onPress={() => addVote('excited', `Voter ${currentVotes.length + 1}`)}
-          >
-            <Heart size={32} color="#ffffff" />
-            <Text style={styles.voteButtonText}>Excited</Text>
-            <Text style={styles.voteButtonSubtext}>Really want to play</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Current Votes Display */}
-      {currentVotes.length > 0 && (
-        <View style={styles.currentVotesContainer}>
-          <Text style={styles.currentVotesTitle}>Current Votes ({currentVotes.length})</Text>
-          <View style={styles.votesDisplay}>
-            {currentVotes.map((vote, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.voteChip,
-                  vote.type === 'veto' && styles.vetoChip,
-                  vote.type === 'ok' && styles.okChip,
-                  vote.type === 'excited' && styles.excitedChip,
-                ]}
-                onPress={() => removeVote(index)}
-              >
-                {vote.type === 'veto' && <X size={16} color="#ef4444" />}
-                {vote.type === 'ok' && <ThumbsUp size={16} color="#10b981" />}
-                {vote.type === 'excited' && <Heart size={16} color="#ec4899" fill="#ec4899" />}
-                <Text style={styles.voteChipText}>{vote.voter}</Text>
-                <X size={12} color="#666666" />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Next Button */}
-      <TouchableOpacity
-        style={styles.nextButton}
-        onPress={nextGame}
-      >
-        <Text style={styles.nextButtonText}>
-          {currentGameIndex < games.length - 1 ? 'Next Game' : 'View Results'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  if (Platform.OS === 'web') {
-    if (!isVisible) return null;
-    return (
-      <View style={styles.webOverlay}>
-        {content}
-      </View>
-    );
-  }
-
-  return (
-    <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        {content}
-      </View>
-    </Modal>
-  );
-};
-
-// Selection Method Modal Component
-const SelectionMethodModal: React.FC<SelectionMethodModalProps> = ({
-  isVisible,
-  onClose,
-  selectedGames,
-  onRandomSelection,
-  onScoreBasedStart,
-}) => {
-  const handleRandomSelection = () => {
-    if (selectedGames.length > 0) {
-      const randomIndex = Math.floor(Math.random() * selectedGames.length);
-      const selectedGame = selectedGames[randomIndex];
-      onRandomSelection(selectedGame);
-    }
-  };
-
-  if (!isVisible) return null;
-
-  const content = (
-    <View style={styles.dialog}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Choose Selection Method</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={20} color="#666666" />
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.description}>
-        How would you like to select a game from your chosen options?
-      </Text>
-
-      <View style={styles.methodsContainer}>
-        <TouchableOpacity
-          style={styles.methodCard}
-          onPress={handleRandomSelection}
-        >
-          <View style={styles.methodIcon}>
-            <Text style={styles.methodEmoji}>🎲</Text>
-          </View>
-          <Text style={styles.methodTitle}>Random Selection</Text>
-          <Text style={styles.methodDescription}>
-            Randomly pick one game from your selected options
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.methodCard}
-          onPress={onScoreBasedStart}
-        >
-          <View style={styles.methodIcon}>
-            <Text style={styles.methodEmoji}>🏆</Text>
-          </View>
-          <Text style={styles.methodTitle}>Score Based</Text>
-          <Text style={styles.methodDescription}>
-            Players give scores to each game option
-          </Text>
-        </TouchableOpacity>
-
-        <View style={[styles.methodCard, styles.methodCardDisabled]}>
-          <View style={styles.methodIcon}>
-            <Text style={styles.methodEmoji}>📊</Text>
-          </View>
-          <Text style={styles.methodTitle}>Ranked Choice</Text>
-          <Text style={styles.methodDescription}>
-            Players rank games in order of preference
-          </Text>
-          <View style={styles.comingSoonBadge}>
-            <Text style={styles.comingSoonText}>Coming Soon</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-
-  if (Platform.OS === 'web') {
-    if (!isVisible) return null;
-    return (
-      <View style={styles.webOverlay}>
-        {content}
-      </View>
-    );
-  }
-
-  return (
-    <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        {content}
-      </View>
-    </Modal>
-  );
-};
 
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   isVisible,
   onClose,
   onSuccess,
 }) => {
+  const [currentStep, setCurrentStep] = useState<PollStep>('type-selection');
+  const [pollType, setPollType] = useState<PollType>('remote');
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSelectionMethod, setShowSelectionMethod] = useState(false);
-  const [showRandomResult, setShowRandomResult] = useState(false);
-  const [randomSelectedGame, setRandomSelectedGame] = useState<Game | null>(null);
-  const [showScoreBasedVoting, setShowScoreBasedVoting] = useState(false);
-  const [showScoreBasedResults, setShowScoreBasedResults] = useState(false);
-  const [scoreBasedResults, setScoreBasedResults] = useState<GameResult[]>([]);
+  const [randomlySelectedGame, setRandomlySelectedGame] = useState<Game | null>(null);
+
+  // Score-based voting states
+  const [currentGameIndex, setCurrentGameIndex] = useState(0);
+  const [gameVotes, setGameVotes] = useState<Record<number, GameVote>>({});
+  const [currentVoterName, setCurrentVoterName] = useState('');
+  const [finalScores, setFinalScores] = useState<GameScore[]>([]);
+  const [tiedGames, setTiedGames] = useState<Game[]>([]);
 
   // Filter states
   const [playerCount, setPlayerCount] = useState<string>('');
@@ -636,14 +90,16 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'];
 
   useEffect(() => {
-    if (isVisible) {
+    if (isVisible && currentStep === 'game-selection') {
       loadGames();
     }
-  }, [isVisible]);
+  }, [isVisible, currentStep]);
 
   useEffect(() => {
-    filterGames();
-  }, [availableGames, playerCount, playTime, minAge, gameType, complexity]);
+    if (currentStep === 'game-selection') {
+      filterGames();
+    }
+  }, [availableGames, playerCount, playTime, minAge, gameType, complexity, currentStep]);
 
   const loadGames = async () => {
     try {
@@ -735,7 +191,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     );
   };
 
-  const handleCreatePoll = async () => {
+  const handleInPersonPoll = () => {
+    setPollType('in-person');
+    setCurrentStep('game-selection');
+  };
+
+  const handleRemotePoll = () => {
+    setPollType('remote');
+    setCurrentStep('game-selection');
+  };
+
+  const handleCreateRemotePoll = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -785,40 +251,164 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     }
   };
 
-  const handleInPersonPoll = () => {
+  const handleCreateInPersonPoll = () => {
     if (selectedGames.length === 0) {
       setError('Please select at least one game');
       return;
     }
-    setShowSelectionMethod(true);
+    setCurrentStep('in-person-type-selection');
   };
 
-  const handleRandomSelection = (game: Game) => {
-    setRandomSelectedGame(game);
-    setShowSelectionMethod(false);
-    setShowRandomResult(true);
+  const handleRandomSelection = async () => {
+    if (selectedGames.length > 0) {
+      setCurrentStep('random-animation');
+      
+      setTimeout(() => {
+        const randomIndex = Math.floor(Math.random() * selectedGames.length);
+        const selectedGame = selectedGames[randomIndex];
+        setRandomlySelectedGame(selectedGame);
+        runOnJS(setCurrentStep)('random-result');
+      }, 2000);
+    }
   };
 
-  const handleScoreBasedStart = () => {
-    setShowSelectionMethod(false);
-    setShowScoreBasedVoting(true);
+  const handleRankedChoice = () => {
+    onClose();
+    resetForm();
   };
 
-  const handleScoreBasedComplete = (results: GameResult[]) => {
-    setScoreBasedResults(results);
-    setShowScoreBasedVoting(false);
-    setShowScoreBasedResults(true);
+  const handleScoreBased = () => {
+    // Initialize voting for score-based selection
+    setCurrentGameIndex(0);
+    setGameVotes({});
+    setCurrentVoterName('');
+    setCurrentStep('score-based-voting');
   };
 
-  const handleRandomTieBreaker = (tiedGames: GameResult[]) => {
-    const randomIndex = Math.floor(Math.random() * tiedGames.length);
-    const selectedGame = tiedGames[randomIndex].game;
-    setRandomSelectedGame(selectedGame);
-    setShowScoreBasedResults(false);
-    setShowRandomResult(true);
+  const handleVote = (vote: 'veto' | 'ok' | 'excited') => {
+    if (!currentVoterName.trim()) return;
+
+    const currentGame = selectedGames[currentGameIndex];
+    const gameId = currentGame.id;
+
+    setGameVotes(prev => {
+      const currentGameVotes = prev[gameId] || {
+        gameId,
+        vetos: 0,
+        oks: 0,
+        excited: 0,
+        voters: []
+      };
+
+      // Check if this voter already voted for this game
+      const existingVoterIndex = currentGameVotes.voters.findIndex(v => v.name === currentVoterName.trim());
+      
+      if (existingVoterIndex >= 0) {
+        // Remove the previous vote
+        const previousVote = currentGameVotes.voters[existingVoterIndex].vote;
+        currentGameVotes[previousVote === 'veto' ? 'vetos' : previousVote === 'ok' ? 'oks' : 'excited']--;
+        currentGameVotes.voters.splice(existingVoterIndex, 1);
+      }
+
+      // Add the new vote
+      currentGameVotes.voters.push({
+        name: currentVoterName.trim(),
+        vote
+      });
+      currentGameVotes[vote === 'veto' ? 'vetos' : vote === 'ok' ? 'oks' : 'excited']++;
+
+      return {
+        ...prev,
+        [gameId]: currentGameVotes
+      };
+    });
+
+    setCurrentVoterName('');
+  };
+
+  const removeVote = (voterName: string) => {
+    const currentGame = selectedGames[currentGameIndex];
+    const gameId = currentGame.id;
+
+    setGameVotes(prev => {
+      const currentGameVotes = prev[gameId];
+      if (!currentGameVotes) return prev;
+
+      const voterIndex = currentGameVotes.voters.findIndex(v => v.name === voterName);
+      if (voterIndex >= 0) {
+        const vote = currentGameVotes.voters[voterIndex].vote;
+        currentGameVotes[vote === 'veto' ? 'vetos' : vote === 'ok' ? 'oks' : 'excited']--;
+        currentGameVotes.voters.splice(voterIndex, 1);
+      }
+
+      return {
+        ...prev,
+        [gameId]: { ...currentGameVotes }
+      };
+    });
+  };
+
+  const nextGame = () => {
+    if (currentGameIndex < selectedGames.length - 1) {
+      setCurrentGameIndex(currentGameIndex + 1);
+      setCurrentVoterName('');
+    } else {
+      // All games voted on, calculate results
+      calculateFinalScores();
+    }
+  };
+
+  const calculateFinalScores = () => {
+    const scores: GameScore[] = selectedGames.map(game => {
+      const votes = gameVotes[game.id] || { gameId: game.id, vetos: 0, oks: 0, excited: 0, voters: [] };
+      return {
+        game,
+        vetos: votes.vetos,
+        score: (votes.excited * 2) + votes.oks, // excited = 2 points, ok = 1 point
+        voters: votes.voters
+      };
+    });
+
+    // Filter out games with vetos
+    const gamesWithoutVetos = scores.filter(score => score.vetos === 0);
+    
+    if (gamesWithoutVetos.length === 0) {
+      // All games have vetos, rank by fewest vetos
+      const sortedByVetos = scores.sort((a, b) => a.vetos - b.vetos);
+      setFinalScores(sortedByVetos);
+      setCurrentStep('score-based-results');
+    } else {
+      // Sort by score (highest first)
+      const sortedScores = gamesWithoutVetos.sort((a, b) => b.score - a.score);
+      
+      // Check for ties at the top
+      const topScore = sortedScores[0].score;
+      const tiedTopGames = sortedScores.filter(score => score.score === topScore);
+      
+      if (tiedTopGames.length > 1 && topScore > 0) {
+        // There's a tie, offer random selection
+        setTiedGames(tiedTopGames.map(score => score.game));
+        setFinalScores(sortedScores);
+        setCurrentStep('score-based-tie-breaker');
+      } else {
+        setFinalScores(sortedScores);
+        setCurrentStep('score-based-results');
+      }
+    }
+  };
+
+  const handleTieBreaker = () => {
+    if (tiedGames.length > 0) {
+      const randomIndex = Math.floor(Math.random() * tiedGames.length);
+      const selectedGame = tiedGames[randomIndex];
+      setRandomlySelectedGame(selectedGame);
+      setCurrentStep('random-result');
+    }
   };
 
   const resetForm = () => {
+    setCurrentStep('type-selection');
+    setPollType('remote');
     setSelectedGames([]);
     setError(null);
     setPlayerCount('');
@@ -831,12 +421,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setShowAgeDropdown(false);
     setShowTypeDropdown(false);
     setShowComplexityDropdown(false);
-    setShowSelectionMethod(false);
-    setShowRandomResult(false);
-    setShowScoreBasedVoting(false);
-    setShowScoreBasedResults(false);
-    setRandomSelectedGame(null);
-    setScoreBasedResults([]);
+    setRandomlySelectedGame(null);
+    setCurrentGameIndex(0);
+    setGameVotes({});
+    setCurrentVoterName('');
+    setFinalScores([]);
+    setTiedGames([]);
   };
 
   const toggleGameSelection = (game: Game) => {
@@ -904,10 +494,543 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     }
   };
 
-  const content = (
+  const renderTypeSelection = () => (
     <View style={styles.dialog}>
       <View style={styles.header}>
         <Text style={styles.title}>Create Poll</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.description}>
+        Choose the type of poll you want to create
+      </Text>
+
+      <View style={styles.pollTypeContainer}>
+        <TouchableOpacity
+          style={styles.pollTypeOption}
+          onPress={handleInPersonPoll}
+        >
+          <View style={styles.pollTypeIcon}>
+            <UserCheck size={32} color="#8b5cf6" />
+          </View>
+          <Text style={styles.pollTypeTitle}>In-person</Text>
+          <Text style={styles.pollTypeDescription}>
+            For players deciding what to play together in person
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.pollTypeOption}
+          onPress={handleRemotePoll}
+        >
+          <View style={styles.pollTypeIcon}>
+            <Globe size={32} color="#10b981" />
+          </View>
+          <Text style={styles.pollTypeTitle}>Remote Poll</Text>
+          <Text style={styles.pollTypeDescription}>
+            Share a link for others to vote on games remotely
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderRandomAnimation = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Selecting Game...</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.animationContainer}>
+        <RandomSelectionAnimation />
+        <Text style={styles.animationText}>
+          Randomly selecting from {selectedGames.length} games...
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderRandomResult = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          {currentStep === 'score-based-tie-breaker' ? 'Tie Breaker Result' : 'Random Selection Result'}
+        </Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.randomResultContainer}>
+        <View style={styles.randomResultIcon}>
+          <Shuffle size={48} color="#10b981" />
+        </View>
+        
+        <Text style={styles.randomResultTitle}>Selected Game:</Text>
+        
+        {randomlySelectedGame && (
+          <Animated.View 
+            entering={ZoomIn.delay(300).duration(600).springify()}
+            style={styles.selectedGameCard}
+          >
+            <Image
+              source={{ uri: randomlySelectedGame.thumbnail }}
+              style={styles.selectedGameImage}
+              resizeMode="cover"
+            />
+            <View style={styles.selectedGameInfo}>
+              <Text style={styles.selectedGameName}>{randomlySelectedGame.name}</Text>
+              <Text style={styles.selectedGameDetails}>
+                {randomlySelectedGame.min_players}-{randomlySelectedGame.max_players} players • {randomlySelectedGame.playing_time} min
+              </Text>
+              {randomlySelectedGame.yearPublished && (
+                <Text style={styles.selectedGameYear}>
+                  Published: {randomlySelectedGame.yearPublished}
+                </Text>
+              )}
+            </View>
+          </Animated.View>
+        )}
+
+        <Text style={styles.randomResultSubtext}>
+          Enjoy your game!
+        </Text>
+      </View>
+
+      <View style={styles.randomResultActions}>
+        {currentStep !== 'score-based-tie-breaker' && (
+          <TouchableOpacity
+            style={styles.selectAgainButton}
+            onPress={handleRandomSelection}
+          >
+            <Shuffle size={20} color="#10b981" />
+            <Text style={styles.selectAgainText}>Select Again</Text>
+          </TouchableOpacity>
+        )}
+        
+        <TouchableOpacity
+          style={styles.doneButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <Text style={styles.doneButtonText}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderInPersonTypeSelection = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Choose Selection Method</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.description}>
+        How would you like to select a game from your chosen options?
+      </Text>
+
+      <View style={styles.selectionMethodContainer}>
+        <TouchableOpacity
+          style={styles.selectionMethodOption}
+          onPress={handleRandomSelection}
+        >
+          <View style={styles.selectionMethodIcon}>
+            <Shuffle size={24} color="#10b981" />
+          </View>
+          <View style={styles.selectionMethodContent}>
+            <Text style={styles.selectionMethodTitle}>Random Selection</Text>
+            <Text style={styles.selectionMethodDescription}>
+              Randomly pick one game from your selected options
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.selectionMethodOption}
+          onPress={handleRankedChoice}
+        >
+          <View style={styles.selectionMethodIcon}>
+            <BarChart3 size={24} color="#8b5cf6" />
+          </View>
+          <View style={styles.selectionMethodContent}>
+            <Text style={styles.selectionMethodTitle}>Ranked Choice</Text>
+            <Text style={styles.selectionMethodDescription}>
+              Players rank games in order of preference
+            </Text>
+            <Text style={styles.comingSoonText}>Coming Soon</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.selectionMethodOption}
+          onPress={handleScoreBased}
+        >
+          <View style={styles.selectionMethodIcon}>
+            <Trophy size={24} color="#ff9654" />
+          </View>
+          <View style={styles.selectionMethodContent}>
+            <Text style={styles.selectionMethodTitle}>Score Based</Text>
+            <Text style={styles.selectionMethodDescription}>
+              Players give scores to each game option
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setCurrentStep('game-selection')}
+        >
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderScoreBasedVoting = () => {
+    const currentGame = selectedGames[currentGameIndex];
+    const currentGameVotes = gameVotes[currentGame.id] || { gameId: currentGame.id, vetos: 0, oks: 0, excited: 0, voters: [] };
+
+    return (
+      <View style={styles.dialog}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Score Based Voting</Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => {
+              onClose();
+              resetForm();
+            }}
+          >
+            <X size={20} color="#666666" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.votingProgress}>
+          <Text style={styles.progressText}>
+            Game {currentGameIndex + 1} of {selectedGames.length}
+          </Text>
+          <View style={styles.progressBar}>
+            <View 
+              style={[
+                styles.progressFill, 
+                { width: `${((currentGameIndex + 1) / selectedGames.length) * 100}%` }
+              ]} 
+            />
+          </View>
+        </View>
+
+        <View style={styles.gameVotingSection}>
+          <Image
+            source={{ uri: currentGame.thumbnail }}
+            style={styles.votingGameImage}
+            resizeMode="cover"
+          />
+          <Text style={styles.votingGameName}>{currentGame.name}</Text>
+          <Text style={styles.votingGameDetails}>
+            {currentGame.min_players}-{currentGame.max_players} players • {currentGame.playing_time} min
+          </Text>
+          
+          <Text style={styles.votingInstructions}>
+            Ask your players how they feel about this game and record their votes:
+          </Text>
+
+          <View style={styles.voterInputSection}>
+            <Text style={styles.voterInputLabel}>Player Name:</Text>
+            <View style={styles.voterInputRow}>
+              <input
+                style={styles.voterInput}
+                value={currentVoterName}
+                onChange={(e) => setCurrentVoterName(e.target.value)}
+                placeholder="Enter player name"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && currentVoterName.trim()) {
+                    e.preventDefault();
+                  }
+                }}
+              />
+            </View>
+          </View>
+
+          <View style={styles.voteButtonsSection}>
+            <TouchableOpacity
+              style={[styles.voteOptionButton, styles.vetoButton]}
+              onPress={() => handleVote('veto')}
+              disabled={!currentVoterName.trim()}
+            >
+              <X size={24} color="#ffffff" />
+              <Text style={styles.voteOptionText}>Veto</Text>
+              <Text style={styles.voteOptionSubtext}>Don't want to play</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.voteOptionButton, styles.okButton]}
+              onPress={() => handleVote('ok')}
+              disabled={!currentVoterName.trim()}
+            >
+              <ThumbsUp size={24} color="#ffffff" />
+              <Text style={styles.voteOptionText}>OK</Text>
+              <Text style={styles.voteOptionSubtext}>Would play</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.voteOptionButton, styles.excitedButton]}
+              onPress={() => handleVote('excited')}
+              disabled={!currentVoterName.trim()}
+            >
+              <Heart size={24} color="#ffffff" />
+              <Text style={styles.voteOptionText}>Excited</Text>
+              <Text style={styles.voteOptionSubtext}>Really want to play</Text>
+            </TouchableOpacity>
+          </View>
+
+          {currentGameVotes.voters.length > 0 && (
+            <View style={styles.currentVotesSection}>
+              <Text style={styles.currentVotesTitle}>Current Votes:</Text>
+              <View style={styles.votesSummary}>
+                <Text style={styles.voteSummaryItem}>Veto: {currentGameVotes.vetos}</Text>
+                <Text style={styles.voteSummaryItem}>OK: {currentGameVotes.oks}</Text>
+                <Text style={styles.voteSummaryItem}>Excited: {currentGameVotes.excited}</Text>
+              </View>
+              
+              <ScrollView style={styles.votersList} showsVerticalScrollIndicator={false}>
+                {currentGameVotes.voters.map((voter, index) => (
+                  <View key={index} style={styles.voterItem}>
+                    <Text style={styles.voterName}>{voter.name}</Text>
+                    <View style={styles.voterVoteContainer}>
+                      <Text style={[
+                        styles.voterVote,
+                        voter.vote === 'veto' && styles.vetoVote,
+                        voter.vote === 'ok' && styles.okVote,
+                        voter.vote === 'excited' && styles.excitedVote,
+                      ]}>
+                        {voter.vote === 'veto' ? 'Veto' : voter.vote === 'ok' ? 'OK' : 'Excited'}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.removeVoteButton}
+                        onPress={() => removeVote(voter.name)}
+                      >
+                        <X size={16} color="#e74c3c" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.votingActions}>
+          <TouchableOpacity
+            style={styles.nextGameButton}
+            onPress={nextGame}
+          >
+            <Text style={styles.nextGameButtonText}>
+              {currentGameIndex < selectedGames.length - 1 ? 'Next Game' : 'View Results'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderScoreBasedResults = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Final Results</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.resultsScrollView} showsVerticalScrollIndicator={false}>
+        <Text style={styles.resultsDescription}>
+          {finalScores.every(score => score.vetos > 0) 
+            ? "All games received vetos. Ranked by fewest vetos:"
+            : "Games ranked by player excitement (Excited = 2 points, OK = 1 point):"
+          }
+        </Text>
+
+        {finalScores.map((scoreData, index) => (
+          <Animated.View
+            key={scoreData.game.id}
+            entering={FadeIn.delay(index * 100)}
+            style={[
+              styles.resultGameCard,
+              index === 0 && styles.winnerCard
+            ]}
+          >
+            <View style={styles.resultRank}>
+              <Text style={[styles.rankNumber, index === 0 && styles.winnerRank]}>
+                #{index + 1}
+              </Text>
+              {index === 0 && <Text style={styles.crownEmoji}>👑</Text>}
+            </View>
+
+            <Image
+              source={{ uri: scoreData.game.thumbnail }}
+              style={styles.resultGameImage}
+              resizeMode="cover"
+            />
+
+            <View style={styles.resultGameInfo}>
+              <Text style={[styles.resultGameName, index === 0 && styles.winnerName]}>
+                {scoreData.game.name}
+              </Text>
+              <Text style={styles.resultGameDetails}>
+                {scoreData.game.min_players}-{scoreData.game.max_players} players • {scoreData.game.playing_time} min
+              </Text>
+
+              <View style={styles.resultScores}>
+                {scoreData.vetos > 0 && (
+                  <Text style={styles.vetoScore}>Vetos: {scoreData.vetos}</Text>
+                )}
+                {!finalScores.every(score => score.vetos > 0) && (
+                  <Text style={styles.totalScore}>Score: {scoreData.score}</Text>
+                )}
+              </View>
+
+              {scoreData.voters.length > 0 && (
+                <View style={styles.resultVoters}>
+                  <Text style={styles.votersLabel}>Voters:</Text>
+                  {scoreData.voters.map((voter, voterIndex) => (
+                    <Text key={voterIndex} style={[
+                      styles.voterResult,
+                      voter.vote === 'veto' && styles.vetoVote,
+                      voter.vote === 'ok' && styles.okVote,
+                      voter.vote === 'excited' && styles.excitedVote,
+                    ]}>
+                      {voter.name} ({voter.vote === 'veto' ? 'Veto' : voter.vote === 'ok' ? 'OK' : 'Excited'})
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </View>
+          </Animated.View>
+        ))}
+      </ScrollView>
+
+      <View style={styles.resultsActions}>
+        <TouchableOpacity
+          style={styles.doneButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <Text style={styles.doneButtonText}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderScoreBasedTieBreaker = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Tie Breaker</Text>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+        >
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.tieBreakerContainer}>
+        <Text style={styles.tieBreakerTitle}>
+          We have a tie!
+        </Text>
+        <Text style={styles.tieBreakerDescription}>
+          The following games are tied for first place:
+        </Text>
+
+        <View style={styles.tiedGamesList}>
+          {tiedGames.map((game, index) => (
+            <View key={game.id} style={styles.tiedGameItem}>
+              <Image
+                source={{ uri: game.thumbnail }}
+                style={styles.tiedGameImage}
+                resizeMode="cover"
+              />
+              <Text style={styles.tiedGameName}>{game.name}</Text>
+            </View>
+          ))}
+        </View>
+
+        <Text style={styles.tieBreakerSubtext}>
+          Would you like to randomly select between these games?
+        </Text>
+      </View>
+
+      <View style={styles.tieBreakerActions}>
+        <TouchableOpacity
+          style={styles.viewFullResultsButton}
+          onPress={() => setCurrentStep('score-based-results')}
+        >
+          <Text style={styles.viewFullResultsText}>View Full Results</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.randomTieBreakerButton}
+          onPress={handleTieBreaker}
+        >
+          <Shuffle size={20} color="#ffffff" />
+          <Text style={styles.randomTieBreakerText}>Random Selection</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderGameSelection = () => (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          {pollType === 'remote' ? 'Create Remote Poll' : 'Create In-person Poll'}
+        </Text>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => {
@@ -1295,72 +1418,52 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         <Text style={styles.errorText}>{error}</Text>
       )}
 
-      <View style={styles.buttonContainer}>
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setCurrentStep('type-selection')}
+        >
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.createButton, loading && styles.createButtonDisabled]}
-          onPress={handleCreatePoll}
+          onPress={pollType === 'remote' ? handleCreateRemotePoll : handleCreateInPersonPoll}
           disabled={loading}
         >
           <Plus color="#fff" size={20} />
           <Text style={styles.createButtonText}>
-            {loading ? 'Creating Poll...' : 'Remote Poll'}
+            {loading ? 'Creating Poll...' : pollType === 'remote' ? 'Create Poll' : 'Continue'}
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.inPersonButton, selectedGames.length === 0 && styles.createButtonDisabled]}
-          onPress={handleInPersonPoll}
-          disabled={selectedGames.length === 0}
-        >
-          <Users size={20} color="#ffffff" />
-          <Text style={styles.inPersonButtonText}>In-Person</Text>
-        </TouchableOpacity>
       </View>
-
-      {/* Selection Method Modal */}
-      <SelectionMethodModal
-        isVisible={showSelectionMethod}
-        onClose={() => setShowSelectionMethod(false)}
-        selectedGames={selectedGames}
-        onRandomSelection={handleRandomSelection}
-        onScoreBasedStart={handleScoreBasedStart}
-      />
-
-      {/* Random Selection Result Modal */}
-      {randomSelectedGame && (
-        <RandomSelectionModal
-          isVisible={showRandomResult}
-          onClose={() => {
-            setShowRandomResult(false);
-            setRandomSelectedGame(null);
-            onClose();
-            resetForm();
-          }}
-          selectedGame={randomSelectedGame}
-        />
-      )}
-
-      {/* Score Based Voting Modal */}
-      <ScoreBasedVotingModal
-        isVisible={showScoreBasedVoting}
-        onClose={() => setShowScoreBasedVoting(false)}
-        games={selectedGames}
-        onComplete={handleScoreBasedComplete}
-      />
-
-      {/* Score Based Results Modal */}
-      <ScoreBasedResultsModal
-        isVisible={showScoreBasedResults}
-        onClose={() => {
-          setShowScoreBasedResults(false);
-          onClose();
-          resetForm();
-        }}
-        results={scoreBasedResults}
-        onRandomTieBreaker={handleRandomTieBreaker}
-      />
     </View>
   );
+
+  const getCurrentContent = () => {
+    switch (currentStep) {
+      case 'type-selection':
+        return renderTypeSelection();
+      case 'game-selection':
+        return renderGameSelection();
+      case 'in-person-type-selection':
+        return renderInPersonTypeSelection();
+      case 'random-animation':
+        return renderRandomAnimation();
+      case 'random-result':
+        return renderRandomResult();
+      case 'score-based-voting':
+        return renderScoreBasedVoting();
+      case 'score-based-results':
+        return renderScoreBasedResults();
+      case 'score-based-tie-breaker':
+        return renderScoreBasedTieBreaker();
+      default:
+        return renderTypeSelection();
+    }
+  };
+
+  const content = getCurrentContent();
 
   if (Platform.OS === 'web') {
     if (!isVisible) return null;
@@ -1385,6 +1488,108 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   );
 };
 
+// Random Selection Animation Component
+function RandomSelectionAnimation() {
+  const rotation = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { rotate: `${rotation.value}deg` },
+        { scale: scale.value },
+      ],
+      opacity: opacity.value,
+    };
+  });
+
+  React.useEffect(() => {
+    // Continuous rotation
+    rotation.value = withRepeat(
+      withTiming(360, { duration: 1000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    
+    // Pulsing scale animation
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.2, { duration: 500 }),
+        withTiming(1, { duration: 500 })
+      ),
+      -1,
+      true
+    );
+
+    // Subtle opacity animation
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.7, { duration: 800 }),
+        withTiming(1, { duration: 800 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  return (
+    <View style={styles.animationIconContainer}>
+      <Animated.View style={[styles.animationIcon, animatedStyle]}>
+        <Shuffle size={64} color="#10b981" />
+      </Animated.View>
+      
+      {/* Surrounding animated dots */}
+      <AnimatedDot delay={0} />
+      <AnimatedDot delay={200} />
+      <AnimatedDot delay={400} />
+      <AnimatedDot delay={600} />
+    </View>
+  );
+}
+
+function AnimatedDot({ delay }: { delay: number }) {
+  const scale = useSharedValue(0.5);
+  const opacity = useSharedValue(0.3);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+      opacity: opacity.value,
+    };
+  });
+
+  React.useEffect(() => {
+    scale.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 600 }),
+          withTiming(0.5, { duration: 600 })
+        ),
+        -1,
+        true
+      )
+    );
+
+    opacity.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(0.8, { duration: 600 }),
+          withTiming(0.3, { duration: 600 })
+        ),
+        -1,
+        true
+      )
+    );
+  }, [delay]);
+
+  return (
+    <Animated.View style={[styles.animationDot, animatedStyle]} />
+  );
+}
+
 type Styles = {
   overlay: ViewStyle;
   webOverlay: ViewStyle;
@@ -1392,6 +1597,39 @@ type Styles = {
   header: ViewStyle;
   closeButton: ViewStyle;
   title: TextStyle;
+  description: TextStyle;
+  pollTypeContainer: ViewStyle;
+  pollTypeOption: ViewStyle;
+  pollTypeIcon: ViewStyle;
+  pollTypeTitle: TextStyle;
+  pollTypeDescription: TextStyle;
+  comingSoonText: TextStyle;
+  selectionMethodContainer: ViewStyle;
+  selectionMethodOption: ViewStyle;
+  selectionMethodIcon: ViewStyle;
+  selectionMethodContent: ViewStyle;
+  selectionMethodTitle: TextStyle;
+  selectionMethodDescription: TextStyle;
+  animationContainer: ViewStyle;
+  animationIconContainer: ViewStyle;
+  animationIcon: ViewStyle;
+  animationDot: ViewStyle;
+  animationText: TextStyle;
+  randomResultContainer: ViewStyle;
+  randomResultIcon: ViewStyle;
+  randomResultTitle: TextStyle;
+  randomResultSubtext: TextStyle;
+  selectedGameCard: ViewStyle;
+  selectedGameImage: ViewStyle;
+  selectedGameInfo: ViewStyle;
+  selectedGameName: TextStyle;
+  selectedGameDetails: TextStyle;
+  selectedGameYear: TextStyle;
+  randomResultActions: ViewStyle;
+  selectAgainButton: ViewStyle;
+  selectAgainText: TextStyle;
+  doneButton: ViewStyle;
+  doneButtonText: TextStyle;
   content: ViewStyle;
   label: TextStyle;
   sublabel: TextStyle;
@@ -1418,81 +1656,81 @@ type Styles = {
   playerCount: TextStyle;
   noGamesText: TextStyle;
   errorText: TextStyle;
-  buttonContainer: ViewStyle;
+  actionButtons: ViewStyle;
+  backButton: ViewStyle;
+  backButtonText: TextStyle;
   createButton: ViewStyle;
   createButtonDisabled: ViewStyle;
   createButtonText: TextStyle;
-  inPersonButton: ViewStyle;
-  inPersonButtonText: TextStyle;
-  description: TextStyle;
-  methodsContainer: ViewStyle;
-  methodCard: ViewStyle;
-  methodCardDisabled: ViewStyle;
-  methodIcon: ViewStyle;
-  methodEmoji: TextStyle;
-  methodTitle: TextStyle;
-  methodDescription: TextStyle;
-  comingSoonBadge: ViewStyle;
-  comingSoonText: TextStyle;
-  randomSelectionOverlay: ViewStyle;
-  countdownContainer: ViewStyle;
-  countdownText: TextStyle;
-  randomResultCard: ViewStyle;
-  randomResultTitle: TextStyle;
-  selectedGameContainer: ViewStyle;
-  selectedGameImage: ViewStyle;
-  selectedGameName: TextStyle;
-  selectedGameDetails: TextStyle;
-  randomCloseButton: ViewStyle;
-  randomCloseText: TextStyle;
-  scoreBasedContainer: ViewStyle;
-  scoreBasedHeader: ViewStyle;
-  progressContainer: ViewStyle;
+  votingProgress: ViewStyle;
   progressText: TextStyle;
   progressBar: ViewStyle;
   progressFill: ViewStyle;
-  gameDisplayContainer: ViewStyle;
-  gameImage: ViewStyle;
-  gameTitle: TextStyle;
-  gameDetails: TextStyle;
-  instructionText: TextStyle;
-  votingSection: ViewStyle;
-  voteButtonsContainer: ViewStyle;
-  voteButton: ViewStyle;
+  gameVotingSection: ViewStyle;
+  votingGameImage: ViewStyle;
+  votingGameName: TextStyle;
+  votingGameDetails: TextStyle;
+  votingInstructions: TextStyle;
+  voterInputSection: ViewStyle;
+  voterInputLabel: TextStyle;
+  voterInputRow: ViewStyle;
+  voterInput: any;
+  voteButtonsSection: ViewStyle;
+  voteOptionButton: ViewStyle;
   vetoButton: ViewStyle;
   okButton: ViewStyle;
   excitedButton: ViewStyle;
-  voteButtonText: TextStyle;
-  voteButtonSubtext: TextStyle;
-  currentVotesContainer: ViewStyle;
+  voteOptionText: TextStyle;
+  voteOptionSubtext: TextStyle;
+  currentVotesSection: ViewStyle;
   currentVotesTitle: TextStyle;
-  votesDisplay: ViewStyle;
-  voteChip: ViewStyle;
-  vetoChip: ViewStyle;
-  okChip: ViewStyle;
-  excitedChip: ViewStyle;
-  voteChipText: TextStyle;
-  nextButton: ViewStyle;
-  nextButtonText: TextStyle;
+  votesSummary: ViewStyle;
+  voteSummaryItem: TextStyle;
+  votersList: ViewStyle;
+  voterItem: ViewStyle;
+  voterName: TextStyle;
+  voterVoteContainer: ViewStyle;
+  voterVote: TextStyle;
+  vetoVote: TextStyle;
+  okVote: TextStyle;
+  excitedVote: TextStyle;
+  removeVoteButton: ViewStyle;
+  votingActions: ViewStyle;
+  nextGameButton: ViewStyle;
+  nextGameButtonText: TextStyle;
   resultsScrollView: ViewStyle;
-  resultItem: ViewStyle;
-  winnerItem: ViewStyle;
-  vetoedItem: ViewStyle;
+  resultsDescription: TextStyle;
+  resultGameCard: ViewStyle;
+  winnerCard: ViewStyle;
   resultRank: ViewStyle;
-  resultRankText: TextStyle;
-  winnerText: TextStyle;
-  resultInfo: ViewStyle;
+  rankNumber: TextStyle;
+  winnerRank: TextStyle;
+  crownEmoji: TextStyle;
+  resultGameImage: ViewStyle;
+  resultGameInfo: ViewStyle;
   resultGameName: TextStyle;
-  vetoedText: TextStyle;
-  resultVotes: ViewStyle;
-  voteTypeCount: ViewStyle;
-  voteCountText: TextStyle;
-  resultScore: ViewStyle;
-  resultScoreText: TextStyle;
-  tieSection: ViewStyle;
-  tieText: TextStyle;
-  tieBreakerButton: ViewStyle;
-  tieBreakerText: TextStyle;
+  winnerName: TextStyle;
+  resultGameDetails: TextStyle;
+  resultScores: ViewStyle;
+  vetoScore: TextStyle;
+  totalScore: TextStyle;
+  resultVoters: ViewStyle;
+  votersLabel: TextStyle;
+  voterResult: TextStyle;
+  resultsActions: ViewStyle;
+  tieBreakerContainer: ViewStyle;
+  tieBreakerTitle: TextStyle;
+  tieBreakerDescription: TextStyle;
+  tiedGamesList: ViewStyle;
+  tiedGameItem: ViewStyle;
+  tiedGameImage: ViewStyle;
+  tiedGameName: TextStyle;
+  tieBreakerSubtext: TextStyle;
+  tieBreakerActions: ViewStyle;
+  viewFullResultsButton: ViewStyle;
+  viewFullResultsText: TextStyle;
+  randomTieBreakerButton: ViewStyle;
+  randomTieBreakerText: TextStyle;
 };
 
 const screenHeight = Dimensions.get('window').height;
@@ -1546,6 +1784,248 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 20,
     color: '#1a2b5f',
+  },
+  description: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 32,
+    paddingHorizontal: 20,
+  },
+  pollTypeContainer: {
+    padding: 20,
+    paddingTop: 0,
+    gap: 16,
+  },
+  pollTypeOption: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  pollTypeIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f7f9fc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pollTypeTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 20,
+    color: '#1a2b5f',
+    marginBottom: 8,
+  },
+  pollTypeDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  comingSoonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    color: '#ff9654',
+    marginTop: 8,
+    backgroundColor: '#fff5ef',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  selectionMethodContainer: {
+    padding: 20,
+    paddingTop: 0,
+    gap: 12,
+  },
+  selectionMethodOption: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  selectionMethodIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f7f9fc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  selectionMethodContent: {
+    flex: 1,
+  },
+  selectionMethodTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  selectionMethodDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 18,
+  },
+  animationContainer: {
+    padding: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  animationIconContainer: {
+    position: 'relative',
+    width: 160,
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  animationIcon: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animationDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10b981',
+  },
+  animationText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#1a2b5f',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  randomResultContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  randomResultIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#ecfdf5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  randomResultTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 24,
+    color: '#1a2b5f',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  randomResultSubtext: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginTop: 24,
+  },
+  selectedGameCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#10b981',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    width: '100%',
+    maxWidth: 300,
+  },
+  selectedGameImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  selectedGameInfo: {
+    alignItems: 'center',
+  },
+  selectedGameName: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 20,
+    color: '#1a2b5f',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 26,
+  },
+  selectedGameDetails: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  selectedGameYear: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#8d8d8d',
+    textAlign: 'center',
+  },
+  randomResultActions: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+  },
+  selectAgainButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ecfdf5',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#10b981',
+  },
+  selectAgainText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#10b981',
+    marginLeft: 8,
+  },
+  doneButton: {
+    backgroundColor: '#10b981',
+    borderRadius: 12,
+    padding: 16,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
   },
   content: {
     padding: 20,
@@ -1688,10 +2168,24 @@ const styles = StyleSheet.create<Styles>({
     marginTop: 8,
     paddingHorizontal: 20,
   },
-  buttonContainer: {
+  actionButtons: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+  },
+  backButton: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#666666',
   },
   createButton: {
     flex: 1,
@@ -1699,8 +2193,8 @@ const styles = StyleSheet.create<Styles>({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ff9654',
-    padding: 16,
     borderRadius: 12,
+    padding: 16,
     gap: 8,
   },
   createButtonDisabled: {
@@ -1711,235 +2205,109 @@ const styles = StyleSheet.create<Styles>({
     fontSize: 16,
     color: '#ffffff',
   },
-  inPersonButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1a2b5f',
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  inPersonButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-  },
-  description: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  methodsContainer: {
-    gap: 16,
-  },
-  methodCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
+  votingProgress: {
     padding: 20,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e1e5ea',
-    position: 'relative',
-  },
-  methodCardDisabled: {
-    opacity: 0.6,
-  },
-  methodIcon: {
-    marginBottom: 12,
-  },
-  methodEmoji: {
-    fontSize: 32,
-  },
-  methodTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  methodDescription: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  comingSoonBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  comingSoonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 12,
-    color: '#ffffff',
-  },
-  randomSelectionOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 43, 95, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  countdownContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  countdownText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 120,
-    color: '#ffffff',
-  },
-  randomResultCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 32,
-    width: '90%',
-    maxWidth: 400,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  randomResultTitle: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#1a2b5f',
-    marginBottom: 24,
-  },
-  selectedGameContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  selectedGameImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  selectedGameName: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  selectedGameDetails: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  randomCloseButton: {
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  randomCloseText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-  },
-  scoreBasedContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: screenHeight * 0.9,
-    overflow: 'hidden',
-  },
-  scoreBasedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e5ea',
-  },
-  progressContainer: {
-    flex: 1,
-    marginRight: 16,
+    paddingBottom: 10,
   },
   progressText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#1a2b5f',
-    marginBottom: 8,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   progressBar: {
-    height: 6,
+    height: 8,
     backgroundColor: '#e1e5ea',
-    borderRadius: 3,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#ff9654',
-    borderRadius: 3,
+    borderRadius: 4,
   },
-  gameDisplayContainer: {
-    alignItems: 'center',
+  gameVotingSection: {
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
   },
-  gameImage: {
-    width: 100,
-    height: 100,
+  votingGameImage: {
+    width: 120,
+    height: 120,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 16,
+    backgroundColor: '#f0f0f0',
   },
-  gameTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
+  votingGameName: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
     color: '#1a2b5f',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  gameDetails: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  instructionText: {
+  votingGameDetails: {
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    marginBottom: 24,
+  },
+  votingInstructions: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+    textAlign: 'center',
+    marginBottom: 24,
     lineHeight: 22,
   },
-  votingSection: {
-    padding: 20,
+  voterInputSection: {
+    width: '100%',
+    marginBottom: 24,
   },
-  voteButtonsContainer: {
+  voterInputLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 8,
+  },
+  voterInputRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  voteButton: {
-    flex: 1,
     alignItems: 'center',
-    padding: 16,
+  },
+  voterInput: {
+    flex: 1,
+    backgroundColor: '#f7f9fc',
     borderRadius: 12,
-    minHeight: 100,
+    padding: 16,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333333',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    outline: 'none',
+  },
+  voteButtonsSection: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 32,
+    width: '100%',
     justifyContent: 'center',
   },
+  voteOptionButton: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 16,
+    minHeight: 100,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   vetoButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#e74c3c',
   },
   okButton: {
     backgroundColor: '#10b981',
@@ -1947,23 +2315,26 @@ const styles = StyleSheet.create<Styles>({
   excitedButton: {
     backgroundColor: '#ec4899',
   },
-  voteButtonText: {
+  voteOptionText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#ffffff',
     marginTop: 8,
+    marginBottom: 4,
   },
-  voteButtonSubtext: {
+  voteOptionSubtext: {
     fontFamily: 'Poppins-Regular',
     fontSize: 12,
     color: '#ffffff',
     opacity: 0.9,
-    marginTop: 4,
     textAlign: 'center',
   },
-  currentVotesContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  currentVotesSection: {
+    width: '100%',
+    backgroundColor: '#f7f9fc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
   },
   currentVotesTitle: {
     fontFamily: 'Poppins-SemiBold',
@@ -1971,147 +2342,275 @@ const styles = StyleSheet.create<Styles>({
     color: '#1a2b5f',
     marginBottom: 12,
   },
-  votesDisplay: {
+  votesSummary: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-around',
+    marginBottom: 16,
+    paddingVertical: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
   },
-  voteChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
-  },
-  vetoChip: {
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#ef4444',
-  },
-  okChip: {
-    backgroundColor: '#ecfdf5',
-    borderWidth: 1,
-    borderColor: '#10b981',
-  },
-  excitedChip: {
-    backgroundColor: '#fdf2f8',
-    borderWidth: 1,
-    borderColor: '#ec4899',
-  },
-  voteChipText: {
-    fontFamily: 'Poppins-Regular',
+  voteSummaryItem: {
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#333333',
   },
-  nextButton: {
-    backgroundColor: '#1a2b5f',
-    margin: 20,
-    padding: 16,
+  votersList: {
+    maxHeight: 120,
+  },
+  voterItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  voterName: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#333333',
+    flex: 1,
+  },
+  voterVoteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  voterVote: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 12,
+  },
+  vetoVote: {
+    backgroundColor: '#fef2f2',
+    color: '#e74c3c',
+  },
+  okVote: {
+    backgroundColor: '#ecfdf5',
+    color: '#10b981',
+  },
+  excitedVote: {
+    backgroundColor: '#fdf2f8',
+    color: '#ec4899',
+  },
+  removeVoteButton: {
+    width: 24,
+    height: 24,
+    backgroundColor: '#fff0f0',
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  nextButtonText: {
+  votingActions: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+  },
+  nextGameButton: {
+    backgroundColor: '#ff9654',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  nextGameButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#ffffff',
   },
   resultsScrollView: {
-    maxHeight: 400,
-    paddingHorizontal: 20,
+    flex: 1,
+    padding: 20,
   },
-  resultItem: {
+  resultsDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  resultGameCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  winnerCard: {
+    backgroundColor: '#fff7ed',
+    borderWidth: 2,
+    borderColor: '#ff9654',
+  },
+  resultRank: {
+    alignItems: 'center',
+    marginRight: 16,
+    minWidth: 40,
+  },
+  rankNumber: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 20,
+    color: '#8b5cf6',
+  },
+  winnerRank: {
+    color: '#ff9654',
+  },
+  crownEmoji: {
+    fontSize: 16,
+    marginTop: 4,
+  },
+  resultGameImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    marginRight: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  resultGameInfo: {
+    flex: 1,
+  },
+  resultGameName: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  winnerName: {
+    color: '#ff9654',
+  },
+  resultGameDetails: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 8,
+  },
+  resultScores: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 8,
+  },
+  vetoScore: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#e74c3c',
+  },
+  totalScore: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#10b981',
+  },
+  resultVoters: {
+    marginTop: 8,
+  },
+  votersLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  voterResult: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  resultsActions: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+  },
+  tieBreakerContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  tieBreakerTitle: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
+    color: '#1a2b5f',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  tieBreakerDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  tiedGamesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  tiedGameItem: {
     alignItems: 'center',
     backgroundColor: '#f7f9fc',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
+    minWidth: 120,
   },
-  winnerItem: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#ff9654',
-    borderWidth: 2,
-  },
-  vetoedItem: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#ef4444',
-  },
-  resultRank: {
+  tiedGameImage: {
     width: 60,
-    alignItems: 'center',
-  },
-  resultRankText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 16,
-    color: '#666666',
-  },
-  winnerText: {
-    color: '#ff9654',
-  },
-  resultInfo: {
-    flex: 1,
-    marginHorizontal: 12,
-  },
-  resultGameName: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    height: 60,
+    borderRadius: 8,
     marginBottom: 8,
+    backgroundColor: '#f0f0f0',
   },
-  vetoedText: {
-    color: '#ef4444',
-  },
-  resultVotes: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  voteTypeCount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  voteCountText: {
+  tiedGameName: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#666666',
-  },
-  resultScore: {
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  resultScoreText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 16,
-    color: '#10b981',
-  },
-  tieSection: {
-    backgroundColor: '#fff7ed',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  tieText: {
-    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#1a2b5f',
     textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 20,
   },
-  tieBreakerButton: {
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
+  tieBreakerSubtext: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
   },
-  tieBreakerText: {
+  tieBreakerActions: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+  },
+  viewFullResultsButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  viewFullResultsText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
+    fontSize: 16,
+    color: '#666666',
+  },
+  randomTieBreakerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    borderRadius: 12,
+    padding: 16,
+  },
+  randomTieBreakerText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
     color: '#ffffff',
+    marginLeft: 8,
   },
 });
