@@ -506,46 +506,52 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         How would you like to select a game from your chosen options?
       </Text>
 
-      <View style={styles.pollTypeContainer}>
+      <View style={styles.selectionMethodContainer}>
         <TouchableOpacity
-          style={styles.pollTypeOption}
+          style={styles.selectionMethodOption}
           onPress={handleRandomSelection}
         >
-          <View style={styles.pollTypeIcon}>
-            <Shuffle size={32} color="#10b981" />
+          <View style={styles.selectionMethodIcon}>
+            <Shuffle size={24} color="#10b981" />
           </View>
-          <Text style={styles.pollTypeTitle}>Random Selection</Text>
-          <Text style={styles.pollTypeDescription}>
-            Randomly pick one game from your selected options
-          </Text>
+          <View style={styles.selectionMethodContent}>
+            <Text style={styles.selectionMethodTitle}>Random Selection</Text>
+            <Text style={styles.selectionMethodDescription}>
+              Randomly pick one game from your selected options
+            </Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.pollTypeOption}
+          style={styles.selectionMethodOption}
           onPress={handleRankedChoice}
         >
-          <View style={styles.pollTypeIcon}>
-            <BarChart3 size={32} color="#8b5cf6" />
+          <View style={styles.selectionMethodIcon}>
+            <BarChart3 size={24} color="#8b5cf6" />
           </View>
-          <Text style={styles.pollTypeTitle}>Ranked Choice</Text>
-          <Text style={styles.pollTypeDescription}>
-            Players rank games in order of preference
-          </Text>
-          <Text style={styles.comingSoonText}>Coming Soon</Text>
+          <View style={styles.selectionMethodContent}>
+            <Text style={styles.selectionMethodTitle}>Ranked Choice</Text>
+            <Text style={styles.selectionMethodDescription}>
+              Players rank games in order of preference
+            </Text>
+            <Text style={styles.comingSoonText}>Coming Soon</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.pollTypeOption}
+          style={styles.selectionMethodOption}
           onPress={handleScoreBased}
         >
-          <View style={styles.pollTypeIcon}>
-            <Trophy size={32} color="#ff9654" />
+          <View style={styles.selectionMethodIcon}>
+            <Trophy size={24} color="#ff9654" />
           </View>
-          <Text style={styles.pollTypeTitle}>Score Based</Text>
-          <Text style={styles.pollTypeDescription}>
-            Players give scores to each game option
-          </Text>
-          <Text style={styles.comingSoonText}>Coming Soon</Text>
+          <View style={styles.selectionMethodContent}>
+            <Text style={styles.selectionMethodTitle}>Score Based</Text>
+            <Text style={styles.selectionMethodDescription}>
+              Players give scores to each game option
+            </Text>
+            <Text style={styles.comingSoonText}>Coming Soon</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -1133,6 +1139,12 @@ type Styles = {
   pollTypeTitle: TextStyle;
   pollTypeDescription: TextStyle;
   comingSoonText: TextStyle;
+  selectionMethodContainer: ViewStyle;
+  selectionMethodOption: ViewStyle;
+  selectionMethodIcon: ViewStyle;
+  selectionMethodContent: ViewStyle;
+  selectionMethodTitle: TextStyle;
+  selectionMethodDescription: TextStyle;
   animationContainer: ViewStyle;
   animationIconContainer: ViewStyle;
   animationIcon: ViewStyle;
@@ -1296,6 +1308,49 @@ const styles = StyleSheet.create<Styles>({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  selectionMethodContainer: {
+    padding: 20,
+    paddingTop: 0,
+    gap: 12,
+  },
+  selectionMethodOption: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  selectionMethodIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f7f9fc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  selectionMethodContent: {
+    flex: 1,
+  },
+  selectionMethodTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  selectionMethodDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 18,
   },
   animationContainer: {
     padding: 60,
