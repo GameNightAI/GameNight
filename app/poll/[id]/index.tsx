@@ -63,6 +63,8 @@ export default function PollScreen() {
         return;
       }
 
+      console.log(pendingVotes);
+      
       for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
         const { data: existing } = await supabase
