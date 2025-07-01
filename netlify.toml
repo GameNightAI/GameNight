@@ -1,5 +1,5 @@
 [[redirects]]
   from = "*"
-  to = "/index.html"
+  to = "/app/index.html"
   status = 200
   force = true
