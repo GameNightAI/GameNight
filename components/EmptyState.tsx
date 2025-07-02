@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Package, RefreshCw, Search, Star, Filter, Users, Plus } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, Platform } from 'react-native';
+import { Package, RefreshCw, Search, Star, Filter, Users, Plus, X } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface EmptyStateProps {
@@ -20,6 +20,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   const [inputUsername, setInputUsername] = useState('');
   const [error, setError] = useState('');
+  const [showModal, setShowModal] = useState(false);
 
   const handleImportCollection = () => {
     if (!inputUsername.trim()) {
@@ -29,6 +30,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     setError('');
     onRefresh(inputUsername.trim());
     setInputUsername('');
+    setShowModal(false);
   };
 
   const handleAddGame = () => {
@@ -36,6 +38,63 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     // For now, we'll just call onRefresh without username to trigger the add game modal
     onRefresh();
   };
+
+  const openImportModal = () => {
+    setShowModal(true);
+    setError('');
+    setInputUsername('');
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setError('');
+    setInputUsername('');
+  };
+
+  const modalContent = (
+    <View style={styles.modalDialog}>
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>Import BGG Collection</Text>
+        <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+          <X size={20} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.modalDescription}>
+        Enter your BoardGameGeek username to import your collection
+      </Text>
+
+      <View style={styles.modalInputContainer}>
+        <TextInput
+          style={styles.modalInput}
+          placeholder="BGG Username"
+          value={inputUsername}
+          onChangeText={(text) => {
+            setInputUsername(text);
+            setError('');
+          }}
+          onSubmitEditing={handleImportCollection}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoFocus
+        />
+      </View>
+
+      {error ? <Text style={styles.modalErrorText}>{error}</Text> : null}
+
+      <TouchableOpacity
+        style={styles.modalImportButton}
+        onPress={handleImportCollection}
+      >
+        <Search size={20} color="#ffffff" />
+        <Text style={styles.modalImportButtonText}>Import Collection</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.modalHelpText}>
+        Your BoardGameGeek collection must be public to sync games.
+      </Text>
+    </View>
+  );
 
   if (showSyncButton) {
     return (
@@ -89,33 +148,36 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {/* Import BGG Collection Button */}
         <TouchableOpacity
           style={styles.importButton}
-          onPress={handleImportCollection}
+          onPress={openImportModal}
         >
           <Search size={20} color="#ffffff" />
           <Text style={styles.importButtonText}>Import BGG Collection</Text>
         </TouchableOpacity>
 
-        {/* Username input (hidden by default, shown when import is clicked) */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter BGG Username"
-            value={inputUsername}
-            onChangeText={(text) => {
-              setInputUsername(text);
-              setError('');
-            }}
-            onSubmitEditing={handleImportCollection}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        </View>
-
         {/* Help text */}
         <Text style={styles.helpText}>
           Your BoardGameGeek collection must be public to sync games.
         </Text>
+
+        {/* Import Modal */}
+        {Platform.OS === 'web' ? (
+          showModal && (
+            <View style={styles.webModalOverlay}>
+              {modalContent}
+            </View>
+          )
+        ) : (
+          <Modal
+            visible={showModal}
+            transparent
+            animationType="fade"
+            onRequestClose={closeModal}
+          >
+            <View style={styles.modalOverlay}>
+              {modalContent}
+            </View>
+          </Modal>
+        )}
       </Animated.View>
     );
   }
@@ -241,7 +303,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     maxWidth: 320,
-    marginBottom: 16,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -254,35 +316,109 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginLeft: 8,
   },
-  inputContainer: {
-    width: '100%',
-    maxWidth: 320,
-    marginBottom: 16,
-  },
-  input: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    marginBottom: 8,
-  },
-  errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#e74c3c',
-    textAlign: 'center',
-  },
   helpText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 13,
     color: '#8d8d8d',
     textAlign: 'center',
     maxWidth: 280,
+    lineHeight: 18,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  webModalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    padding: 20,
+  },
+  modalDialog: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 20,
+    color: '#1a2b5f',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalInputContainer: {
+    marginBottom: 16,
+  },
+  modalInput: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+  },
+  modalErrorText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#e74c3c',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalImportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff9654',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  modalImportButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
+    marginLeft: 8,
+  },
+  modalHelpText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 13,
+    color: '#8d8d8d',
+    textAlign: 'center',
     lineHeight: 18,
   },
   // Legacy styles for non-sync scenarios
