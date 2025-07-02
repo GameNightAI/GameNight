@@ -81,6 +81,7 @@ export default function PollScreen() {
           console.log('vote.vote_type', vote.vote_type);
           console.log('voteType', voteType);
           if (vote.vote_type !== voteType) {
+            console.log('Attempting to update vote', vote.id);
             const {error: updateError} = await supabase
               .from('votes')
               .update({ vote_type: voteType })
@@ -91,6 +92,7 @@ export default function PollScreen() {
             }
           }
         } else {
+          console.log('Attempting to insert vote for gameID', gameID);
           const {error: insertError} = await supabase
             .from('votes').insert({
               poll_id: id,
