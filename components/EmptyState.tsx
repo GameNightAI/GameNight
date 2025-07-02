@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Package, RefreshCw, Link2, Search } from 'lucide-react-native';
+import { Package, RefreshCw, Link2, Search, Star, Filter, Users } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface EmptyStateProps {
@@ -37,15 +37,39 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       style={styles.container}
     >
       <Package size={48} color="#8d8d8d" />
-      <Text style={styles.emptyTitle}>No Games Found</Text>
-      <Text style={styles.emptyMessage}>
-        {message || (showSyncButton ?
-          'Enter your BoardGameGeek username to import your collection' :
-          username ?
+      <Text style={styles.emptyTitle}>Add games to your collection!</Text>
+      
+      {message ? (
+        <Text style={styles.emptyMessage}>{message}</Text>
+      ) : showSyncButton ? (
+        <>
+          <Text style={styles.emptyMessage}>
+            Start building your board game collection and unlock these benefits:
+          </Text>
+          
+          <View style={styles.benefitsContainer}>
+            <View style={styles.benefitItem}>
+              <Star size={20} color="#ff9654" />
+              <Text style={styles.benefitText}>Track your collection</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <Filter size={20} color="#ff9654" />
+              <Text style={styles.benefitText}>Easily filter to find the right game</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <Users size={20} color="#ff9654" />
+              <Text style={styles.benefitText}>Let your friends vote on what they want to play</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <Text style={styles.emptyMessage}>
+          {username ?
             `We couldn't find any games in ${username}'s collection.` :
             'We couldn\'t find any games in your collection.'
-        )}
-      </Text>
+          }
+        </Text>
+      )}
 
       {showSyncButton && (
         <View style={styles.inputContainer}>
@@ -102,18 +126,38 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
+    fontSize: 24,
     color: '#1a2b5f',
     marginTop: 20,
-    marginBottom: 8,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   emptyMessage: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: 16,
     color: '#666666',
     textAlign: 'center',
     marginBottom: 24,
+    maxWidth: 320,
+    lineHeight: 24,
+  },
+  benefitsContainer: {
+    marginBottom: 32,
+    width: '100%',
     maxWidth: 300,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  benefitText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginLeft: 12,
+    flex: 1,
   },
   inputContainer: {
     width: '100%',
