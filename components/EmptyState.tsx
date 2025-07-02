@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Dice6, RefreshCw, Link2, Search, Star, Filter, Users, Plus } from 'lucide-react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Dice6, RefreshCw, Search, Star, Filter, Users, Plus } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface EmptyStateProps {
@@ -20,17 +20,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   showSyncButton = false,
   onAddGame
 }) => {
-  const [inputUsername, setInputUsername] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = () => {
-    if (!inputUsername.trim()) {
-      setError('Please enter a BoardGameGeek username');
-      return;
-    }
-    setError('');
-    onRefresh(inputUsername.trim());
-    setInputUsername('');
+  const handleImportBGG = () => {
+    onRefresh(); // This will trigger the sync modal
   };
 
   return (
@@ -93,30 +84,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Import from BGG Section */}
-          <Text style={styles.importSectionTitle}>Import from BoardGameGeek</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter BGG Username"
-              value={inputUsername}
-              onChangeText={(text) => {
-                setInputUsername(text);
-                setError('');
-              }}
-              onSubmitEditing={handleSubmit}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            <TouchableOpacity
-              style={styles.importButton}
-              onPress={handleSubmit}
-            >
-              <Search size={18} color="#ffffff" />
-              <Text style={styles.importButtonText}>Import Collection</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Import BGG Collection Button */}
+          <TouchableOpacity
+            style={styles.importButton}
+            onPress={handleImportBGG}
+          >
+            <Search size={18} color="#ffffff" />
+            <Text style={styles.importButtonText}>Import BGG Collection</Text>
+          </TouchableOpacity>
         </>
       )}
 
@@ -197,6 +172,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    width: '100%',
+    maxWidth: 300,
   },
   addGameButtonText: {
     fontFamily: 'Poppins-SemiBold',
@@ -222,49 +199,26 @@ const styles = StyleSheet.create({
     color: '#8d8d8d',
     marginHorizontal: 16,
   },
-  importSectionTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    width: '100%',
-    maxWidth: 300,
-    marginBottom: 24,
-  },
-  input: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    marginBottom: 12,
-  },
-  errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#e74c3c',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
   importButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ff9654',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    width: '100%',
+    maxWidth: 300,
   },
   importButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
+    fontSize: 18,
     color: '#ffffff',
     marginLeft: 8,
   },
