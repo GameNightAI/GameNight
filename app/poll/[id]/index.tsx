@@ -63,7 +63,8 @@ export default function PollScreen() {
         return;
       }
 
-      console.log(pendingVotes);
+      console.log('finalName:', finalName);
+      console.log('pendingVotes:', pendingVotes);
       
       for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
@@ -74,12 +75,12 @@ export default function PollScreen() {
           .eq('game_id', gameId)
           .eq('voter_name', finalName);
 
-        console.log(existing);
+        console.log('existing:', existing);
         
         if (existing && existing.length > 0) {
           const vote = existing[0];
-          console.log('vote.vote_type', vote.vote_type);
-          console.log('voteType', voteType);
+          console.log('vote.vote_type:', vote.vote_type);
+          console.log('voteType:', voteType);
           if (vote.vote_type !== voteType) {
             console.log('Attempting to update vote', vote.id);
             const {error: updateError} = await supabase
@@ -111,6 +112,7 @@ export default function PollScreen() {
       await reload();
       Toast.show({ type: 'success', text1: 'Votes submitted!' });
     } catch (err) {
+      console.error('Vote submission error:', err);
       Toast.show({ type: 'error', text1: 'Failed to submit votes' });
     } finally {
       setSubmitting(false);
