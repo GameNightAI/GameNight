@@ -93,7 +93,7 @@ export default function PollScreen() {
             }
           }
         } else {
-          console.log('Attempting to insert vote for gameID', gameID);
+          console.log('Attempting to insert vote for gameID', gameId);
           const {error: insertError} = await supabase
             .from('votes').insert({
               poll_id: id,
