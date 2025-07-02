@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Package, RefreshCw, Link2, Search } from 'lucide-react-native';
+import { Package, RefreshCw, Search, Star, Filter, Users, Plus } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface EmptyStateProps {
@@ -21,7 +21,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const [inputUsername, setInputUsername] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = () => {
+  const handleImportCollection = () => {
     if (!inputUsername.trim()) {
       setError('Please enter a BoardGameGeek username');
       return;
@@ -31,23 +31,71 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     setInputUsername('');
   };
 
-  return (
-    <Animated.View
-      entering={FadeIn.duration(500)}
-      style={styles.container}
-    >
-      <Package size={48} color="#8d8d8d" />
-      <Text style={styles.emptyTitle}>No Games Found</Text>
-      <Text style={styles.emptyMessage}>
-        {message || (showSyncButton ?
-          'Enter your BoardGameGeek username to import your collection' :
-          username ?
-            `We couldn't find any games in ${username}'s collection.` :
-            'We couldn\'t find any games in your collection.'
-        )}
-      </Text>
+  const handleAddGame = () => {
+    // This will be handled by the parent component's add game functionality
+    // For now, we'll just call onRefresh without username to trigger the add game modal
+    onRefresh();
+  };
 
-      {showSyncButton && (
+  if (showSyncButton) {
+    return (
+      <Animated.View
+        entering={FadeIn.duration(500)}
+        style={styles.container}
+      >
+        {/* Game dice icon */}
+        <View style={styles.iconContainer}>
+          <Package size={48} color="#ff9654" />
+        </View>
+
+        {/* Main heading */}
+        <Text style={styles.title}>Add games to your collection!</Text>
+        
+        {/* Subtitle */}
+        <Text style={styles.subtitle}>
+          Start building your board game collection and unlock these benefits:
+        </Text>
+
+        {/* Benefits list */}
+        <View style={styles.benefitsList}>
+          <View style={styles.benefitItem}>
+            <Star size={20} color="#ff9654" />
+            <Text style={styles.benefitText}>Track your collection</Text>
+          </View>
+          
+          <View style={styles.benefitItem}>
+            <Filter size={20} color="#ff9654" />
+            <Text style={styles.benefitText}>Easily filter to find the right game</Text>
+          </View>
+          
+          <View style={styles.benefitItem}>
+            <Users size={20} color="#ff9654" />
+            <Text style={styles.benefitText}>Let your friends vote on what they want to play</Text>
+          </View>
+        </View>
+
+        {/* Add Game Button */}
+        <TouchableOpacity
+          style={styles.addGameButton}
+          onPress={handleAddGame}
+        >
+          <Plus size={20} color="#ffffff" />
+          <Text style={styles.addGameButtonText}>Add Game</Text>
+        </TouchableOpacity>
+
+        {/* Or divider */}
+        <Text style={styles.orText}>or</Text>
+
+        {/* Import BGG Collection Button */}
+        <TouchableOpacity
+          style={styles.importButton}
+          onPress={handleImportCollection}
+        >
+          <Search size={20} color="#ffffff" />
+          <Text style={styles.importButtonText}>Import BGG Collection</Text>
+        </TouchableOpacity>
+
+        {/* Username input (hidden by default, shown when import is clicked) */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -57,36 +105,46 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               setInputUsername(text);
               setError('');
             }}
-            onSubmitEditing={handleSubmit}
+            onSubmitEditing={handleImportCollection}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <TouchableOpacity
-            style={styles.importButton}
-            onPress={handleSubmit}
-          >
-            <Search size={18} color="#ffffff" />
-            <Text style={styles.importButtonText}>Import Collection</Text>
-          </TouchableOpacity>
         </View>
-      )}
 
-      {!showSyncButton && (
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={() => onRefresh()}
-        >
-          <RefreshCw size={18} color="#ffffff" />
-          <Text style={styles.refreshText}>{buttonText}</Text>
-        </TouchableOpacity>
-      )}
+        {/* Help text */}
+        <Text style={styles.helpText}>
+          Your BoardGameGeek collection must be public to sync games.
+        </Text>
+      </Animated.View>
+    );
+  }
+
+  // Fallback for non-sync scenarios
+  return (
+    <Animated.View
+      entering={FadeIn.duration(500)}
+      style={styles.container}
+    >
+      <Package size={48} color="#8d8d8d" />
+      <Text style={styles.emptyTitle}>No Games Found</Text>
+      <Text style={styles.emptyMessage}>
+        {message || (username ?
+          `We couldn't find any games in ${username}'s collection.` :
+          'We couldn\'t find any games in your collection.'
+        )}
+      </Text>
+
+      <TouchableOpacity
+        style={styles.refreshButton}
+        onPress={() => onRefresh()}
+      >
+        <RefreshCw size={18} color="#ffffff" />
+        <Text style={styles.refreshText}>{buttonText}</Text>
+      </TouchableOpacity>
 
       <Text style={styles.helpText}>
-        {showSyncButton ?
-          'Your BoardGameGeek collection must be public to sync games.' :
-          'Make sure your BoardGameGeek collection is public and contains board games.'
-        }
+        Make sure your BoardGameGeek collection is public and contains board games.
       </Text>
     </Animated.View>
   );
@@ -100,6 +158,134 @@ const styles = StyleSheet.create({
     backgroundColor: '#f7f9fc',
     padding: 20,
   },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: '#fff5ef',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
+    color: '#1a2b5f',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  subtitle: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 32,
+    maxWidth: 300,
+    lineHeight: 24,
+  },
+  benefitsList: {
+    width: '100%',
+    maxWidth: 320,
+    marginBottom: 40,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  benefitText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginLeft: 12,
+    flex: 1,
+    lineHeight: 22,
+  },
+  addGameButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 320,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  addGameButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
+    marginLeft: 8,
+  },
+  orText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#8d8d8d',
+    marginBottom: 16,
+  },
+  importButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff9654',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 320,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  importButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#ffffff',
+    marginLeft: 8,
+  },
+  inputContainer: {
+    width: '100%',
+    maxWidth: 320,
+    marginBottom: 16,
+  },
+  input: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    marginBottom: 8,
+  },
+  errorText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#e74c3c',
+    textAlign: 'center',
+  },
+  helpText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 13,
+    color: '#8d8d8d',
+    textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 18,
+  },
+  // Legacy styles for non-sync scenarios
   emptyTitle: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
@@ -115,45 +301,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     maxWidth: 300,
   },
-  inputContainer: {
-    width: '100%',
-    maxWidth: 300,
-    marginBottom: 24,
-  },
-  input: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    marginBottom: 12,
-  },
-  errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#e74c3c',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  importButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-  importButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-    marginLeft: 8,
-  },
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -168,12 +315,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
     marginLeft: 8,
-  },
-  helpText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
-    color: '#8d8d8d',
-    textAlign: 'center',
-    maxWidth: 280,
   },
 });
