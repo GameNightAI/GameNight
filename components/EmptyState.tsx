@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, Platform } from 'react-native';
-import { RefreshCw, Search, Star, Filter, Users, Plus, X, User } from 'lucide-react-native';
+import { RefreshCw, Search, Star, Filter, Users, Plus, X, Dice6 } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface EmptyStateProps {
@@ -102,9 +102,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         entering={FadeIn.duration(500)}
         style={styles.container}
       >
-        {/* Meeple icon */}
+        {/* Die icon */}
         <View style={styles.iconContainer}>
-          <User size={48} color="#ff9654" />
+          <Dice6 size={48} color="#ff9654" />
         </View>
 
         {/* Main heading */}
@@ -188,7 +188,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       entering={FadeIn.duration(500)}
       style={styles.container}
     >
-      <User size={48} color="#8d8d8d" />
+      <Dice6 size={48} color="#8d8d8d" />
       <Text style={styles.emptyTitle}>No Games Found</Text>
       <Text style={styles.emptyMessage}>
         {message || (username ?
