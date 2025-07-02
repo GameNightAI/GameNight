@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Dice6, RefreshCw, Link2, Search, Star, Filter, Users } from 'lucide-react-native';
+import { Dice6, RefreshCw, Link2, Search, Star, Filter, Users, Plus } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface EmptyStateProps {
@@ -9,6 +9,7 @@ interface EmptyStateProps {
   message?: string;
   buttonText?: string;
   showSyncButton?: boolean;
+  onAddGame?: () => void;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -16,7 +17,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onRefresh,
   message,
   buttonText = "Refresh",
-  showSyncButton = false
+  showSyncButton = false,
+  onAddGame
 }) => {
   const [inputUsername, setInputUsername] = useState('');
   const [error, setError] = useState('');
@@ -72,28 +74,50 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       )}
 
       {showSyncButton && (
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter BGG Username"
-            value={inputUsername}
-            onChangeText={(text) => {
-              setInputUsername(text);
-              setError('');
-            }}
-            onSubmitEditing={handleSubmit}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <TouchableOpacity
-            style={styles.importButton}
-            onPress={handleSubmit}
-          >
-            <Search size={18} color="#ffffff" />
-            <Text style={styles.importButtonText}>Import Collection</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          {/* Add Game Button */}
+          {onAddGame && (
+            <TouchableOpacity
+              style={styles.addGameButton}
+              onPress={onAddGame}
+            >
+              <Plus size={20} color="#ffffff" />
+              <Text style={styles.addGameButtonText}>Add Game</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Import from BGG Section */}
+          <Text style={styles.importSectionTitle}>Import from BoardGameGeek</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter BGG Username"
+              value={inputUsername}
+              onChangeText={(text) => {
+                setInputUsername(text);
+                setError('');
+              }}
+              onSubmitEditing={handleSubmit}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <TouchableOpacity
+              style={styles.importButton}
+              onPress={handleSubmit}
+            >
+              <Search size={18} color="#ffffff" />
+              <Text style={styles.importButtonText}>Import Collection</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
       {!showSyncButton && (
@@ -158,6 +182,52 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginLeft: 12,
     flex: 1,
+  },
+  addGameButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  addGameButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#ffffff',
+    marginLeft: 8,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    width: '100%',
+    maxWidth: 300,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e1e5ea',
+  },
+  dividerText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#8d8d8d',
+    marginHorizontal: 16,
+  },
+  importSectionTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   inputContainer: {
     width: '100%',

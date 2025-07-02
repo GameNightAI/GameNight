@@ -229,6 +229,7 @@ export default function CollectionScreen() {
         }
         buttonText={isFiltered ? "Clear Filters" : undefined}
         showSyncButton={!isFiltered}
+        onAddGame={!isFiltered ? () => setAddGameModalVisible(true) : undefined}
       />
     );
   }
