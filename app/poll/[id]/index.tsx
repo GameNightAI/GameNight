@@ -78,6 +78,8 @@ export default function PollScreen() {
         
         if (existing && existing.length > 0) {
           const vote = existing[0];
+          console.log('vote.vote_type', vote.vote_type);
+          console.log('voteType', voteType);
           if (vote.vote_type !== voteType) {
             await supabase.from('votes').update({ vote_type: voteType }).eq('id', vote.id);
           }
