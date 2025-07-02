@@ -81,15 +81,27 @@ export default function PollScreen() {
           console.log('vote.vote_type', vote.vote_type);
           console.log('voteType', voteType);
           if (vote.vote_type !== voteType) {
-            await supabase.from('votes').update({ vote_type: voteType }).eq('id', vote.id);
+            const {error: updateError} = await supabase
+              .from('votes')
+              .update({ vote_type: voteType })
+              .eq('id', vote.id);
+            if (updateError) {
+              console.error('Votes error:', updateError);
+              throw updateError;
+            }
           }
         } else {
-          await supabase.from('votes').insert({
-            poll_id: id,
-            game_id: gameId,
-            vote_type: voteType,
-            voter_name: finalName,
-          });
+          const {error: insertError} = await supabase
+            .from('votes').insert({
+              poll_id: id,
+              game_id: gameId,
+              vote_type: voteType,
+              voter_name: finalName,
+            });
+            if (insertError) {
+              console.error('Votes error:', insertError);
+              throw insertError;
+            }
         }
       }
 
