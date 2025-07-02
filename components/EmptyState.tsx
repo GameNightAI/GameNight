@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Package, RefreshCw, Link2, Search, Star, Filter, Users } from 'lucide-react-native';
+import { Dice6, RefreshCw, Link2, Search, Star, Filter, Users } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface EmptyStateProps {
@@ -36,7 +36,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       entering={FadeIn.duration(500)}
       style={styles.container}
     >
-      <Package size={48} color="#8d8d8d" />
+      <Dice6 size={48} color="#ff9654" />
       <Text style={styles.emptyTitle}>Add games to your collection!</Text>
       
       {message ? (
