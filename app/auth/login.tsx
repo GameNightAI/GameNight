@@ -36,7 +36,7 @@ export default function LoginScreen() {
 
       if (error) throw error;
 
-      router.replace('/(tabs)');
+      router.replace('/collection');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to sign in');
     } finally {
