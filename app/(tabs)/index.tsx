@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     minHeight: screenHeight,
   },
   headerSection: {
-    height: Math.max(250, screenHeight * 0.35), // Responsive height with minimum
+    height: Math.max(220, screenHeight * 0.3), // Reduced height slightly
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 20, // Reduced from 40 to 20
     alignItems: 'center',
     zIndex: 1,
   },
