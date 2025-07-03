@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Dimensions } from 'react-native';
 import { Dice6, RotateCcw, Plus, Minus, X } from 'lucide-react-native';
 import Animated, {
   FadeIn,
@@ -16,6 +16,8 @@ import Animated, {
   runOnJS,
   Easing,
 } from 'react-native-reanimated';
+
+const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
 interface DiceResult {
   id: number;
@@ -87,6 +89,7 @@ export default function DigitalDiceScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Background Image */}
       <Image
         source={{ uri: 'https://images.pexels.com/photos/278918/pexels-photo-278918.jpeg' }}
         style={styles.backgroundImage}
@@ -217,50 +220,63 @@ export default function DigitalDiceScreen() {
         </Animated.View>
       )}
 
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Digital Dice</Text>
         <Text style={styles.subtitle}>Roll virtual dice for your board games</Text>
       </View>
 
-      <View style={styles.content}>
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         {/* Dice Sides Configuration */}
         <View style={styles.configSection}>
           <Text style={styles.configLabel}>Number of Sides</Text>
-          <View style={styles.sidesGrid}>
-            {STANDARD_DICE_SIDES.map((sideOption) => (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.sidesScrollContainer}
+          >
+            <View style={styles.sidesGrid}>
+              {STANDARD_DICE_SIDES.map((sideOption) => (
+                <TouchableOpacity
+                  key={sideOption}
+                  style={[
+                    styles.sideOption,
+                    sides === sideOption && styles.sideOptionSelected
+                  ]}
+                  onPress={() => handleSidesSelection(sideOption)}
+                >
+                  <Text style={[
+                    styles.sideOptionText,
+                    sides === sideOption && styles.sideOptionTextSelected
+                  ]}>
+                    d{sideOption}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              
               <TouchableOpacity
-                key={sideOption}
                 style={[
                   styles.sideOption,
-                  sides === sideOption && styles.sideOptionSelected
+                  styles.customSideOption,
+                  !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionSelected
                 ]}
-                onPress={() => handleSidesSelection(sideOption)}
+                onPress={() => setShowCustomModal(true)}
               >
                 <Text style={[
                   styles.sideOptionText,
-                  sides === sideOption && styles.sideOptionTextSelected
+                  !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionTextSelected
                 ]}>
-                  d{sideOption}
+                  {!STANDARD_DICE_SIDES.includes(sides) ? `d${sides}` : 'Other'}
                 </Text>
               </TouchableOpacity>
-            ))}
-            
-            <TouchableOpacity
-              style={[
-                styles.sideOption,
-                styles.customSideOption,
-                !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionSelected
-              ]}
-              onPress={() => setShowCustomModal(true)}
-            >
-              <Text style={[
-                styles.sideOptionText,
-                !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionTextSelected
-              ]}>
-                {!STANDARD_DICE_SIDES.includes(sides) ? `d${sides}` : 'Other'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </ScrollView>
         </View>
 
         {/* Number of Dice Configuration */}
@@ -293,13 +309,19 @@ export default function DigitalDiceScreen() {
         {/* Preview */}
         <View style={styles.previewSection}>
           <Text style={styles.previewLabel}>Preview</Text>
-          <View style={styles.previewContainer}>
-            {Array.from({ length: numberOfDice }, (_, index) => (
-              <View key={index} style={styles.previewDice}>
-                <Dice6 size={24} color="#10b981" />
-              </View>
-            ))}
-          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.previewScrollContainer}
+          >
+            <View style={styles.previewContainer}>
+              {Array.from({ length: numberOfDice }, (_, index) => (
+                <View key={index} style={styles.previewDice}>
+                  <Dice6 size={24} color="#10b981" />
+                </View>
+              ))}
+            </View>
+          </ScrollView>
           <Text style={styles.previewText}>
             Rolling {numberOfDice} {numberOfDice === 1 ? 'die' : 'dice'} with {sides} sides each
           </Text>
@@ -316,7 +338,7 @@ export default function DigitalDiceScreen() {
             {isRolling ? 'Rolling...' : 'Roll Dice'}
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -377,45 +399,53 @@ const styles = StyleSheet.create({
   backgroundImage: {
     position: 'absolute',
     width: '100%',
-    height: 200,
+    height: Math.min(200, screenHeight * 0.25), // Responsive height
   },
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 200,
+    height: Math.min(200, screenHeight * 0.25), // Responsive height
     backgroundColor: 'rgba(26, 43, 95, 0.85)',
   },
   header: {
-    paddingTop: 40,
+    paddingTop: Math.max(20, screenHeight * 0.03), // Responsive padding
     paddingHorizontal: 20,
     paddingBottom: 20,
+    height: Math.min(200, screenHeight * 0.25), // Responsive height
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 32,
+    fontSize: Math.min(32, screenWidth * 0.08), // Responsive font size
     color: '#ffffff',
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Math.min(16, screenWidth * 0.04), // Responsive font size
     color: '#ffffff',
     marginTop: 8,
     textAlign: 'center',
     opacity: 0.9,
   },
-  content: {
+  scrollContainer: {
     flex: 1,
+  },
+  content: {
     backgroundColor: '#f7f9fc',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    marginTop: 20,
-    padding: 20,
+    marginTop: -30,
+    paddingTop: 30,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    minHeight: screenHeight * 0.8, // Ensure enough content height
   },
   configSection: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   configLabel: {
     fontFamily: 'Poppins-SemiBold',
@@ -424,11 +454,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
+  sidesScrollContainer: {
+    paddingHorizontal: 10,
+  },
   sidesGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
     gap: 12,
+    alignItems: 'center',
   },
   sideOption: {
     backgroundColor: '#ffffff',
@@ -507,12 +539,14 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginBottom: 16,
   },
+  previewScrollContainer: {
+    paddingHorizontal: 10,
+  },
   previewContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
     gap: 12,
     marginBottom: 12,
+    alignItems: 'center',
   },
   previewDice: {
     width: 40,
@@ -532,6 +566,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     textAlign: 'center',
+    paddingHorizontal: 20,
   },
   rollButton: {
     backgroundColor: '#10b981',
@@ -545,6 +580,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,
+    marginTop: 20,
   },
   rollButtonDisabled: {
     opacity: 0.7,
@@ -670,7 +706,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    maxHeight: '80%',
+    maxHeight: screenHeight * 0.8, // Responsive max height
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -685,7 +721,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   resultsScroll: {
-    maxHeight: 200,
+    maxHeight: Math.min(200, screenHeight * 0.3), // Responsive scroll height
   },
   resultsContainer: {
     flexDirection: 'row',
