@@ -61,8 +61,12 @@ export default function RegisterScreen() {
           style={styles.backgroundImage}
         />
         <View style={styles.overlay} />
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join the community</Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>GameNyte</Text>
+          <Text style={styles.subtitle}>
+            The ultimate tool for organizing{'\n'}your next game night
+          </Text>
+        </View>
       </Animated.View>
 
       <Animated.View 
@@ -139,18 +143,25 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(26, 43, 95, 0.85)',
   },
+  titleContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
   title: {
     fontFamily: 'Poppins-Bold',
     fontSize: 28,
     color: '#ffffff',
     textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: '#ffffff',
-    marginTop: 8,
+    textAlign: 'center',
     opacity: 0.9,
+    lineHeight: 22,
+    maxWidth: 280,
   },
   formContainer: {
     flex: 1,
