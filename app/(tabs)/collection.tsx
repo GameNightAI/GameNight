@@ -218,6 +218,7 @@ export default function CollectionScreen() {
       <EmptyState
         username={null}
         onRefresh={handleSync}
+        onAdd={() => setAddGameModalVisible(true)}
         message={
           isFiltered
             ? `No games found for ${players} players${time ? ` within ${time}${unlimited === '1' ? '+' : ''} minutes` : ''}`
