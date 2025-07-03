@@ -61,8 +61,8 @@ export default function RegisterScreen() {
           style={styles.backgroundImage}
         />
         <View style={styles.overlay} />
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join the community</Text>
+        <Text style={styles.title}>GameNyte</Text>
+        <Text style={styles.subtitle}>The ultimate tool for organizing your next game night</Text>
       </Animated.View>
 
       <Animated.View 
