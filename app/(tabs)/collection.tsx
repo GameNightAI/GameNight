@@ -192,6 +192,10 @@ export default function CollectionScreen() {
     router.setParams(params);
   };
 
+  const handleAdd = () => {
+    setAddGameModalVisible(true);
+  };
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadGames();
@@ -218,7 +222,7 @@ export default function CollectionScreen() {
       <EmptyState
         username={null}
         onRefresh={handleSync}
-        onAdd={() => setAddGameModalVisible(true)}
+        onAdd={handleAdd}
         message={
           isFiltered
             ? `No games found for ${players} players${time ? ` within ${time}${unlimited === '1' ? '+' : ''} minutes` : ''}`
