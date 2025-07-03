@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, Dimensions } from 'react-native';
 import { Plus, Shuffle, X } from 'lucide-react-native';
 import Animated, {
   FadeIn,
@@ -11,6 +11,8 @@ import Animated, {
   useSharedValue,
   runOnJS
 } from 'react-native-reanimated';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function FirstPlayerScreen() {
   const [players, setPlayers] = useState<string[]>([]);
@@ -129,13 +131,14 @@ export default function FirstPlayerScreen() {
             placeholder="Enter player name"
             placeholderTextColor="#666666"
             onSubmitEditing={addPlayer}
+            maxLength={20}
           />
           <TouchableOpacity
             style={[styles.addButton, !newPlayer.trim() && styles.addButtonDisabled]}
             onPress={() => addPlayer()}
             disabled={!newPlayer.trim()}
           >
-            <Plus color="#fff" size={24} />
+            <Plus color="#fff" size={20} />
           </TouchableOpacity>
         </View>
 
@@ -207,13 +210,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 32,
+    fontSize: Math.min(32, screenWidth * 0.08),
     color: '#ffffff',
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Math.min(16, screenWidth * 0.04),
     color: '#ffffff',
     marginTop: 8,
     textAlign: 'center',
@@ -229,8 +232,9 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
     marginBottom: 24,
+    paddingHorizontal: 4, // Add padding to prevent edge cutoff
   },
   input: {
     flex: 1,
@@ -245,14 +249,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    marginRight: 12, // Consistent spacing between input and button
+    minWidth: 0, // Allow input to shrink properly
   },
   addButton: {
-    width: 56,
-    height: 56,
+    width: 48, // Slightly smaller button
+    height: 48,
     backgroundColor: '#ff9654',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addButtonDisabled: {
     opacity: 0.7,
@@ -302,6 +313,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   shuffleButtonDisabled: {
     opacity: 0.7,
@@ -321,7 +337,7 @@ const styles = StyleSheet.create({
   },
   countdownText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 120,
+    fontSize: Math.min(120, screenWidth * 0.3),
     color: '#ffffff',
   },
   revealOverlay: {
@@ -346,14 +362,14 @@ const styles = StyleSheet.create({
   },
   revealText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 32,
+    fontSize: Math.min(32, screenWidth * 0.08),
     color: '#1a2b5f',
     textAlign: 'center',
     marginBottom: 8,
   },
   revealSubtext: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 20,
+    fontSize: Math.min(20, screenWidth * 0.05),
     color: '#666666',
     textAlign: 'center',
     marginBottom: 24,

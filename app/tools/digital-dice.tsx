@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Dimensions } from 'react-native';
 import { Dice6, RotateCcw, Plus, Minus, X } from 'lucide-react-native';
 import Animated, {
   FadeIn,
@@ -16,6 +16,8 @@ import Animated, {
   runOnJS,
   Easing,
 } from 'react-native-reanimated';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 interface DiceResult {
   id: number;
@@ -87,6 +89,7 @@ export default function DigitalDiceScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Background Image */}
       <Image
         source={{ uri: 'https://images.pexels.com/photos/278918/pexels-photo-278918.jpeg' }}
         style={styles.backgroundImage}
@@ -217,106 +220,116 @@ export default function DigitalDiceScreen() {
         </Animated.View>
       )}
 
-      <View style={styles.header}>
-        <Text style={styles.title}>Digital Dice</Text>
-        <Text style={styles.subtitle}>Roll virtual dice for your board games</Text>
-      </View>
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Header Section */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Digital Dice</Text>
+          <Text style={styles.subtitle}>Roll virtual dice for your board games</Text>
+        </View>
 
-      <View style={styles.content}>
-        {/* Dice Sides Configuration */}
-        <View style={styles.configSection}>
-          <Text style={styles.configLabel}>Number of Sides</Text>
-          <View style={styles.sidesGrid}>
-            {STANDARD_DICE_SIDES.map((sideOption) => (
+        {/* Main Content */}
+        <View style={styles.content}>
+          {/* Dice Sides Configuration */}
+          <View style={styles.configSection}>
+            <Text style={styles.configLabel}>Number of Sides</Text>
+            <View style={styles.sidesGrid}>
+              {STANDARD_DICE_SIDES.map((sideOption) => (
+                <TouchableOpacity
+                  key={sideOption}
+                  style={[
+                    styles.sideOption,
+                    sides === sideOption && styles.sideOptionSelected
+                  ]}
+                  onPress={() => handleSidesSelection(sideOption)}
+                >
+                  <Text style={[
+                    styles.sideOptionText,
+                    sides === sideOption && styles.sideOptionTextSelected
+                  ]}>
+                    d{sideOption}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              
               <TouchableOpacity
-                key={sideOption}
                 style={[
                   styles.sideOption,
-                  sides === sideOption && styles.sideOptionSelected
+                  styles.customSideOption,
+                  !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionSelected
                 ]}
-                onPress={() => handleSidesSelection(sideOption)}
+                onPress={() => setShowCustomModal(true)}
               >
                 <Text style={[
                   styles.sideOptionText,
-                  sides === sideOption && styles.sideOptionTextSelected
+                  !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionTextSelected
                 ]}>
-                  d{sideOption}
+                  {!STANDARD_DICE_SIDES.includes(sides) ? `d${sides}` : 'Other'}
                 </Text>
               </TouchableOpacity>
-            ))}
-            
-            <TouchableOpacity
-              style={[
-                styles.sideOption,
-                styles.customSideOption,
-                !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionSelected
-              ]}
-              onPress={() => setShowCustomModal(true)}
-            >
-              <Text style={[
-                styles.sideOptionText,
-                !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionTextSelected
-              ]}>
-                {!STANDARD_DICE_SIDES.includes(sides) ? `d${sides}` : 'Other'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Number of Dice Configuration */}
-        <View style={styles.configSection}>
-          <Text style={styles.configLabel}>Number of Dice</Text>
-          <View style={styles.configRow}>
-            <TouchableOpacity
-              style={[styles.adjustButton, numberOfDice <= 1 && styles.adjustButtonDisabled]}
-              onPress={() => adjustNumberOfDice(false)}
-              disabled={numberOfDice <= 1}
-            >
-              <Minus size={20} color={numberOfDice <= 1 ? "#cccccc" : "#10b981"} />
-            </TouchableOpacity>
-            
-            <View style={styles.valueContainer}>
-              <Text style={styles.valueText}>{numberOfDice}</Text>
-              <Text style={styles.valueSubtext}>{numberOfDice === 1 ? 'die' : 'dice'}</Text>
             </View>
-            
-            <TouchableOpacity
-              style={[styles.adjustButton, numberOfDice >= 10 && styles.adjustButtonDisabled]}
-              onPress={() => adjustNumberOfDice(true)}
-              disabled={numberOfDice >= 10}
-            >
-              <Plus size={20} color={numberOfDice >= 10 ? "#cccccc" : "#10b981"} />
-            </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Preview */}
-        <View style={styles.previewSection}>
-          <Text style={styles.previewLabel}>Preview</Text>
-          <View style={styles.previewContainer}>
-            {Array.from({ length: numberOfDice }, (_, index) => (
-              <View key={index} style={styles.previewDice}>
-                <Dice6 size={24} color="#10b981" />
+          {/* Number of Dice Configuration */}
+          <View style={styles.configSection}>
+            <Text style={styles.configLabel}>Number of Dice</Text>
+            <View style={styles.configRow}>
+              <TouchableOpacity
+                style={[styles.adjustButton, numberOfDice <= 1 && styles.adjustButtonDisabled]}
+                onPress={() => adjustNumberOfDice(false)}
+                disabled={numberOfDice <= 1}
+              >
+                <Minus size={20} color={numberOfDice <= 1 ? "#cccccc" : "#10b981"} />
+              </TouchableOpacity>
+              
+              <View style={styles.valueContainer}>
+                <Text style={styles.valueText}>{numberOfDice}</Text>
+                <Text style={styles.valueSubtext}>{numberOfDice === 1 ? 'die' : 'dice'}</Text>
               </View>
-            ))}
+              
+              <TouchableOpacity
+                style={[styles.adjustButton, numberOfDice >= 10 && styles.adjustButtonDisabled]}
+                onPress={() => adjustNumberOfDice(true)}
+                disabled={numberOfDice >= 10}
+              >
+                <Plus size={20} color={numberOfDice >= 10 ? "#cccccc" : "#10b981"} />
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.previewText}>
-            Rolling {numberOfDice} {numberOfDice === 1 ? 'die' : 'dice'} with {sides} sides each
-          </Text>
-        </View>
 
-        {/* Roll Button */}
-        <TouchableOpacity
-          style={[styles.rollButton, isRolling && styles.rollButtonDisabled]}
-          onPress={rollDice}
-          disabled={isRolling}
-        >
-          <Dice6 size={24} color="#ffffff" />
-          <Text style={styles.rollButtonText}>
-            {isRolling ? 'Rolling...' : 'Roll Dice'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Preview */}
+          <View style={styles.previewSection}>
+            <Text style={styles.previewLabel}>Preview</Text>
+            <View style={styles.previewContainer}>
+              {Array.from({ length: numberOfDice }, (_, index) => (
+                <View key={index} style={styles.previewDice}>
+                  <Dice6 size={24} color="#10b981" />
+                </View>
+              ))}
+            </View>
+            <Text style={styles.previewText}>
+              Rolling {numberOfDice} {numberOfDice === 1 ? 'die' : 'dice'} with {sides} sides each
+            </Text>
+          </View>
+
+          {/* Roll Button */}
+          <TouchableOpacity
+            style={[styles.rollButton, isRolling && styles.rollButtonDisabled]}
+            onPress={rollDice}
+            disabled={isRolling}
+          >
+            <Dice6 size={24} color="#ffffff" />
+            <Text style={styles.rollButtonText}>
+              {isRolling ? 'Rolling...' : 'Roll Dice'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -387,20 +400,29 @@ const styles = StyleSheet.create({
     height: 200,
     backgroundColor: 'rgba(26, 43, 95, 0.85)',
   },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: screenHeight,
+  },
   header: {
     paddingTop: 40,
     paddingHorizontal: 20,
     paddingBottom: 20,
+    minHeight: 120,
+    justifyContent: 'center',
   },
   title: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 32,
+    fontSize: Math.min(32, screenHeight * 0.04),
     color: '#ffffff',
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Math.min(16, screenHeight * 0.02),
     color: '#ffffff',
     marginTop: 8,
     textAlign: 'center',
@@ -413,6 +435,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     marginTop: 20,
     padding: 20,
+    paddingBottom: 40,
+    minHeight: screenHeight * 0.7,
   },
   configSection: {
     marginBottom: 32,
@@ -545,6 +569,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,
+    marginTop: 20,
   },
   rollButtonDisabled: {
     opacity: 0.7,

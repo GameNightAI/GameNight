@@ -82,8 +82,7 @@ export default function ProfileScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>About this app</Text>
           <Text style={styles.infoText}>
-            This app allows you to browse your BoardGameGeek collection and view details
-            about your board games including player counts, play times, and images.
+            Manage your board game collection, invite friends to play games, and access key tools to make your board gaming easier and more fun.
           </Text>
         </View>
 
