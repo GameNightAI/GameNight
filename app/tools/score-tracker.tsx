@@ -451,15 +451,13 @@ export default function ScoreTrackerScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.finishedFooter}>
-        <TouchableOpacity
-          style={styles.newGameButton}
-          onPress={resetGame}
-        >
-          <RotateCcw size={24} color="#ffffff" />
-          <Text style={styles.newGameButtonText}>New Game</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={styles.newGameButton}
+        onPress={resetGame}
+      >
+        <RotateCcw size={24} color="#ffffff" />
+        <Text style={styles.newGameButtonText}>New Game</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -1017,12 +1015,6 @@ const styles = StyleSheet.create({
     width: 60,
     textAlign: 'center',
   },
-  finishedFooter: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
   newGameButton: {
     backgroundColor: '#8b5cf6',
     borderRadius: 16,
@@ -1030,6 +1022,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    margin: 20,
   },
   newGameButtonText: {
     fontFamily: 'Poppins-SemiBold',
