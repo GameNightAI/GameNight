@@ -34,9 +34,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   };
 
   const handleAddGame = () => {
-    // This will be handled by the parent component's add game functionality
-    // For now, we'll just call onRefresh without username to trigger the add game modal
-    onRefresh();
+    setAddGameModalVisible(true);
   };
 
   const openImportModal = () => {
