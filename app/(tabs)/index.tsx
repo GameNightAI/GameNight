@@ -1,7 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Shuffle, Dice6, Trophy } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 export default function ToolsScreen() {
   const router = useRouter();
@@ -37,19 +39,28 @@ export default function ToolsScreen() {
   ];
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={{ uri: 'https://images.pexels.com/photos/278918/pexels-photo-278918.jpeg' }}
-        style={styles.backgroundImage}
-      />
-      <View style={styles.overlay} />
-
-      <View style={styles.header}>
-        <Text style={styles.title}>Game Tools</Text>
-        <Text style={styles.subtitle}>Essential utilities for your board game sessions</Text>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      bounces={false}
+    >
+      {/* Header Section with Background */}
+      <View style={styles.headerSection}>
+        <Image
+          source={{ uri: 'https://images.pexels.com/photos/278918/pexels-photo-278918.jpeg' }}
+          style={styles.backgroundImage}
+        />
+        <View style={styles.overlay} />
+        
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Game Tools</Text>
+          <Text style={styles.subtitle}>Essential utilities for your board game sessions</Text>
+        </View>
       </View>
 
-      <View style={styles.content}>
+      {/* Tools Content Section */}
+      <View style={styles.toolsSection}>
         {tools.map((tool, index) => {
           const IconComponent = tool.icon;
           
@@ -81,7 +92,7 @@ export default function ToolsScreen() {
           );
         })}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -90,46 +101,62 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f7f9fc',
   },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: screenHeight,
+  },
+  headerSection: {
+    height: Math.max(250, screenHeight * 0.35), // Responsive height with minimum
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   backgroundImage: {
     position: 'absolute',
     width: '100%',
-    height: 200,
+    height: '100%',
+    resizeMode: 'cover',
   },
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 200,
+    bottom: 0,
     backgroundColor: 'rgba(26, 43, 95, 0.85)',
   },
-  header: {
-    paddingTop: 40,
+  headerContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: 40,
+    alignItems: 'center',
+    zIndex: 1,
   },
   title: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 32,
+    fontSize: Math.min(32, screenHeight * 0.04), // Responsive font size
     color: '#ffffff',
     textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Math.min(16, screenHeight * 0.02), // Responsive font size
     color: '#ffffff',
-    marginTop: 8,
     textAlign: 'center',
     opacity: 0.9,
+    lineHeight: 22,
+    maxWidth: 300,
   },
-  content: {
+  toolsSection: {
     flex: 1,
     backgroundColor: '#f7f9fc',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    marginTop: 20,
-    padding: 20,
+    marginTop: -30,
     paddingTop: 30,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    minHeight: screenHeight * 0.6, // Ensure minimum height for content
   },
   toolCard: {
     marginBottom: 16,
@@ -144,6 +171,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    minHeight: 80, // Ensure consistent height
   },
   toolIconContainer: {
     width: 60,
@@ -161,18 +189,21 @@ const styles = StyleSheet.create({
   },
   toolContent: {
     flex: 1,
+    paddingRight: 12,
   },
   toolTitle: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
     color: '#1a2b5f',
     marginBottom: 4,
+    lineHeight: 22,
   },
   toolDescription: {
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#666666',
     lineHeight: 20,
+    flexWrap: 'wrap',
   },
   toolArrow: {
     width: 24,
