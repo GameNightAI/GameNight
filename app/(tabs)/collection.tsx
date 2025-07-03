@@ -162,10 +162,6 @@ export default function CollectionScreen() {
           maxplaytime: game.maxPlaytime,
           year_published: game.yearPublished,
           description: game.description,
-          min_age: game.minAge,
-          is_cooperative: game.is_cooperative,
-          complexity: game.complexity,
-          complexity_desc: game.complexity_desc || '',
         });
       });
 
