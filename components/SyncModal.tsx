@@ -18,8 +18,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
 
-  const handleSync = (username?: string) => {
-    if (!username || !username.trim()) {
+  const handleSync = () => {
+    if (!username.trim()) {
       setError('Please enter a BoardGameGeek username');
       return;
     }
@@ -56,7 +56,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
 
       <TouchableOpacity
         style={[styles.syncButton, loading && styles.syncButtonDisabled]}
-        onPress={() => handleSync()}
+        onPress={handleSync}
         disabled={loading}
       >
         {loading ? (
