@@ -369,16 +369,6 @@ export default function ScoreTrackerScreen() {
             </View>
           )}
         </ScrollView>
-
-        // <View style={styles.gameFooter}>
-          // <TouchableOpacity
-            // style={styles.resetButton}
-            // onPress={resetGame}
-          // >
-            // <RotateCcw size={20} color="#e74c3c" />
-            // <Text style={styles.resetButtonText}>New Game</Text>
-          // </TouchableOpacity>
-        // </View>
       </View>
     );
   }
