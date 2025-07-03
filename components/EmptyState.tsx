@@ -6,7 +6,6 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 interface EmptyStateProps {
   username: string | null;
   onRefresh: (username?: string) => void | Promise<void>;
-  onAdd: () => void
   message?: string;
   buttonText?: string;
   showSyncButton?: boolean;
@@ -15,7 +14,6 @@ interface EmptyStateProps {
 export const EmptyState: React.FC<EmptyStateProps> = ({
   username,
   onRefresh,
-  onAdd,
   message,
   buttonText = "Refresh",
   showSyncButton = false
@@ -36,7 +34,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   };
 
   const handleAddGame = () => {
-    onAdd();
+    // This will be handled by the parent component's add game functionality
+    // For now, we'll just call onRefresh without username to trigger the add game modal
+    onRefresh();
   };
 
   const openImportModal = () => {
