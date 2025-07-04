@@ -41,8 +41,9 @@ export default function RegisterScreen() {
       });
 
       if (error) throw error;
+      // TODO: else notify the user that the account was created successfully
 
-      router.replace('/(tabs)');
+      router.replace('/collection');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to create account');
     } finally {
