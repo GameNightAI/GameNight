@@ -60,7 +60,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       const { data, error } = await supabase
         .from('collections_games')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('name', { ascending: true });
 
       if (error) throw error;
 
