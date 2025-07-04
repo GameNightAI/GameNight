@@ -80,6 +80,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         complexity: game.complexity,
         minPlaytime: game.minplaytime,
         maxPlaytime: game.maxplaytime,
+        complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc
       }));
 
@@ -123,13 +124,13 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
     if (complexity) {
       filtered = filtered.filter(game => {
-        if (!game.complexity_desc) return false;
+        if (!game.complexity_tier) return false;
         switch (complexity) {
-          case 'Light': return game.complexity_desc === 'Light';
-          case 'Medium Light': return game.complexity_desc === 'Medium Light';
-          case 'Medium': return game.complexity_desc === 'Medium';
-          case 'Medium Heavy': return game.complexity_desc === 'Medium Heavy';
-          case 'Heavy': return game.complexity_desc === 'Heavy';
+          case 'Light': return game.complexity_tier <= 1;
+          case 'Medium Light': return game.complexity_tier <= 2;
+          case 'Medium': return game.complexity_tier <= 3;
+          case 'Medium Heavy': return game.complexity_tier <= 4;
+          case 'Heavy': return return game.complexity_tier <= 5;
           default: return true;
         }
       });
