@@ -130,7 +130,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           case 'Medium Light': return game.complexity_tier <= 2;
           case 'Medium': return game.complexity_tier <= 3;
           case 'Medium Heavy': return game.complexity_tier <= 4;
-          case 'Heavy': return return game.complexity_tier <= 5;
+          case 'Heavy': return game.complexity_tier <= 5;
           default: return true;
         }
       });
