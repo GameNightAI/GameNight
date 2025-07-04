@@ -506,7 +506,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
               <View style={styles.filterButtonContent}>
                 <Users2 size={20} color={gameType ? "#ff9654" : "#666666"} />
                 <Text style={[styles.filterButtonText, gameType ? styles.filterButtonTextActive : undefined]}>
-                  {gameType || 'Game type'}
+                  {gameType || 'Co-op/Competitive'}
                 </Text>
               </View>
               <View style={styles.filterButtonRight}>
