@@ -26,6 +26,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
+  const router = useRouter();
 
   const handleImportCollection = () => {
     if (!inputUsername.trim()) {
