@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, Platform } from 'react-native';
 import { RefreshCw, Search, Star, Filter, Users, Plus, X, Dice6 } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { AddGameModal } from '@/components/AddGameModal';
 
 interface EmptyStateProps {
   username: string | null;
@@ -21,6 +22,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const [inputUsername, setInputUsername] = useState('');
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [addGameModalVisible, setAddGameModalVisible] = useState(false);
 
   const handleImportCollection = () => {
     if (!inputUsername.trim()) {
@@ -137,7 +139,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {/* Add Game Button */}
         <TouchableOpacity
           style={styles.addGameButton}
-          onPress={handleAddGame}
+          onPress={() => setAddGameModalVisible(true)}
         >
           <Plus size={20} color="#ffffff" />
           <Text style={styles.addGameButtonText}>Add Game</Text>
@@ -179,6 +181,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             </View>
           </Modal>
         )}
+        
+        <AddGameModal
+          isVisible={addGameModalVisible}
+          onClose={() => setAddGameModalVisible(false)}
+          onGameAdded={loadGames}
+        />
       </Animated.View>
     );
   }
