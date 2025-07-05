@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Tex
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { RefreshCw, X, Search, Plus } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 
 import { supabase } from '@/services/supabase';
 import { fetchGames } from '@/services/bggApi';
@@ -176,6 +177,7 @@ export default function CollectionScreen() {
       if (insertError) throw insertError;
 
       await loadGames();
+      Toast.show({ type: 'success', text1: 'Collection imported!' });
     } catch (err) {
       console.error('Error in handleSync:', err);
       setError(err instanceof Error ? err.message : 'Failed to sync games');
