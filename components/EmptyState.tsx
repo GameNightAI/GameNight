@@ -204,7 +204,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       <TouchableOpacity
         style={styles.refreshButton}
-        onPress={() => router.push('/collection');}
+        onPress={() => router.push('/collection')}
       >
         <RefreshCw size={18} color="#ffffff" />
         <Text style={styles.refreshText}>{buttonText}</Text>
