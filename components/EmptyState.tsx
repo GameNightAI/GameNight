@@ -7,6 +7,7 @@ import { AddGameModal } from '@/components/AddGameModal';
 interface EmptyStateProps {
   username: string | null;
   onRefresh: (username?: string) => void | Promise<void>;
+  loadGames: () => void;
   message?: string;
   buttonText?: string;
   showSyncButton?: boolean;
@@ -15,6 +16,7 @@ interface EmptyStateProps {
 export const EmptyState: React.FC<EmptyStateProps> = ({
   username,
   onRefresh,
+  loadGames,
   message,
   buttonText = "Refresh",
   showSyncButton = false
