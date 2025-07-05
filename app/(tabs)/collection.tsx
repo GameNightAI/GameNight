@@ -68,6 +68,7 @@ export default function CollectionScreen() {
         minAge: game.min_age || 0,
         is_cooperative: game.is_cooperative || false,
         complexity: game.complexity || 1,
+        complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc || '',
       }));
 
