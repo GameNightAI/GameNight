@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, Platform } from 'react-native';
 import { RefreshCw, Search, Star, Filter, Users, Plus, X, Dice6 } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { AddGameModal } from '@/components/AddGameModal';
 
 interface EmptyStateProps {
@@ -203,7 +204,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       <TouchableOpacity
         style={styles.refreshButton}
-        onPress={() => onRefresh()}
+        onPress={() => router.push('/collection');}
       >
         <RefreshCw size={18} color="#ffffff" />
         <Text style={styles.refreshText}>{buttonText}</Text>
