@@ -8,21 +8,20 @@ export async function fetchGames(username: string): Promise<Game[]> {
     // First request to trigger collection fetch
     const response = await fetch(`https://boardgamegeek.com/xmlapi2/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
 
-    if (!response.ok) {
+    // 202: BGG has queued your request and you need to keep retrying (hopefully w/some delay between tries) until the status is not 202.
+    // 429: Too many requests
+    if ([202, 429].includes(response.status)) {
+      console.log(`Received ${response.status} status, retrying in 2 seconds...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const retryResponse = await fetch(`https://boardgamegeek.com/xmlapi2/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
+      xmlText = await retryResponse.text();
+      console.log('Retry XML response:', xmlText.substring(0, 200) + '...');
+    } else if (!response.ok) {
       throw new Error(`Failed to fetch collection: ${response.status}`);
     }
 
     let xmlText = await response.text();
     console.log('Initial XML response:', xmlText.substring(0, 200) + '...');
-
-    // If BGG returns a "please wait" message, retry after a delay
-    if (xmlText.includes('Please wait')) {
-      console.log('Received "Please wait" message, retrying in 2 seconds...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const retryResponse = await fetch(`https://boardgamegeek.com/xmlapi2/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
-      xmlText = await retryResponse.text();
-      console.log('Retry XML response:', xmlText.substring(0, 200) + '...');
-    }
 
     // Parse the XML response
     const parser = new XMLParser({
