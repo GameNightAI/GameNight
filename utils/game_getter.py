@@ -5,12 +5,15 @@ import xml.etree.ElementTree as ET
 import itertools
 import time
 import string
+# from optparse import OptionParser
 
 INPUT_PATH = 'boardgames_ranks.csv'
 OUTPUT_PATH = 'output.csv'
 SLEEP_TIME = 10 # seconds to wait after receiving a urllib.request error
 DASH = '–' # NOT the hyphen character on the keyboard
 DESCRIPTION_NCHARS = 100 # number of description characters to store in the output, since we currently have a database size limit
+INCLUDE_BGG_TAXONOMY = True
+TAXONOMY_DELIMITER = '|'
 
 def parse_xml(text):
   root = ET.fromstring(text)
@@ -36,7 +39,7 @@ def parse_xml(text):
           elif result.attrib['name'] == 'recommmendedwith':
             rec_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+')).replace(DASH, '-')
             
-    yield dict(
+    row = dict(
       id = item.attrib['id'],
       minplaytime = item.find('minplaytime').attrib['value'],
       maxplaytime = item.find('maxplaytime').attrib['value'],
@@ -53,6 +56,12 @@ def parse_xml(text):
       min_age = item.find('minage').attrib['value'],
       suggested_playerage = suggested_playerage
     )
+    
+    if INCLUDE_BGG_TAXONOMY:
+      for type in ['boardgamecategory', 'boardgamemechanic', 'boardgamefamily']:
+        row[type] = TAXONOMY_DELIMITER.join(link.attrib['value'] for link in item.findall('link') if link.attrib['type'] == type)
+    
+    yield row
 
 def urllib_error_handler(err):
   print(err)
@@ -60,6 +69,10 @@ def urllib_error_handler(err):
   time.sleep(SLEEP_TIME)
 
 def main():
+  
+  # parser = OptionParser()
+  # parser.add_option()
+
   reader = csv.DictReader(open(INPUT_PATH, 'r', encoding='utf-8'))
   writer = csv.DictWriter(open(OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=reader.fieldnames)
   writer.writeheader()
@@ -69,9 +82,10 @@ def main():
     items = {}
     for row in batch:
       items[row['id']] = row
-      # We want 0 rank to show up as NULL in the database for sorting purposes
-      if row['rank'] == '0':
-        row['rank'] = ''
+      # We want 0 to show up as NULL in the database for sorting/filtering purposes
+      for col in ['average', 'bayesaverage', 'rank', 'yearpublished']:
+        if row[col] == '0':
+          row[col] = ''
     
     ids = ','.join(items.keys())
     url = f'https://boardgamegeek.com/xmlapi2/thing?id={ids}&stats=1'
@@ -90,8 +104,9 @@ def main():
         break
     
     for item in parse_xml(response.read()):
-      items[item['id']].update(item)
-      print(items[item['id']])
-      writer.writerow(items[item['id']])
+      id = item['id']
+      items[id].update(item)
+      print(items[id])
+      writer.writerow(items[id])
 if __name__ == '__main__':
   main()
