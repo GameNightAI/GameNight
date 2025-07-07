@@ -178,6 +178,7 @@ export default function CollectionScreen() {
 
       await loadGames();
       Toast.show({ type: 'success', text1: 'Collection imported!' });
+      setSyncModalVisible(false);
     } catch (err) {
       console.error('Error in handleSync:', err);
       setError(err instanceof Error ? err.message : 'Failed to sync games');
