@@ -57,7 +57,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
       const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
 
-      const ids = items.filter.(
+      const ids = items.filter(
         (item: any) => item.name.type === 'primary';
       ).map((item: any) => item.id);
       console.log(ids);
