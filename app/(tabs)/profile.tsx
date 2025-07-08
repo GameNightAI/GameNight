@@ -86,7 +86,7 @@ export default function ProfileScreen() {
               Questions, issues, or feature requests?{'\n'}
               Email us or join our Discord server!
             </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('mailto:GameNightAIDev@gmail.com')}>
+            <TouchableOpacity onPress={() => Linking.openURL('mailto:GameNyteApp@gmail.com')}>
               <Mail size={64} color="#666666" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => Linking.openURL('https://discord.gg/s5dRZ2SR')}>
