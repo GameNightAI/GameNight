@@ -82,10 +82,19 @@ export default function ProfileScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>Contact & Support</Text>
           <View style={styles.contactContainer}>
-            <Mail size={16} color="#666666" />
             <Text style={styles.contactText}>
-              Questions, issues, or feature requests? Email us at GameNightAIDev@gmail.com
+              Questions, issues, or feature requests? Email us or join our Discord server!
+              Email us at 
             </Text>
+            <TouchableOpacity onPress={() => Linking.openURL('mailto:GameNightAIDev@gmail.com')}>
+              <Mail size={64} color="#666666" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://discord.gg/s5dRZ2SR')}>
+              <Image
+                source={require('@/assets/images/discord_symbol.svg')}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
           </View>
         </View>
 
