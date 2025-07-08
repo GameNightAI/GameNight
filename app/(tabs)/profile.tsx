@@ -65,13 +65,6 @@ export default function ProfileScreen() {
           <Text style={styles.avatarLetter}>{email.charAt(0).toUpperCase()}</Text>
         </View>
         <Text style={styles.username}>{email}</Text>
-        <TouchableOpacity
-          style={styles.bggLink}
-          onPress={handleViewOnBGG}
-        >
-          <Text style={styles.bggLinkText}>View on BoardGameGeek</Text>
-          <ExternalLink size={16} color="#ff9654" />
-        </TouchableOpacity>
       </Animated.View>
 
       <Animated.View
