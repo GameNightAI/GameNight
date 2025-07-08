@@ -47,6 +47,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       });
 
       const result = parser.parse(xmlText);
+      console.log('BGG API search result:', result);
 
       // No search results returned by API
       if (!result.items || !result.items.item) {
