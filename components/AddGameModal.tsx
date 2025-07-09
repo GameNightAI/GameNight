@@ -165,9 +165,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           placeholder="Search for games..."
           value={searchQuery}
           onChangeText={(text) => {
-            handleSearch();
             setSearchQuery(text);
             setError('');
+            handleSearch();
           }}
           onSubmitEditing={handleSearch}
           autoCapitalize="none"
