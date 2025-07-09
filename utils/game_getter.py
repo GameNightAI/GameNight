@@ -1,26 +1,37 @@
 import csv
 import urllib.request
 import urllib.error
+from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
 import itertools
 import time
 import string
 # from optparse import OptionParser
 
+CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks'
 INPUT_PATH = 'boardgames_ranks.csv'
 OUTPUT_PATH = 'output.csv'
 SLEEP_TIME = 10 # seconds to wait after receiving a urllib.request error
 DASH = '–' # NOT the hyphen character on the keyboard
 DESCRIPTION_NCHARS = 100 # number of description characters to store in the output, since we currently have a database size limit
-INCLUDE_BGG_TAXONOMY = True
+INCLUDE_BGG_TAXONOMY = False
 TAXONOMY_DELIMITER = '|'
+
+def get_zip_url():
+  response = urllib.request.urlopen(CSV_URL)
+  soup = BeautifulSoup(response.read(), 'lxml')
+  
+
+def has_taxonomy(item, type, value):
+  return any(link.attrib['type'] == type and link.attrib['value'] == value for link in item.findall('link'))
 
 def parse_xml(text):
   root = ET.fromstring(text)
   for item in root:
     for poll in item.findall('poll'):
       if poll.attrib['name'] == 'suggested_playerage':
-        if poll.attrib['totalvotes'] == '0': # Avoid division by zero
+        # Avoid division by zero
+        if poll.attrib['totalvotes'] == '0':
           suggested_playerage = ''
         else:
           votesum = 0
@@ -48,11 +59,13 @@ def parse_xml(text):
       best_players = best_players,
       rec_players = rec_players,
       image_url = item.findtext('image', default=''),
+      thumbnail = item.findtext('thumbnail', default=''),
       # NULL out complexity=0 for filtering purposes, and in case we ever decide to do some math (0 means no votes)
       complexity = float(item.find('statistics').find('ratings').find('averageweight').attrib['value']) or '',
       description = item.findtext('description', default='')[:DESCRIPTION_NCHARS],
-      is_cooperative = any(link.attrib['type'] == 'boardgamemechanic' and link.attrib['value'] == 'Cooperative Game' for link in item.findall('link')),
-      is_teambased = any(link.attrib['type'] == 'boardgamemechanic' and link.attrib['value'] == 'Team-Based Game' for link in item.findall('link')),
+      is_cooperative = has_taxonomy(item, 'boardgamemechanic', 'Cooperative Game'),
+      is_teambased = has_taxonomy(item, 'boardgamemechanic', 'Team-Based Game'),
+      is_legacy = has_taxonomy(item, 'boardgamemechanic', 'Legacy Game'),
       min_age = item.find('minage').attrib['value'],
       suggested_playerage = suggested_playerage
     )
