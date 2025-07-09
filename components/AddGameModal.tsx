@@ -201,9 +201,6 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             />
             <View style={styles.resultInfo}>
               <Text style={styles.resultTitle}>{item.name}</Text>
-              {item.year_published && (
-                <Text style={styles.resultYear}>({item.year_published})</Text>
-              )}
             </View>
             <TouchableOpacity
               style={[styles.addButton, adding && styles.addButtonDisabled]}
