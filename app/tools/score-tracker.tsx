@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView,
 import { Plus, Minus, Trophy, Users, RotateCcw, X, Pen, Check } from 'lucide-react-native';
 import Animated, { FadeIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+
 interface Player {
   id: string;
   name: string;
@@ -26,6 +28,7 @@ export default function ScoreTrackerScreen() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingPlayerName, setEditingPlayerName] = useState('');
+  const [confirmationVisible, setConfirmationVisible] = useState(false);
 
   const addPlayer = useCallback(() => {
     if (newPlayerName.trim() && !players.some(p => p.name.toLowerCase() === newPlayerName.trim().toLowerCase())) {
@@ -113,6 +116,7 @@ export default function ScoreTrackerScreen() {
   }, []);
 
   const resetGame = useCallback(() => {
+    setConfirmationVisible(false)
     setGamePhase('setup');
     setPlayers([]);
     setNewPlayerName('');
@@ -443,11 +447,20 @@ export default function ScoreTrackerScreen() {
 
       <TouchableOpacity
         style={styles.newGameButton}
-        onPress={resetGame}
+        onPress={confirmationVisible}
       >
         <RotateCcw size={24} color="#ffffff" />
         <Text style={styles.newGameButtonText}>New Game</Text>
       </TouchableOpacity>
+      
+      <ConfirmationDialog
+        isVisible={confirmationVisible}
+        title="New Game"
+        message={`Are you sure you want to reset the tracker and start a new game?`}
+        onConfirm={resetGame}
+        onCancel={() => setConfirmationVisible(false)}
+      />
+      
     </View>
   );
 }
