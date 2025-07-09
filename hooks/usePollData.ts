@@ -145,12 +145,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       console.log('User identifier:', identifier);
 
       const userVotes = votes?.filter(v => v.voter_name === identifier) || [];
-      //setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
-      setHasVoted(true);
-
-      console.log('userVotes', userVotes);
-      console.log('user', user);
-      console.log('pollData', pollData);
+      setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
 
       // Map games data to the expected format
       const formattedGames = gamesData.map(game => {
