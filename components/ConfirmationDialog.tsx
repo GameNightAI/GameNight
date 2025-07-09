@@ -55,7 +55,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.confirmButton} onPress={onConfirm}>
-              <Text style={styles.confirmButtonText}>Delete</Text>
+              <Text style={styles.confirmButtonText}>{confirmButtonText}</Text>
             </TouchableOpacity>
           </View>
         </View>
