@@ -112,6 +112,7 @@ export default function ScoreTrackerScreen() {
   }, [players, roundScores, currentRound]);
 
   const finishGame = useCallback(() => {
+    setConfirmationVisible(false);
     setGamePhase('finished');
   }, []);
 
@@ -311,7 +312,7 @@ export default function ScoreTrackerScreen() {
               {rounds.length > 0 && (
                 <TouchableOpacity
                   style={styles.finishGameButton}
-                  onPress={finishGame}
+                  onPress={() => setConfirmationVisible(true)}
                 >
                   <Text style={styles.finishGameText}>Finish Game</Text>
                 </TouchableOpacity>
@@ -373,6 +374,15 @@ export default function ScoreTrackerScreen() {
             </View>
           )}
         </ScrollView>
+        
+        <ConfirmationDialog
+          isVisible={confirmationVisible}
+          title="Finish Game"
+          message={`Are you sure you want to finish game?`}
+          onConfirm={finishGame}
+          onCancel={() => setConfirmationVisible(false)}
+          confirmButtonText="Finish"
+        />        
       </View>
     );
   }
