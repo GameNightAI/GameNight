@@ -15,6 +15,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   onCancel,
   title,
   message,
+  confirmButtonText = 'Delete'
 }) => {
   if (!isVisible) return null;
 

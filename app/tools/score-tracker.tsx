@@ -459,6 +459,7 @@ export default function ScoreTrackerScreen() {
         message={`Are you sure you want to reset the tracker and start a new game?`}
         onConfirm={resetGame}
         onCancel={() => setConfirmationVisible(false)}
+        confirmButtonText="Reset"
       />
       
     </View>
