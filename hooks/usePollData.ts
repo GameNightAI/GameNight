@@ -46,12 +46,25 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       console.log('Loading poll with ID:', id);
 
       // Get the poll details
+      console.log('Loading poll with ID:', id);
+
+      // Get the poll details
       const { data: pollData, error: pollError } = await supabase
         .from('polls')
         .select('*')
         .eq('id', id)
         .maybeSingle();
 
+      if (pollError) {
+        console.error('Poll error:', pollError);
+        throw new Error('Poll not found or has been deleted');
+      }
+
+      if (!pollData) {
+        throw new Error('Poll not found');
+      }
+
+      console.log('Poll data loaded:', pollData);
       if (pollError) {
         console.error('Poll error:', pollError);
         throw new Error('Poll not found or has been deleted');
@@ -75,10 +88,31 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       // Get the games in this poll
       const { data: pollGames, error: gamesError } = await supabase
+      // Get the games in this poll
+      const { data: pollGames, error: gamesError } = await supabase
         .from('poll_games')
         .select('game_id')
         .eq('poll_id', id);
 
+      if (gamesError) {
+        console.error('Poll games error:', gamesError);
+        throw gamesError;
+      }
+
+      console.log('Poll games:', pollGames);
+
+      if (!pollGames || pollGames.length === 0) {
+        console.log('No games found in poll');
+        setGames([]);
+        setLoading(false);
+        return;
+      }
+
+      const gameIds = pollGames.map(pg => pg.game_id);
+      console.log('Game IDs to fetch:', gameIds);
+
+      // Get the actual game details from games table
+      const { data: gamesData, error: gameDetailsError } = await supabase
       if (gamesError) {
         console.error('Poll games error:', gamesError);
         throw gamesError;
@@ -118,10 +152,32 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       // Get votes for this poll
       const { data: votes, error: votesError } = await supabase
+      if (gameDetailsError) {
+        console.error('Game details error:', gameDetailsError);
+        throw gameDetailsError;
+      }
+
+      console.log('Games data loaded:', gamesData);
+
+      if (!gamesData || gamesData.length === 0) {
+        console.log('No game details found');
+        setGames([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get votes for this poll
+      const { data: votes, error: votesError } = await supabase
         .from('votes')
         .select('*')
         .eq('poll_id', id);
 
+      if (votesError) {
+        console.error('Votes error:', votesError);
+        throw votesError;
+      }
+
+      console.log('Votes loaded:', votes);
       if (votesError) {
         console.error('Votes error:', votesError);
         throw votesError;
@@ -145,15 +201,12 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       console.log('User identifier:', identifier);
 
       const userVotes = votes?.filter(v => v.voter_name === identifier) || [];
-      //setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
-      setHasVoted(true);
-
-      console.log('userVotes', userVotes);
-      console.log('user', user);
-      console.log('pollData', pollData);
+      setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
 
       // Map games data to the expected format
       const formattedGames = gamesData.map(game => {
+        // Find votes for this specific game using the game's ID
+        const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
         // Find votes for this specific game using the game's ID
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
@@ -162,6 +215,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_UP).length,
           double_thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.DOUBLE_THUMBS_UP).length,
           voters: gameVotes.map(v => ({
+            name: v.voter_name || 'Anonymous',
             name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type as VoteType,
           })),
@@ -188,11 +242,29 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           is_cooperative: game.is_cooperative || false,
           complexity: game.complexity || 1,
           complexity_desc: game.complexity_desc || '',
+          name: game.name || 'Unknown Game',
+          yearPublished: game.year_published || null,
+          thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
+          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+          min_players: game.min_players || 1,
+          max_players: game.max_players || 1,
+          playing_time: game.playing_time || 0,
+          minPlaytime: game.minplaytime || 0,
+          maxPlaytime: game.maxplaytime || 0,
+          description: game.description || '',
+          minAge: game.min_age || 0,
+          is_cooperative: game.is_cooperative || false,
+          complexity: game.complexity || 1,
+          complexity_desc: game.complexity_desc || '',
           votes: voteData,
+          userVote,
           userVote,
         };
       });
 
+      console.log('Formatted games:', formattedGames);
+
+      // Set initial pending votes from user's existing votes
       console.log('Formatted games:', formattedGames);
 
       // Set initial pending votes from user's existing votes
@@ -201,11 +273,16 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         if (v.game_id && v.vote_type) {
           initialVotes[v.game_id] = v.vote_type as VoteType;
         }
+        if (v.game_id && v.vote_type) {
+          initialVotes[v.game_id] = v.vote_type as VoteType;
+        }
       });
 
       setGames(formattedGames);
       setPendingVotes(initialVotes);
     } catch (err) {
+      console.error('Error in loadPoll:', err);
+      setError((err as Error).message || 'Failed to load poll');
       console.error('Error in loadPoll:', err);
       setError((err as Error).message || 'Failed to load poll');
     } finally {
