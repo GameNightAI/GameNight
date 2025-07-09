@@ -69,7 +69,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       if (userError) {
         console.warn('User auth error (continuing as anonymous):', userError);
       }
-      
+
       setUser(user);
       setIsCreator(user?.id === pollData.user_id);
 
@@ -151,7 +151,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       console.log('userVotes', userVotes);
       console.log('user', user);
       console.log('pollData', pollData);
-      
+
       // Map games data to the expected format
       const formattedGames = gamesData.map(game => {
         // Find votes for this specific game using the game's ID
@@ -168,8 +168,8 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         };
 
         // Find user's vote for this game
-        const userVote = identifier ? 
-          gameVotes.find(v => v.voter_name === identifier)?.vote_type as VoteType || null 
+        const userVote = identifier ?
+          gameVotes.find(v => v.voter_name === identifier)?.vote_type as VoteType || null
           : null;
 
         return {
