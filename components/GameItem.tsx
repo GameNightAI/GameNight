@@ -58,12 +58,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             </Text>
           </View>
         </View>
-
-        {game.yearPublished && (
-          <Text style={styles.yearText}>
-            {game.yearPublished > 0 ? game.yearPublished : -game.yearPublished + ' BCE'}
-          </Text>
-        )}
+        
       </View>
     </Animated.View>
   );
