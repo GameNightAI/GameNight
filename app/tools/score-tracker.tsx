@@ -447,7 +447,7 @@ export default function ScoreTrackerScreen() {
 
       <TouchableOpacity
         style={styles.newGameButton}
-        onPress={confirmationVisible}
+        onPress={() => setConfirmationVisible(true)}
       >
         <RotateCcw size={24} color="#ffffff" />
         <Text style={styles.newGameButtonText}>New Game</Text>
