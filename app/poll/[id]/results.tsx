@@ -1,16 +1,26 @@
-import React from 'react';
-import { ScrollView, Text, StyleSheet, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, Text, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { usePollResults } from '@/hooks/usePollResults';
 import { GameResultCard } from '@/components/PollGameResultCard';
+import { supabase } from '@/services/supabase';
 
 export default function PollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const [user, setUser] = useState<any>(null);
 
   const { pollTitle, gameResults, hasVoted, loading, error } = usePollResults(id as string | undefined);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
 
   if (loading) return <LoadingState />;
 
@@ -47,8 +57,19 @@ export default function PollResultsScreen() {
         <Text style={styles.title}>Poll Results</Text>
         <Text style={styles.subtitle}>{pollTitle}</Text>
       </View>
-      
-      <ScrollView 
+
+      {!user && (
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>
+            Want to create your own polls?{' '}
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+            <Text style={styles.signUpLink}>Sign up for free</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -108,5 +129,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
+  },
+  signUpContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e5ea',
+  },
+  signUpText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#666666',
+  },
+  signUpLink: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#ff9654',
+    textDecorationLine: 'underline',
   },
 });

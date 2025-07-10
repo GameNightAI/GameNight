@@ -164,14 +164,24 @@ export default function PollScreen() {
       </View>
 
       {!user && (
-        <VoterNameInput
-          value={voterName}
-          onChange={(text) => {
-            setVoterName(text);
-            if (nameError) setNameError(false);
-          }}
-          hasError={nameError}
-        />
+        <>
+          <VoterNameInput
+            value={voterName}
+            onChange={(text) => {
+              setVoterName(text);
+              if (nameError) setNameError(false);
+            }}
+            hasError={nameError}
+          />
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>
+              Want to create your own polls?{' '}
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/auth/register')}>
+              <Text style={styles.signUpLink}>Sign up for free</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
       <View style={styles.gamesContainer}>
@@ -245,4 +255,22 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   viewResultsContainer: { padding: 20 },
+  signUpContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signUpText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#666666',
+  },
+  signUpLink: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#ff9654',
+    textDecorationLine: 'underline',
+  },
 });
