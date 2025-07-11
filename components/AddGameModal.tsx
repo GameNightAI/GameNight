@@ -28,18 +28,17 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
 
-  const handleSearch = async (searchText: text = searchQuery) => {
-    if (!searchText.trim()) {
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
       setError('Please enter a search term');
       return;
     }
-    console.log('handleSearch() searchText:', searchText);
 
     try {
       setSearching(true);
       setError('');
 
-      const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchText)}&type=boardgame`);
+      const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchQuery)}&type=boardgame`);
       const xmlText = await response.text();
 
       const parser = new XMLParser({
@@ -48,6 +47,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       });
 
       const result = parser.parse(xmlText);
+      console.log('searchQuery:', searchQuery);
       console.log('BGG API search result:', result);
 
       // No search results returned by API
@@ -58,9 +58,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
       const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
 
-      const ids = items
-        .filter((item: any) => item.name.type === 'primary')
-        .map((item: any) => item.id);
+      const ids = items.filter(
+        (item: any) => item.name.type === 'primary'
+      ).map((item: any) => item.id);
       // console.log(ids);
 
       const {data: games } = await supabase
@@ -167,8 +167,10 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           value={searchQuery}
           onChangeText={(text) => {
             setSearchQuery(text);
-            handleSearch(text);
+            setError('');
+            // handleSearch();
           }}
+          onEndEditing={handleSearch}
           onSubmitEditing={handleSearch}
           autoCapitalize="none"
           autoCorrect={false}
