@@ -69,7 +69,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       if (userError) {
         console.warn('User auth error (continuing as anonymous):', userError);
       }
-      
+
       setUser(user);
       setIsCreator(user?.id === pollData.user_id);
 
@@ -145,13 +145,8 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       console.log('User identifier:', identifier);
 
       const userVotes = votes?.filter(v => v.voter_name === identifier) || [];
-      //setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
-      setHasVoted(true);
+      setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
 
-      console.log('userVotes', userVotes);
-      console.log('user', user);
-      console.log('pollData', pollData);
-      
       // Map games data to the expected format
       const formattedGames = gamesData.map(game => {
         // Find votes for this specific game using the game's ID
@@ -168,8 +163,8 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         };
 
         // Find user's vote for this game
-        const userVote = identifier ? 
-          gameVotes.find(v => v.voter_name === identifier)?.vote_type as VoteType || null 
+        const userVote = identifier ?
+          gameVotes.find(v => v.voter_name === identifier)?.vote_type as VoteType || null
           : null;
 
         return {
@@ -187,6 +182,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           minAge: game.min_age || 0,
           is_cooperative: game.is_cooperative || false,
           complexity: game.complexity || 1,
+          complexity_tier: game.complexity_tier || 1,
           complexity_desc: game.complexity_desc || '',
           votes: voteData,
           userVote,

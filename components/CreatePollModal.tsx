@@ -789,6 +789,7 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 20,
     color: '#1a2b5f',
+    marginTop: Dimensions.get('window').width > 768 ? 8 : 4,
   },
   content: {
     padding: 20,
