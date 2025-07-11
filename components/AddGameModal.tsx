@@ -28,17 +28,18 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
+  const handleSearch = async (searchText: text = searchQuery) => {
+    if (!searchText.trim()) {
       setError('Please enter a search term');
       return;
     }
+    console.log('handleSearch() searchText:', searchText);
 
     try {
       setSearching(true);
       setError('');
 
-      const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchQuery)}&type=boardgame`);
+      const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchText)}&type=boardgame`);
       const xmlText = await response.text();
 
       const parser = new XMLParser({
@@ -57,17 +58,17 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
       const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
 
-      const ids = items.filter(
-        (item: any) => item.name.type === 'primary'
-      ).map((item: any) => item.id);
-      console.log(ids);
+      const ids = items
+        .filter((item: any) => item.name.type === 'primary')
+        .map((item: any) => item.id);
+      // console.log(ids);
 
       const {data: games } = await supabase
         .from('games')
         .select()
         .in('id', ids)
         .order('rank');
-      console.log(games);
+      // console.log(games);
       
       /* const games = items.map((item: any) => ({
         id: item.id,
@@ -166,8 +167,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           value={searchQuery}
           onChangeText={(text) => {
             setSearchQuery(text);
-            setError('');
-            handleSearch();
+            handleSearch(text);
           }}
           onSubmitEditing={handleSearch}
           autoCapitalize="none"
