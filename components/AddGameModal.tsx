@@ -28,62 +28,65 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setError('Please enter a search term');
-      return;
-    }
-
-    try {
-      setSearching(true);
-      setError('');
-
-      const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchQuery)}&type=boardgame`);
-      const xmlText = await response.text();
-
-      const parser = new XMLParser({
-        ignoreAttributes: false,
-        attributeNamePrefix: '',
-      });
-
-      const result = parser.parse(xmlText);
-      console.log('searchQuery:', searchQuery);
-      console.log('BGG API search result:', result);
-
-      // No search results returned by API
-      if (!result.items || !result.items.item) {
-        setSearchResults([]);
+  useEffect(() => 
+    {const handleSearch = async () => {
+      if (!searchQuery.trim()) {
+        setError('Please enter a search term');
         return;
       }
 
-      const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
+      try {
+        setSearching(true);
+        setError('');
 
-      const ids = items.filter(
-        (item: any) => item.name.type === 'primary'
-      ).map((item: any) => item.id);
-      // console.log(ids);
+        const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchQuery)}&type=boardgame`);
+        const xmlText = await response.text();
 
-      const {data: games } = await supabase
-        .from('games')
-        .select()
-        .in('id', ids)
-        .order('rank');
-      // console.log(games);
-      
-      /* const games = items.map((item: any) => ({
-        id: item.id,
-        name: Array.isArray(item.name) ? item.name[0].value : item.name.value,
-        yearPublished: item.yearpublished?.value,
-      })); */
+        const parser = new XMLParser({
+          ignoreAttributes: false,
+          attributeNamePrefix: '',
+        });
 
-      setSearchResults(games);
-    } catch (err) {
-      console.error('Search error:', err);
-      setError('Failed to search for games');
-    } finally {
-      setSearching(false);
-    }
-  };
+        const result = parser.parse(xmlText);
+        console.log('searchQuery:', searchQuery);
+        console.log('BGG API search result:', result);
+
+        // No search results returned by API
+        if (!result.items || !result.items.item) {
+          setSearchResults([]);
+          return;
+        }
+
+        const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
+
+        const ids = items.filter(
+          (item: any) => item.name.type === 'primary'
+        ).map((item: any) => item.id);
+        // console.log(ids);
+
+        const {data: games } = await supabase
+          .from('games')
+          .select()
+          .in('id', ids)
+          .order('rank');
+        // console.log(games);
+        
+        /* const games = items.map((item: any) => ({
+          id: item.id,
+          name: Array.isArray(item.name) ? item.name[0].value : item.name.value,
+          yearPublished: item.yearpublished?.value,
+        })); */
+
+        setSearchResults(games);
+      } catch (err) {
+        console.error('Search error:', err);
+        setError('Failed to search for games');
+      } finally {
+        setSearching(false);
+      }
+    };
+    handleSearch();
+  }, [searchQuery]);
 
   const handleAddGame = async (game: Game) => {
     try {
@@ -170,7 +173,6 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             setError('');
             // handleSearch();
           }}
-          onEndEditing={handleSearch}
           onSubmitEditing={handleSearch}
           autoCapitalize="none"
           autoCorrect={false}
