@@ -3,11 +3,12 @@ import { Game } from '@/types/game';
 
 export async function fetchGames(username: string): Promise<Game[]> {
   try {
+    var response;
     while (1) {  
       console.log('Fetching games for username:', username);
 
       // Request to trigger collection fetch
-      const response = await fetch(`https://boardgamegeek.com/xmlapi2/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
+      response = await fetch(`https://boardgamegeek.com/xmlapi2/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
 
       // 202: "BGG has queued your request and you need to keep retrying (hopefully w/some delay between tries) until the status is not 202."
       // 429: Too many requests
