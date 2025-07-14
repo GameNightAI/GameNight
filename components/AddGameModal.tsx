@@ -173,13 +173,11 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             setError('');
             
           }}
-          onSubmitEditing={}
           autoCapitalize="none"
           autoCorrect={false}
         />
         <TouchableOpacity
           style={[styles.searchButton, searching && styles.searchButtonDisabled]}
-          onPress={}
           disabled={searching}
         >
           {searching ? (
