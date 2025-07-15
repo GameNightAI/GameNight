@@ -78,17 +78,14 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
               </Text>
             </View>
 
-            <View style={styles.infoItem}>
-              {isExpanded ? (
-                <ChevronUp size={16} color="#ff9654" />
-              ) : (
-                <ChevronDown size={16} color="#ff9654" />
-              )}
-              <Text style={styles.expandHintText}>
-                {isExpanded ? 'Less info' : 'More info'}
-              </Text>
-            </View>
-          </View>
+        </View>
+        
+        <View style={styles.expandIndicator}>
+          {isExpanded ? (
+            <ChevronUp size={24} color="#ff9654" />
+          ) : (
+            <ChevronDown size={24} color="#ff9654" />
+          )}
         </View>
       </TouchableOpacity>
 
@@ -196,26 +193,25 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginTop: 2,
   },
+  expandIndicator: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
   infoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    gap: 16,
     marginBottom: 4,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 8,
   },
   infoText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 13,
     color: '#666666',
-    marginLeft: 4,
-  },
-  expandHintText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#ff9654',
     marginLeft: 4,
   },
   expandedContent: {
