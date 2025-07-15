@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Users, Clock, X } from 'lucide-react-native';
-import Animated, { FadeOut } from 'react-native-reanimated';
+import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain } from 'lucide-react-native';
+import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 
 import { Game } from '@/types/game';
 
@@ -17,6 +17,12 @@ function decodeHTML(html: string): string {
 }
 
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <Animated.View
       style={styles.container}
@@ -29,44 +35,103 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
         <X size={16} color="#e74c3c" />
       </TouchableOpacity>
 
-      <Image
-        source={{ uri: game.thumbnail }}
-        style={styles.thumbnail}
-        resizeMode="cover"
-      />
+      <TouchableOpacity
+        style={styles.mainContent}
+        onPress={toggleExpanded}
+        activeOpacity={0.7}
+      >
+        <Image
+          source={{ uri: game.thumbnail }}
+          style={styles.thumbnail}
+          resizeMode="cover"
+        />
 
-      <View style={styles.contentContainer}>
-        <Text style={styles.title} numberOfLines={2}>
-          {decodeHTML(game.name)}
-        </Text>
-
-        <View style={styles.infoRow}>
-          <View style={styles.infoItem}>
-            <Users size={16} color="#666666" />
-            <Text style={styles.infoText}>
-              {game.max_players ?
-                game.min_players + (game.min_players === game.max_players ? '' : '-' + game.max_players) + ' player' + (game.max_players === 1 ? '' : 's')
-                : 'N/A'}
+        <View style={styles.contentContainer}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={2}>
+              {decodeHTML(game.name)}
             </Text>
+            <View style={styles.expandIcon}>
+              {isExpanded ? (
+                <ChevronUp size={20} color="#666666" />
+              ) : (
+                <ChevronDown size={20} color="#666666" />
+              )}
+            </View>
           </View>
 
-          <View style={styles.infoItem}>
-            <Clock size={16} color="#666666" />
-            <Text style={styles.infoText}>
-              {game.maxPlaytime === 0 ? 'N/A'
-                : game.minPlaytime + (game.minPlaytime === game.maxPlaytime ? '' : '-' + game.maxPlaytime) + ' min'}
-            </Text>
+          <View style={styles.infoRow}>
+            <View style={styles.infoItem}>
+              <Users size={16} color="#666666" />
+              <Text style={styles.infoText}>
+                {game.max_players ?
+                  game.min_players + (game.min_players === game.max_players ? '' : '-' + game.max_players) + ' player' + (game.max_players === 1 ? '' : 's')
+                  : 'N/A'}
+              </Text>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Clock size={16} color="#666666" />
+              <Text style={styles.infoText}>
+                {game.maxPlaytime === 0 ? 'N/A'
+                  : game.minPlaytime + (game.minPlaytime === game.maxPlaytime ? '' : '-' + game.maxPlaytime) + ' min'}
+              </Text>
+            </View>
           </View>
         </View>
-        
-      </View>
+      </TouchableOpacity>
+
+      {isExpanded && (
+        <Animated.View
+          entering={SlideInDown.duration(300)}
+          exiting={SlideOutUp.duration(200)}
+          style={styles.expandedContent}
+        >
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
+                <Calendar size={16} color="#ff9654" />
+                <Text style={styles.detailLabel}>Publication Year</Text>
+                <Text style={styles.detailValue}>
+                  {game.yearPublished || 'Unknown'}
+                </Text>
+              </View>
+
+              <View style={styles.detailItem}>
+                <Brain size={16} color="#8b5cf6" />
+                <Text style={styles.detailLabel}>Weight</Text>
+                <Text style={styles.detailValue}>
+                  {game.complexity_desc || 'Unknown'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
+                <Star size={16} color="#10b981" />
+                <Text style={styles.detailLabel}>Community Score</Text>
+                <Text style={styles.detailValue}>
+                  {game.average ? game.average.toFixed(1) : 'N/A'}
+                </Text>
+              </View>
+
+              <View style={styles.detailItem}>
+                <Baby size={16} color="#e74c3c" />
+                <Text style={styles.detailLabel}>Minimum Age</Text>
+                <Text style={styles.detailValue}>
+                  {game.minAge ? `${game.minAge}+` : 'N/A'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+      )}
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     backgroundColor: '#ffffff',
     borderRadius: 12,
     marginBottom: 16,
@@ -87,6 +152,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 4,
   },
+  mainContent: {
+    flexDirection: 'row',
+  },
   thumbnail: {
     width: 80,
     height: 80,
@@ -98,12 +166,22 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     justifyContent: 'space-between',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   title: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#1a2b5f',
-    marginBottom: 8,
     paddingRight: 24,
+    flex: 1,
+  },
+  expandIcon: {
+    marginLeft: 8,
+    marginTop: 2,
   },
   infoRow: {
     flexDirection: 'row',
@@ -121,10 +199,39 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginLeft: 4,
   },
-  yearText: {
+  expandedContent: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  detailsContainer: {
+    gap: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  detailItem: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#f7f9fc',
+    padding: 12,
+    borderRadius: 8,
+  },
+  detailLabel: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 13,
-    color: '#8d8d8d',
+    fontSize: 12,
+    color: '#666666',
     marginTop: 4,
+    textAlign: 'center',
+  },
+  detailValue: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    marginTop: 2,
+    textAlign: 'center',
   },
 });
