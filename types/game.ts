@@ -15,4 +15,6 @@ export interface Game {
   complexity: number;
   complexity_tier: number;
   complexity_desc: string;
+  average: number | null;
+  bayesaverage: number | null;
 }
