@@ -6,6 +6,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { usePollResults } from '@/hooks/usePollResults';
 import { GameResultCard } from '@/components/PollGameResultCard';
 import { supabase } from '@/services/supabase';
+import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
 
 export default function PollResultsScreen() {
   const router = useRouter();
@@ -24,15 +25,6 @@ export default function PollResultsScreen() {
 
   if (loading) return <LoadingState />;
 
-  if (!hasVoted) {
-    return (
-      <ErrorState
-        message="You need to vote in the poll before viewing the results."
-        onRetry={() => router.back()}
-      />
-    );
-  }
-
   if (error) {
     return (
       <ErrorState
@@ -50,6 +42,36 @@ export default function PollResultsScreen() {
     const bScore = (b.double_thumbs_up * 2) + b.thumbs_up - b.thumbs_down;
     return bScore - aScore;
   });
+
+  const getRankingIcon = (index: number) => {
+    switch (index) {
+      case 0:
+        return <Trophy size={24} color="#FFD700" />;
+      case 1:
+        return <Medal size={24} color="#C0C0C0" />;
+      case 2:
+        return <Award size={24} color="#CD7F32" />;
+      default:
+        return null;
+    }
+  };
+
+  const getRankingColor = (index: number) => {
+    switch (index) {
+      case 0:
+        return '#FFD700';
+      case 1:
+        return '#C0C0C0';
+      case 2:
+        return '#CD7F32';
+      default:
+        return '#666666';
+    }
+  };
+
+  const navigateToVoting = () => {
+    router.push({ pathname: '/poll/[id]', params: { id: id as string } });
+  };
 
   return (
     <View style={styles.container}>
@@ -79,14 +101,63 @@ export default function PollResultsScreen() {
             <Text style={styles.emptyText}>No votes have been cast yet.</Text>
           </View>
         ) : (
-          sortedResults.map((game) => (
-            <GameResultCard key={game.id} game={game} />
-          ))
+          <>
+            <View style={styles.resultsHeader}>
+              <Text style={styles.resultsTitle}>Ranking Results</Text>
+              <Text style={styles.resultsSubtitle}>
+                {sortedResults.length} game{sortedResults.length !== 1 ? 's' : ''} ranked by votes
+              </Text>
+            </View>
+
+            {sortedResults.map((game, index) => (
+              <View key={game.id} style={styles.resultItem}>
+                <View style={styles.rankingContainer}>
+                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(index) }]}>
+                    {getRankingIcon(index)}
+                    <Text style={styles.rankingNumber}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.rankingInfo}>
+                    <Text style={styles.rankingLabel}>
+                      {index === 0 ? '1st Place' :
+                        index === 1 ? '2nd Place' :
+                          index === 2 ? '3rd Place' :
+                            `${index + 1}${getOrdinalSuffix(index + 1)} Place`}
+                    </Text>
+                    <Text style={styles.scoreText}>
+                      Score: {(game.double_thumbs_up * 2) + game.thumbs_up - game.thumbs_down}
+                    </Text>
+                  </View>
+                </View>
+                <GameResultCard game={game} />
+              </View>
+            ))}
+          </>
         )}
       </ScrollView>
+
+      <View style={styles.bottomActionsContainer}>
+        <TouchableOpacity
+          style={styles.backToVotingButton}
+          onPress={navigateToVoting}
+        >
+          <Vote size={20} color="#ffffff" />
+          <Text style={styles.backToVotingButtonText}>
+            {hasVoted ? 'Back to Voting' : 'Vote Now'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
+
+const getOrdinalSuffix = (num: number) => {
+  const j = num % 10;
+  const k = num % 100;
+  if (j === 1 && k !== 11) return 'st';
+  if (j === 2 && k !== 12) return 'nd';
+  if (j === 3 && k !== 13) return 'rd';
+  return 'th';
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -117,6 +188,62 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+  },
+  resultsHeader: {
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: '#e1e5ea',
+  },
+  resultsTitle: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 20,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  resultsSubtitle: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+  },
+  resultItem: {
+    marginBottom: 20,
+  },
+  rankingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  rankingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 12,
+    minWidth: 60,
+    justifyContent: 'center',
+  },
+  rankingNumber: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 16,
+    color: '#ffffff',
+    marginLeft: 4,
+  },
+  rankingInfo: {
+    flex: 1,
+  },
+  rankingLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 2,
+  },
+  scoreText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
   },
   emptyState: {
     flex: 1,
@@ -150,5 +277,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     color: '#ff9654',
     textDecorationLine: 'underline',
+  },
+  bottomActionsContainer: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  backToVotingButton: {
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  backToVotingButtonText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#ffffff',
   },
 });

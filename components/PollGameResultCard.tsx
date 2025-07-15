@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Heart, ThumbsUp, ThumbsDown, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Heart, ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, Star } from 'lucide-react-native';
 import { GameResult } from '@/hooks/usePollResults';
 
 export function GameResultCard({ game }: { game: GameResult }) {
   const [showVoters, setShowVoters] = useState(false);
   const totalVotes = game.double_thumbs_up + game.thumbs_up + game.thumbs_down;
-  
+  const totalScore = (game.double_thumbs_up * 2) + game.thumbs_up - game.thumbs_down;
+
   // Group voters by their vote type
   const getVotersByType = () => {
     const votersByType = {
@@ -33,11 +34,17 @@ export function GameResultCard({ game }: { game: GameResult }) {
   };
 
   const votersByType = getVotersByType();
-  
+
   return (
     <View style={styles.card}>
-      <Text style={styles.name}>{game.name}</Text>
-      
+      <View style={styles.headerRow}>
+        <Text style={styles.name}>{game.name}</Text>
+        <View style={styles.scoreContainer}>
+          <Star size={16} color="#FFD700" fill="#FFD700" />
+          <Text style={styles.totalScore}>{totalScore}</Text>
+        </View>
+      </View>
+
       <View style={styles.votesContainer}>
         {/* Heart (Double Thumbs Up) */}
         <View style={styles.voteItem}>
@@ -45,6 +52,7 @@ export function GameResultCard({ game }: { game: GameResult }) {
             <Heart size={20} color="#ec4899" fill="#ec4899" />
             <Text style={[styles.voteCount, { color: '#ec4899' }]}>{game.double_thumbs_up}</Text>
           </View>
+          <Text style={styles.voteLabel}>Love</Text>
         </View>
 
         {/* Thumbs Up */}
@@ -53,6 +61,7 @@ export function GameResultCard({ game }: { game: GameResult }) {
             <ThumbsUp size={20} color="#10b981" />
             <Text style={[styles.voteCount, { color: '#10b981' }]}>{game.thumbs_up}</Text>
           </View>
+          <Text style={styles.voteLabel}>Like</Text>
         </View>
 
         {/* Thumbs Down */}
@@ -61,12 +70,13 @@ export function GameResultCard({ game }: { game: GameResult }) {
             <ThumbsDown size={20} color="#ef4444" />
             <Text style={[styles.voteCount, { color: '#ef4444' }]}>{game.thumbs_down}</Text>
           </View>
+          <Text style={styles.voteLabel}>Dislike</Text>
         </View>
       </View>
 
       {totalVotes > 0 && (
         <View style={styles.votersSection}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.showVotersButton}
             onPress={() => setShowVoters(!showVoters)}
           >
@@ -136,19 +146,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   name: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
     color: '#1a2b5f',
-    marginBottom: 12,
     lineHeight: 24,
+    flex: 1,
+  },
+  scoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff5ef',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  totalScore: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 16,
+    color: '#ff9654',
+    marginLeft: 4,
   },
   votesContainer: {
     flexDirection: 'row',
@@ -169,6 +198,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Bold',
     fontSize: 16,
     marginTop: 4,
+  },
+  voteLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 2,
   },
   votersSection: {
     borderTopWidth: 1,

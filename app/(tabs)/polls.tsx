@@ -10,6 +10,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { CreatePollModal } from '@/components/CreatePollModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+import { PollsEmptyState } from '@/components/PollsEmptyState';
 
 export default function PollsScreen() {
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -196,9 +197,7 @@ export default function PollsScreen() {
         )}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            No polls yet. Create one to get started!
-          </Text>
+          <PollsEmptyState onCreate={() => setCreateModalVisible(true)} />
         }
       />
 

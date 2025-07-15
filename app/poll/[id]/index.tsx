@@ -12,6 +12,7 @@ import { PollResultsButton } from '@/components/PollResultsButton';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { getOrCreateAnonId } from '@/utils/anon';
+import { BarChart3 } from 'lucide-react-native';
 
 export default function PollScreen() {
   const { id } = useLocalSearchParams();
@@ -147,6 +148,10 @@ export default function PollScreen() {
     }
   };
 
+  const navigateToResults = () => {
+    router.push({ pathname: '/poll/[id]/results', params: { id: id as string } });
+  };
+
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!poll) return <ErrorState message="Poll not found." onRetry={reload} />;
@@ -215,15 +220,27 @@ export default function PollScreen() {
         </View>
       )}
 
-      {hasVoted && (
-        <View style={styles.viewResultsContainer}>
-          <PollResultsButton
-            onPress={() =>
-              router.replace({ pathname: '/poll/[id]/results', params: { id: id as string } })
-            }
-          />
-        </View>
-      )}
+      <View style={styles.bottomActionsContainer}>
+        {hasVoted && (
+          <View style={styles.viewResultsContainer}>
+            <PollResultsButton
+              onPress={navigateToResults}
+            />
+          </View>
+        )}
+
+        {!hasVoted && (
+          <View style={styles.viewResultsContainer}>
+            <TouchableOpacity
+              style={styles.viewResultsButton}
+              onPress={navigateToResults}
+            >
+              <BarChart3 size={20} color="#ffffff" />
+              <Text style={styles.viewResultsButtonText}>View Results</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -254,7 +271,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     color: '#ffffff',
   },
-  viewResultsContainer: { padding: 20 },
+  bottomActionsContainer: { padding: 20 },
+  viewResultsContainer: { marginTop: 8 },
+  viewResultsButton: {
+    backgroundColor: '#ff9654',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  viewResultsButtonText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#ffffff',
+  },
   signUpContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
