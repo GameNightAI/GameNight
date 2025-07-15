@@ -77,7 +77,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                   : game.minPlaytime + (game.minPlaytime === game.maxPlaytime ? '' : '-' + game.maxPlaytime) + ' min'}
               </Text>
             </View>
-
+          </View>
         </View>
         
         <View style={styles.expandIndicator}>
