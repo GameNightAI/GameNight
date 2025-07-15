@@ -101,7 +101,9 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 <Brain size={16} color="#8b5cf6" />
                 <Text style={styles.detailLabel}>Weight</Text>
                 <Text style={styles.detailValue}>
-                  {game.complexity_desc || 'Unknown'}
+                  {game.complexity ? 
+                    `${game.complexity.toFixed(1)}${game.complexity_desc ? ` (${game.complexity_desc})` : ''}` 
+                    : 'Unknown'}
                 </Text>
               </View>
             </View>
