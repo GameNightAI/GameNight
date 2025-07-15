@@ -80,13 +80,11 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
           </View>
         </View>
         
-        <View style={styles.expandIndicator}>
-          {isExpanded ? (
-            <ChevronUp size={24} color="#ff9654" />
-          ) : (
-            <ChevronDown size={24} color="#ff9654" />
-          )}
-        </View>
+        {isExpanded ? (
+          <ChevronUp size={24} color="#ff9654" />
+        ) : (
+          <ChevronDown size={24} color="#ff9654" />
+        )}
       </TouchableOpacity>
 
       {isExpanded && (
