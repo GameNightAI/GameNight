@@ -77,14 +77,25 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                   : game.minPlaytime + (game.minPlaytime === game.maxPlaytime ? '' : '-' + game.maxPlaytime) + ' min'}
               </Text>
             </View>
+
+            <View style={styles.infoItem}>
+              {isExpanded ? (
+                <ChevronUp size={16} color="#ff9654" />
+              ) : (
+                <ChevronDown size={16} color="#ff9654" />
+              )}
+              <Text style={styles.expandHintText}>
+                {isExpanded ? 'Less info' : 'More info'}
+              </Text>
+            </View>
           </View>
         </View>
       </TouchableOpacity>
 
       {isExpanded && (
         <Animated.View
-          entering={SlideInDown.duration(300)}
-          exiting={SlideOutUp.duration(200)}
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
           style={styles.expandedContent}
         >
           <View style={styles.detailsContainer}>
@@ -199,6 +210,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 13,
     color: '#666666',
+    marginLeft: 4,
+  },
+  expandHintText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#ff9654',
     marginLeft: 4,
   },
   expandedContent: {
