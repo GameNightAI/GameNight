@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions, TextInput } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
+import * as Clipboard from 'expo-clipboard';
+import Toast from 'react-native-toast-message';
 
 
 interface CreatePollModalProps {
@@ -21,6 +23,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pollTitle, setPollTitle] = useState('');
+  const [defaultTitle, setDefaultTitle] = useState('');
+  const [pollDescription, setPollDescription] = useState('');
 
   // Filter states
   const [playerCount, setPlayerCount] = useState<string>('');
@@ -51,6 +56,22 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   useEffect(() => {
     filterGames();
   }, [availableGames, playerCount, playTime, minAge, gameType, complexity]);
+
+  // Update default title when selected games change
+  useEffect(() => {
+    const newDefaultTitle = selectedGames.length === 1
+      ? `Vote on ${selectedGames[0].name}`
+      : selectedGames.length > 1
+        ? `Vote on ${selectedGames.length} games`
+        : 'Vote on games';
+
+    setDefaultTitle(newDefaultTitle);
+
+    // If pollTitle is empty, update it with the default
+    if (!pollTitle) {
+      setPollTitle(newDefaultTitle);
+    }
+  }, [selectedGames, pollTitle]);
 
   const loadGames = async () => {
     try {
@@ -157,15 +178,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const title = selectedGames.length === 1
-        ? `Vote on ${selectedGames[0].name}`
-        : `Vote on ${selectedGames.length} games`;
+      // Use the current poll title (which will be the default if user didn't change it)
+      const title = pollTitle.trim();
 
       const { data: poll, error: pollError } = await supabase
         .from('polls')
         .insert({
           user_id: user.id,
           title,
+          description: pollDescription.trim() || null,
           max_votes: 1,
         })
         .select()
@@ -184,6 +205,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
       if (gamesError) throw gamesError;
 
+      // Copy poll link to clipboard
+      const pollUrl = `${Platform.select({ web: window.location.origin, default: '' })}/poll/${poll.id}/`;
+      await Clipboard.setStringAsync(pollUrl);
+      Toast.show({ type: 'success', text1: 'Poll link copied to clipboard!' });
+
       onSuccess();
       resetForm();
     } catch (err) {
@@ -197,6 +223,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const resetForm = () => {
     setSelectedGames([]);
     setError(null);
+    setPollTitle('');
+    setPollDescription('');
     setPlayerCount('');
     setPlayTime('');
     setMinAge('');
@@ -290,6 +318,39 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       </View>
 
       <ScrollView style={styles.content}>
+        <View style={styles.titleSection}>
+          <Text style={styles.label}>Poll Title (Optional)</Text>
+          <Text style={styles.sublabel}>
+            Customize your poll title or keep the auto-generated name
+          </Text>
+          <TextInput
+            style={styles.titleInput}
+            value={pollTitle}
+            onChangeText={setPollTitle}
+            placeholder="Enter a custom title or keep the default"
+            placeholderTextColor="#999999"
+            maxLength={100}
+          />
+        </View>
+
+        <View style={styles.descriptionSection}>
+          <Text style={styles.label}>Description (Optional)</Text>
+          <Text style={styles.sublabel}>
+            Add context, instructions, or any additional information for voters
+          </Text>
+          <TextInput
+            style={styles.descriptionInput}
+            value={pollDescription}
+            onChangeText={setPollDescription}
+            placeholder="e.g., Vote for your top 3 games, or Let's decide what to play this weekend"
+            placeholderTextColor="#999999"
+            maxLength={500}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+        </View>
+
         <View style={styles.filterSection}>
           <Text style={styles.label}>Filter Games</Text>
 
@@ -625,38 +686,64 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         </View>
 
         <View style={styles.gamesSection}>
-          <Text style={styles.label}>Select Games</Text>
-          <Text style={styles.sublabel}>
-            {(playerCount || playTime || minAge || gameType || complexity)
-              ? `Games that match your filters`
-              : 'Choose games from your collection to include in the poll'}
-          </Text>
+          <View style={styles.gamesHeader}>
+            <View style={styles.gamesHeaderLeft}>
+              <Text style={styles.label}>Select Games</Text>
+              <Text style={styles.sublabel}>
+                {(playerCount || playTime || minAge || gameType || complexity)
+                  ? `Games that match your filters`
+                  : 'Choose games from your collection to include in the poll'}
+              </Text>
+            </View>
+            <View style={styles.gamesHeaderRight}>
+              <TouchableOpacity
+                style={styles.selectAllButton}
+                onPress={() => setSelectedGames([...filteredGames])}
+              >
+                <Text style={styles.selectAllButtonText}>Select All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.clearAllButton}
+                onPress={() => setSelectedGames([])}
+              >
+                <Text style={styles.clearAllButtonText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {filteredGames.length === 0 ? (
             <Text style={styles.noGamesText}>
               No games found matching your filters
             </Text>
           ) : (
-            filteredGames.map(game => (
-              <TouchableOpacity
-                key={game.id}
-                style={[
-                  styles.gameItem,
-                  selectedGames.some(g => g.id === game.id) && styles.gameItemSelected
-                ]}
-                onPress={() => toggleGameSelection(game)}
-              >
-                <View style={styles.gameInfo}>
-                  <Text style={styles.gameName}>{game.name}</Text>
-                  <Text style={styles.playerCount}>
-                    {game.min_players}-{game.max_players} players • {game.playing_time} min
-                  </Text>
-                </View>
-                {selectedGames.some(g => g.id === game.id) && (
-                  <Check size={20} color="#ff9654" />
-                )}
-              </TouchableOpacity>
-            ))
+            filteredGames.map(game => {
+              const isSelected = selectedGames.some(g => g.id === game.id);
+              return (
+                <TouchableOpacity
+                  key={game.id}
+                  style={[
+                    styles.gameItem,
+                    isSelected && styles.gameItemSelected
+                  ]}
+                  onPress={() => toggleGameSelection(game)}
+                >
+                  <View style={styles.gameInfo}>
+                    <Text style={styles.gameName}>{game.name}</Text>
+                    <Text style={styles.playerCount}>
+                      {game.min_players}-{game.max_players} players • {game.playing_time} min
+                    </Text>
+                  </View>
+                  <View style={[
+                    styles.checkbox,
+                    isSelected && styles.checkboxSelected
+                  ]}>
+                    {isSelected && (
+                      <Check size={16} color="#ffffff" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -708,6 +795,10 @@ type Styles = {
   closeButton: ViewStyle;
   title: TextStyle;
   content: ViewStyle;
+  titleSection: ViewStyle;
+  titleInput: TextStyle;
+  descriptionSection: ViewStyle;
+  descriptionInput: TextStyle;
   label: TextStyle;
   sublabel: TextStyle;
   filterSection: ViewStyle;
@@ -726,11 +817,20 @@ type Styles = {
   dropdownItemText: TextStyle;
   dropdownItemTextSelected: TextStyle;
   gamesSection: ViewStyle;
+  gamesHeader: ViewStyle;
+  gamesHeaderLeft: ViewStyle;
+  gamesHeaderRight: ViewStyle;
+  selectAllButton: ViewStyle;
+  selectAllButtonText: TextStyle;
+  clearAllButton: ViewStyle;
+  clearAllButtonText: TextStyle;
   gameItem: ViewStyle;
   gameItemSelected: ViewStyle;
   gameInfo: ViewStyle;
   gameName: TextStyle;
   playerCount: TextStyle;
+  checkbox: ViewStyle;
+  checkboxSelected: ViewStyle;
   noGamesText: TextStyle;
   errorText: TextStyle;
   createButton: ViewStyle;
@@ -793,6 +893,36 @@ const styles = StyleSheet.create<Styles>({
   },
   content: {
     padding: 20,
+  },
+  titleSection: {
+    marginBottom: 20,
+  },
+  titleInput: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+  },
+  descriptionSection: {
+    marginBottom: 20,
+  },
+  descriptionInput: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#333333',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   label: {
     fontFamily: 'Poppins-SemiBold',
@@ -887,6 +1017,43 @@ const styles = StyleSheet.create<Styles>({
   gamesSection: {
     marginTop: 8,
   },
+  gamesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  gamesHeaderLeft: {
+    flex: 1,
+  },
+  gamesHeaderRight: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  selectAllButton: {
+    backgroundColor: '#ff9654',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  selectAllButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    color: '#ffffff',
+  },
+  clearAllButton: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+  },
+  clearAllButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    color: '#666666',
+  },
   gameItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -915,6 +1082,20 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#666666',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#e1e5ea',
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#ff9654',
+    borderColor: '#ff9654',
   },
   noGamesText: {
     fontFamily: 'Poppins-Regular',
