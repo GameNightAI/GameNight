@@ -10,7 +10,7 @@ import Toast from 'react-native-toast-message';
 interface CreatePollModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (pollType: 'single-user' | 'multi-user-device') => void;
 }
 
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
@@ -59,19 +59,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   // Update default title when selected games change
   useEffect(() => {
-    const newDefaultTitle = selectedGames.length === 1
-      ? `Vote on ${selectedGames[0].name}`
-      : selectedGames.length > 1
-        ? `Vote on ${selectedGames.length} games`
-        : 'Vote on games';
-
+    let newDefaultTitle = '';
+    if (selectedGames.length === 1) {
+      newDefaultTitle = 'Vote on 1 game';
+    } else if (selectedGames.length > 1) {
+      newDefaultTitle = `Vote on ${selectedGames.length} games`;
+    }
     setDefaultTitle(newDefaultTitle);
-
-    // If pollTitle is empty, update it with the default
-    if (!pollTitle) {
+    if ((!pollTitle || pollTitle.startsWith('Vote on')) && newDefaultTitle) {
       setPollTitle(newDefaultTitle);
     }
-  }, [selectedGames, pollTitle]);
+  }, [selectedGames]);
 
   const loadGames = async () => {
     try {
@@ -171,7 +169,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       setError(null);
 
       if (selectedGames.length === 0) {
-        setError('Please select at least one game');
+        setError('Please select at least one game to create a poll.');
+        setLoading(false);
         return;
       }
 
@@ -210,7 +209,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       await Clipboard.setStringAsync(pollUrl);
       Toast.show({ type: 'success', text1: 'Poll link copied to clipboard!' });
 
-      onSuccess();
+      // Pass pollType to onSuccess for downstream handling
+      onSuccess('single-user'); // Assuming single-user for now
       resetForm();
     } catch (err) {
       console.error('Error creating poll:', err);

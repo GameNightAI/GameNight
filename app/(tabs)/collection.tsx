@@ -240,11 +240,6 @@ export default function CollectionScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.titleSection}>
-          <Text style={styles.title}>
-            {isFiltered ?
-              `Games for ${players} Players${time ? ` (${time}${unlimited === '1' ? '+' : ''} min)` : ''}`
-              : 'My Collection'}
-          </Text>
           <Text style={styles.countText}>{games.length} games</Text>
         </View>
 
