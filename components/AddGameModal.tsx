@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, A
 import { Search, X, Plus } from 'lucide-react-native';
 import { XMLParser } from 'fast-xml-parser';
 import { supabase } from '@/services/supabase';
+import { debounce } from 'lodash';
 
 interface Game {
   id: string;
@@ -27,18 +28,6 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [error, setError] = useState('');
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
-
-  const debounce = (func, delay) => {
-    let timeoutId;
-
-    return (...args) => {
-      clearTimeout(timeoutId);
-
-      timeoutId = setTimeout(() => {
-        func.apply(this, args);
-      }, delay);
-    };
-  };
 
   const fetchSearchResults = async (term) => {
     try {
@@ -175,7 +164,6 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           placeholder="Search for games..."
           value={searchQuery}
           onChangeText={handleSearch}
-          onSubmitEditing={handleSearch}
           autoCapitalize="none"
           autoCorrect={false}
         />
