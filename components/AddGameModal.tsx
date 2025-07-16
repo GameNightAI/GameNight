@@ -44,18 +44,20 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     try {
       // Perform an API request based on the search term
       const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchQuery)}&type=boardgame`);
+      
+      const xmlText = await response.text();
+
+      const parser = new XMLParser({
+        ignoreAttributes: false,
+        attributeNamePrefix: '',
+      });
+
+      const result = parser.parse(xmlText);
+      
       // No search results returned by API
       if (!result.items || !result.items.item) {
         setSearchResults([]);
       } else {
-        const xmlText = await response.text();
-
-        const parser = new XMLParser({
-          ignoreAttributes: false,
-          attributeNamePrefix: '',
-        });
-
-        const result = parser.parse(xmlText);
       
         const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
 
