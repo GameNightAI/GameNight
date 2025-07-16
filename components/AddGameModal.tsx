@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator, FlatList, Image } from 'react-native';
 import { Search, X, Plus } from 'lucide-react-native';
 import { XMLParser } from 'fast-xml-parser';
@@ -29,7 +29,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
 
-  const fetchSearchResults = async (term) => {
+  const fetchSearchResults = useCallback(async (term) => {
     try {
       // Perform an API request based on the search term
       const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchQuery)}&type=boardgame`);
@@ -68,9 +68,11 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     } finally {
       setSearching(false);
     }
-  };
+  }, []);
 
-  const debouncedSearch = debounce(fetchSearchResults, 500);
+  const debouncedSearch = useMemo(() => {
+    debounce(fetchSearchResults, 500);
+  }, [fetchSearchResults]);
 
   const handleSearch = (text) => {
     setSearchQuery(text);
