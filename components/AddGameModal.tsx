@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator, FlatList, Image } from 'react-native';
 import { Search, X, Plus } from 'lucide-react-native';
 import { XMLParser } from 'fast-xml-parser';
@@ -28,18 +28,26 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
 
-  useEffect(() => 
-    {const handleSearch = async () => {
-      if (!searchQuery.trim()) {
-        setError('Please enter a search term');
-        return;
-      }
+  const debounce = (func, delay) => {
+    let timeoutId;
 
-      try {
-        setSearching(true);
-        setError('');
+    return (...args) => {
+      clearTimeout(timeoutId);
 
-        const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchQuery)}&type=boardgame`);
+      timeoutId = setTimeout(() => {
+        func.apply(this, args);
+      }, delay);
+    };
+  };
+
+  const fetchSearchResults = async (term) => {
+    try {
+      // Perform an API request based on the search term
+      const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(searchQuery)}&type=boardgame`);
+      // No search results returned by API
+      if (!result.items || !result.items.item) {
+        setSearchResults([]);
+      } else {
         const xmlText = await response.text();
 
         const parser = new XMLParser({
@@ -48,45 +56,41 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         });
 
         const result = parser.parse(xmlText);
-        console.log('searchQuery:', searchQuery);
-        console.log('BGG API search result:', result);
-
-        // No search results returned by API
-        if (!result.items || !result.items.item) {
-          setSearchResults([]);
-          return;
-        }
-
+      
         const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
 
-        const ids = items.filter(
-          (item: any) => item.name.type === 'primary'
-        ).map((item: any) => item.id);
-        // console.log(ids);
+        const ids = items
+          .filter((item: any) => item.name.type === 'primary')
+          .map((item: any) => item.id);
 
         const {data: games } = await supabase
           .from('games')
           .select()
           .in('id', ids)
           .order('rank');
-        // console.log(games);
-        
-        /* const games = items.map((item: any) => ({
-          id: item.id,
-          name: Array.isArray(item.name) ? item.name[0].value : item.name.value,
-          yearPublished: item.yearpublished?.value,
-        })); */
-
+          
         setSearchResults(games);
-      } catch (err) {
-        console.error('Search error:', err);
-        setError('Failed to search for games');
-      } finally {
-        setSearching(false);
       }
-    };
-    handleSearch();
-  }, [searchQuery]);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      // Handle the error, e.g., show an error message to the user
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const debouncedSearch = debounce(fetchSearchResults, 500);
+
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    if (!searchQuery.trim()) {
+      setError('Please enter a search term');
+      return;
+    }
+    setSearching(true);
+    setError('');
+    debouncedSearch(text);
+  };
 
   const handleAddGame = async (game: Game) => {
     try {
@@ -168,16 +172,14 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           style={styles.input}
           placeholder="Search for games..."
           value={searchQuery}
-          onChangeText={(text) => {
-            setSearchQuery(text);
-            setError('');
-            
-          }}
+          onChangeText={handleSearch}
+          onSubmitEditing={handleSearch}
           autoCapitalize="none"
           autoCorrect={false}
         />
         <TouchableOpacity
           style={[styles.searchButton, searching && styles.searchButtonDisabled]}
+          onPress={handleSearch}
           disabled={searching}
         >
           {searching ? (
