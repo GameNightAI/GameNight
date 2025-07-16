@@ -14,6 +14,7 @@ import { PollsEmptyState } from '@/components/PollsEmptyState';
 
 export default function PollsScreen() {
   const [polls, setPolls] = useState<Poll[]>([]);
+  const [pollGameCounts, setPollGameCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -45,6 +46,21 @@ export default function PollsScreen() {
       if (error) throw error;
 
       setPolls(data);
+
+      // Fetch game counts for each poll
+      const pollIds = data.map((poll: Poll) => poll.id);
+      if (pollIds.length > 0) {
+        const { data: pollGames, error: pollGamesError } = await supabase
+          .from('poll_games')
+          .select('poll_id', { count: 'exact', head: false });
+        if (!pollGamesError && pollGames) {
+          const counts: Record<string, number> = {};
+          pollIds.forEach((id: string) => {
+            counts[id] = pollGames.filter(pg => pg.poll_id === id).length;
+          });
+          setPollGameCounts(counts);
+        }
+      }
     } catch (err) {
       console.error('Error loading polls:', err);
       setError(err instanceof Error ? err.message : 'Failed to load polls');
@@ -106,7 +122,6 @@ export default function PollsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Game Polls</Text>
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => setCreateModalVisible(true)}
@@ -171,7 +186,9 @@ export default function PollsScreen() {
             style={styles.pollCard}
           >
             <View style={styles.pollInfo}>
-              <Text style={styles.pollTitle}>{item.title}</Text>
+              <TouchableOpacity onPress={() => router.push({ pathname: '/poll/[id]', params: { id: item.id } })}>
+                <Text style={[styles.pollTitle, { textDecorationLine: 'underline', color: '#1a2b5f' }]}>{item.title}</Text>
+              </TouchableOpacity>
               {item.description && (
                 <Text style={styles.pollDescription}>{item.description}</Text>
               )}

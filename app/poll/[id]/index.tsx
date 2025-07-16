@@ -34,20 +34,54 @@ export default function PollScreen() {
   const [voterName, setVoterName] = useState('');
   const [nameError, setNameError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [creatorName, setCreatorName] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const savedName = await AsyncStorage.getItem('voter_name');
-      if (savedName) setVoterName(savedName);
+      // Single device: prefill with user email/username if logged in
+      if (user && (user.email || user.username)) {
+        setVoterName(user.username || user.email);
+      } else {
+        const savedName = await AsyncStorage.getItem('voter_name');
+        if (savedName) setVoterName(savedName);
+      }
     })();
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    if (poll && poll.user_id) {
+      // Fetch the creator's email or name from Supabase auth.users
+      (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profiles') // Try profiles table first
+            .select('username, email')
+            .eq('id', poll.user_id)
+            .maybeSingle();
+          if (data) {
+            setCreatorName(data.username || data.email || null);
+          } else {
+            // Fallback: try auth.users
+            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(poll.user_id);
+            if (userData && userData.user) {
+              setCreatorName(userData.user.email || null);
+            }
+          }
+        } catch (e) {
+          setCreatorName(null);
+        }
+      })();
+    }
+  }, [poll]);
 
   const handleVote = (gameId: number, voteType: VoteType) => {
     setPendingVotes(prev => {
       const updated = { ...prev };
       if (updated[gameId] === voteType) {
-        delete updated[gameId]; // toggle off
+        // If the same icon is clicked again, unselect it
+        delete updated[gameId];
       } else {
+        // If a different icon is clicked, only select that one
         updated[gameId] = voteType;
       }
       return updated;
@@ -58,19 +92,14 @@ export default function PollScreen() {
     try {
       setSubmitting(true);
 
-      // Get user identifier
-      let finalName = '';
-      if (user?.email) {
-        finalName = user.email;
-      } else {
-        const trimmedName = voterName.trim();
-        if (!trimmedName) {
-          setNameError(true);
-          Toast.show({ type: 'error', text1: 'Please enter your name' });
-          return;
-        }
-        finalName = trimmedName;
+      // Always use entered voterName
+      const trimmedName = voterName.trim();
+      if (!trimmedName) {
+        setNameError(true);
+        Toast.show({ type: 'error', text1: 'Please enter your name' });
+        return;
       }
+      const finalName = trimmedName;
 
       console.log('Submitting votes with name:', finalName);
       console.log('Pending votes:', pendingVotes);
@@ -131,13 +160,10 @@ export default function PollScreen() {
       }
 
       // Save voter name for future use
-      if (!user?.email) {
-        await AsyncStorage.setItem('voter_name', finalName);
-      }
+      await AsyncStorage.setItem('voter_name', finalName);
 
       // Mark as voted in local storage for results access
       await AsyncStorage.setItem(`voted_${id}`, 'true');
-
       await reload();
       Toast.show({ type: 'success', text1: 'Votes submitted!' });
     } catch (err) {
@@ -147,6 +173,8 @@ export default function PollScreen() {
       setSubmitting(false);
     }
   };
+
+  // Remove finishMultiUserVoting and multi-user session logic
 
   const navigateToResults = () => {
     router.push({ pathname: '/poll/[id]/results', params: { id: id as string } });
@@ -159,35 +187,40 @@ export default function PollScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{poll?.title}</Text>
+        <Text style={styles.title}>
+          {poll?.title === 'Vote on games' && games && games.length > 0
+            ? `Vote on games (${games.length} game${games.length === 1 ? '' : 's'})`
+            : poll?.title}
+        </Text>
         {!!poll?.description && <Text style={styles.description}>{poll.description}</Text>}
+        {/* Show creator for non-creator users */}
+        {!isCreator && creatorName && (
+          <Text style={[styles.subtitle, { marginBottom: 2, color: '#ff9654' }]}>Poll created by {creatorName}</Text>
+        )}
         <Text style={styles.subtitle}>
           {isCreator
-            ? 'View results below'
-            : 'Vote for as many games as you like with thumbs up, double thumbs up, or thumbs down'}
+            ? (creatorName ? `Poll created by ${creatorName}` : 'Poll created by you')
+            : 'Vote for as many games as you like! ❤️ = Excited, 👍 = Would play, 👎 = Not Interested'}
         </Text>
       </View>
 
-      {!user && (
-        <>
-          <VoterNameInput
-            value={voterName}
-            onChange={(text) => {
-              setVoterName(text);
-              if (nameError) setNameError(false);
-            }}
-            hasError={nameError}
-          />
-          <View style={styles.signUpContainer}>
-            <Text style={styles.signUpText}>
-              Want to create your own polls?{' '}
-            </Text>
-            <TouchableOpacity onPress={() => router.push('/auth/register')}>
-              <Text style={styles.signUpLink}>Sign up for free</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
+      {/* Always show voter name input */}
+      <VoterNameInput
+        value={voterName}
+        onChange={(text) => {
+          setVoterName(text);
+          if (nameError) setNameError(false);
+        }}
+        hasError={nameError}
+      />
+      <View style={styles.signUpContainer}>
+        <Text style={styles.signUpText}>
+          Want to create your own polls?{' '}
+        </Text>
+        <TouchableOpacity onPress={() => router.push('/auth/register')}>
+          <Text style={styles.signUpLink}>Sign up for free</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.gamesContainer}>
         {games.length === 0 ? (

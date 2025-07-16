@@ -37,11 +37,36 @@ export default function PollResultsScreen() {
   }
 
   // Sort games by total positive votes (heart votes count double)
-  const sortedResults = [...gameResults].sort((a, b) => {
-    const aScore = (a.double_thumbs_up * 2) + a.thumbs_up - a.thumbs_down;
-    const bScore = (b.double_thumbs_up * 2) + b.thumbs_up - b.thumbs_down;
-    return bScore - aScore;
+  const scoredResults = gameResults.map(game => ({
+    ...game,
+    score: (game.double_thumbs_up * 2) + game.thumbs_up - game.thumbs_down
+  }));
+  scoredResults.sort((a, b) => b.score - a.score);
+
+  // Assign ranks, handling ties (all tied items get tie: true)
+  let lastScore: number | null = null;
+  let lastRank = 0;
+  let tieGroup: number[] = [];
+  const tempRanked: any[] = [];
+  scoredResults.forEach((game, idx) => {
+    if (lastScore === null || game.score !== lastScore) {
+      // Assign tie: true to all in previous tieGroup if more than 1
+      if (tieGroup.length > 1) {
+        tieGroup.forEach(i => tempRanked[i].tie = true);
+      }
+      tieGroup = [idx];
+      lastRank = idx + 1;
+    } else {
+      tieGroup.push(idx);
+    }
+    tempRanked.push({ ...game, rank: lastRank, tie: false });
+    lastScore = game.score;
   });
+  // Final group
+  if (tieGroup.length > 1) {
+    tieGroup.forEach(i => tempRanked[i].tie = true);
+  }
+  const rankedResults = tempRanked;
 
   const getRankingIcon = (index: number) => {
     switch (index) {
@@ -96,7 +121,7 @@ export default function PollResultsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {sortedResults.length === 0 ? (
+        {rankedResults.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No votes have been cast yet.</Text>
           </View>
@@ -105,26 +130,25 @@ export default function PollResultsScreen() {
             <View style={styles.resultsHeader}>
               <Text style={styles.resultsTitle}>Ranking Results</Text>
               <Text style={styles.resultsSubtitle}>
-                {sortedResults.length} game{sortedResults.length !== 1 ? 's' : ''} ranked by votes
+                {rankedResults.length} game{rankedResults.length !== 1 ? 's' : ''} ranked by votes
               </Text>
             </View>
 
-            {sortedResults.map((game, index) => (
+            {rankedResults.map((game, index) => (
               <View key={game.id} style={styles.resultItem}>
                 <View style={styles.rankingContainer}>
-                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(index) }]}>
-                    {getRankingIcon(index)}
-                    <Text style={styles.rankingNumber}>{index + 1}</Text>
+                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(game.rank - 1) }]}>
+                    {getRankingIcon(game.rank - 1)}
+                    <Text style={styles.rankingNumber}>{game.rank}</Text>
                   </View>
                   <View style={styles.rankingInfo}>
                     <Text style={styles.rankingLabel}>
-                      {index === 0 ? '1st Place' :
-                        index === 1 ? '2nd Place' :
-                          index === 2 ? '3rd Place' :
-                            `${index + 1}${getOrdinalSuffix(index + 1)} Place`}
+                      {game.tie
+                        ? `Tied for ${game.rank}${getOrdinalSuffix(game.rank)} Place`
+                        : `${game.rank}${getOrdinalSuffix(game.rank)} Place`}
                     </Text>
                     <Text style={styles.scoreText}>
-                      Score: {(game.double_thumbs_up * 2) + game.thumbs_up - game.thumbs_down}
+                      Score: {game.score}
                     </Text>
                   </View>
                 </View>
