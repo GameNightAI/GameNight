@@ -71,6 +71,8 @@ export default function CollectionScreen() {
         complexity: game.complexity || 1,
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc || '',
+        average: game.average,
+        bayesaverage: game.bayesaverage,
       }));
 
       // Filter games based on player count and play time
