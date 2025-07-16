@@ -169,17 +169,6 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           autoCapitalize="none"
           autoCorrect={false}
         />
-        <TouchableOpacity
-          style={[styles.searchButton, searching && styles.searchButtonDisabled]}
-          onPress={handleSearch}
-          disabled={searching}
-        >
-          {searching ? (
-            <ActivityIndicator color="#ffffff\" size="small" />
-          ) : (
-            <Search size={20} color="#ffffff" />
-          )}
-        </TouchableOpacity>
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
