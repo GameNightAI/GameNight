@@ -71,7 +71,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   }, []);
 
   const debouncedSearch = useMemo(() => {
-    debounce(fetchSearchResults, 500);
+    return debounce(fetchSearchResults, 500);
   }, [fetchSearchResults]);
 
   const handleSearch = (text) => {
