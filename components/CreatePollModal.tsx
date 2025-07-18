@@ -761,6 +761,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
               )}
             </View>
           </ScrollView>
+          <View style={styles.footer}>
+            {error && <Text style={styles.errorText}>{error}</Text>}
+            <TouchableOpacity
+              style={[styles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
+              onPress={handleCreatePoll}
+              disabled={loading || selectedGames.length === 0}
+            >
+              <Plus size={20} color="#fff" />
+              <Text style={styles.createButtonText}>{loading ? 'Creating...' : 'Create Poll'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </div>
     );
@@ -1211,6 +1222,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             )}
           </View>
         </ScrollView>
+        <View style={styles.footer}>
+          {error && <Text style={styles.errorText}>{error}</Text>}
+          <TouchableOpacity
+            style={[styles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
+            onPress={handleCreatePoll}
+            disabled={loading || selectedGames.length === 0}
+          >
+            <Plus size={20} color="#fff" />
+            <Text style={styles.createButtonText}>{loading ? 'Creating...' : 'Create Poll'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -1238,14 +1260,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
           >
-            <ScrollView
-              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', minHeight: '100%' }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <TouchableWithoutFeedback onPress={() => { }}>
-                {content}
-              </TouchableWithoutFeedback>
-            </ScrollView>
+            <View style={{ width: '100%', maxWidth: screenWidth * 0.95, maxHeight: screenHeight * 0.8, flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              {content}
+            </View>
           </KeyboardAvoidingView>
         </View>
       </TouchableWithoutFeedback>
@@ -1302,12 +1319,13 @@ type Styles = {
   createButtonDisabled: ViewStyle;
   createButtonText: TextStyle;
   scrollContent: ViewStyle;
+  footer: ViewStyle;
 };
 
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
 
-const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle }>({
+const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, footer: ViewStyle }>({
   overlay: {
     position: Platform.OS === 'web' ? 'fixed' : 'absolute',
     top: 0,
@@ -1374,9 +1392,10 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle }>({
     paddingVertical: 20,
   },
   scrollContent: {
-    paddingBottom: 32,
+    paddingBottom: 0,
     paddingTop: 0,
     paddingHorizontal: 0,
+    // backgroundColor: 'green',
   },
   titleSection: {
     marginBottom: 20,
@@ -1505,6 +1524,9 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle }>({
   gamesSection: {
     marginTop: 8,
     width: '100%',
+    marginBottom: 0,
+    paddingBottom: 0,
+    //backgroundColor: 'red'
   },
   gamesHeader: {
     flexDirection: 'row',
@@ -1607,17 +1629,18 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle }>({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ff9654',
-    padding: 16,
-    margin: 20,
-    borderRadius: 12,
-    gap: 8,
+    padding: 13,
+    paddingRight: 16,// 20% less than 16
+    margin: 16, // 20% less than 20
+    borderRadius: 10, // 20% less than 12
+    gap: 3, // 20% less than 8
   },
   createButtonDisabled: {
     opacity: 0.7,
   },
   createButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
+    fontSize: 13, // 20% less than 16
     color: '#ffffff',
   },
   absoluteCloseButton: {
@@ -1631,5 +1654,18 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle }>({
     elevation: 2,
     borderWidth: 1,
     borderColor: '#e74c3c',
+  },
+  footer: {
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingLeft: 14, // 30% less than 20
+    paddingRight: 14, // 30% less than 20
+    minHeight: 30, // add a minHeight to shrink the container
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
 });
