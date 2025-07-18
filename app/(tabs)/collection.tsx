@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { RefreshCw, X, Search, Plus } from 'lucide-react-native';
+import { RefreshCw, X, Search, Plus, Camera } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 
 import { supabase } from '@/services/supabase';
@@ -263,6 +263,13 @@ export default function CollectionScreen() {
             <RefreshCw size={20} color="#ff9654" />
             <Text style={styles.syncButtonText}>Sync with BGG</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.analyzeButton}
+            onPress={() => router.push('/ImageAnalyzer')}
+          >
+            <Camera size={20} color="#ff9654" />
+            <Text style={styles.analyzeButtonText}>Analyze Image</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -410,5 +417,22 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     paddingBottom: 40,
+  },
+  analyzeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+    marginLeft: 4,
+  },
+  analyzeButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    marginLeft: 8,
   },
 });

@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { ThumbsDown, ThumbsUp, Heart, Calendar, Star, Baby, Brain, ChevronDown, ChevronUp } from 'lucide-react-native';
 
-import { VoteType } from '../hooks/usePollData';
+import { VoteType } from '@/hooks/usePollData';
 
 interface Game {
   id: number;
@@ -13,10 +13,10 @@ interface Game {
   max_players: number;
   playing_time: number;
   userVote?: VoteType | null;
-  yearPublished?: number;
+  yearPublished?: number | null;
   complexity?: number;
   complexity_desc?: string;
-  average?: number;
+  average?: number | null;
   minAge?: number;
   thumbnail?: string;
   image?: string;

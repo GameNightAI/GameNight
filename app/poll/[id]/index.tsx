@@ -1,6 +1,6 @@
 // poll/PollScreen.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,6 +35,7 @@ export default function PollScreen() {
   const [nameError, setNameError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [creatorName, setCreatorName] = useState<string | null>(null);
+  const [comment, setComment] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -89,6 +90,16 @@ export default function PollScreen() {
   };
 
   const submitAllVotes = async () => {
+    if (Object.keys(pendingVotes).length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'No votes selected',
+        text2: 'Please vote for at least one game before submitting.',
+        visibilityTime: 4000,
+        autoHide: true,
+      });
+      return;
+    }
     try {
       setSubmitting(true);
 
@@ -162,9 +173,22 @@ export default function PollScreen() {
       // Save voter name for future use
       await AsyncStorage.setItem('voter_name', finalName);
 
+      // Insert comment if present
+      if (comment.trim()) {
+        const { error: commentError } = await supabase.from('poll_comments').insert({
+          poll_id: id,
+          voter_name: finalName,
+          comment_text: comment.trim(),
+        });
+        if (commentError) {
+          Toast.show({ type: 'error', text1: 'Failed to submit comment' });
+        }
+      }
+
       // Mark as voted in local storage for results access
       await AsyncStorage.setItem(`voted_${id}`, 'true');
       await reload();
+      setComment(''); // Clear comment after successful submission
       Toast.show({ type: 'success', text1: 'Votes submitted!' });
     } catch (err) {
       console.error('Error submitting votes:', err);
@@ -238,8 +262,21 @@ export default function PollScreen() {
           ))
         )}
       </View>
+      {/* Comments Field */}
+      <View style={styles.commentContainer}>
+        <Text style={styles.commentLabel}>Comments (optional):</Text>
+        <TextInput
+          style={styles.commentInput}
+          value={comment}
+          onChangeText={setComment}
+          placeholder="Add any comments about your vote..."
+          multiline
+          editable={!submitting}
+        />
+      </View>
 
-      {Object.keys(pendingVotes).length > 0 && (
+      {/* Shared button container for consistent width and padding */}
+      <View style={{ paddingHorizontal: 0, width: '100%', alignSelf: 'stretch' }}>
         <View style={styles.submitVotesContainer}>
           <TouchableOpacity
             style={styles.submitVotesButton}
@@ -251,28 +288,27 @@ export default function PollScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      )}
+        <View style={styles.bottomActionsContainer}>
+          {hasVoted && (
+            <View style={styles.viewResultsContainer}>
+              <PollResultsButton
+                onPress={navigateToResults}
+              />
+            </View>
+          )}
 
-      <View style={styles.bottomActionsContainer}>
-        {hasVoted && (
-          <View style={styles.viewResultsContainer}>
-            <PollResultsButton
-              onPress={navigateToResults}
-            />
-          </View>
-        )}
-
-        {!hasVoted && (
-          <View style={styles.viewResultsContainer}>
-            <TouchableOpacity
-              style={styles.viewResultsButton}
-              onPress={navigateToResults}
-            >
-              <BarChart3 size={20} color="#ffffff" />
-              <Text style={styles.viewResultsButtonText}>View Results</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {!hasVoted && (
+            <View style={styles.viewResultsContainer}>
+              <TouchableOpacity
+                style={styles.viewResultsButton}
+                onPress={navigateToResults}
+              >
+                <BarChart3 size={20} color="#ffffff" />
+                <Text style={styles.viewResultsButtonText}>View Results</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
     </ScrollView>
   );
@@ -284,7 +320,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontFamily: 'Poppins-Bold', color: '#fff', marginBottom: 8 },
   description: { fontSize: 16, fontFamily: 'Poppins-Regular', color: '#fff', marginBottom: 12 },
   subtitle: { fontSize: 14, fontFamily: 'Poppins-Regular', color: '#fff', opacity: 0.8 },
-  gamesContainer: { padding: 20 },
+  gamesContainer: {
+    paddingTop: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingBottom: 0, // Reduce bottom padding by 50%
+  },
   noGamesText: {
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
@@ -292,20 +333,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 32,
   },
-  submitVotesContainer: { padding: 20, paddingTop: 0 },
+  submitVotesContainer: {
+    paddingTop: 10,
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingBottom: 0,
+    width: '100%', alignSelf: 'stretch'
+  },
   submitVotesButton: {
     backgroundColor: '#1d4ed8',
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
+    width: '100%', // Make button full width
+    alignSelf: 'stretch',
   },
   submitVotesButtonText: {
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#ffffff',
   },
-  bottomActionsContainer: { padding: 20 },
-  viewResultsContainer: { marginTop: 8 },
+  bottomActionsContainer: { width: '100%', alignSelf: 'stretch', marginTop: 8 },
+  viewResultsContainer: { marginTop: 8, width: '100%', alignSelf: 'stretch' },
   viewResultsButton: {
     backgroundColor: '#ff9654',
     paddingVertical: 14,
@@ -314,6 +363,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
+    width: '100%', // Make button full width
+    alignSelf: 'stretch',
   },
   viewResultsButtonText: {
     fontSize: 16,
@@ -337,5 +388,28 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     color: '#ff9654',
     textDecorationLine: 'underline',
+  },
+  commentContainer: {
+    marginTop: 4,
+    marginBottom: 10,
+    paddingHorizontal: 20,
+    width: '100%',
+  },
+  commentLabel: {
+    fontSize: 15,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  commentInput: {
+    minHeight: 48,
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 15,
+    fontFamily: 'Poppins-Regular',
+    backgroundColor: '#fff',
+    color: '#1a2b5f',
   },
 });

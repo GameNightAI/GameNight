@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, Share2, Trash2, X, Copy, Check } from 'lucide-react-native';
+import { Plus, Share2, Trash2, X, Copy, Check, BarChart3 } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { supabase } from '@/services/supabase';
@@ -12,15 +12,20 @@ import { CreatePollModal } from '@/components/CreatePollModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { PollsEmptyState } from '@/components/PollsEmptyState';
 
+type TabType = 'all' | 'created' | 'other';
+
 export default function PollsScreen() {
   const [polls, setPolls] = useState<Poll[]>([]);
-  const [pollGameCounts, setPollGameCounts] = useState<Record<string, number>>({});
+  const [allPolls, setAllPolls] = useState<Poll[]>([]);
+  const [otherUsersPolls, setOtherUsersPolls] = useState<Poll[]>([]);
+  const [creatorMap, setCreatorMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
   const [showShareLink, setShowShareLink] = useState<string | null>(null);
   const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('all');
   const router = useRouter();
 
   useEffect(() => {
@@ -37,30 +42,62 @@ export default function PollsScreen() {
         return;
       }
 
-      const { data, error } = await supabase
+      // Load all polls
+      const { data: allPollsData, error: allPollsError } = await supabase
         .from('polls')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (allPollsError) throw allPollsError;
 
-      setPolls(data);
-
-      // Fetch game counts for each poll
-      const pollIds = data.map((poll: Poll) => poll.id);
-      if (pollIds.length > 0) {
-        const { data: pollGames, error: pollGamesError } = await supabase
-          .from('poll_games')
-          .select('poll_id', { count: 'exact', head: false });
-        if (!pollGamesError && pollGames) {
-          const counts: Record<string, number> = {};
-          pollIds.forEach((id: string) => {
-            counts[id] = pollGames.filter(pg => pg.poll_id === id).length;
+      // Fetch creator usernames/emails for all unique user_ids
+      const userIds = Array.from(new Set((allPollsData || []).map(p => p.user_id)));
+      let creatorMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, username, email')
+          .in('id', userIds);
+        if (profiles) {
+          profiles.forEach((profile: any) => {
+            creatorMap[profile.id] = profile.email || profile.username || profile.id;
           });
-          setPollGameCounts(counts);
         }
       }
+      setCreatorMap(creatorMap);
+
+      setAllPolls([]); // will be set below
+
+      // Separate created polls and other users' polls
+      const createdPolls = allPollsData?.filter(poll => poll.user_id === user.id) || [];
+
+      // Get polls from other users that the current user has voted in
+      const { data: userVotes, error: votesError } = await supabase
+        .from('votes')
+        .select('poll_id, voter_name')
+        .eq('voter_name', user.email || 'Anonymous');
+
+      if (votesError) throw votesError;
+
+      let otherUsersPolls: Poll[] = [];
+      if (userVotes && userVotes.length > 0) {
+        const votedPollIds = [...new Set(userVotes.map(vote => vote.poll_id))];
+        otherUsersPolls = allPollsData?.filter(poll =>
+          poll.user_id !== user.id && votedPollIds.includes(poll.id)
+        ) || [];
+      }
+
+      setPolls(createdPolls);
+      setOtherUsersPolls(otherUsersPolls);
+
+      // Set allPolls to be the union of createdPolls and otherUsersPolls (no duplicates)
+      const uniqueAllPolls = [
+        ...createdPolls,
+        ...otherUsersPolls.filter(
+          (poll) => !createdPolls.some((myPoll) => myPoll.id === poll.id)
+        ),
+      ];
+      setAllPolls(uniqueAllPolls);
     } catch (err) {
       console.error('Error loading polls:', err);
       setError(err instanceof Error ? err.message : 'Failed to load polls');
@@ -119,9 +156,38 @@ export default function PollsScreen() {
     return <ErrorState message={error} onRetry={loadPolls} />;
   }
 
+  const currentPolls = activeTab === 'all' ? allPolls : activeTab === 'created' ? polls : otherUsersPolls;
+  const isCreator = activeTab === 'created';
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+            onPress={() => setActiveTab('all')}
+          >
+            <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+              All Polls ({allPolls.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'created' && styles.activeTab]}
+            onPress={() => setActiveTab('created')}
+          >
+            <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
+              My Polls ({polls.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'other' && styles.activeTab]}
+            onPress={() => setActiveTab('other')}
+          >
+            <Text style={[styles.tabText, activeTab === 'other' && styles.activeTabText]}>
+              Voted In ({otherUsersPolls.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => setCreateModalVisible(true)}
@@ -178,7 +244,7 @@ export default function PollsScreen() {
       )}
 
       <FlatList
-        data={polls}
+        data={currentPolls}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
           <Animated.View
@@ -193,21 +259,29 @@ export default function PollsScreen() {
                 <Text style={styles.pollDescription}>{item.description}</Text>
               )}
               <Text style={styles.pollDate}>
-                Created {new Date(item.created_at).toLocaleDateString()}
+                Created on {new Date(item.created_at).toLocaleDateString()}
               </Text>
             </View>
             <View style={styles.pollActions}>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => setPollToDelete(item)}
-              >
-                <Trash2 size={20} color="#e74c3c" />
-              </TouchableOpacity>
+              {isCreator && (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => setPollToDelete(item)}
+                >
+                  <Trash2 size={20} color="#e74c3c" />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={styles.shareButton}
                 onPress={() => handleShare(item.id)}
               >
                 <Share2 size={20} color="#ff9654" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.resultsButton}
+                onPress={() => router.push({ pathname: '/poll/[id]/results', params: { id: item.id } })}
+              >
+                <BarChart3 size={20} color="#4b5563" />
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -249,10 +323,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 4,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  activeTab: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  tabText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  activeTabText: {
     color: '#1a2b5f',
+    fontFamily: 'Poppins-SemiBold',
   },
   createButton: {
     flexDirection: 'row',
@@ -372,11 +469,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff5ef',
     borderRadius: 8,
   },
-  emptyText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    marginTop: 32,
+  resultsButton: {
+    padding: 8,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    marginLeft: 4,
   },
 });
