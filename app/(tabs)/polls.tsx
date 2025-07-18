@@ -192,32 +192,6 @@ export default function PollsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-            onPress={() => setActiveTab('all')}
-          >
-            <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-              All Polls ({allPolls.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'created' && styles.activeTab]}
-            onPress={() => setActiveTab('created')}
-          >
-            <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
-              My Polls ({polls.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'other' && styles.activeTab]}
-            onPress={() => setActiveTab('other')}
-          >
-            <Text style={[styles.tabText, activeTab === 'other' && styles.activeTabText]}>
-              Voted In ({otherUsersPolls.length})
-            </Text>
-          </TouchableOpacity>
-        </View>
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => setCreateModalVisible(true)}
@@ -225,6 +199,34 @@ export default function PollsScreen() {
           <Plus size={20} color="#ffffff" />
           <Text style={styles.createButtonText}>Create Poll</Text>
         </TouchableOpacity>
+        <View style={styles.tabsWrapper}>
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+              onPress={() => setActiveTab('all')}
+            >
+              <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+                All Polls ({allPolls.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'created' && styles.activeTab]}
+              onPress={() => setActiveTab('created')}
+            >
+              <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
+                My Polls ({polls.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'other' && styles.activeTab]}
+              onPress={() => setActiveTab('other')}
+            >
+              <Text style={[styles.tabText, activeTab === 'other' && styles.activeTabText]}>
+                Voted In ({otherUsersPolls.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       {showShareLink && (
@@ -350,18 +352,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f7f9fc',
+    paddingHorizontal: 8,
   },
   header: {
     padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  tabsWrapper: {
+    width: '100%',
+    marginTop: 8,
+    alignItems: 'flex-start',
   },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
     padding: 4,
+    flexShrink: 1,
   },
   tab: {
     paddingHorizontal: 16,
@@ -393,6 +404,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     gap: 8,
+    marginRight: 8,
   },
   createButtonText: {
     fontFamily: 'Poppins-SemiBold',
@@ -452,8 +464,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listContent: {
-    padding: 20,
+    paddingHorizontal: 0,
     paddingTop: 0,
+    paddingBottom: 32,
   },
   pollCard: {
     backgroundColor: '#ffffff',

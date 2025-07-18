@@ -1,6 +1,6 @@
 // poll/components/GameCard.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { ThumbsDown, ThumbsUp, Heart, Calendar, Star, Baby, Brain, ChevronDown, ChevronUp } from 'lucide-react-native';
 
@@ -30,7 +30,20 @@ interface Props {
   disabled?: boolean;
 }
 
+// Move this function outside of StyleSheet.create
+const infoAndVoteMobileWrap = (isMobile: boolean): import('react-native').ViewStyle => ({
+  flex: 1,
+  flexDirection: isMobile ? 'column' : 'row',
+  alignItems: isMobile ? 'flex-start' : 'center',
+  justifyContent: 'space-between',
+  marginLeft: isMobile ? 0 : 12,
+  gap: 8,
+  width: '100%',
+});
+
 export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props) => {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 500;
   const getButtonStyle = (voteType: VoteType) => {
     const isSelected = selectedVote === voteType;
 
@@ -65,13 +78,8 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         activeOpacity={0.85}
         onPress={toggleExpanded}
       >
-        <View style={styles.contentRowWithThumb}>
-          <Image
-            source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
-            style={styles.thumbnail}
-            resizeMode="cover"
-          />
-          <View style={styles.infoAndVote}>
+        <View style={[isMobile ? styles.contentColWithThumb : styles.contentRowWithThumb]}>
+          <View style={infoAndVoteMobileWrap(isMobile)}>
             <View style={styles.info}>
               <Text style={styles.name}>{game.name}</Text>
               <Text style={styles.details}>
@@ -115,6 +123,11 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               </View>
             </View>
           </View>
+          <Image
+            source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
+            style={[styles.thumbnail, isMobile ? styles.thumbnailMobile : null]}
+            resizeMode="cover"
+          />
         </View>
       </TouchableOpacity>
       {isExpanded && (
@@ -182,11 +195,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  contentColWithThumb: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
   thumbnail: {
     width: 80,
     height: 80,
     borderRadius: 8,
     backgroundColor: '#f0f0f0',
+    marginTop: 0,
+  },
+  thumbnailMobile: {
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 4,
   },
   infoAndVote: {
     flex: 1,
@@ -195,12 +219,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginLeft: 12,
     gap: 8,
-  },
-  content: {
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   info: {
     flex: 1,
