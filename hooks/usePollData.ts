@@ -184,6 +184,8 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           complexity: game.complexity || 1,
           complexity_tier: game.complexity_tier || 1,
           complexity_desc: game.complexity_desc || '',
+          average: game.average ?? null, // <-- Added this line
+          bayesaverage: game.bayesaverage ?? null, // <-- Add this line for type compatibility
           votes: voteData,
           userVote,
         };
