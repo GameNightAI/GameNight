@@ -4,12 +4,12 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 export const LoadingState: React.FC = () => {
   return (
-    <Animated.View 
+    <Animated.View
       entering={FadeIn.duration(500)}
       style={styles.container}
     >
       <ActivityIndicator size="large" color="#ff9654" />
-      <Text style={styles.loadingText}>Loading your collection...</Text>
+      <Text style={styles.loadingText}>Loading your collection and polls...</Text>
       <Text style={styles.subText}>
         This may take a moment as we connect to BoardGameGeek
       </Text>
