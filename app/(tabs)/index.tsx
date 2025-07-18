@@ -39,7 +39,7 @@ export default function ToolsScreen() {
   ];
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -52,9 +52,9 @@ export default function ToolsScreen() {
           style={styles.backgroundImage}
         />
         <View style={styles.overlay} />
-        
+
         <View style={styles.headerContent}>
-          <Text style={styles.title}>Game Tools</Text>
+          {/*<Text style={styles.title}>Game Tools</Text>*/}
           <Text style={styles.subtitle}>Essential utilities for your board game sessions</Text>
         </View>
       </View>
@@ -63,7 +63,7 @@ export default function ToolsScreen() {
       <View style={styles.toolsSection}>
         {tools.map((tool, index) => {
           const IconComponent = tool.icon;
-          
+
           return (
             <Animated.View
               key={tool.id}
@@ -78,12 +78,12 @@ export default function ToolsScreen() {
                 <View style={styles.toolIconContainer}>
                   <IconComponent size={32} color={tool.color} />
                 </View>
-                
+
                 <View style={styles.toolContent}>
                   <Text style={styles.toolTitle}>{tool.title}</Text>
                   <Text style={styles.toolDescription}>{tool.description}</Text>
                 </View>
-                
+
                 <View style={styles.toolArrow}>
                   <View style={[styles.arrowIcon, { backgroundColor: tool.color }]} />
                 </View>
@@ -106,10 +106,10 @@ const styles = StyleSheet.create({
     minHeight: screenHeight,
   },
   headerSection: {
-    height: Math.max(220, screenHeight * 0.3), // Reduced height slightly
+    height: Math.max(110, screenHeight * 0.1), // Reduced height slightly
     position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   backgroundImage: {
     position: 'absolute',
@@ -127,25 +127,27 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     paddingHorizontal: 20,
-    paddingTop: 20, // Reduced from 40 to 20
-    alignItems: 'center',
+    paddingTop: 0, // Reduced from 40 to 20
+    alignItems: 'flex-start',
     zIndex: 1,
   },
-  title: {
+  /*title: {
     fontFamily: 'Poppins-Bold',
     fontSize: Math.min(32, screenHeight * 0.04), // Responsive font size
     color: '#ffffff',
     textAlign: 'center',
     marginBottom: 8,
-  },
+  },*/
   subtitle: {
     fontFamily: 'Poppins-Regular',
     fontSize: Math.min(16, screenHeight * 0.02), // Responsive font size
     color: '#ffffff',
-    textAlign: 'center',
+    textAlign: 'left',
+    paddingTop: 0,
     opacity: 0.9,
     lineHeight: 22,
-    maxWidth: 300,
+    // maxWidth: 300,
+    marginTop: 30, // Shift up by about 20 units
   },
   toolsSection: {
     flex: 1,

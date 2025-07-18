@@ -12,6 +12,7 @@ export default function PollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [user, setUser] = useState<any>(null);
+  const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
 
   const { pollTitle, gameResults, hasVoted, loading, error } = usePollResults(id as string | undefined);
 
@@ -21,7 +22,19 @@ export default function PollResultsScreen() {
       setUser(user);
     };
     getUser();
-  }, []);
+
+    // Fetch poll comments
+    const fetchComments = async () => {
+      if (!id) return;
+      const { data, error } = await supabase
+        .from('poll_comments')
+        .select('voter_name, comment_text')
+        .eq('poll_id', id)
+        .order('id', { ascending: false });
+      if (!error && data) setComments(data);
+    };
+    fetchComments();
+  }, [id]);
 
   if (loading) return <LoadingState />;
 
@@ -155,6 +168,18 @@ export default function PollResultsScreen() {
                 <GameResultCard game={game} />
               </View>
             ))}
+            {/* Comments Section at the bottom of the scrollview */}
+            {comments.length > 0 && (
+              <View style={styles.commentsContainer}>
+                <Text style={styles.commentsTitle}>Comments</Text>
+                {comments.map((c, idx) => (
+                  <View key={idx} style={styles.commentItem}>
+                    <Text style={styles.commentVoter}>{c.voter_name || 'Anonymous'}:</Text>
+                    <Text style={styles.commentText}>{c.comment_text}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -319,5 +344,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#ffffff',
+  },
+  commentsContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+  },
+  commentsTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 8,
+  },
+  commentItem: {
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  commentVoter: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    marginBottom: 2,
+  },
+  commentText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#1a2b5f',
   },
 });

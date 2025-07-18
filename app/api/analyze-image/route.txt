@@ -1,0 +1,54 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { OpenAI } from 'openai';
+
+// Helper to parse multipart form data (works in Node.js environments)
+async function parseMultipartFormData(req: NextRequest) {
+  const contentType = req.headers.get('content-type') || '';
+  if (!contentType.startsWith('multipart/form-data')) {
+    throw new Error('Invalid content-type');
+  }
+  // Use a third-party library like 'busboy' or 'formidable' in a real app.
+  // For this example, we'll use a simple approach for small files.
+  const boundary = contentType.split('boundary=')[1];
+  const body = await req.arrayBuffer();
+  const bodyStr = Buffer.from(body).toString('binary');
+  const parts = bodyStr.split('--' + boundary);
+  for (const part of parts) {
+    if (part.includes('Content-Disposition: form-data;') && part.includes('filename=')) {
+      const match = part.match(/filename="(.+?)"/);
+      if (!match) continue;
+      const filename = match[1];
+      const contentTypeMatch = part.match(/Content-Type: (.+)/);
+      const fileType = contentTypeMatch ? contentTypeMatch[1].trim() : 'image/jpeg';
+      const fileData = part.split('\r\n\r\n')[1]?.split('\r\n')[0];
+      if (!fileData) continue;
+      const buffer = Buffer.from(fileData, 'binary');
+      return { buffer, fileType, filename };
+    }
+  }
+  throw new Error('No file found');
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { buffer, fileType } = await parseMultipartFormData(req);
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const base64 = buffer.toString('base64');
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-vision-preview',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Describe this image.' },
+            { type: 'image_url', image_url: { url: `data:${fileType};base64,${base64}` } }
+          ]
+        }
+      ],
+      max_tokens: 300,
+    });
+    return NextResponse.json({ result: response.choices[0]?.message?.content || 'No result' });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+} 
