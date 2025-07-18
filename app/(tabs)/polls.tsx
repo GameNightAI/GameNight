@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus, Share2, Trash2, X, Copy, Check, BarChart3 } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import * as Clipboard from 'expo-clipboard';
 
 import { supabase } from '@/services/supabase';
 import { Poll } from '@/types/poll';
@@ -107,18 +108,35 @@ export default function PollsScreen() {
   };
 
   const handleShare = async (pollId: string) => {
-    const shareUrl = `${window.location.origin}/poll/${pollId}`;
+    // Use a proper base URL for React Native
+    const baseUrl = Platform.select({
+      web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
+      default: 'https://gamenyte.netlify.app', // Replace with your actual domain
+    });
+
+    const shareUrl = `${baseUrl}/poll/${pollId}`;
     setShowShareLink(shareUrl);
 
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Vote on which game to play!',
-          text: 'Help us decide which game to play by voting in this poll.',
-          url: shareUrl,
-        });
+      if (Platform.OS === 'web') {
+        // Web-specific sharing
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Vote on which game to play!',
+            text: 'Help us decide which game to play by voting in this poll.',
+            url: shareUrl,
+          });
+        } else {
+          // Fallback for web browsers without native sharing
+          await Clipboard.setStringAsync(shareUrl);
+          setShowCopiedConfirmation(true);
+          setTimeout(() => {
+            setShowCopiedConfirmation(false);
+          }, 2000);
+        }
       } else {
-        await navigator.clipboard.writeText(shareUrl);
+        // Mobile-specific sharing
+        await Clipboard.setStringAsync(shareUrl);
         setShowCopiedConfirmation(true);
         setTimeout(() => {
           setShowCopiedConfirmation(false);
@@ -126,6 +144,18 @@ export default function PollsScreen() {
       }
     } catch (err) {
       console.log('Error sharing:', err);
+      // Final fallback
+      try {
+        await Clipboard.setStringAsync(shareUrl);
+        setShowCopiedConfirmation(true);
+        setTimeout(() => {
+          setShowCopiedConfirmation(false);
+        }, 2000);
+      } catch (clipboardErr) {
+        console.log('Error copying to clipboard:', clipboardErr);
+        // Last resort: show the URL in an alert for manual copying
+        alert(`Share this link: ${shareUrl}`);
+      }
     }
   };
 
@@ -221,12 +251,16 @@ export default function PollsScreen() {
             />
             <TouchableOpacity
               style={styles.copyButton}
-              onPress={() => {
-                navigator.clipboard.writeText(showShareLink);
-                setShowCopiedConfirmation(true);
-                setTimeout(() => {
-                  setShowCopiedConfirmation(false);
-                }, 2000);
+              onPress={async () => {
+                try {
+                  await Clipboard.setStringAsync(showShareLink);
+                  setShowCopiedConfirmation(true);
+                  setTimeout(() => {
+                    setShowCopiedConfirmation(false);
+                  }, 2000);
+                } catch (err) {
+                  console.log('Error copying to clipboard:', err);
+                }
               }}
             >
               {showCopiedConfirmation ? (
