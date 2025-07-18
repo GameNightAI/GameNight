@@ -142,7 +142,7 @@ export default function CollectionScreen() {
         return;  // Exit early since username is invalid
       }
 
-      username = username.replace('@', '')); // Requested in GAM-134 ("Ignore @ when people enter BGG ID")
+      username = username.replace('@', ''); // Requested in GAM-134 ("Ignore @ when people enter BGG ID")
       const bggGames = await fetchGames(username);
 
       if (!bggGames || bggGames.length === 0) {
