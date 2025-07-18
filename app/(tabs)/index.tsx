@@ -55,7 +55,7 @@ export default function ToolsScreen() {
 
         <View style={styles.headerContent}>
           {/*<Text style={styles.title}>Game Tools</Text>*/}
-          <Text style={styles.subtitle}>Essential utilities for your board game sessions</Text>
+          <Text style={styles.subtitle}>Useful utilities for your board game sessions</Text>
         </View>
       </View>
 

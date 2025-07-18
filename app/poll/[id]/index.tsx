@@ -189,6 +189,7 @@ export default function PollScreen() {
       await AsyncStorage.setItem(`voted_${id}`, 'true');
       await reload();
       setComment(''); // Clear comment after successful submission
+      navigateToResults();
       Toast.show({ type: 'success', text1: 'Votes submitted!' });
     } catch (err) {
       console.error('Error submitting votes:', err);
@@ -211,6 +212,9 @@ export default function PollScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/polls')}>
+          <Text style={styles.backLink}>&larr; Back to Polls</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>
           {poll?.title === 'Vote on games' && games && games.length > 0
             ? `Vote on games (${games.length} game${games.length === 1 ? '' : 's'})`
@@ -411,5 +415,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     backgroundColor: '#fff',
     color: '#1a2b5f',
+  },
+  backLink: {
+    color: '#1d4ed8',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    marginBottom: 8,
+    textDecorationLine: 'underline',
+    alignSelf: 'flex-start',
   },
 });

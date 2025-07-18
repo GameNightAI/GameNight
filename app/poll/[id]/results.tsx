@@ -114,6 +114,9 @@ export default function PollResultsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/polls')}>
+          <Text style={styles.backLink}>&larr; Back to Polls</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>Poll Results</Text>
         <Text style={styles.subtitle}>{pollTitle}</Text>
       </View>
@@ -160,9 +163,9 @@ export default function PollResultsScreen() {
                         ? `Tied for ${game.rank}${getOrdinalSuffix(game.rank)} Place`
                         : `${game.rank}${getOrdinalSuffix(game.rank)} Place`}
                     </Text>
-                    <Text style={styles.scoreText}>
+                    {/* <Text style={styles.scoreText}>
                       Score: {game.score}
-                    </Text>
+                    </Text> */}
                   </View>
                 </View>
                 <GameResultCard game={game} />
@@ -224,10 +227,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Poppins-Regular',
     color: '#fff',
-    marginBottom: 12,
+    opacity: 0.8,
   },
   scrollView: {
     flex: 1,
@@ -373,5 +376,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#1a2b5f',
+  },
+  backLink: {
+    color: '#1d4ed8',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    marginBottom: 8,
+    textDecorationLine: 'underline',
+    alignSelf: 'flex-start',
   },
 });
