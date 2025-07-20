@@ -101,6 +101,8 @@ export default function PollsScreen() {
           (poll) => !createdPolls.some((myPoll) => myPoll.id === poll.id)
         ),
       ];
+      // Sort by created_at to ensure proper date ordering
+      uniqueAllPolls.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setAllPolls(uniqueAllPolls);
     } catch (err) {
       console.error('Error loading polls:', err);

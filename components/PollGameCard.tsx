@@ -44,11 +44,13 @@ const infoAndVoteMobileWrap = (isMobile: boolean): import('react-native').ViewSt
 export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 500;
+  const isSmallScreen = width < 400;
   const getButtonStyle = (voteType: VoteType) => {
     const isSelected = selectedVote === voteType;
 
     return [
       styles.voteButton,
+      isSmallScreen && styles.voteButtonSmall,
       isSelected && styles.voteButtonSelected,
       isSelected && voteType === VoteType.THUMBS_DOWN && styles.thumbsDownSelected,
       isSelected && voteType === VoteType.THUMBS_UP && styles.thumbsUpSelected,
@@ -81,26 +83,26 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         <View style={[isMobile ? styles.contentColWithThumb : styles.contentRowWithThumb]}>
           <View style={infoAndVoteMobileWrap(isMobile)}>
             <View style={styles.info}>
-              <Text style={styles.name}>{game.name}</Text>
-              <Text style={styles.details}>
+              <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
+              <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
                 {game.min_players}-{game.max_players} players • {game.playing_time} min
               </Text>
             </View>
             <View style={styles.voteButtonsContainer}>
-              <View style={styles.voteButtons}>
+              <View style={[styles.voteButtons, isSmallScreen && styles.voteButtonsSmall]}>
                 <TouchableOpacity
                   style={getButtonStyle(VoteType.THUMBS_DOWN)}
                   onPress={e => { e.stopPropagation(); onVote(game.id, VoteType.THUMBS_DOWN); }}
                   disabled={disabled}
                 >
-                  <ThumbsDown size={20} color={getIconColor(VoteType.THUMBS_DOWN)} />
+                  <ThumbsDown size={isSmallScreen ? 16 : 20} color={getIconColor(VoteType.THUMBS_DOWN)} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={getButtonStyle(VoteType.THUMBS_UP)}
                   onPress={e => { e.stopPropagation(); onVote(game.id, VoteType.THUMBS_UP); }}
                   disabled={disabled}
                 >
-                  <ThumbsUp size={20} color={getIconColor(VoteType.THUMBS_UP)} />
+                  <ThumbsUp size={isSmallScreen ? 16 : 20} color={getIconColor(VoteType.THUMBS_UP)} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={getButtonStyle(VoteType.DOUBLE_THUMBS_UP)}
@@ -108,7 +110,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
                   disabled={disabled}
                 >
                   <Heart
-                    size={20}
+                    size={isSmallScreen ? 16 : 20}
                     color={getIconColor(VoteType.DOUBLE_THUMBS_UP)}
                     fill={selectedVote === VoteType.DOUBLE_THUMBS_UP ? getIconColor(VoteType.DOUBLE_THUMBS_UP) : 'transparent'}
                   />
@@ -116,16 +118,20 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               </View>
               <View style={styles.chevronIcon}>
                 {isExpanded ? (
-                  <ChevronUp size={24} color="#ff9654" />
+                  <ChevronUp size={isSmallScreen ? 20 : 24} color="#ff9654" />
                 ) : (
-                  <ChevronDown size={24} color="#ff9654" />
+                  <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
                 )}
               </View>
             </View>
           </View>
           <Image
             source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
-            style={[styles.thumbnail, isMobile ? styles.thumbnailMobile : null]}
+            style={[
+              styles.thumbnail,
+              isMobile ? styles.thumbnailMobile : null,
+              isSmallScreen ? styles.thumbnailSmall : null
+            ]}
             resizeMode="cover"
           />
         </View>
@@ -212,6 +218,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
   },
+  thumbnailSmall: {
+    width: 60,
+    height: 60,
+  },
   infoAndVote: {
     flex: 1,
     flexDirection: 'row',
@@ -230,10 +240,16 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginBottom: 4,
   },
+  nameSmall: {
+    fontSize: 14,
+  },
   details: {
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
     color: '#666666',
+  },
+  detailsSmall: {
+    fontSize: 12,
   },
   voteButtons: {
     flexDirection: 'row',
@@ -248,6 +264,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  voteButtonSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   voteButtonSelected: {
     backgroundColor: '#ffffff',
@@ -322,6 +343,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  voteButtonsSmall: {
+    gap: 4,
   },
   chevronIcon: {
     marginLeft: 8,
