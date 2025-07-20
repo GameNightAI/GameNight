@@ -266,7 +266,7 @@ export default function CollectionScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.analyzeButton}
-            onPress={() => router.push('/ImageAnalyzer')}
+            onPress={() => router.push('/image-analyzer/' as any)}
           >
             <Camera size={20} color="#ff9654" />
             <Text style={styles.analyzeButtonText}>Analyze Image</Text>
