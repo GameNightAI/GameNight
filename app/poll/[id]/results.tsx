@@ -7,6 +7,8 @@ import { usePollResults } from '@/hooks/usePollResults';
 import { GameResultCard } from '@/components/PollGameResultCard';
 import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PollResultsScreen() {
   const router = useRouter();
@@ -34,6 +36,17 @@ export default function PollResultsScreen() {
       if (!error && data) setComments(data);
     };
     fetchComments();
+
+    // Check if user just updated their votes
+    const checkForVoteUpdate = async () => {
+      if (!id) return;
+      const voteUpdated = await AsyncStorage.getItem(`vote_updated_${id}`);
+      if (voteUpdated === 'true') {
+        Toast.show({ type: 'success', text1: 'Vote updated!' });
+        await AsyncStorage.removeItem(`vote_updated_${id}`);
+      }
+    };
+    checkForVoteUpdate();
   }, [id]);
 
   if (loading) return <LoadingState />;

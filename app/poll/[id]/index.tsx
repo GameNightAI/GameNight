@@ -115,6 +115,8 @@ export default function PollScreen() {
       console.log('Submitting votes with name:', finalName);
       console.log('Pending votes:', pendingVotes);
 
+      let updated = false; // Track if any votes were updated
+
       // Submit each vote
       for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
@@ -151,6 +153,7 @@ export default function PollScreen() {
               console.error('Error updating vote:', updateError);
               throw updateError;
             }
+            updated = true; // Mark as updated
           } else {
             console.log('Vote already exists with same type, skipping');
           }
@@ -173,6 +176,11 @@ export default function PollScreen() {
       // Save voter name for future use
       await AsyncStorage.setItem('voter_name', finalName);
 
+      // Set flag if votes were updated
+      if (updated) {
+        await AsyncStorage.setItem(`vote_updated_${id}`, 'true');
+      }
+
       // Insert comment if present
       if (comment.trim()) {
         const { error: commentError } = await supabase.from('poll_comments').insert({
@@ -190,7 +198,10 @@ export default function PollScreen() {
       await reload();
       setComment(''); // Clear comment after successful submission
       navigateToResults();
-      Toast.show({ type: 'success', text1: 'Votes submitted!' });
+      // Only show toast for new votes, not updated votes
+      if (!updated) {
+        Toast.show({ type: 'success', text1: 'Votes submitted!' });
+      }
     } catch (err) {
       console.error('Error submitting votes:', err);
       Toast.show({ type: 'error', text1: 'Failed to submit votes' });
@@ -241,14 +252,16 @@ export default function PollScreen() {
         }}
         hasError={nameError}
       />
-      <View style={styles.signUpContainer}>
-        <Text style={styles.signUpText}>
-          Want to create your own polls?{' '}
-        </Text>
-        <TouchableOpacity onPress={() => router.push('/auth/register')}>
-          <Text style={styles.signUpLink}>Sign up for free</Text>
-        </TouchableOpacity>
-      </View>
+      {!user && (
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>
+            Want to create your own polls?{' '}
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+            <Text style={styles.signUpLink}>Sign up for free</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.gamesContainer}>
         {games.length === 0 ? (
