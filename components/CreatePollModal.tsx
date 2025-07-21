@@ -96,6 +96,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         image: game.image_url,
         minAge: game.min_age,
         is_cooperative: game.is_cooperative,
+        is_teambased: game.is_teambased,
         complexity: game.complexity,
         minPlaytime: game.minplaytime,
         maxPlaytime: game.maxplaytime,
