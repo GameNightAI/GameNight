@@ -99,7 +99,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 <Calendar size={16} color="#ff9654" />
                 <Text style={styles.detailLabel}>Publication Year</Text>
                 <Text style={styles.detailValue}>
-                  {game.yearPublished || 'Unknown'}
+                  {(game.yearPublished >= 0 ? game.yearPublished : -game.yearPublished + ' BCE') || 'Unknown'}
                 </Text>
               </View>
 
@@ -127,7 +127,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 <Baby size={16} color="#e74c3c" />
                 <Text style={styles.detailLabel}>Minimum Age</Text>
                 <Text style={styles.detailValue}>
-                  {game.minAge ? `${game.minAge}+` : 'N/A'}
+                  {game.minAge ? `${game.minAge}` : 'N/A'}
                 </Text>
               </View>
             </View>
