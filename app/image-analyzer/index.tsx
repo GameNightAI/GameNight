@@ -1,3 +1,46 @@
+// Temporarily disabled for deployment
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+} from 'react-native';
+
+export default function ImageAnalyzer() {
+  // This component is temporarily disabled for deployment
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Image Analyzer</Text>
+      <Text style={styles.disabledText}>This feature is temporarily disabled for deployment.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#f7f9fc',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#1a2b5f',
+  },
+  disabledText: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666666',
+    lineHeight: 24,
+  },
+});
+
+/*
+// Original implementation commented out for deployment
 import React, { useState } from 'react';
 import {
   View,
@@ -237,4 +280,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-}); 
+});
+*/ 

@@ -1,11 +1,12 @@
 [build]
-  functions = "netlify/functions"
+  # functions = "netlify/functions"  # Temporarily disabled for deployment
   publish = "build" # or "dist", "public", or "." depending on your frontend output folder
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+# Temporarily disabled for deployment
+# [[redirects]]
+#   from = "/api/*"
+#   to = "/.netlify/functions/:splat"
+#   status = 200
 
 [[redirects]]
   from = "*"
