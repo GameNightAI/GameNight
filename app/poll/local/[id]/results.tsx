@@ -74,26 +74,26 @@ export default function LocalPollResultsScreen() {
   }
   const rankedResults = tempRanked;
 
-  const getRankingIcon = (index: number) => {
-    switch (index) {
-      case 0:
-        return <Trophy size={24} color="#FFD700" />;
+  const getRankingIcon = (rank: number) => {
+    switch (rank) {
       case 1:
-        return <Medal size={24} color="#C0C0C0" />;
+        return <Trophy size={24} color="#FFC300" />; // Higher-contrast gold
       case 2:
+        return <Medal size={24} color="#A6B1C2" />;
+      case 3:
         return <Award size={24} color="#CD7F32" />;
       default:
         return null;
     }
   };
 
-  const getRankingColor = (index: number) => {
-    switch (index) {
-      case 0:
-        return '#FFD700';
+  const getRankingColor = (rank: number) => {
+    switch (rank) {
       case 1:
-        return '#C0C0C0';
+        return '#FFC300'; // Higher-contrast gold
       case 2:
+        return '#A6B1C2';
+      case 3:
         return '#CD7F32';
       default:
         return '#666666';
@@ -135,8 +135,8 @@ export default function LocalPollResultsScreen() {
             {rankedResults.map((game, index) => (
               <View key={game.id} style={styles.resultItem}>
                 <View style={styles.rankingContainer}>
-                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(game.rank - 1) }]}>
-                    {getRankingIcon(game.rank - 1)}
+                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(game.rank) }]}>
+                    {getRankingIcon(game.rank)}
                     <Text style={styles.rankingNumber}>{game.rank}</Text>
                   </View>
                   <View style={styles.rankingInfo}>
