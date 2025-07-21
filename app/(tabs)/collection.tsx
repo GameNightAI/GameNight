@@ -59,7 +59,7 @@ export default function CollectionScreen() {
         name: game.name,
         yearPublished: game.year_published,
         thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
-        image: game.thumbnail || 'https://via.placeholder.com/300?text=No+Image',
+        image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
         min_players: game.min_players,
         max_players: game.max_players,
         playing_time: game.playing_time,
