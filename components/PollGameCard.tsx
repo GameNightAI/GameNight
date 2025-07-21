@@ -30,24 +30,12 @@ interface Props {
   disabled?: boolean;
 }
 
-// Move this function outside of StyleSheet.create
-const infoAndVoteMobileWrap = (isMobile: boolean): import('react-native').ViewStyle => ({
-  flex: 1,
-  flexDirection: isMobile ? 'column' : 'row',
-  alignItems: isMobile ? 'flex-start' : 'center',
-  justifyContent: 'space-between',
-  marginLeft: isMobile ? 0 : 12,
-  gap: 8,
-  width: '100%',
-});
-
 export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 500;
   const isSmallScreen = width < 400;
   const getButtonStyle = (voteType: VoteType) => {
     const isSelected = selectedVote === voteType;
-
     return [
       styles.voteButton,
       isSmallScreen && styles.voteButtonSmall,
@@ -57,7 +45,6 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
       isSelected && voteType === VoteType.DOUBLE_THUMBS_UP && styles.doubleThumbsUpSelected,
     ];
   };
-
   const getIconColor = (voteType: VoteType) => {
     if (selectedVote === voteType) {
       switch (voteType) {
@@ -68,8 +55,6 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
     }
     return '#666666';
   };
-
-  // Add expand/collapse state
   const [isExpanded, setIsExpanded] = React.useState(false);
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
 
@@ -80,8 +65,8 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         activeOpacity={0.85}
         onPress={toggleExpanded}
       >
-        <View style={[isMobile ? styles.contentColWithThumb : styles.contentRowWithThumb]}>
-          <View style={infoAndVoteMobileWrap(isMobile)}>
+        <View style={[styles.contentRowWithThumb, isSmallScreen && styles.contentRowWithThumbSmall]}>
+          <View style={[styles.infoAndVote, isSmallScreen && styles.infoAndVoteSmall]}>
             <View style={styles.info}>
               <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
               <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
@@ -129,8 +114,8 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
             source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
             style={[
               styles.thumbnail,
-              isMobile ? styles.thumbnailMobile : null,
-              isSmallScreen ? styles.thumbnailSmall : null
+              isMobile && styles.thumbnailMobile,
+              isSmallScreen && styles.thumbnailSmall
             ]}
             resizeMode="cover"
           />
@@ -189,7 +174,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     marginBottom: 16,
-    padding: 12, // Add padding similar to GameItem
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -201,10 +186,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  contentColWithThumb: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 12,
+  contentRowWithThumbSmall: {
+    gap: 6,
+    padding: 0,
   },
   thumbnail: {
     width: 80,
@@ -215,24 +199,27 @@ const styles = StyleSheet.create({
   },
   thumbnailMobile: {
     alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 0,
+    marginBottom: 0,
   },
   thumbnailSmall: {
-    width: 60,
-    height: 60,
+    width: 48,
+    height: 48,
   },
   infoAndVote: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginLeft: 12,
+    marginLeft: 0,
     gap: 8,
+  },
+  infoAndVoteSmall: {
+    gap: 4,
   },
   info: {
     flex: 1,
-    marginRight: 16,
+    marginRight: 8,
   },
   name: {
     fontSize: 16,
@@ -241,7 +228,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   nameSmall: {
-    fontSize: 14,
+    fontSize: 13,
+    marginBottom: 2,
   },
   details: {
     fontSize: 14,
@@ -249,11 +237,14 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   detailsSmall: {
-    fontSize: 12,
+    fontSize: 11,
   },
   voteButtons: {
     flexDirection: 'row',
     gap: 8,
+  },
+  voteButtonsSmall: {
+    gap: 4,
   },
   voteButton: {
     width: 40,
@@ -266,9 +257,9 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   voteButtonSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   voteButtonSelected: {
     backgroundColor: '#ffffff',
@@ -343,9 +334,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  voteButtonsSmall: {
-    gap: 4,
   },
   chevronIcon: {
     marginLeft: 8,
