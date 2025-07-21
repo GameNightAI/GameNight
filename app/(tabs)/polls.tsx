@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -12,13 +12,21 @@ import { ErrorState } from '@/components/ErrorState';
 import { CreatePollModal } from '@/components/CreatePollModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { PollsEmptyState } from '@/components/PollsEmptyState';
+import { Calendar, Shield } from 'lucide-react-native';
+import { PollScreenCard } from '@/components/PollScreenCard';
+import { usePollResults } from '@/hooks/usePollResults';
 
 type TabType = 'all' | 'created' | 'other';
 
+// Extend Poll type locally for voteCount
+interface PollWithVoteCount extends Poll {
+  voteCount: number;
+}
+
 export default function PollsScreen() {
-  const [polls, setPolls] = useState<Poll[]>([]);
-  const [allPolls, setAllPolls] = useState<Poll[]>([]);
-  const [otherUsersPolls, setOtherUsersPolls] = useState<Poll[]>([]);
+  const [polls, setPolls] = useState<PollWithVoteCount[]>([]);
+  const [allPolls, setAllPolls] = useState<PollWithVoteCount[]>([]);
+  const [otherUsersPolls, setOtherUsersPolls] = useState<PollWithVoteCount[]>([]);
   const [creatorMap, setCreatorMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +37,9 @@ export default function PollsScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+  const [openResultsPollId, setOpenResultsPollId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPolls();
@@ -53,6 +64,27 @@ export default function PollsScreen() {
         .order('created_at', { ascending: false });
 
       if (allPollsError) throw allPollsError;
+
+      // Fetch vote counts for all poll IDs using aggregate
+      const pollIds = (allPollsData || []).map(p => p.id);
+      let voterCountMap: Record<string, number> = {};
+      if (pollIds.length > 0) {
+        const { data: numberOfVoters, error: numberOfVotersError } = await supabase
+          .from('votes')
+          .select('poll_id, voter_name');
+        if (!numberOfVotersError && numberOfVoters) {
+          const pollVoters: Record<string, Set<string>> = {};
+          numberOfVoters.forEach((row: any) => {
+            if (row.poll_id && row.voter_name) {
+              if (!pollVoters[row.poll_id]) pollVoters[row.poll_id] = new Set();
+              pollVoters[row.poll_id].add(row.voter_name);
+            }
+          });
+          Object.keys(pollVoters).forEach(pid => {
+            voterCountMap[pid] = pollVoters[pid].size;
+          });
+        }
+      }
 
       // Fetch creator usernames/emails for all unique user_ids
       const userIds = Array.from(new Set((allPollsData || []).map(p => p.user_id)));
@@ -91,15 +123,19 @@ export default function PollsScreen() {
         ) || [];
       }
 
-      setPolls(createdPolls);
-      setOtherUsersPolls(otherUsersPolls);
+      // Add voterCount to each poll
+      const addVoterCount = (polls: Poll[]): PollWithVoteCount[] =>
+        polls.map(p => ({ ...p, voteCount: voterCountMap[p.id] || 0 }));
+
+      setPolls(addVoterCount(createdPolls));
+      setOtherUsersPolls(addVoterCount(otherUsersPolls));
 
       // Set allPolls to be the union of createdPolls and otherUsersPolls (no duplicates)
-      const uniqueAllPolls = [
-        ...createdPolls,
-        ...otherUsersPolls.filter(
+      const uniqueAllPolls: PollWithVoteCount[] = [
+        ...addVoterCount(createdPolls),
+        ...addVoterCount(otherUsersPolls.filter(
           (poll) => !createdPolls.some((myPoll) => myPoll.id === poll.id)
-        ),
+        )),
       ];
       // Sort by created_at to ensure proper date ordering
       uniqueAllPolls.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -182,6 +218,31 @@ export default function PollsScreen() {
       setError(err instanceof Error ? err.message : 'Failed to delete poll');
     }
   };
+
+  // Helper to render poll results dropdown
+  function PollResultsDropdown({ pollId }: { pollId: string }) {
+    const { gameResults, loading, error } = usePollResults(pollId);
+    if (loading) return <LoadingState />;
+    if (error) return <ErrorState message={error} onRetry={() => { }} />;
+    if (!gameResults || gameResults.length === 0) return <Text style={{ padding: 16, color: '#888' }}>No votes yet.</Text>;
+    // Sort by score: double_thumbs_up * 2 + thumbs_up - thumbs_down, descending
+    const sortedGames = [...gameResults].sort((a, b) => (
+      (b.double_thumbs_up * 2 + b.thumbs_up - b.thumbs_down) -
+      (a.double_thumbs_up * 2 + a.thumbs_up - a.thumbs_down)
+    ));
+    const games = sortedGames.map(g => ({
+      name: g.name,
+      thumbs_up: g.thumbs_up,
+      double_thumbs_up: g.double_thumbs_up,
+      thumbs_down: g.thumbs_down,
+    }));
+    return (
+      <PollScreenCard
+        games={games}
+        onViewDetails={() => router.push({ pathname: '/poll/[id]/results', params: { id: pollId } })}
+      />
+    );
+  }
 
   if (loading) {
     return <LoadingState />;
@@ -288,59 +349,112 @@ export default function PollsScreen() {
       <FlatList
         data={currentPolls}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <Animated.View
-            entering={FadeIn.delay(index * 100)}
-            style={styles.pollCard}
-          >
-            <View style={styles.pollMainRow}>
-              <Pressable
-                style={({ hovered }) => [
-                  styles.pollTitleContainer,
-                  hovered && Platform.OS === 'web' ? styles.pollTitleContainerHover : null,
-                ]}
-                onPress={() => router.push({ pathname: '/poll/[id]', params: { id: item.id } })}
-              >
-                <Text style={[styles.pollTitle, { textDecorationLine: 'underline', color: '#1a2b5f' }]}>{item.title}</Text>
-                {item.description && (
-                  <Text style={styles.pollDescription}>{item.description}</Text>
-                )}
-                <Text style={styles.pollDate}>
-                  Created on {new Date(item.created_at).toLocaleDateString()}
-                </Text>
-              </Pressable>
-              <View style={styles.pollActions}>
-                {currentUserId && item.user_id === currentUserId && (
+        renderItem={({ item, index }) => {
+          const isDropdownOpen = openResultsPollId === item.id;
+          return (
+            <Animated.View
+              entering={FadeIn.delay(index * 100)}
+              style={styles.pollCard}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                    <Text style={[styles.pollTitle, { fontSize: 18, paddingTop: 8, marginBottom: 0, flexShrink: 1 }]} numberOfLines={2}>
+                      {item.title}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+                      <Calendar size={16} color="#8d8d8d" style={{ paddingTop: 8, marginBottom: 0, marginRight: 4 }} />
+                      <Text style={[styles.pollDate, { paddingTop: 8, marginBottom: 0 }]} numberOfLines={1}>
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={{ alignItems: 'flex-end', minWidth: 40 }}>
                   <TouchableOpacity
-                    style={styles.deleteButton}
+                    style={styles.deleteCircle}
                     onPress={() => setPollToDelete(item)}
                   >
-                    <Trash2 size={20} color="#e74c3c" />
+                    <Text style={{ fontSize: 20, color: '#e74c3c', fontWeight: 'bold' }}>×</Text>
                   </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.localVoteButton}
-                  onPress={() => router.push(`/poll/local/${item.id}`)}
-                >
-                  <Users size={20} color="#10b981" />
-                  <Text style={styles.localVoteButtonText}>Local Vote</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.shareButton}
-                  onPress={() => handleShare(item.id)}
-                >
-                  <Share2 size={20} color="#ff9654" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.resultsButton}
-                  onPress={() => router.push({ pathname: '/poll/[id]/results', params: { id: item.id } })}
-                >
-                  <BarChart3 size={20} color="#4b5563" />
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </Animated.View>
-        )}
+              {/* Action buttons */}
+              {isMobile ? (
+                <>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                    <TouchableOpacity style={styles.shareButtonMobile} onPress={() => handleShare(item.id)}>
+                      <Share2 size={18} color="#ff9654" />
+                      <Text style={styles.shareLinkButtonTextMobile}>Share</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.localVoteButtonMobile} onPress={() => router.push(`/poll/local/${item.id}`)}>
+                      <Users size={18} color="#10b981" />
+                      <Text style={styles.localVoteButtonTextMobile}>Local</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.resultsButtonMobile,
+                      item.voteCount === 0 && { backgroundColor: '#e5e7eb' }
+                    ]}
+                    onPress={() => setOpenResultsPollId(isDropdownOpen ? null : item.id)}
+                    disabled={item.voteCount === 0}
+                  >
+                    <BarChart3 size={18} color={item.voteCount === 0 ? '#6b7280' : '#2563eb'} />
+                    <Text
+                      style={[
+                        styles.resultsButtonTextMobile,
+                        item.voteCount === 0 && { color: '#6b7280' }
+                      ]}
+                    >
+                      View Results ({item.voteCount})
+                    </Text>
+                  </TouchableOpacity>
+                  {isDropdownOpen && (
+                    <View style={{ marginTop: 8 }}>
+                      <PollResultsDropdown pollId={item.id} />
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 18 }}>
+                  <TouchableOpacity style={styles.shareButtonDesktop} onPress={() => handleShare(item.id)}>
+                    <Share2 size={18} color="#ff9654" />
+                    <Text style={styles.shareLinkButtonTextDesktop}>Share</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.localVoteButtonDesktop} onPress={() => router.push(`/poll/local/${item.id}`)}>
+                    <Users size={18} color="#10b981" />
+                    <Text style={styles.localVoteButtonTextDesktop}>Local</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.resultsButtonDesktop,
+                      item.voteCount === 0 && { backgroundColor: '#e5e7eb' }
+                    ]}
+                    onPress={() => setOpenResultsPollId(isDropdownOpen ? null : item.id)}
+                    disabled={item.voteCount === 0}
+                  >
+                    <BarChart3 size={18} color={item.voteCount === 0 ? '#6b7280' : '#2563eb'} />
+                    <Text
+                      style={[
+                        styles.resultsButtonTextDesktop,
+                        item.voteCount === 0 && { color: '#6b7280' }
+                      ]}
+                    >
+                      Results ({item.voteCount})
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {/* Dropdown for desktop, below poll card */}
+              {!isMobile && isDropdownOpen && (
+                <View style={{ marginTop: 8 }}>
+                  <PollResultsDropdown pollId={item.id} />
+                </View>
+              )}
+            </Animated.View>
+          );
+        }}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <PollsEmptyState onCreate={() => setCreateModalVisible(true)} />
@@ -520,6 +634,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1a2b5f',
     marginBottom: 4,
+    paddingTop: 8, // Add padding to shift title down
   },
   pollDescription: {
     fontFamily: 'Poppins-Regular',
@@ -548,14 +663,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   shareButton: {
-    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff5ef',
     borderRadius: 8,
+    padding: 8,
+    minWidth: 100,
+    flexShrink: 1,
   },
   resultsButton: {
-    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
+    padding: 8,
+    marginLeft: 4,
+    minWidth: 110,
+    flexShrink: 1,
+  },
+  resultsButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#4b5563',
     marginLeft: 4,
   },
   localVoteButton: {
@@ -571,5 +700,140 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#10b981',
+  },
+  shareLinkButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    marginLeft: 4,
+  },
+  voteCountBadge: {
+    marginLeft: 8,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 999,
+    minWidth: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  voteCountText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#1a2b5f',
+  },
+  deleteCircle: {
+    backgroundColor: '#fff5f5',
+    borderRadius: 999,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+    marginTop: 0, // Reduce margin so X sits higher
+  },
+  shareButtonDesktop: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff5ef',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  shareLinkButtonTextDesktop: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#ff9654',
+  },
+  localVoteButtonDesktop: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  localVoteButtonTextDesktop: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#10b981',
+  },
+  resultsButtonDesktop: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f6ff',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  resultsButtonTextDesktop: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#2563eb',
+  },
+  shareButtonMobile: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff5ef',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  shareLinkButtonTextMobile: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#ff9654',
+  },
+  localVoteButtonMobile: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  localVoteButtonTextMobile: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#10b981',
+  },
+  resultsButtonMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f6ff',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  resultsButtonTextMobile: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#2563eb',
+  },
+  responseCountBadge: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 999,
+    minWidth: 28,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  responseCountText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
   },
 });

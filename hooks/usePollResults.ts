@@ -66,10 +66,10 @@ export function usePollResults(pollId?: string) {
           console.log('User is poll creator, allowing access to results');
           setHasVoted(true);
         } else if (votedFlag !== 'true') {
-          console.log('User has not voted, denying access to results');
+          // console.log('User has not voted, denying access to results');
           setHasVoted(false);
-          setLoading(false);
-          return;
+          // setLoading(false); //removed to allow for loading of other users' polls without voting
+          // return;
         } else {
           console.log('User has voted, allowing access to results');
           setHasVoted(true);
