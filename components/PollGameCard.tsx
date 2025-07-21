@@ -1,8 +1,8 @@
 // poll/components/GameCard.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions, Linking } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { ThumbsDown, ThumbsUp, Heart, Calendar, Star, Baby, Brain, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react-native';
 
 import { VoteType } from '@/hooks/usePollData';
 
@@ -13,7 +13,6 @@ interface Game {
   max_players: number;
   playing_time: number;
   userVote?: VoteType | null;
-  yearPublished?: number | null;
   complexity?: number;
   complexity_desc?: string;
   average?: number | null;
@@ -129,14 +128,17 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         >
           <View style={styles.detailsContainer}>
             <View style={styles.detailRow}>
-              <View style={styles.detailItem}>
-                <Calendar size={16} color="#ff9654" />
-                <Text style={styles.detailLabel}>Publication Year</Text>
-                <Text style={styles.detailValue}>
-                  {game.yearPublished || 'Unknown'}
+              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
+                <LinkIcon size={16} color="#1d4ed8" />
+                <Text style={styles.detailLabel}>BGG Link</Text>
+                <Text
+                  style={[styles.detailValue, { color: '#1d4ed8', textDecorationLine: 'underline' }]}
+                  onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}`)}
+                >
+                  More Info
                 </Text>
               </View>
-              <View style={styles.detailItem}>
+              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
                 <Brain size={16} color="#8b5cf6" />
                 <Text style={styles.detailLabel}>Weight</Text>
                 <Text style={styles.detailValue}>
@@ -147,14 +149,14 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               </View>
             </View>
             <View style={styles.detailRow}>
-              <View style={styles.detailItem}>
+              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
                 <Star size={16} color="#10b981" />
                 <Text style={styles.detailLabel}>Community Score</Text>
                 <Text style={styles.detailValue}>
                   {game.average ? game.average.toFixed(1) : 'N/A'}
                 </Text>
               </View>
-              <View style={styles.detailItem}>
+              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
                 <Baby size={16} color="#e74c3c" />
                 <Text style={styles.detailLabel}>Minimum Age</Text>
                 <Text style={styles.detailValue}>
@@ -306,6 +308,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f7f9fc',
     padding: 12,
     borderRadius: 8,
+  },
+  detailItemSmall: {
+    borderRadius: 4,
   },
   detailLabel: {
     fontFamily: 'Poppins-Regular',
