@@ -268,6 +268,7 @@ export default function CollectionScreen() {
             <RefreshCw size={20} color="#ff9654" />
             <Text style={styles.syncButtonText}>Sync with BGG</Text>
           </TouchableOpacity>
+          {/* Temporarily disabled for deployment
           <TouchableOpacity
             style={styles.analyzeButton}
             onPress={() => router.push('/image-analyzer/' as any)}
@@ -275,6 +276,7 @@ export default function CollectionScreen() {
             <Camera size={20} color="#ff9654" />
             <Text style={styles.analyzeButtonText}>Analyze Image</Text>
           </TouchableOpacity>
+          */}
         </ScrollView>
       </View>
 
