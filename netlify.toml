@@ -1,3 +1,14 @@
+[build]
+  command = "npm run build:web"
+  # functions = "netlify/functions"  # Temporarily disabled for deployment
+  publish = "dist" # Expo exports to "dist" directory, not "build"
+
+# Temporarily disabled for deployment
+# [[redirects]]
+#   from = "/api/*"
+#   to = "/.netlify/functions/:splat"
+#   status = 200
+
 [[redirects]]
   from = "*"
   to = "/index.html"

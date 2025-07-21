@@ -39,10 +39,12 @@ export function GameResultCard({ game }: { game: GameResult }) {
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.name}>{game.name}</Text>
-        <View style={styles.scoreContainer}>
-          <Star size={16} color="#FFD700" fill="#FFD700" />
-          <Text style={styles.totalScore}>{totalScore}</Text>
-        </View>
+        {/*
+          <View style={styles.scoreContainer}>
+            <Star size={16} color="#FFD700" fill="#FFD700" />
+            <Text style={styles.totalScore}>{totalScore}</Text>
+          </View>
+        */}
       </View>
 
       <View style={styles.votesContainer}>

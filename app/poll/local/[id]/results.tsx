@@ -7,24 +7,15 @@ import { usePollResults } from '@/hooks/usePollResults';
 import { GameResultCard } from '@/components/PollGameResultCard';
 import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
-import Toast from 'react-native-toast-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function PollResultsScreen() {
+export default function LocalPollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [user, setUser] = useState<any>(null);
   const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
 
   const { pollTitle, gameResults, hasVoted, loading, error } = usePollResults(id as string | undefined);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-
     // Fetch poll comments
     const fetchComments = async () => {
       if (!id) return;
@@ -36,17 +27,6 @@ export default function PollResultsScreen() {
       if (!error && data) setComments(data);
     };
     fetchComments();
-
-    // Check if user just updated their votes
-    const checkForVoteUpdate = async () => {
-      if (!id) return;
-      const voteUpdated = await AsyncStorage.getItem(`vote_updated_${id}`);
-      if (voteUpdated === 'true') {
-        Toast.show({ type: 'success', text1: 'Vote updated!' });
-        await AsyncStorage.removeItem(`vote_updated_${id}`);
-      }
-    };
-    checkForVoteUpdate();
   }, [id]);
 
   if (loading) return <LoadingState />;
@@ -56,7 +36,7 @@ export default function PollResultsScreen() {
       <ErrorState
         message={error}
         onRetry={() => {
-          router.replace({ pathname: '/poll/[id]', params: { id: id as string } });
+          router.replace({ pathname: '/poll/local/[id]', params: { id: id as string } });
         }}
       />
     );
@@ -121,7 +101,7 @@ export default function PollResultsScreen() {
   };
 
   const navigateToVoting = () => {
-    router.push({ pathname: '/poll/[id]', params: { id: id as string } });
+    router.push({ pathname: '/poll/local/[id]', params: { id: id as string } });
   };
 
   return (
@@ -130,20 +110,9 @@ export default function PollResultsScreen() {
         <TouchableOpacity onPress={() => router.push('/(tabs)/polls')}>
           <Text style={styles.backLink}>&larr; Back to Polls</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Poll Results</Text>
+        <Text style={styles.title}>Local Poll Results</Text>
         <Text style={styles.subtitle}>{pollTitle}</Text>
       </View>
-
-      {!user && (
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>
-            Want to create your own polls?{' '}
-          </Text>
-          <TouchableOpacity onPress={() => router.push('/auth/register')}>
-            <Text style={styles.signUpLink}>Sign up for free</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <ScrollView
         style={styles.scrollView}
@@ -176,9 +145,6 @@ export default function PollResultsScreen() {
                         ? `Tied for ${game.rank}${getOrdinalSuffix(game.rank)} Place`
                         : `${game.rank}${getOrdinalSuffix(game.rank)} Place`}
                     </Text>
-                    {/* <Text style={styles.scoreText}>
-                      Score: {game.score}
-                    </Text> */}
                   </View>
                 </View>
                 <GameResultCard game={game} />
@@ -207,7 +173,7 @@ export default function PollResultsScreen() {
         >
           <Vote size={20} color="#ffffff" />
           <Text style={styles.backToVotingButtonText}>
-            {hasVoted ? 'Back to Voting' : 'Vote Now'}
+            Back to Voting
           </Text>
         </TouchableOpacity>
       </View>
@@ -306,11 +272,6 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginBottom: 2,
   },
-  scoreText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -322,24 +283,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
-  },
-  signUpContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  signUpText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-  },
-  signUpLink: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ff9654',
-    marginLeft: 4,
   },
   bottomActionsContainer: {
     padding: 20,

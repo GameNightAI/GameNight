@@ -30,32 +30,21 @@ interface Props {
   disabled?: boolean;
 }
 
-// Move this function outside of StyleSheet.create
-const infoAndVoteMobileWrap = (isMobile: boolean): import('react-native').ViewStyle => ({
-  flex: 1,
-  flexDirection: isMobile ? 'column' : 'row',
-  alignItems: isMobile ? 'flex-start' : 'center',
-  justifyContent: 'space-between',
-  marginLeft: isMobile ? 0 : 12,
-  gap: 8,
-  width: '100%',
-});
-
 export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 500;
+  const isSmallScreen = width < 400;
   const getButtonStyle = (voteType: VoteType) => {
     const isSelected = selectedVote === voteType;
-
     return [
       styles.voteButton,
+      isSmallScreen && styles.voteButtonSmall,
       isSelected && styles.voteButtonSelected,
       isSelected && voteType === VoteType.THUMBS_DOWN && styles.thumbsDownSelected,
       isSelected && voteType === VoteType.THUMBS_UP && styles.thumbsUpSelected,
       isSelected && voteType === VoteType.DOUBLE_THUMBS_UP && styles.doubleThumbsUpSelected,
     ];
   };
-
   const getIconColor = (voteType: VoteType) => {
     if (selectedVote === voteType) {
       switch (voteType) {
@@ -66,8 +55,6 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
     }
     return '#666666';
   };
-
-  // Add expand/collapse state
   const [isExpanded, setIsExpanded] = React.useState(false);
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
 
@@ -78,29 +65,29 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         activeOpacity={0.85}
         onPress={toggleExpanded}
       >
-        <View style={[isMobile ? styles.contentColWithThumb : styles.contentRowWithThumb]}>
-          <View style={infoAndVoteMobileWrap(isMobile)}>
+        <View style={[styles.contentRowWithThumb, isSmallScreen && styles.contentRowWithThumbSmall]}>
+          <View style={[styles.infoAndVote, isSmallScreen && styles.infoAndVoteSmall]}>
             <View style={styles.info}>
-              <Text style={styles.name}>{game.name}</Text>
-              <Text style={styles.details}>
+              <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
+              <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
                 {game.min_players}-{game.max_players} players • {game.playing_time} min
               </Text>
             </View>
             <View style={styles.voteButtonsContainer}>
-              <View style={styles.voteButtons}>
+              <View style={[styles.voteButtons, isSmallScreen && styles.voteButtonsSmall]}>
                 <TouchableOpacity
                   style={getButtonStyle(VoteType.THUMBS_DOWN)}
                   onPress={e => { e.stopPropagation(); onVote(game.id, VoteType.THUMBS_DOWN); }}
                   disabled={disabled}
                 >
-                  <ThumbsDown size={20} color={getIconColor(VoteType.THUMBS_DOWN)} />
+                  <ThumbsDown size={isSmallScreen ? 16 : 20} color={getIconColor(VoteType.THUMBS_DOWN)} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={getButtonStyle(VoteType.THUMBS_UP)}
                   onPress={e => { e.stopPropagation(); onVote(game.id, VoteType.THUMBS_UP); }}
                   disabled={disabled}
                 >
-                  <ThumbsUp size={20} color={getIconColor(VoteType.THUMBS_UP)} />
+                  <ThumbsUp size={isSmallScreen ? 16 : 20} color={getIconColor(VoteType.THUMBS_UP)} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={getButtonStyle(VoteType.DOUBLE_THUMBS_UP)}
@@ -108,7 +95,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
                   disabled={disabled}
                 >
                   <Heart
-                    size={20}
+                    size={isSmallScreen ? 16 : 20}
                     color={getIconColor(VoteType.DOUBLE_THUMBS_UP)}
                     fill={selectedVote === VoteType.DOUBLE_THUMBS_UP ? getIconColor(VoteType.DOUBLE_THUMBS_UP) : 'transparent'}
                   />
@@ -116,16 +103,20 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               </View>
               <View style={styles.chevronIcon}>
                 {isExpanded ? (
-                  <ChevronUp size={24} color="#ff9654" />
+                  <ChevronUp size={isSmallScreen ? 20 : 24} color="#ff9654" />
                 ) : (
-                  <ChevronDown size={24} color="#ff9654" />
+                  <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
                 )}
               </View>
             </View>
           </View>
           <Image
             source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
-            style={[styles.thumbnail, isMobile ? styles.thumbnailMobile : null]}
+            style={[
+              styles.thumbnail,
+              isMobile && styles.thumbnailMobile,
+              isSmallScreen && styles.thumbnailSmall
+            ]}
             resizeMode="cover"
           />
         </View>
@@ -183,7 +174,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     marginBottom: 16,
-    padding: 12, // Add padding similar to GameItem
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -195,10 +186,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  contentColWithThumb: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 12,
+  contentRowWithThumbSmall: {
+    gap: 6,
+    padding: 0,
   },
   thumbnail: {
     width: 80,
@@ -209,20 +199,27 @@ const styles = StyleSheet.create({
   },
   thumbnailMobile: {
     alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  thumbnailSmall: {
+    width: 48,
+    height: 48,
   },
   infoAndVote: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginLeft: 12,
+    marginLeft: 0,
     gap: 8,
+  },
+  infoAndVoteSmall: {
+    gap: 4,
   },
   info: {
     flex: 1,
-    marginRight: 16,
+    marginRight: 8,
   },
   name: {
     fontSize: 16,
@@ -230,14 +227,24 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginBottom: 4,
   },
+  nameSmall: {
+    fontSize: 13,
+    marginBottom: 2,
+  },
   details: {
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
     color: '#666666',
   },
+  detailsSmall: {
+    fontSize: 11,
+  },
   voteButtons: {
     flexDirection: 'row',
     gap: 8,
+  },
+  voteButtonsSmall: {
+    gap: 4,
   },
   voteButton: {
     width: 40,
@@ -248,6 +255,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  voteButtonSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   voteButtonSelected: {
     backgroundColor: '#ffffff',

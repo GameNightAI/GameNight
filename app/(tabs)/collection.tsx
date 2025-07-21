@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { RefreshCw, X, Search, Plus, Camera } from 'lucide-react-native';
@@ -245,7 +245,11 @@ export default function CollectionScreen() {
           <Text style={styles.countText}>{games.length} games</Text>
         </View>
 
-        <View style={styles.actionsSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.actionsSection}
+        >
           <TouchableOpacity
             style={styles.findButton}
             onPress={() => setFindModalVisible(true)}
@@ -265,14 +269,16 @@ export default function CollectionScreen() {
             <RefreshCw size={20} color="#ff9654" />
             <Text style={styles.syncButtonText}>Sync with BGG</Text>
           </TouchableOpacity>
+          {/* Temporarily disabled for deployment
           <TouchableOpacity
             style={styles.analyzeButton}
-            onPress={() => router.push('/ImageAnalyzer')}
+            onPress={() => router.push('/image-analyzer/' as any)}
           >
             <Camera size={20} color="#ff9654" />
             <Text style={styles.analyzeButtonText}>Analyze Image</Text>
           </TouchableOpacity>
-        </View>
+          */}
+        </ScrollView>
       </View>
 
       {isFiltered && (
