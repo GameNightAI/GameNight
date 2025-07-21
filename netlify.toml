@@ -1,6 +1,7 @@
 [build]
+  command = "npm run build:web"
   # functions = "netlify/functions"  # Temporarily disabled for deployment
-  publish = "build" # or "dist", "public", or "." depending on your frontend output folder
+  publish = "dist" # Expo exports to "dist" directory, not "build"
 
 # Temporarily disabled for deployment
 # [[redirects]]
