@@ -357,11 +357,15 @@ export default function PollsScreen() {
               style={styles.pollCard}
             >
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1 }}>
+                <Pressable
+                  style={({ hovered }) => [
+                    styles.pollTitleContainer,
+                    hovered && Platform.OS === 'web' ? styles.pollTitleContainerHover : null,
+                  ]}
+                  onPress={() => router.push({ pathname: '/poll/[id]', params: { id: item.id } })}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                    <Text style={[styles.pollTitle, { fontSize: 18, paddingTop: 8, marginBottom: 0, flexShrink: 1 }]} numberOfLines={2}>
-                      {item.title}
-                    </Text>
+                    <Text style={[styles.pollTitle, { textDecorationLine: 'underline', color: '#1a2b5f', fontSize: 18, paddingTop: 8, marginBottom: 0, flexShrink: 1 }]} numberOfLines={2}>{item.title}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
                       <Calendar size={16} color="#8d8d8d" style={{ paddingTop: 8, marginBottom: 0, marginRight: 4 }} />
                       <Text style={[styles.pollDate, { paddingTop: 8, marginBottom: 0 }]} numberOfLines={1}>
@@ -369,7 +373,10 @@ export default function PollsScreen() {
                       </Text>
                     </View>
                   </View>
-                </View>
+                  {item.description && (
+                    <Text style={styles.pollDescription}>{item.description}</Text>
+                  )}
+                </Pressable>
                 <View style={{ alignItems: 'flex-end', minWidth: 40 }}>
                   <TouchableOpacity
                     style={styles.deleteCircle}
