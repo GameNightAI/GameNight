@@ -378,12 +378,14 @@ export default function PollsScreen() {
                   )}
                 </Pressable>
                 <View style={{ alignItems: 'flex-end', minWidth: 40 }}>
-                  <TouchableOpacity
-                    style={styles.deleteCircle}
-                    onPress={() => setPollToDelete(item)}
-                  >
-                    <Text style={{ fontSize: 20, color: '#e74c3c', fontWeight: 'bold' }}>×</Text>
-                  </TouchableOpacity>
+                  {item.user_id === currentUserId && (
+                    <TouchableOpacity
+                      style={styles.deleteCircle}
+                      onPress={() => setPollToDelete(item)}
+                    >
+                      <Text style={{ fontSize: 20, color: '#e74c3c', fontWeight: 'bold' }}>×</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
               {/* Action buttons */}
