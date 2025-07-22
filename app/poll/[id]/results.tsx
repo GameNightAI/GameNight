@@ -9,12 +9,42 @@ import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRef } from 'react';
 
 export default function PollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [user, setUser] = useState<any>(null);
   const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
+  // --- Real-time vote listening ---
+  const [newVotes, setNewVotes] = useState(false);
+  const subscriptionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    // Subscribe to new votes for this poll
+    const channel = supabase
+      .channel('votes-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+          filter: `poll_id=eq.${id}`,
+        },
+        (payload) => {
+          setNewVotes(true);
+        }
+      )
+      .subscribe();
+    subscriptionRef.current = channel;
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
+  }, [id]);
 
   const { pollTitle, gameResults, hasVoted, loading, error } = usePollResults(id as string | undefined);
 
@@ -133,6 +163,33 @@ export default function PollResultsScreen() {
         <Text style={styles.title}>Poll Results</Text>
         <Text style={styles.subtitle}>{pollTitle}</Text>
       </View>
+      {/* --- Banner notification for new votes --- */}
+      {newVotes && (
+        <View style={{
+          backgroundColor: '#fffbe6',
+          borderBottomWidth: 1,
+          borderBottomColor: '#ffe58f',
+          padding: 14,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+        }}>
+          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: 15 }}>
+            New votes have been cast! Pull to refresh or tap below.
+          </Text>
+          <TouchableOpacity onPress={() => {
+            setNewVotes(false);
+            // Optionally, trigger a refetch of results here
+          }}>
+            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: 16 }}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {!user && (
         <View style={styles.signUpContainer}>
