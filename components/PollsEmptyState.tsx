@@ -12,15 +12,19 @@ export const PollsEmptyState: React.FC<PollsEmptyStateProps> = ({ onCreate }) =>
       <Plus size={48} color="#ff9654" style={styles.icon} />
       <Text style={styles.title}>No Polls Yet</Text>
       <Text style={styles.subtitle}>
-        Create a poll to help your group decide what to play! Here’s how:
+        Create a poll to help your group decide what board game to play!{"\n"}
+        Here's how:
       </Text>
       <View style={styles.stepsContainer}>
-        <Text style={styles.step}><Text style={styles.stepNumber}>1.</Text> Tap <Text style={styles.highlight}>"Create Poll"</Text> above.</Text>
-        <Text style={styles.step}><Text style={styles.stepNumber}>2.</Text> Enter a title and description.</Text>
-        <Text style={styles.step}><Text style={styles.stepNumber}>3.</Text> Add games from your collection.</Text>
-        <Text style={styles.step}><Text style={styles.stepNumber}>4.</Text> Share the poll link with friends.</Text>
-        <Text style={styles.step}><Text style={styles.stepNumber}>5.</Text> Watch the votes come in!</Text>
+        <Text style={styles.step}><Text style={styles.stepNumber}>1.</Text> Start Your Poll - Click <Text style={styles.highlight}>"Create Poll"</Text> to begin.</Text>
+        <Text style={styles.step}><Text style={styles.stepNumber}>2.</Text> Add Details (Optional) - Enter a title and description for your poll.</Text>
+        <Text style={styles.step}><Text style={styles.stepNumber}>3.</Text> Find Games - Filter or search your collection or browse BoardGameGeek's database.</Text>
+        <Text style={styles.step}><Text style={styles.stepNumber}>4.</Text> Select Games - Click on games to add them as voting options.</Text>
+        <Text style={styles.step}><Text style={styles.stepNumber}>5.</Text> Create Poll - Click <Text style={styles.highlight}>"Create Poll"</Text> when you're finished adding games.</Text>
+        <Text style={styles.step}><Text style={styles.stepNumber}>6.</Text> Share & Vote - Send the link to your group or vote in-person on one device.</Text>
+        <Text style={styles.step}><Text style={styles.stepNumber}>7.</Text> View Results - Check results from the Poll Homepage or Voting Screen.</Text>
       </View>
+      <Text style={[styles.subtitle, { fontSize: 13, color: '#888', marginBottom: 16 }]}>Note: Registered users can change their votes anytime; anonymous voters can revote until they close their browser.</Text>
       <TouchableOpacity
         style={styles.button}
         onPress={onCreate}
