@@ -133,11 +133,11 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             </View>
             
             <View style={styles.detailRow}>
-              <Touchable Opacity onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}/`)}>
+              <TouchableOpacity onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}/`)}>
                 <Text style={styles.infoText}>
                   View on BGG
                 </Text>
-              </Touchable Opacity>
+              </TouchableOpacity>
             </View>
             
           </View>
