@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users } from 'lucide-react-native';
@@ -40,9 +41,36 @@ export default function PollsScreen() {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [openResultsPollId, setOpenResultsPollId] = useState<string | null>(null);
+  const [newVotes, setNewVotes] = useState(false);
+  const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
     loadPolls();
+  }, []);
+
+  // --- Real-time vote listening subscription ---
+  useEffect(() => {
+    // Subscribe to new votes for any poll
+    const channel = supabase
+      .channel('votes-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+        },
+        (payload) => {
+          setNewVotes(true);
+        }
+      )
+      .subscribe();
+    subscriptionRef.current = channel;
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
   }, []);
 
   const loadPolls = async () => {
@@ -295,6 +323,34 @@ export default function PollsScreen() {
           </View>
         </View>
       </View>
+
+      {/* --- Banner notification for new votes --- */}
+      {newVotes && (
+        <View style={{
+          backgroundColor: '#fffbe6',
+          borderBottomWidth: 1,
+          borderBottomColor: '#ffe58f',
+          padding: 14,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+        }}>
+          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: 15 }}>
+            New votes have been cast! Pull to refresh or tap below.
+          </Text>
+          <TouchableOpacity onPress={() => {
+            setNewVotes(false);
+            // Optionally, trigger a refetch of polls here
+          }}>
+            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: 16 }}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {showShareLink && (
         <Animated.View

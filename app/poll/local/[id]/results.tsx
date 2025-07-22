@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LoadingState } from '@/components/LoadingState';
@@ -12,6 +13,8 @@ export default function LocalPollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
+  const [newVotes, setNewVotes] = useState(false);
+  const subscriptionRef = useRef<any>(null);
 
   const { pollTitle, gameResults, hasVoted, loading, error } = usePollResults(id as string | undefined);
 
@@ -27,6 +30,33 @@ export default function LocalPollResultsScreen() {
       if (!error && data) setComments(data);
     };
     fetchComments();
+  }, [id]);
+
+  // --- Real-time vote listening subscription ---
+  useEffect(() => {
+    if (!id) return;
+    // Subscribe to new votes for this poll
+    const channel = supabase
+      .channel('votes-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+          filter: `poll_id=eq.${id}`,
+        },
+        (payload) => {
+          setNewVotes(true);
+        }
+      )
+      .subscribe();
+    subscriptionRef.current = channel;
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
   }, [id]);
 
   if (loading) return <LoadingState />;
@@ -113,6 +143,33 @@ export default function LocalPollResultsScreen() {
         <Text style={styles.title}>Local Poll Results</Text>
         <Text style={styles.subtitle}>{pollTitle}</Text>
       </View>
+      {/* --- Banner notification for new votes --- */}
+      {newVotes && (
+        <View style={{
+          backgroundColor: '#fffbe6',
+          borderBottomWidth: 1,
+          borderBottomColor: '#ffe58f',
+          padding: 14,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+        }}>
+          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: 15 }}>
+            New votes have been cast! Pull to refresh or tap below.
+          </Text>
+          <TouchableOpacity onPress={() => {
+            setNewVotes(false);
+            // Optionally, trigger a refetch of results here
+          }}>
+            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: 16 }}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView
         style={styles.scrollView}
