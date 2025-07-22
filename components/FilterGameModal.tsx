@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
 import { Search, X, ChevronDown, Clock } from 'lucide-react-native';
 
-interface FindGameModalProps {
+interface FilterGameModalProps {
   isVisible: boolean;
   onClose: () => void;
   onSearch: (players: string, time?: string, unlimited?: boolean) => void;
 }
 
-export const FindGameModal: React.FC<FindGameModalProps> = ({
+export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   isVisible,
   onClose,
   onSearch,
@@ -38,7 +38,7 @@ export const FindGameModal: React.FC<FindGameModalProps> = ({
   const content = (
     <View style={styles.dialog}>
       <View style={styles.header}>
-        <Text style={styles.title}>Find Games</Text>
+        <Text style={styles.title}>Filter Games</Text>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <X size={20} color="#666666" />
         </TouchableOpacity>
@@ -155,7 +155,7 @@ export const FindGameModal: React.FC<FindGameModalProps> = ({
         disabled={!playerCount}
       >
         <Search color="#fff" size={20} />
-        <Text style={styles.searchButtonText}>Find Games</Text>
+        <Text style={styles.searchButtonText}>Filter Games</Text>
       </TouchableOpacity>
     </View>
   );
