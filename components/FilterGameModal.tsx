@@ -13,23 +13,29 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   onClose,
   onSearch,
 }) => {
+  // Filter states
   const [playerCount, setPlayerCount] = useState<string>('');
   const [playTime, setPlayTime] = useState<string>('');
+  const [minAge, setMinAge] = useState<string>('');
+  const [gameType, setGameType] = useState<string>('');
+  const [complexity, setComplexity] = useState<string>('');
+  
+  // Dropdown visibility states
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [showAgeDropdown, setShowAgeDropdown] = useState(false);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [showComplexityDropdown, setShowComplexityDropdown] = useState(false);
 
-  const playerOptions = [
-    '1', '2', '3', '4', '5', '6',
-    '7', '8', '9', '10', '11', '12+'
-  ];
-
-  const timeOptions = [
-    '30', '60', '90', '120+'
-  ];
+  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
+  const timeOptions = ['30', '60', '90', '120+'];
+  const ageOptions = ['6+', '8+', '10+', '12+', '14+', '16+'];
+  const typeOptions = ['Any', 'Cooperative', 'Competitive', 'Team-based'];
+  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'];
 
   const handleSearch = () => {
     if (!playerCount) return;
-    const players = playerCount === '12+' ? '12' : playerCount;
+    const players = playerCount === '15+' ? '15' : playerCount;
     const time = playTime === '120+' ? '120' : playTime;
     onSearch(players, time, playTime === '120+');
     onClose();
@@ -45,7 +51,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </View>
 
       <Text style={styles.description}>
-        Filter your collection to find the perfect game for your group
+        Filter your collection to find the perfect game for your group. All filters are optional.
       </Text>
 
       <View style={[styles.inputSection, { zIndex: 2 }]}>
@@ -139,7 +145,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
                       styles.dropdownItemText,
                       playTime === option && styles.dropdownItemTextSelected
                     ]}>
-                      {option} minutes{option === '120+' ? ' or more' : ''}
+                      {option} minutes
                     </Text>
                   </TouchableOpacity>
                 ))}

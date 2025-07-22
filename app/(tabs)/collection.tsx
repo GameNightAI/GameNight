@@ -13,7 +13,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
-import { FindGameModal } from '@/components/FindGameModal';
+import { FilterGameModal } from '@/components/FilterGameModal';
 import { AddGameModal } from '@/components/AddGameModal';
 import { Game } from '@/types/game';
 
@@ -24,7 +24,7 @@ export default function CollectionScreen() {
   const [error, setError] = useState<string | null>(null);
   const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
-  const [findModalVisible, setFindModalVisible] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
@@ -81,13 +81,13 @@ export default function CollectionScreen() {
         let matches = true;
 
         if (players) {
-          const playerCount = parseInt(players);
-          matches = matches && game.min_players <= playerCount && game.max_players >= playerCount;
+          const count = parseInt(players === '15+' ? '15' : players);
+          matches &&= (game.min_players <= count || count === 15) && game.max_players >= count;
         }
 
         if (time && unlimited !== '1') {
           const maxTime = parseInt(time);
-          matches = matches && game.playing_time <= maxTime;
+          matches &&= game.playing_time <= maxTime;
         }
 
         return matches;
@@ -191,7 +191,7 @@ export default function CollectionScreen() {
     }
   };
 
-  const handleFind = (players: string, time?: string, unlimited?: boolean) => {
+  const handleFilter = (players: string, time?: string, unlimited?: boolean) => {
     const params: { players: string; time?: string; unlimited?: string } = { players };
     if (time) {
       params.time = time;
@@ -251,13 +251,13 @@ export default function CollectionScreen() {
           contentContainerStyle={styles.actionsSection}
         >
           <TouchableOpacity
-            style={styles.findButton}
-            onPress={() => setFindModalVisible(true)}
+            style={styles.filterButton}
+            onPress={() => setFilterModalVisible(true)}
           >
             <Search size={20} color="#ff9654" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.findButton}
+            style={styles.filterButton}
             onPress={() => setAddGameModalVisible(true)}
           >
             <Plus size={20} color="#ff9654" />
@@ -331,10 +331,10 @@ export default function CollectionScreen() {
         loading={syncing}
       />
 
-      <FindGameModal
-        isVisible={findModalVisible}
-        onClose={() => setFindModalVisible(false)}
-        onSearch={handleFind}
+      <FilterGameModal
+        isVisible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onSearch={handleFilter}
       />
 
       <AddGameModal
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  findButton: {
+  filterButton: {
     backgroundColor: '#fff',
     width: 40,
     height: 40,
