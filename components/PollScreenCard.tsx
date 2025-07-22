@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Trophy, Medal, Award } from 'lucide-react-native';
 
 interface GameVoteSummary {
   name: string;
@@ -12,33 +11,6 @@ interface GameVoteSummary {
 interface PollScreenCardProps {
   games: GameVoteSummary[];
   onViewDetails: () => void;
-}
-
-// Helper functions for ranking icons/colors
-function getRankingIcon(rank: number) {
-  switch (rank) {
-    case 1:
-      return <Trophy size={20} color="#FFC300" style={{ marginRight: 4 }} />; // Higher-contrast gold
-    case 2:
-      return <Medal size={20} color="#A6B1C2" style={{ marginRight: 4 }} />;
-    case 3:
-      return <Award size={20} color="#CD7F32" style={{ marginRight: 4 }} />;
-    default:
-      return null;
-  }
-}
-
-function getRankingColor(rank: number) {
-  switch (rank) {
-    case 1:
-      return '#FFC300'; // Higher-contrast gold
-    case 2:
-      return '#A6B1C2';
-    case 3:
-      return '#CD7F32';
-    default:
-      return '#666666';
-  }
 }
 
 export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
@@ -89,13 +61,11 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
           Platform.OS === 'web' && idx % 2 === 1 ? styles.altRow : null,
           Platform.OS === 'web' ? styles.gameRowDesktop : null,
         ];
-        const icon = getRankingIcon(game.rank);
-        const color = getRankingColor(game.rank);
         return (
           <View key={idx} style={rowStyle}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              {icon}
-              <Text style={[styles.gameName, { color }]}>{game.name}</Text>
+              <Text style={styles.rankNumber}>{game.rank}.</Text>
+              <Text style={styles.gameName}>{game.name}</Text>
               {game.tie && (
                 <Text style={{ color: '#888', fontSize: 12, marginLeft: 4 }}>(tie)</Text>
               )}
@@ -208,5 +178,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Poppins-Regular',
     color: '#222',
+  },
+  rankNumber: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#666',
+    marginRight: 8,
+    minWidth: 22,
+    textAlign: 'right',
   },
 });

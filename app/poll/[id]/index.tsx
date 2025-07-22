@@ -36,6 +36,7 @@ export default function PollScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [comment, setComment] = useState('');
+  const [hasPreviousVotes, setHasPreviousVotes] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -75,6 +76,27 @@ export default function PollScreen() {
     }
   }, [poll]);
 
+  useEffect(() => {
+    const checkPreviousVotes = async () => {
+      const trimmedName = voterName.trim();
+      if (!trimmedName) {
+        setHasPreviousVotes(false);
+        return;
+      }
+      const { data: previousVotes, error: previousVotesError } = await supabase
+        .from('votes')
+        .select('id')
+        .eq('poll_id', id)
+        .eq('voter_name', trimmedName);
+      if (previousVotesError) {
+        setHasPreviousVotes(false);
+        return;
+      }
+      setHasPreviousVotes(previousVotes && previousVotes.length > 0);
+    };
+    checkPreviousVotes();
+  }, [voterName, id]);
+
   const handleVote = (gameId: number, voteType: VoteType) => {
     setPendingVotes(prev => {
       const updated = { ...prev };
@@ -112,63 +134,53 @@ export default function PollScreen() {
       }
       const finalName = trimmedName;
 
-      console.log('Submitting votes with name:', finalName);
-      console.log('Pending votes:', pendingVotes);
+      // Check if the voter has previously voted on any game in this poll
+      const { data: previousVotes, error: previousVotesError } = await supabase
+        .from('votes')
+        .select('id, game_id, vote_type')
+        .eq('poll_id', id)
+        .eq('voter_name', finalName);
+      if (previousVotesError) {
+        console.error('Error checking previous votes:', previousVotesError);
+        throw previousVotesError;
+      }
+      const hasPreviousVotes = previousVotes && previousVotes.length > 0;
 
-      let updated = false; // Track if any votes were updated
+      let updated = false; // Track if any votes were updated or inserted as an update
 
       // Submit each vote
       for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
 
-        console.log(`Processing vote for game ${gameId}: ${voteType}`);
+        // Check for existing vote for this game
+        const existing = previousVotes?.find(v => v.game_id === gameId);
 
-        // Check for existing vote
-        const { data: existing, error: selectError } = await supabase
-          .from('votes')
-          .select('id, vote_type')
-          .eq('poll_id', id)
-          .eq('game_id', gameId)
-          .eq('voter_name', finalName);
-
-        if (selectError) {
-          console.error('Error checking existing votes:', selectError);
-          throw selectError;
-        }
-
-        console.log('Existing votes found:', existing);
-
-        if (existing && existing.length > 0) {
-          const vote = existing[0];
-          console.log('vote.vote_type:', vote.vote_type);
-          console.log('voteType:', voteType);
-          if (vote.vote_type !== voteType) {
-            console.log(`Updating existing vote ${vote.id} from ${vote.vote_type} to ${voteType}`);
+        if (existing) {
+          if (existing.vote_type !== voteType) {
             const { error: updateError } = await supabase
               .from('votes')
               .update({ vote_type: voteType })
-              .eq('id', vote.id);
-
+              .eq('id', existing.id);
             if (updateError) {
               console.error('Error updating vote:', updateError);
               throw updateError;
             }
-            updated = true; // Mark as updated
-          } else {
-            console.log('Vote already exists with same type, skipping');
+            updated = true;
           }
         } else {
-          console.log(`Creating new vote for game ${gameId}`);
           const { error: insertError } = await supabase.from('votes').insert({
             poll_id: id,
             game_id: gameId,
             vote_type: voteType,
             voter_name: finalName,
           });
-
           if (insertError) {
             console.error('Error inserting vote:', insertError);
             throw insertError;
+          }
+          // If the voter has previously voted on any other game, mark as updated
+          if (hasPreviousVotes) {
+            updated = true;
           }
         }
       }
@@ -301,7 +313,7 @@ export default function PollScreen() {
             disabled={submitting}
           >
             <Text style={styles.submitVotesButtonText}>
-              {submitting ? 'Submitting...' : 'Submit My Votes'}
+              {submitting ? 'Submitting...' : (hasPreviousVotes ? 'Update Vote' : 'Submit My Votes')}
             </Text>
           </TouchableOpacity>
         </View>

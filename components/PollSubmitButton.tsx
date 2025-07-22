@@ -1,3 +1,4 @@
+//not in use, can be activated later if we want to unify the submit button function
 // poll/components/SubmitButton.tsx
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
