@@ -137,6 +137,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 <Text style={styles.infoText}>
                   View on BGG
                 </Text>
+              </Touchable Opacity>
             </View>
             
           </View>
