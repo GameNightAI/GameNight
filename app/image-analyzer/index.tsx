@@ -1,45 +1,3 @@
-// Temporarily disabled for deployment
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-} from 'react-native';
-
-export default function ImageAnalyzer() {
-  // This component is temporarily disabled for deployment
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Image Analyzer</Text>
-      <Text style={styles.disabledText}>This feature is temporarily disabled for deployment.</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f7f9fc',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-    color: '#1a2b5f',
-  },
-  disabledText: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#666666',
-    lineHeight: 24,
-  },
-});
-
-/*
 // Original implementation commented out for deployment
 import React, { useState } from 'react';
 import {
@@ -101,9 +59,15 @@ export default function ImageAnalyzer() {
 
       const isLocalhost =
         typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
+      /*
+       to test locally
+       run 2 terminals
+       1. npx expo start --web --port 19006 (explicit port labelling here)
+          *run in dev mode (not default expo go)
+       2. run netlify dev --port 8082 (or relabel the port in line 64)
+      */
       const functionURL = isLocalhost
-        ? 'http://localhost:8888/.netlify/functions/analyze'
+        ? 'http://localhost:8082/.netlify/functions/analyze'
         : '/.netlify/functions/analyze';
 
       const res = await fetch(functionURL, {
@@ -281,4 +245,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-*/ 
