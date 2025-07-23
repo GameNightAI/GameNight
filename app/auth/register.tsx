@@ -4,6 +4,7 @@ import { useRouter, Link } from 'expo-router';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { UserPlus } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
 
 import { supabase } from '@/services/supabase';
 
@@ -24,6 +25,7 @@ export default function RegisterScreen() {
     return null;
   }
 
+
   const handleRegister = async () => {
     try {
       setLoading(true);
@@ -35,26 +37,53 @@ export default function RegisterScreen() {
         options: {
           emailRedirectTo: window.location.origin,
           data: {
-            email_confirm: true // This bypasses email confirmation
-          }
-        }
+            email_confirm: true,
+          },
+        },
       });
 
-      if (error) throw error;
-      // TODO: else notify the user that the account was created successfully
+      if (error) {
+        if (error.message.includes('already registered')) {
+          Toast.show({
+            type: 'error',
+            text1: 'Email Already In Use',
+            text2: 'Please try logging in instead.',
+          });
+          setError('This email is already in use.');
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Registration Failed',
+            text2: error.message || 'Something went wrong.',
+          });
+          setError(error.message || 'Failed to create account');
+        }
+      } else {
+        Toast.show({
+          type: 'success',
+          text1: 'Account Created!',
+        });
 
-      router.replace('/collection');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to create account');
+        // Delay redirect slightly to show toast
+        setTimeout(() => {
+          router.replace('/collection');
+        }, 1500);
+      }
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Unexpected Error',
+        text2: err instanceof Error ? err.message : 'Something went wrong.',
+      });
+      setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <View style={styles.container}>
-      <Animated.View 
-        entering={FadeIn.duration(600)} 
+      <Animated.View
+        entering={FadeIn.duration(600)}
         style={styles.header}
       >
         <Image
@@ -70,8 +99,8 @@ export default function RegisterScreen() {
         </View>
       </Animated.View>
 
-      <Animated.View 
-        entering={FadeIn.delay(300).duration(600)} 
+      <Animated.View
+        entering={FadeIn.delay(300).duration(600)}
         style={styles.formContainer}
       >
         <View style={styles.inputContainer}>
@@ -108,7 +137,7 @@ export default function RegisterScreen() {
         >
           <UserPlus color="#fff" size={20} />
           <Text style={styles.buttonText}>
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creating account...' : 'Sign Up'}
           </Text>
         </TouchableOpacity>
 
