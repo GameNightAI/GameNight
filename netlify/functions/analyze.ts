@@ -1,5 +1,3 @@
-**dont forget to add the OPENAI API key to the .env file**
-
 import { Handler } from '@netlify/functions';
 import { OpenAI } from 'openai';
 
@@ -30,7 +28,8 @@ export const handler: Handler = async (event) => {
         {
           role: 'user',
           content: [
-            { type: 'text',
+            {
+              type: 'text',
               text: `You are analyzing an image that contains a collection of physical board games.         
               
               1. Identify all board game titles visible in the image.
@@ -59,24 +58,30 @@ export const handler: Handler = async (event) => {
       max_tokens: 300,
     });
 
-  let boardGames: { title: string; bgg_id: number }[] = [];
+    let boardGames: { title: string; bgg_id: number }[] = [];
 
-  try {
-    const resultText = completion.choices[0]?.message?.content || '[]';
-    boardGames = JSON.parse(resultText);
-  } catch (err) {
-    console.error('Failed to parse JSON:', err);
+    try {
+      let resultText = completion.choices[0]?.message?.content || '[]';
+      console.log('resultText', resultText);
+      resultText = resultText.trim();
+      if (resultText.startsWith('```')) {
+        // Remove code block markers
+        resultText = resultText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+      }
+      boardGames = JSON.parse(resultText);
+    } catch (err) {
+      console.error('Failed to parse JSON:', err);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to parse OpenAI response.' }),
+      };
+    }
+
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to parse OpenAI response.' }),
+      statusCode: 200,
+      body: JSON.stringify({ boardGames }),
     };
-  }
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ boardGames }),
-  };
- } catch (error: any) {
+  } catch (error: any) {
     console.error('OpenAI error:', error);
     return {
       statusCode: 500,

@@ -489,7 +489,7 @@ export default function PollsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.localVoteButtonDesktop} onPress={() => router.push(`/poll/local/${item.id}`)}>
                     <Users size={18} color="#10b981" />
-                    <Text style={styles.localVoteButtonTextDesktop}>Local</Text>
+                    <Text style={styles.localVoteButtonTextDesktop}>In-Person</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
