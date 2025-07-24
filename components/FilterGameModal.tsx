@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
 import { Search, X, ChevronDown, Clock } from 'lucide-react-native';
+import Select from 'react-select';
 
 interface FilterGameModalProps {
   isVisible: boolean;
@@ -55,7 +56,6 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </Text>
 
       <View style={[styles.inputSection, { zIndex: 2 }]}>
-        <Text style={styles.label}>How many players?</Text>
 
         <View style={styles.dropdownContainer}>
           <TouchableOpacity
@@ -105,8 +105,6 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </View>
 
       <View style={[styles.inputSection, { zIndex: 1 }]}>
-        <Text style={styles.label}>How much time do you have?</Text>
-        <Text style={styles.sublabel}>(Optional)</Text>
 
         <View style={styles.dropdownContainer}>
           <TouchableOpacity
@@ -154,6 +152,14 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           )}
         </View>
       </View>
+
+      <Select
+        value={gameType}
+        onchange={setGameType}
+        defaultValue="Any"
+        isMulti
+        options={typeOptions}
+      />
 
       <TouchableOpacity
         style={[styles.searchButton, !playerCount && styles.searchButtonDisabled]}
