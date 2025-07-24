@@ -18,7 +18,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const [playerCount, setPlayerCount] = useState<string>('');
   const [playTime, setPlayTime] = useState<string>('');
   const [minAge, setMinAge] = useState<string>('');
-  const [gameType, setGameType] = useState<string>('');
+  const [gameType, setGameType] = useState([]);
   const [complexity, setComplexity] = useState<string>('');
   
   // Dropdown visibility states
