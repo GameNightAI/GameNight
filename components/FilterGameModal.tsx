@@ -155,7 +155,10 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
       <Select
         value={gameType}
-        onchange={setGameType}
+        onchange={(option) => {
+          console.log('Selected option:', option);
+          setGameType(option);
+        }}
         defaultValue={[]}
         options={typeOptions}
         isMulti
