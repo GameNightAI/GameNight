@@ -16,6 +16,7 @@ import { PollsEmptyState } from '@/components/PollsEmptyState';
 import { Calendar, Shield } from 'lucide-react-native';
 import { PollScreenCard } from '@/components/PollScreenCard';
 import { usePollResults } from '@/hooks/usePollResults';
+import { Game } from '@/types/game';
 
 type TabType = 'all' | 'created' | 'other';
 
@@ -43,6 +44,7 @@ export default function PollsScreen() {
   const [openResultsPollId, setOpenResultsPollId] = useState<string | null>(null);
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
+  const [preselectedGames, setPreselectedGames] = useState<Game[] | null>(null);
 
   useEffect(() => {
     loadPolls();
@@ -244,6 +246,37 @@ export default function PollsScreen() {
     } catch (err) {
       console.error('Error deleting poll:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete poll');
+    }
+  };
+
+  const handleDuplicatePoll = async (pollId: string) => {
+    try {
+      // Get poll games
+      const { data: pollGames, error: pollGamesError } = await supabase
+        .from('poll_games')
+        .select('game_id')
+        .eq('poll_id', pollId);
+      if (pollGamesError) throw pollGamesError;
+      if (!pollGames || pollGames.length === 0) {
+        setError('No games found in poll.');
+        return;
+      }
+      const gameIds = pollGames.map(pg => pg.game_id);
+      // Get game details
+      const { data: gamesData, error: gamesError } = await supabase
+        .from('games')
+        .select('*')
+        .in('id', gameIds);
+      if (gamesError) throw gamesError;
+      if (!gamesData || gamesData.length === 0) {
+        setError('No game details found.');
+        return;
+      }
+      setPreselectedGames(gamesData);
+      setCreateModalVisible(true);
+    } catch (err) {
+      console.error('Error duplicating poll:', err);
+      setError(err instanceof Error ? err.message : 'Failed to duplicate poll');
     }
   };
 
@@ -456,6 +489,10 @@ export default function PollsScreen() {
                       <Users size={18} color="#10b981" />
                       <Text style={styles.localVoteButtonTextMobile}>Local</Text>
                     </TouchableOpacity>
+                    <TouchableOpacity style={styles.duplicateButtonMobile} onPress={() => handleDuplicatePoll(item.id)}>
+                      <Copy size={18} color="#4b5563" />
+                      <Text style={styles.duplicateButtonTextMobile}>Duplicate</Text>
+                    </TouchableOpacity>
                   </View>
                   <TouchableOpacity
                     style={[
@@ -509,6 +546,13 @@ export default function PollsScreen() {
                       Results ({item.voteCount})
                     </Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.duplicateButtonDesktop}
+                    onPress={() => handleDuplicatePoll(item.id)}
+                  >
+                    <Copy size={18} color="#4b5563" />
+                    <Text style={styles.duplicateButtonTextDesktop}>Duplicate</Text>
+                  </TouchableOpacity>
                 </View>
               )}
               {/* Dropdown for desktop, below poll card */}
@@ -528,11 +572,16 @@ export default function PollsScreen() {
 
       <CreatePollModal
         isVisible={createModalVisible}
-        onClose={() => setCreateModalVisible(false)}
+        onClose={() => {
+          setCreateModalVisible(false);
+          setPreselectedGames(null);
+        }}
         onSuccess={() => {
           setCreateModalVisible(false);
+          setPreselectedGames(null);
           loadPolls();
         }}
+        preselectedGames={preselectedGames || undefined}
       />
 
       <ConfirmationDialog
@@ -900,5 +949,35 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#1a2b5f',
+  },
+  duplicateButtonDesktop: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  duplicateButtonTextDesktop: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#4b5563',
+  },
+  duplicateButtonMobile: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  duplicateButtonTextMobile: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#4b5563',
   },
 });
