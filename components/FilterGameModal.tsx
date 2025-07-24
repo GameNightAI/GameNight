@@ -17,9 +17,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   // Filter states
   const [playerCount, setPlayerCount] = useState<string>('');
   const [playTime, setPlayTime] = useState<string>('');
-  const [minAge, setMinAge] = useState<string>('');
+  const [minAge, setMinAge] = useState([]);
   const [gameType, setGameType] = useState([]);
-  const [complexity, setComplexity] = useState<string>('');
+  const [complexity, setComplexity] = useState([]);
   
   // Dropdown visibility states
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
@@ -30,9 +30,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
   const timeOptions = ['30', '60', '90', '120+'];
-  const ageOptions = ['6+', '8+', '10+', '12+', '14+', '16+'];
+  const ageOptions = ['6+', '8+', '10+', '12+', '14+', '16+'].map((_) => {return {value: _, label: _}});
   const typeOptions = ['Any', 'Competitive', 'Cooperative', 'Team-based'].map((_) => {return {value: _, label: _}});
-  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'];
+  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'].map((_) => {return {value: _, label: _}});
 
   const handleSearch = () => {
     if (!playerCount) return;
@@ -154,6 +154,16 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </View>
 
       <Select
+        value={minAge}
+        onChange={setMinAge}
+        defaultValue={[]}
+        options={ageOptions}
+        isMulti
+        isClearable
+        closeMenuOnSelect="false"
+      />
+
+      <Select
         value={gameType}
         onChange={(option) => {
           console.log('Selected option:', option);
@@ -163,9 +173,17 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         options={typeOptions}
         isMulti
         isClearable
-        className="basic-multi-select"
-        classNamePrefix="select"
-        closeMenuOnSelect={false}
+        closeMenuOnSelect="false"
+      />
+
+      <Select
+        value={complexity}
+        onChange={setcomplexity}
+        defaultValue={[]}
+        options={complexityOptions}
+        isMulti
+        isClearable
+        closeMenuOnSelect="false"
       />
 
       <TouchableOpacity
