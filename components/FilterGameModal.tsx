@@ -157,10 +157,12 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         value={gameType}
         onchange={setGameType}
         defaultValue={[]}
-        isMulti
         options={typeOptions}
+        isMulti
+        isClearable
         className="basic-multi-select"
         classNamePrefix="select"
+        closeMenuOnSelect={false}
       />
 
       <TouchableOpacity
