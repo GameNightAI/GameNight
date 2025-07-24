@@ -155,7 +155,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
       <Select
         value={gameType}
-        onchange={(option) => {
+        onChange={(option) => {
           console.log('Selected option:', option);
           setGameType(option);
         }}
