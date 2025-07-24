@@ -31,7 +31,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
   const timeOptions = ['30', '60', '90', '120+'];
   const ageOptions = ['6+', '8+', '10+', '12+', '14+', '16+'];
-  const typeOptions = ['Any', 'Cooperative', 'Competitive', 'Team-based'];
+  const typeOptions = ['Any', 'Cooperative', 'Competitive', 'Team-based'].map((_) => {_: _});
   const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'];
 
   const handleSearch = () => {
