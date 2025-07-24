@@ -156,7 +156,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       <Select
         value={gameType}
         onchange={setGameType}
-        defaultValue="Any"
+        defaultValue={[]}
         isMulti
         options={typeOptions}
         className="basic-multi-select"
