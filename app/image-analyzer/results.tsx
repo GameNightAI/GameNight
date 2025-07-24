@@ -33,12 +33,14 @@ export default function ImageAnalyzerResults() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Analysis Results</Text>
         <View style={styles.headerActions}>
+          {/* TODO: Add share and save functionality 
           <TouchableOpacity style={styles.actionButton}>
             <Share size={20} color="#ff9654" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
             <Save size={20} color="#ff9654" />
           </TouchableOpacity>
+          */}
         </View>
       </View>
 
