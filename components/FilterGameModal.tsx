@@ -160,7 +160,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         options={ageOptions}
         isMulti
         isClearable
-        closeMenuOnSelect="false"
+        closeMenuOnSelect={false}
       />
 
       <Select
@@ -173,7 +173,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         options={typeOptions}
         isMulti
         isClearable
-        closeMenuOnSelect="false"
+        closeMenuOnSelect={false}
       />
 
       <Select
@@ -183,7 +183,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         options={complexityOptions}
         isMulti
         isClearable
-        closeMenuOnSelect="false"
+        closeMenuOnSelect={false}
       />
 
       <TouchableOpacity
