@@ -178,7 +178,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
       <Select
         value={complexity}
-        onChange={setcomplexity}
+        onChange={setComplexity}
         defaultValue={[]}
         options={complexityOptions}
         isMulti
