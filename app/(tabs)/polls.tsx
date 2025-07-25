@@ -17,6 +17,7 @@ import { Calendar, Shield } from 'lucide-react-native';
 import { PollScreenCard } from '@/components/PollScreenCard';
 import { usePollResults } from '@/hooks/usePollResults';
 import { Game } from '@/types/game';
+import { PollSuccessModal } from '@/components/PollSuccessModal';
 
 type TabType = 'all' | 'created' | 'other';
 
@@ -45,6 +46,9 @@ export default function PollsScreen() {
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
   const [preselectedGames, setPreselectedGames] = useState<Game[] | null>(null);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [createdPollId, setCreatedPollId] = useState<string | null>(null);
+  const [createdPollTitle, setCreatedPollTitle] = useState<string>('');
 
   useEffect(() => {
     loadPolls();
@@ -277,6 +281,33 @@ export default function PollsScreen() {
     } catch (err) {
       console.error('Error duplicating poll:', err);
       setError(err instanceof Error ? err.message : 'Failed to duplicate poll');
+    }
+  };
+
+  const handlePollCreated = (pollId: string, pollTitle: string) => {
+    setCreatedPollId(pollId);
+    setCreatedPollTitle(pollTitle);
+    setCreateModalVisible(false);
+    setSuccessModalVisible(true);
+    loadPolls(); // Refresh the polls list
+  };
+
+  const handleSuccessModalClose = () => {
+    setSuccessModalVisible(false);
+    setCreatedPollId(null);
+    setCreatedPollTitle('');
+  };
+
+  const handleShareFromSuccess = () => {
+    if (createdPollId) {
+      handleShare(createdPollId);
+    }
+  };
+
+  const handleLocalVotingFromSuccess = () => {
+    if (createdPollId) {
+      setSuccessModalVisible(false);
+      router.push(`/poll/local/${createdPollId}`);
     }
   };
 
@@ -576,12 +607,17 @@ export default function PollsScreen() {
           setCreateModalVisible(false);
           setPreselectedGames(null);
         }}
-        onSuccess={() => {
-          setCreateModalVisible(false);
-          setPreselectedGames(null);
-          loadPolls();
-        }}
+        onSuccess={handlePollCreated}
         preselectedGames={preselectedGames || undefined}
+      />
+
+      <PollSuccessModal
+        isVisible={successModalVisible}
+        onClose={handleSuccessModalClose}
+        pollId={createdPollId || ''}
+        pollTitle={createdPollTitle}
+        onShareLink={handleShareFromSuccess}
+        onLocalVoting={handleLocalVotingFromSuccess}
       />
 
       <ConfirmationDialog

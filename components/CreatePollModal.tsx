@@ -10,7 +10,7 @@ import Toast from 'react-native-toast-message';
 interface CreatePollModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSuccess: (pollType: 'single-user' | 'multi-user-device') => void;
+  onSuccess: (pollId: string, pollTitle: string) => void;
   preselectedGames?: Game[]; // New prop for preselected games
 }
 
@@ -216,7 +216,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       Toast.show({ type: 'success', text1: 'Poll link copied to clipboard!' });
 
       // Pass pollType to onSuccess for downstream handling
-      onSuccess('single-user'); // Assuming single-user for now
+      onSuccess(pollData.id, title || 'Vote on games');
       resetForm();
     } catch (err) {
       console.error('Error creating poll:', err);
