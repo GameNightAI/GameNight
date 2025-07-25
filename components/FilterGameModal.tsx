@@ -8,20 +8,56 @@ interface FilterGameModalProps {
   isVisible: boolean;
   onClose: () => void;
   onSearch: (players: string, time?: string, unlimited?: boolean) => void;
-  games: Game[];
+  playerCount: any;
+  playTime: any;
+  age: any;
+  gameType: any;
+  complexity: any;
+}
+
+export const filterGames = (games, playerCount, playTime, age, gameType, complexity) => {
+  return filterGames.map((game) => {
+    let is_match = true;
+    
+    // TODO: Change this to multiselect
+    if (playerCount) {
+      const count = parseInt(playerCount)
+      is_match &&= (game.min_players <= count || count === 15) && game.max_players >= count;
+    }
+    
+    if (playTime) {
+      let time_filter = false;
+      playTime.map((t) => {
+      // This should really incorporate game.minplaytime and game.maxplaytime
+        time_filter ||= (t.min < game.playing_time && game.playing_time < t.max);
+      });
+      is_match &&= time_filter;
+    }
+    return is_match;
+  };
 }
 
 export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   isVisible,
   onClose,
   onSearch,
+  playerCount,
+  playTime,
+  age,
+  gameType,
+  complexity,
+  setPlayerCount,
+  setPlayTime,
+  setAge,
+  setGameType,
+  setComplexity,
 }) => {
   // Filter states
-  const [playerCount, setPlayerCount] = useState<string>('');
-  const [playTime, setPlayTime] = useState([]);
-  const [age, setAge] = useState([]);
-  const [gameType, setGameType] = useState([]);
-  const [complexity, setComplexity] = useState([]);
+  // const [playerCount, setPlayerCount] = useState<string>('');
+  // const [playTime, setPlayTime] = useState([]);
+  // const [age, setAge] = useState([]);
+  // const [gameType, setGameType] = useState([]);
+  // const [complexity, setComplexity] = useState([]);
   
   // Dropdown visibility states
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
