@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { RefreshCw, X, Search, Plus, Camera } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
@@ -214,11 +214,7 @@ export default function CollectionScreen() {
         username={null}
         onRefresh={handleSync}
         loadGames={loadGames}
-        message={
-          isFiltered
-            ? `No games found. : ''}`
-            : undefined
-        }
+        message={isFiltered ? 'No games found' : undefined}
         buttonText={isFiltered ? "Clear Filters" : undefined}
         showSyncButton={!isFiltered}
       />
