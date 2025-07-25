@@ -322,16 +322,16 @@ export default function CollectionScreen() {
         isVisible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         onSearch={handleFilter}
-        playerCount={playerCount},
-        playTime={playTime},
-        age={age},
-        gameType={gameType},
-        complexity={complexity},
-        setPlayerCount={setPlayerCount},
-        setPlayTime={setPlayTime},
-        setAge={setAge},
-        setGameType={setGameType},
-        setComplexity={setComplexity},
+        playerCount={playerCount}
+        playTime={playTime}
+        age={age}
+        gameType={gameType}
+        complexity={complexity}
+        setPlayerCount={setPlayerCount}
+        setPlayTime={setPlayTime}
+        setAge={setAge}
+        setGameType={setGameType}
+        setComplexity={setComplexity}
       />
 
       <AddGameModal
