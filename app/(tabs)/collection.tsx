@@ -79,8 +79,8 @@ export default function CollectionScreen() {
       }));
 
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
-
       setGames(filteredGames);
+      
     } catch (err) {
       console.error('Error in loadGames:', err);
       setError(err instanceof Error ? err.message : 'Failed to load games');
@@ -178,14 +178,9 @@ export default function CollectionScreen() {
     }
   };
 
-  const handleFilter = (players: string, time?: string, unlimited?: boolean) => {
-    const params: { players: string; time?: string; unlimited?: string } = { players };
-    if (time) {
-      params.time = time;
-      params.unlimited = unlimited ? '1' : '0';
-    }
-    router.setParams(params);
-  };
+  const handleFilter = useCallback(() => {
+    loadGames();
+  }, [loadGames]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
