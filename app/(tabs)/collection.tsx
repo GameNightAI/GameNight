@@ -94,7 +94,7 @@ export default function CollectionScreen() {
         time.map((t) => {
         // This should really incorporate game.minplaytime and game.maxplaytime
           time_filter ||= (t.min < game.playing_time && game.playing_time < t.max);
-        }
+        });
         matches &&= time_filter;
 
         return matches;
