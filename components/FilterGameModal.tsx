@@ -34,8 +34,8 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       is_match &&= time_filter;
     }
     return is_match;
-  };
-}
+  });
+};
 
 export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   isVisible,
