@@ -50,6 +50,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
   const { width } = useWindowDimensions();
   const isMobile = width < 500;
   const isSmallScreen = width < 400;
+
   const getButtonStyle = (voteType: string) => {
     const isSelected = selectedVote === voteType;
     const score = getScoreByVoteType(voteType);
@@ -67,6 +68,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
       },
     ];
   };
+
   const getIconColor = (voteType: string) => {
     if (selectedVote === voteType) {
       switch (voteType) {
@@ -77,6 +79,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
     }
     return '#666666';
   };
+
   const [isExpanded, setIsExpanded] = React.useState(false);
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
 
@@ -91,48 +94,53 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         activeOpacity={0.85}
         onPress={toggleExpanded}
       >
-        <View style={[styles.contentRowWithThumb, isSmallScreen && styles.contentRowWithThumbSmall]}>
-          <View style={[styles.infoAndVote, isSmallScreen && styles.infoAndVoteSmall]}>
-            <View style={styles.info}>
+        {/* Main content area */}
+        <View style={[styles.mainContent, isMobile && styles.mainContentMobile]}>
+          {/* Game info and thumbnail row */}
+          <View style={[styles.gameInfoRow, isMobile && styles.gameInfoRowMobile]}>
+            <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
               <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
               <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
                 {game.min_players}-{game.max_players} players • {game.playing_time} min
               </Text>
             </View>
-            <View style={styles.voteButtonsContainer}>
-              {VOTING_OPTIONS.map(option => {
-                const IconComponent = ICON_MAP[option.icon];
-                return (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={getButtonStyle(option.value)}
-                    onPress={() => onVote(game.id, option.value)}
-                    disabled={disabled}
-                  >
-                    <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value)} />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <View style={styles.chevronIcon}>
+            <View style={styles.chevronContainer}>
               {isExpanded ? (
                 <ChevronUp size={isSmallScreen ? 20 : 24} color="#ff9654" />
               ) : (
                 <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
               )}
             </View>
+            <Image
+              source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
+              style={[
+                styles.thumbnail,
+                isMobile && styles.thumbnailMobile,
+                isSmallScreen && styles.thumbnailSmall
+              ]}
+              resizeMode="cover"
+            />
           </View>
-          <Image
-            source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
-            style={[
-              styles.thumbnail,
-              isMobile && styles.thumbnailMobile,
-              isSmallScreen && styles.thumbnailSmall
-            ]}
-            resizeMode="cover"
-          />
+
+          {/* Voting buttons row - moved below game info for mobile */}
+          <View style={[styles.voteButtonsContainer, isMobile && styles.voteButtonsContainerMobile]}>
+            {VOTING_OPTIONS.map(option => {
+              const IconComponent = ICON_MAP[option.icon];
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={getButtonStyle(option.value)}
+                  onPress={() => onVote(game.id, option.value)}
+                  disabled={disabled}
+                >
+                  <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value)} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </TouchableOpacity>
+
       {isExpanded && (
         <Animated.View
           entering={FadeIn.duration(200)}
@@ -196,44 +204,53 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  contentRowWithThumb: {
+  mainContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
   },
-  contentRowWithThumbSmall: {
-    gap: 6,
-    padding: 0,
+  mainContentMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  gameInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  gameInfoRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  gameInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  gameInfoMobile: {
+    flex: 1,
+    marginRight: 0,
   },
   thumbnail: {
     width: 80,
     height: 80,
     borderRadius: 8,
     backgroundColor: '#f0f0f0',
-    marginTop: 0,
   },
   thumbnailMobile: {
-    alignSelf: 'center',
-    marginTop: 0,
-    marginBottom: 0,
+    width: 60,
+    height: 60,
   },
   thumbnailSmall: {
     width: 48,
     height: 48,
   },
-  infoAndVote: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginLeft: 0,
-    gap: 8,
-  },
-  infoAndVoteSmall: {
-    gap: 4,
-  },
-  info: {
-    flex: 1,
+  chevronContainer: {
+    marginLeft: 'auto',
     marginRight: 8,
   },
   name: {
@@ -254,12 +271,15 @@ const styles = StyleSheet.create({
   detailsSmall: {
     fontSize: 11,
   },
-  voteButtons: {
+  voteButtonsContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
-  voteButtonsSmall: {
-    gap: 4,
+  voteButtonsContainerMobile: {
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
   },
   voteButton: {
     width: 40,
@@ -342,18 +362,5 @@ const styles = StyleSheet.create({
   expandTouchable: {
     borderRadius: 12,
     overflow: 'hidden',
-  },
-  contentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  voteButtonsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  chevronIcon: {
-    marginLeft: 8,
   },
 });
