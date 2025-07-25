@@ -24,7 +24,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const [complexity, setComplexity] = useState([]);
   
   // Dropdown visibility states
-  // const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
+  const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
   // const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   // const [showAgeDropdown, setShowAgeDropdown] = useState(false);
   // const [showTypeDropdown, setShowTypeDropdown] = useState(false);
