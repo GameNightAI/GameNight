@@ -50,6 +50,14 @@ export default function PollsScreen() {
   const [createdPollId, setCreatedPollId] = useState<string | null>(null);
   const [createdPollTitle, setCreatedPollTitle] = useState<string>('');
 
+  // Simple handler to show success modal directly
+  const handleCreatePollClick = () => {
+    // Set mock data for the modal
+    setCreatedPollId('mock-poll-id-123');
+    setCreatedPollTitle('What should we play tonight?');
+    setSuccessModalVisible(true);
+  };
+
   useEffect(() => {
     loadPolls();
   }, []);
@@ -353,7 +361,7 @@ export default function PollsScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.createButton}
-          onPress={() => setCreateModalVisible(true)}
+          onPress={handleCreatePollClick}
         >
           <Plus size={20} color="#ffffff" />
           <Text style={styles.createButtonText}>Create Poll</Text>
@@ -597,18 +605,8 @@ export default function PollsScreen() {
         }}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <PollsEmptyState onCreate={() => setCreateModalVisible(true)} />
+          <PollsEmptyState onCreate={handleCreatePollClick} />
         }
-      />
-
-      <CreatePollModal
-        isVisible={createModalVisible}
-        onClose={() => {
-          setCreateModalVisible(false);
-          setPreselectedGames(null);
-        }}
-        onSuccess={handlePollCreated}
-        preselectedGames={preselectedGames || undefined}
       />
 
       <PollSuccessModal
