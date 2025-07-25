@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
 import { Search, X, ChevronDown, Clock } from 'lucide-react-native';
 import Select from 'react-select';
+import { Game } from '@/types/game';
 
 interface FilterGameModalProps {
   isVisible: boolean;
   onClose: () => void;
   onSearch: (players: string, time?: string, unlimited?: boolean) => void;
+  games: Game[];
 }
 
 export const FilterGameModal: React.FC<FilterGameModalProps> = ({
@@ -16,26 +18,39 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 }) => {
   // Filter states
   const [playerCount, setPlayerCount] = useState<string>('');
-  const [playTime, setPlayTime] = useState<string>('');
-  const [minAge, setMinAge] = useState([]);
+  const [playTime, setPlayTime] = useState([]);
+  const [age, setAge] = useState([]);
   const [gameType, setGameType] = useState([]);
   const [complexity, setComplexity] = useState([]);
   
   // Dropdown visibility states
-  const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
-  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
-  const [showAgeDropdown, setShowAgeDropdown] = useState(false);
-  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  const [showComplexityDropdown, setShowComplexityDropdown] = useState(false);
+  // const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
+  // const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  // const [showAgeDropdown, setShowAgeDropdown] = useState(false);
+  // const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  // const [showComplexityDropdown, setShowComplexityDropdown] = useState(false);
 
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
-  const timeOptions = ['30', '60', '90', '120+'];
-  const ageOptions = ['6+', '8+', '10+', '12+', '14+', '16+'].map((_) => {return {value: _, label: _}});
-  const typeOptions = ['Any', 'Competitive', 'Cooperative', 'Team-based'].map((_) => {return {value: _, label: _}});
-  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'].map((_) => {return {value: _, label: _}});
+  const timeOptions = [
+    {value: {min: 1, max: 30}, label: '30 minutes or less'},
+    {value: {min: 31, max: 60}, label: '31-60 minutes'},
+    {value: {min: 61, max: 90}, label: '61-90 minutes'},
+    {value: {min: 91, max: 120}, label: '91-120 minutes'},
+    {value: {min: 120, max: 999999999}, label: '120 minutes or more'},
+  ];
+  const ageOptions = [
+    {value: {min: 0, max: 5}, label: '5 and under'},
+    {value: {min: 6, max: 7}, label: '6-7'},
+    {value: {min: 8, max: 9}, label: '8-9'},
+    {value: {min: 10, max: 11}, label: '10-11'},
+    {value: {min: 12, max: 13}, label: '12-13'},
+    {value: {min: 14, max: 15}, label: '14-15'},
+    {value: {min: 16, max: 999}, label: '16 and up'},
+  ];
+  const typeOptions = ['Competitive', 'Cooperative', 'Team-based'].map((_) => ({value: _, label: _}));
+  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'].map((_, i) => {return {value: i+1, label: _}});
 
   const handleSearch = () => {
-    if (!playerCount) return;
     const players = playerCount === '15+' ? '15' : playerCount;
     const time = playTime === '120+' ? '120' : playTime;
     onSearch(players, time, playTime === '120+');
@@ -104,58 +119,19 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         </View>
       </View>
 
-      <View style={[styles.inputSection, { zIndex: 1 }]}>
-
-        <View style={styles.dropdownContainer}>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={() => {
-              setShowTimeDropdown(!showTimeDropdown);
-              setShowPlayerDropdown(false);
-            }}
-          >
-            <Text style={styles.dropdownButtonText}>
-              {playTime ? `${playTime} minutes` : 'Select play time'}
-            </Text>
-            <Clock size={20} color="#666666" />
-          </TouchableOpacity>
-
-          {showTimeDropdown && (
-            <View style={[styles.dropdown, styles.dropdownAbsolute]}>
-              <ScrollView
-                style={styles.dropdownScroll}
-                showsVerticalScrollIndicator={true}
-                nestedScrollEnabled={true}
-              >
-                {timeOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.dropdownItem,
-                      playTime === option && styles.dropdownItemSelected
-                    ]}
-                    onPress={() => {
-                      setPlayTime(option);
-                      setShowTimeDropdown(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.dropdownItemText,
-                      playTime === option && styles.dropdownItemTextSelected
-                    ]}>
-                      {option} minutes
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      </View>
+      <Select
+        value={playTime}
+        onChange={setPlayTime}
+        defaultValue={[]}
+        options={timeOptions}
+        isMulti
+        isClearable
+        closeMenuOnSelect={false}
+      />
 
       <Select
-        value={minAge}
-        onChange={setMinAge}
+        value={age}
+        onChange={setAge}
         defaultValue={[]}
         options={ageOptions}
         isMulti
@@ -187,9 +163,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       />
 
       <TouchableOpacity
-        style={[styles.searchButton, !playerCount && styles.searchButtonDisabled]}
+        style={[styles.searchButton, styles.searchButtonDisabled]}
         onPress={handleSearch}
-        disabled={!playerCount}
       >
         <Search color="#fff" size={20} />
         <Text style={styles.searchButtonText}>Filter Games</Text>
