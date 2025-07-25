@@ -13,12 +13,13 @@ import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
-import { FilterGameModal } from '@/components/FilterGameModal';
+import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
 import { AddGameModal } from '@/components/AddGameModal';
 import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
   const [games, setGames] = useState<Game[]>([]);
+  // const [filteredGames, setFilteredGames] useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +29,14 @@ export default function CollectionScreen() {
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
-  const { players, time, unlimited } = useLocalSearchParams<{
-    players?: string;
-    time?: string;
-    unlimited?: string;
-  }>();
+  
+  const [playerCount, setPlayerCount] = useState<string>('');
+  const [playTime, setPlayTime] = useState([]);
+  const [age, setAge] = useState([]);
+  const [gameType, setGameType] = useState([]);
+  const [complexity, setComplexity] = useState([]);
 
-  const isFiltered = Boolean(players || time);
+  const isFiltered = Boolean(playerCount || playTime);
 
   const loadGames = useCallback(async () => {
     try {
@@ -76,31 +78,7 @@ export default function CollectionScreen() {
         bayesaverage: game.bayesaverage,
       }));
 
-      // Filter games based on player count and play time
-      const filteredGames = mappedGames.filter(game => {
-        let matches = true;
-
-        if (players) {
-          const count = parseInt(players === '15+' ? '15' : players);
-          matches &&= (game.min_players <= count || count === 15) && game.max_players >= count;
-        }
-
-        // if (time && unlimited !== '1') {
-          // const maxTime = parseInt(time);
-          // matches &&= game.playing_time <= maxTime;
-        // }
-        
-        if (time) {
-          let time_filter = false;
-          time.map((t) => {
-          // This should really incorporate game.minplaytime and game.maxplaytime
-            time_filter ||= (t.min < game.playing_time && game.playing_time < t.max);
-          });
-          matches &&= time_filter;
-        }
-
-        return matches;
-      });
+      const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
 
       setGames(filteredGames);
     } catch (err) {
@@ -344,6 +322,16 @@ export default function CollectionScreen() {
         isVisible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         onSearch={handleFilter}
+        playerCount={playerCount},
+        playTime={playTime},
+        age={age},
+        gameType={gameType},
+        complexity={complexity},
+        setPlayerCount={setPlayerCount},
+        setPlayTime={setPlayTime},
+        setAge={setAge},
+        setGameType={setGameType},
+        setComplexity={setComplexity},
       />
 
       <AddGameModal
