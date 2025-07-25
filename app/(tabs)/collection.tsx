@@ -63,13 +63,13 @@ export default function CollectionScreen() {
         min_players: game.min_players,
         max_players: game.max_players,
         playing_time: game.playing_time,
-        minPlaytime: game.minplaytime || 0,
-        maxPlaytime: game.maxplaytime || 0,
+        minPlaytime: game.minplaytime,
+        maxPlaytime: game.maxplaytime,
         description: game.description || '',
-        minAge: game.min_age || 0,
+        minAge: game.min_age,
         is_cooperative: game.is_cooperative || false,
         is_teambased: game.is_teambased || false,
-        complexity: game.complexity || 1,
+        complexity: game.complexity,
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc || '',
         average: game.average,
@@ -85,10 +85,17 @@ export default function CollectionScreen() {
           matches &&= (game.min_players <= count || count === 15) && game.max_players >= count;
         }
 
-        if (time && unlimited !== '1') {
-          const maxTime = parseInt(time);
-          matches &&= game.playing_time <= maxTime;
+        // if (time && unlimited !== '1') {
+          // const maxTime = parseInt(time);
+          // matches &&= game.playing_time <= maxTime;
+        // }
+        
+        let time_filter = !time;
+        time.map((t) => {
+        // This should really incorporate game.minplaytime and game.maxplaytime
+          time_filter ||= (t.min < game.playing_time && game.playing_time < t.max);
         }
+        matches &&= time_filter;
 
         return matches;
       });
