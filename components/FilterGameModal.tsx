@@ -13,6 +13,11 @@ interface FilterGameModalProps {
   age: any;
   gameType: any;
   complexity: any;
+  setPlayerCount: any;
+  setPlayTime: any;
+  setAge: any;
+  setGameType: any;
+  setComplexity: any;
 }
 
 export const filterGames = (games, playerCount, playTime, age, gameType, complexity) => {
@@ -113,7 +118,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             style={styles.dropdownButton}
             onPress={() => {
               setShowPlayerDropdown(!showPlayerDropdown);
-              setShowTimeDropdown(false);
+              //setShowTimeDropdown(false);
             }}
           >
             <Text style={styles.dropdownButtonText}>
