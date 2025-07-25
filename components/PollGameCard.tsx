@@ -4,27 +4,44 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions, L
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react-native';
 
-import { VoteType } from '@/hooks/usePollData';
+import { VOTING_OPTIONS, ICON_MAP, VoteType } from './votingOptions';
+
+// Utility to get score by voteType
+const getScoreByVoteType = (voteType: string): number => {
+  const option = VOTING_OPTIONS.find(opt => opt.value === voteType);
+  return option ? option.score : 0;
+};
+
+// Utility to get background color by score
+const getVoteBgColor = (score: number, isSelected: boolean): string => {
+  if (!isSelected) return '#f5f5f5';
+  if (score > 0) return '#bbf7d0'; // green-200
+  if (score < 0) return '#fecaca'; // red-200
+  return '#fef9c3'; // yellow-100
+};
 
 interface Game {
   id: number;
   name: string;
+  image_url: string;
   min_players: number;
   max_players: number;
   playing_time: number;
-  userVote?: VoteType | null;
   complexity?: number;
   complexity_desc?: string;
-  average?: number | null;
-  minAge?: number;
+  bgg_id?: number;
+  year_published?: number;
   thumbnail?: string;
   image?: string;
+  average?: number | null;
+  minAge?: number;
+  // userVote property removed as it is not used
 }
 
 interface Props {
   game: Game;
   index: number;
-  selectedVote?: VoteType;
+  selectedVote?: string;
   onVote: (gameId: number, voteType: VoteType) => void;
   disabled?: boolean;
 }
@@ -33,29 +50,39 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
   const { width } = useWindowDimensions();
   const isMobile = width < 500;
   const isSmallScreen = width < 400;
-  const getButtonStyle = (voteType: VoteType) => {
+  const getButtonStyle = (voteType: string) => {
     const isSelected = selectedVote === voteType;
+    const score = getScoreByVoteType(voteType);
     return [
       styles.voteButton,
       isSmallScreen && styles.voteButtonSmall,
-      isSelected && styles.voteButtonSelected,
-      isSelected && voteType === VoteType.THUMBS_DOWN && styles.thumbsDownSelected,
-      isSelected && voteType === VoteType.THUMBS_UP && styles.thumbsUpSelected,
-      isSelected && voteType === VoteType.DOUBLE_THUMBS_UP && styles.doubleThumbsUpSelected,
+      {
+        backgroundColor: getVoteBgColor(score, isSelected),
+        borderColor: isSelected ? (score > 0 ? '#22c55e' : score < 0 ? '#ef4444' : '#eab308') : 'transparent',
+        borderWidth: isSelected ? 3 : 2,
+        shadowColor: isSelected ? (score > 0 ? '#22c55e' : score < 0 ? '#ef4444' : '#eab308') : 'transparent',
+        shadowOpacity: isSelected ? 0.25 : 0,
+        shadowRadius: isSelected ? 8 : 0,
+        elevation: isSelected ? 4 : 0,
+      },
     ];
   };
-  const getIconColor = (voteType: VoteType) => {
+  const getIconColor = (voteType: string) => {
     if (selectedVote === voteType) {
       switch (voteType) {
-        case VoteType.THUMBS_DOWN: return '#ef4444';
-        case VoteType.THUMBS_UP: return '#10b981';
-        case VoteType.DOUBLE_THUMBS_UP: return '#ec4899';
+        case 'thumbs_down': return '#ef4444';
+        case 'thumbs_up': return '#10b981';
+        case 'heart': return '#ec4899';
       }
     }
     return '#666666';
   };
   const [isExpanded, setIsExpanded] = React.useState(false);
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
+
+  function hasRemovesGame(option: typeof VOTING_OPTIONS[number]): option is typeof VOTING_OPTIONS[number] & { removesGame: true } {
+    return 'removesGame' in option && option.removesGame === true;
+  }
 
   return (
     <Animated.View entering={FadeIn.delay(index * 100)} style={styles.card}>
@@ -73,40 +100,26 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               </Text>
             </View>
             <View style={styles.voteButtonsContainer}>
-              <View style={[styles.voteButtons, isSmallScreen && styles.voteButtonsSmall]}>
-                <TouchableOpacity
-                  style={getButtonStyle(VoteType.THUMBS_DOWN)}
-                  onPress={e => { e.stopPropagation(); onVote(game.id, VoteType.THUMBS_DOWN); }}
-                  disabled={disabled}
-                >
-                  <ThumbsDown size={isSmallScreen ? 16 : 20} color={getIconColor(VoteType.THUMBS_DOWN)} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={getButtonStyle(VoteType.THUMBS_UP)}
-                  onPress={e => { e.stopPropagation(); onVote(game.id, VoteType.THUMBS_UP); }}
-                  disabled={disabled}
-                >
-                  <ThumbsUp size={isSmallScreen ? 16 : 20} color={getIconColor(VoteType.THUMBS_UP)} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={getButtonStyle(VoteType.DOUBLE_THUMBS_UP)}
-                  onPress={e => { e.stopPropagation(); onVote(game.id, VoteType.DOUBLE_THUMBS_UP); }}
-                  disabled={disabled}
-                >
-                  <Heart
-                    size={isSmallScreen ? 16 : 20}
-                    color={getIconColor(VoteType.DOUBLE_THUMBS_UP)}
-                    fill={selectedVote === VoteType.DOUBLE_THUMBS_UP ? getIconColor(VoteType.DOUBLE_THUMBS_UP) : 'transparent'}
-                  />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.chevronIcon}>
-                {isExpanded ? (
-                  <ChevronUp size={isSmallScreen ? 20 : 24} color="#ff9654" />
-                ) : (
-                  <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
-                )}
-              </View>
+              {VOTING_OPTIONS.map(option => {
+                const IconComponent = ICON_MAP[option.icon];
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={getButtonStyle(option.value)}
+                    onPress={() => onVote(game.id, option.value)}
+                    disabled={disabled}
+                  >
+                    <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value)} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.chevronIcon}>
+              {isExpanded ? (
+                <ChevronUp size={isSmallScreen ? 20 : 24} color="#ff9654" />
+              ) : (
+                <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
+              )}
             </View>
           </View>
           <Image

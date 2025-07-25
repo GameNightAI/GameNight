@@ -1,11 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { VOTING_OPTIONS, ICON_MAP } from './votingOptions';
 
 interface GameVoteSummary {
   name: string;
-  thumbs_up: number;
-  double_thumbs_up: number;
-  thumbs_down: number;
+  [key: string]: any; // allow dynamic vote type keys
 }
 
 interface PollScreenCardProps {
@@ -17,11 +16,14 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
   // Calculate scores and sort
   const scoredResults = games.map(game => ({
     ...game,
-    score: (game.double_thumbs_up * 2) + game.thumbs_up - game.thumbs_down
+    score: VOTING_OPTIONS.reduce((sum, voteType) => {
+      const voteCount = game[voteType.value] || 0;
+      return sum + voteCount * voteType.score;
+    }, 0)
   }));
   scoredResults.sort((a, b) => b.score - a.score);
 
-  // Assign ranks, handling ties (match results context)
+  // Assign ranks, handling ties
   let lastScore: number | null = null;
   let lastRank = 0;
   let tieGroup: number[] = [];
@@ -50,9 +52,14 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
       {/* Header row for vote types */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }} />
-        <View style={styles.voteCol}><Text style={styles.voteIcon}>❤️</Text></View>
-        <View style={styles.voteCol}><Text style={styles.voteIcon}>👍</Text></View>
-        <View style={styles.voteCol}><Text style={styles.voteIcon}>👎</Text></View>
+        {VOTING_OPTIONS.map(option => {
+          const IconComponent = ICON_MAP[option.icon];
+          return (
+            <View style={styles.voteCol} key={option.value}>
+              <IconComponent />
+            </View>
+          );
+        })}
       </View>
       {rankedResults.map((game, idx) => {
         // Alternate row shading for desktop/web
@@ -70,9 +77,11 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
                 <Text style={{ color: '#888', fontSize: 12, marginLeft: 4 }}>(tie)</Text>
               )}
             </View>
-            <View style={styles.voteCol}><Text style={styles.voteValue}>{game.double_thumbs_up}</Text></View>
-            <View style={styles.voteCol}><Text style={styles.voteValue}>{game.thumbs_up}</Text></View>
-            <View style={styles.voteCol}><Text style={styles.voteValue}>{game.thumbs_down}</Text></View>
+            {VOTING_OPTIONS.map(option => (
+              <View style={styles.voteCol} key={option.value}>
+                <Text style={styles.voteValue}>{game[option.value] || 0}</Text>
+              </View>
+            ))}
           </View>
         );
       })}

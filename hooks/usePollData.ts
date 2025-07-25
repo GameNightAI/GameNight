@@ -5,23 +5,20 @@ import { getOrCreateAnonId } from '@/utils/anon';
 import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
-
-export enum VoteType {
-  THUMBS_DOWN = 'thumbs_down',
-  THUMBS_UP = 'thumbs_up',
-  DOUBLE_THUMBS_UP = 'double_thumbs_up',
-}
+import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE } from '@/components/votingOptions';
 
 interface GameVotes {
-  thumbs_down: number;
-  thumbs_up: number;
-  double_thumbs_up: number;
-  voters: { name: string; vote_type: VoteType }[];
+  voteType1: number;
+  voteType2: number;
+  voteType3: number;
+  voteType4: number;
+  voteType5: number;
+  voters: { name: string; vote_type: number }[];
 }
 
 interface PollGame extends Game {
   votes: GameVotes;
-  userVote?: VoteType | null;
+  userVote?: number | null;
 }
 
 export const usePollData = (pollId: string | string[] | undefined) => {
@@ -32,7 +29,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
   const [error, setError] = useState<string | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [pendingVotes, setPendingVotes] = useState<Record<number, VoteType>>({});
+  const [pendingVotes, setPendingVotes] = useState<Record<number, number>>({});
 
   useEffect(() => {
     if (pollId) loadPoll(pollId.toString());
@@ -153,18 +150,20 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
         const voteData: GameVotes = {
-          thumbs_down: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_DOWN).length,
-          thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_UP).length,
-          double_thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.DOUBLE_THUMBS_UP).length,
+          voteType1: gameVotes.filter(v => v.vote_type === 3).length,
+          voteType2: gameVotes.filter(v => v.vote_type === 2).length,
+          voteType3: gameVotes.filter(v => v.vote_type === 1).length,
+          voteType4: gameVotes.filter(v => v.vote_type === 0).length,
+          voteType5: gameVotes.filter(v => v.vote_type === -3).length,
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
-            vote_type: v.vote_type as VoteType,
+            vote_type: v.vote_type,
           })),
         };
 
         // Find user's vote for this game
         const userVote = identifier ?
-          gameVotes.find(v => v.voter_name === identifier)?.vote_type as VoteType || null
+          gameVotes.find(v => v.voter_name === identifier)?.vote_type ?? null
           : null;
 
         return {
@@ -194,10 +193,10 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       console.log('Formatted games:', formattedGames);
 
       // Set initial pending votes from user's existing votes
-      const initialVotes: Record<number, VoteType> = {};
+      const initialVotes: Record<number, number> = {};
       userVotes.forEach(v => {
-        if (v.game_id && v.vote_type) {
-          initialVotes[v.game_id] = v.vote_type as VoteType;
+        if (v.game_id && typeof v.vote_type === 'number') {
+          initialVotes[v.game_id] = v.vote_type;
         }
       });
 

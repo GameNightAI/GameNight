@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
-import { usePollData, VoteType } from '@/hooks/usePollData';
+import { usePollData } from '@/hooks/usePollData';
+import { VoteType, VOTE_TYPE_TO_SCORE, SCORE_TO_VOTE_TYPE } from '@/components/votingOptions';
 import { VoterNameInput } from '@/components/PollVoterNameInput';
 import { GameCard } from '@/components/PollGameCard';
 import { PollResultsButton } from '@/components/PollResultsButton';
@@ -100,12 +101,11 @@ export default function PollScreen() {
   const handleVote = (gameId: number, voteType: VoteType) => {
     setPendingVotes(prev => {
       const updated = { ...prev };
-      if (updated[gameId] === voteType) {
-        // If the same icon is clicked again, unselect it
+      const score = VOTE_TYPE_TO_SCORE[voteType];
+      if (updated[gameId] === score) {
         delete updated[gameId];
       } else {
-        // If a different icon is clicked, only select that one
-        updated[gameId] = voteType;
+        updated[gameId] = score;
       }
       return updated;
     });
@@ -149,17 +149,17 @@ export default function PollScreen() {
       let updated = false; // Track if any votes were updated or inserted as an update
 
       // Submit each vote
-      for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
+      for (const [gameIdStr, score] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
 
         // Check for existing vote for this game
         const existing = previousVotes?.find(v => v.game_id === gameId);
 
         if (existing) {
-          if (existing.vote_type !== voteType) {
+          if (existing.vote_type !== score) {
             const { error: updateError } = await supabase
               .from('votes')
-              .update({ vote_type: voteType })
+              .update({ vote_type: score })
               .eq('id', existing.id);
             if (updateError) {
               console.error('Error updating vote:', updateError);
@@ -171,7 +171,7 @@ export default function PollScreen() {
           const { error: insertError } = await supabase.from('votes').insert({
             poll_id: id,
             game_id: gameId,
-            vote_type: voteType,
+            vote_type: score,
             voter_name: finalName,
           });
           if (insertError) {
@@ -251,7 +251,7 @@ export default function PollScreen() {
         <Text style={styles.subtitle}>
           {isCreator
             ? (creatorName ? `Poll created by ${creatorName}` : 'Poll created by you')
-            : 'Vote for as many games as you like! ❤️ = Excited, 👍 = Would play, 👎 = Not Interested'}
+            : 'Vote for as many games as you like or none at all!'}
         </Text>
       </View>
 
@@ -282,9 +282,9 @@ export default function PollScreen() {
           games.map((game, i) => (
             <GameCard
               key={game.id}
-              game={game}
+              game={game as any} // Allow for missing image_url, etc.
               index={i}
-              selectedVote={pendingVotes[game.id] ?? game.userVote}
+              selectedVote={pendingVotes[game.id] !== undefined && pendingVotes[game.id] !== null ? SCORE_TO_VOTE_TYPE[pendingVotes[game.id]] as VoteType : (game.userVote !== undefined && game.userVote !== null ? SCORE_TO_VOTE_TYPE[game.userVote] as VoteType : undefined)}
               onVote={handleVote}
               disabled={submitting}
             />
