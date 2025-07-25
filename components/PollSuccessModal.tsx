@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, TextInput } from 'react-native';
-import { CheckCircle, Share2, Users, Copy, Check, X } from 'lucide-react-native';
+import { CircleCheck as CheckCircle, Share2, Users, Copy, Check, X } from 'lucide-react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 

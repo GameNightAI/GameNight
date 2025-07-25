@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users } from 'lucide-react-native';
+import { Plus, Share2, Trash2, X, Copy, Check, ChartBar as BarChart3, Users } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 
