@@ -25,7 +25,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       is_match &&= (game.min_players <= count || count === 15) && game.max_players >= count;
     }
     
-    if (playTime) {
+    if (playTime && playTime.length) {
       let time_filter = false;
       playTime.map((t) => {
       // This should really incorporate game.minplaytime and game.maxplaytime
