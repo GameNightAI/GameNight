@@ -88,7 +88,7 @@ export default function CollectionScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [router, players, time, unlimited]);
+  }, [router]);
 
   const handleDelete = useCallback(async () => {
     if (!gameToDelete) return;
@@ -216,7 +216,7 @@ export default function CollectionScreen() {
         loadGames={loadGames}
         message={
           isFiltered
-            ? `No games found for ${players} players${time ? ` within ${time}${unlimited === '1' ? '+' : ''} minutes` : ''}`
+            ? `No games found. : ''}`
             : undefined
         }
         buttonText={isFiltered ? "Clear Filters" : undefined}
