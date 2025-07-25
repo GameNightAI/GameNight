@@ -161,16 +161,21 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </View>
 
       <Select
+        placeholder="Select play time"
         value={playTime}
-        onChange={setPlayTime}
-        defaultValue={[]}
+        onChange={option => {
+          console.log('Selected option:', option);
+          setPlayTime(option);
+        }}
         options={timeOptions}
+        defaultValue={[]}
         isMulti
         isClearable
         closeMenuOnSelect={false}
       />
 
       <Select
+        placeholder="Select age range"
         value={age}
         onChange={setAge}
         defaultValue={[]}
@@ -181,6 +186,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       />
 
       <Select
+        placeholder="Select Co-op/Competitive"
         value={gameType}
         onChange={(option) => {
           console.log('Selected option:', option);
@@ -194,6 +200,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       />
 
       <Select
+        placeholder="Select game complexity"
         value={complexity}
         onChange={setComplexity}
         defaultValue={[]}
