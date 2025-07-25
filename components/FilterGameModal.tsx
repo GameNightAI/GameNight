@@ -16,7 +16,7 @@ interface FilterGameModalProps {
 }
 
 export const filterGames = (games, playerCount, playTime, age, gameType, complexity) => {
-  return games.map((game) => {
+  return games.filter((game) => {
     let is_match = true;
     
     // TODO: Change this to multiselect
