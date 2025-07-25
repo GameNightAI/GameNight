@@ -90,12 +90,14 @@ export default function CollectionScreen() {
           // matches &&= game.playing_time <= maxTime;
         // }
         
-        let time_filter = !time;
-        time.map((t) => {
-        // This should really incorporate game.minplaytime and game.maxplaytime
-          time_filter ||= (t.min < game.playing_time && game.playing_time < t.max);
-        });
-        matches &&= time_filter;
+        if (time) {
+          let time_filter = false;
+          time.map((t) => {
+          // This should really incorporate game.minplaytime and game.maxplaytime
+            time_filter ||= (t.min < game.playing_time && game.playing_time < t.max);
+          });
+          matches &&= time_filter;
+        }
 
         return matches;
       });
