@@ -19,7 +19,7 @@ export function PollHeader({ poll, isCreator }: PollHeaderProps) {
       <Text style={styles.subtitle}>
         {isCreator
           ? 'View results below'
-          : 'Vote for as many games as you like with thumbs up, double thumbs up, or thumbs down'}
+          : 'Vote for as many games as you like or none at all'}
       </Text>
     </View>
   );

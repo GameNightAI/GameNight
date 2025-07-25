@@ -1,81 +1,62 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Heart, ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, Star } from 'lucide-react-native';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { GameResult } from '@/hooks/usePollResults';
+import { VOTING_OPTIONS, ICON_MAP, SCORE_TO_VOTE_TYPE } from './votingOptions';
+
+// Utility to get score by voteType
+const getScoreByVoteType = (voteType: string): number => {
+  const option = VOTING_OPTIONS.find(opt => opt.value === voteType);
+  return option ? option.score : 0;
+};
+
+// Utility to get background color by score
+const getVoteBgColor = (score: number): string => {
+  if (score > 0) return '#bbf7d0'; // green-200
+  if (score < 0) return '#fecaca'; // red-200
+  return '#fef9c3'; // yellow-100
+};
 
 export function GameResultCard({ game }: { game: GameResult }) {
   const [showVoters, setShowVoters] = useState(false);
-  const totalVotes = game.double_thumbs_up + game.thumbs_up + game.thumbs_down;
-  const totalScore = (game.double_thumbs_up * 2) + game.thumbs_up - game.thumbs_down;
+  // Calculate total votes and score using new voting options
+  const totalVotes = VOTING_OPTIONS.reduce((sum, opt) => sum + (game[opt.value] || 0), 0);
+  const totalScore = VOTING_OPTIONS.reduce((sum, opt) => sum + (game[opt.value] || 0) * opt.score, 0);
 
   // Group voters by their vote type
   const getVotersByType = () => {
-    const votersByType = {
-      heart: [] as string[],
-      thumbsUp: [] as string[],
-      thumbsDown: [] as string[]
-    };
-
+    const votersByType: Record<string, string[]> = {};
+    VOTING_OPTIONS.forEach(opt => { votersByType[opt.value] = []; });
     game.voterDetails.forEach(voter => {
-      switch (voter.vote_type) {
-        case 'double_thumbs_up':
-          votersByType.heart.push(voter.name);
-          break;
-        case 'thumbs_up':
-          votersByType.thumbsUp.push(voter.name);
-          break;
-        case 'thumbs_down':
-          votersByType.thumbsDown.push(voter.name);
-          break;
+      const voteTypeKey = SCORE_TO_VOTE_TYPE[voter.vote_type];
+      if (voteTypeKey && votersByType[voteTypeKey]) {
+        votersByType[voteTypeKey].push(voter.name);
       }
     });
-
     return votersByType;
   };
-
   const votersByType = getVotersByType();
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.name}>{game.name}</Text>
-        {/*
-          <View style={styles.scoreContainer}>
-            <Star size={16} color="#FFD700" fill="#FFD700" />
-            <Text style={styles.totalScore}>{totalScore}</Text>
-          </View>
-        */}
       </View>
-
       <View style={styles.votesContainer}>
-        {/* Heart (Double Thumbs Up) */}
-        <View style={styles.voteItem}>
-          <View style={styles.voteIconContainer}>
-            <Heart size={20} color="#ec4899" fill="#ec4899" />
-            <Text style={[styles.voteCount, { color: '#ec4899' }]}>{game.double_thumbs_up}</Text>
-          </View>
-          <Text style={styles.voteLabel}>Love</Text>
-        </View>
-
-        {/* Thumbs Up */}
-        <View style={styles.voteItem}>
-          <View style={styles.voteIconContainer}>
-            <ThumbsUp size={20} color="#10b981" />
-            <Text style={[styles.voteCount, { color: '#10b981' }]}>{game.thumbs_up}</Text>
-          </View>
-          <Text style={styles.voteLabel}>Like</Text>
-        </View>
-
-        {/* Thumbs Down */}
-        <View style={styles.voteItem}>
-          <View style={styles.voteIconContainer}>
-            <ThumbsDown size={20} color="#ef4444" />
-            <Text style={[styles.voteCount, { color: '#ef4444' }]}>{game.thumbs_down}</Text>
-          </View>
-          <Text style={styles.voteLabel}>Dislike</Text>
-        </View>
+        {VOTING_OPTIONS.map(function (option: typeof VOTING_OPTIONS[number]) {
+          const score = getScoreByVoteType(option.value);
+          const IconComponent = ICON_MAP[option.icon];
+          return (
+            <View style={styles.voteItem} key={option.value}>
+              <View style={styles.voteIconContainer}>
+                {typeof IconComponent === 'function' ? <IconComponent /> : <Text>?</Text>}
+                <Text style={[styles.voteCount, { backgroundColor: getVoteBgColor(score), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, minWidth: 28, textAlign: 'center' }]}>{game[option.value] || 0}</Text>
+              </View>
+              <Text style={styles.voteLabel}>{option.label}</Text>
+            </View>
+          );
+        })}
       </View>
-
       {totalVotes > 0 && (
         <View style={styles.votersSection}>
           <TouchableOpacity
@@ -91,50 +72,26 @@ export function GameResultCard({ game }: { game: GameResult }) {
               <ChevronDown size={16} color="#ff9654" />
             )}
           </TouchableOpacity>
-
           {showVoters && (
             <View style={styles.votersDetails}>
-              {votersByType.heart.length > 0 && (
-                <View style={styles.voteTypeSection}>
-                  <View style={styles.voteTypeHeader}>
-                    <Heart size={16} color="#ec4899" fill="#ec4899" />
-                    <Text style={[styles.voteTypeLabel, { color: '#ec4899' }]}>
-                      Love ({votersByType.heart.length})
+              {VOTING_OPTIONS.map(option => (
+                votersByType[option.value]?.length > 0 && (
+                  <View style={styles.voteTypeSection} key={option.value}>
+                    <View style={styles.voteTypeHeader}>
+                      {(() => {
+                        const IconComponent = ICON_MAP[option.icon];
+                        return typeof IconComponent === 'function' ? <IconComponent /> : <Text>?</Text>;
+                      })()}
+                      <Text style={[styles.voteTypeLabel]}>
+                        {option.label} ({votersByType[option.value].length})
+                      </Text>
+                    </View>
+                    <Text style={styles.votersList}>
+                      {votersByType[option.value].join(', ')}
                     </Text>
                   </View>
-                  <Text style={styles.votersList}>
-                    {votersByType.heart.join(', ')}
-                  </Text>
-                </View>
-              )}
-
-              {votersByType.thumbsUp.length > 0 && (
-                <View style={styles.voteTypeSection}>
-                  <View style={styles.voteTypeHeader}>
-                    <ThumbsUp size={16} color="#10b981" />
-                    <Text style={[styles.voteTypeLabel, { color: '#10b981' }]}>
-                      Like ({votersByType.thumbsUp.length})
-                    </Text>
-                  </View>
-                  <Text style={styles.votersList}>
-                    {votersByType.thumbsUp.join(', ')}
-                  </Text>
-                </View>
-              )}
-
-              {votersByType.thumbsDown.length > 0 && (
-                <View style={styles.voteTypeSection}>
-                  <View style={styles.voteTypeHeader}>
-                    <ThumbsDown size={16} color="#ef4444" />
-                    <Text style={[styles.voteTypeLabel, { color: '#ef4444' }]}>
-                      Dislike ({votersByType.thumbsDown.length})
-                    </Text>
-                  </View>
-                  <Text style={styles.votersList}>
-                    {votersByType.thumbsDown.join(', ')}
-                  </Text>
-                </View>
-              )}
+                )
+              ))}
             </View>
           )}
         </View>

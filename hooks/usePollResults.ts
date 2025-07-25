@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
+import { VOTING_OPTIONS, SCORE_TO_VOTE_TYPE } from '@/components/votingOptions';
 
 export type GameResult = {
   id: number;
   name: string;
-  thumbs_up: number;
-  double_thumbs_up: number;
-  thumbs_down: number;
+  voteType1: number;
+  voteType2: number;
+  voteType3: number;
+  voteType4: number;
+  voteType5: number;
   voters: string[];
-  voterDetails: { name: string; vote_type: string }[];
+  voterDetails: { name: string; vote_type: number }[];
 };
 
 export function usePollResults(pollId?: string) {
@@ -92,40 +95,39 @@ export function usePollResults(pollId?: string) {
         const resultsMap: Record<
           number,
           {
-            thumbs_up: number;
-            double_thumbs_up: number;
-            thumbs_down: number;
+            voteType1: number;
+            voteType2: number;
+            voteType3: number;
+            voteType4: number;
+            voteType5: number;
             voters: string[];
-            voterDetails: { name: string; vote_type: string }[];
+            voterDetails: { name: string; vote_type: number }[];
           }
         > = {};
 
         votes?.forEach(({ game_id, vote_type, voter_name }) => {
-          if (!game_id) return; // Skip votes without game_id
-
+          if (!game_id) return;
+          const voteTypeKey = SCORE_TO_VOTE_TYPE[vote_type];
+          if (!voteTypeKey) return;
           if (!resultsMap[game_id]) {
             resultsMap[game_id] = {
-              thumbs_up: 0,
-              double_thumbs_up: 0,
-              thumbs_down: 0,
+              voteType1: 0,
+              voteType2: 0,
+              voteType3: 0,
+              voteType4: 0,
+              voteType5: 0,
               voters: [],
               voterDetails: []
             };
           }
-
-          if (vote_type === 'thumbs_up') resultsMap[game_id].thumbs_up++;
-          else if (vote_type === 'double_thumbs_up') resultsMap[game_id].double_thumbs_up++;
-          else if (vote_type === 'thumbs_down') resultsMap[game_id].thumbs_down++;
-
+          resultsMap[game_id][voteTypeKey]++;
           if (voter_name && !resultsMap[game_id].voters.includes(voter_name)) {
             resultsMap[game_id].voters.push(voter_name);
           }
-
-          // Add detailed voter information
           if (voter_name) {
             resultsMap[game_id].voterDetails.push({
               name: voter_name,
-              vote_type: vote_type
+              vote_type: vote_type // now a number
             });
           }
         });
@@ -158,9 +160,11 @@ export function usePollResults(pollId?: string) {
         const combinedResults: GameResult[] = gamesData?.map((game) => ({
           id: game.id,
           name: game.name || 'Unknown Game',
-          thumbs_up: resultsMap[game.id]?.thumbs_up || 0,
-          double_thumbs_up: resultsMap[game.id]?.double_thumbs_up || 0,
-          thumbs_down: resultsMap[game.id]?.thumbs_down || 0,
+          voteType1: resultsMap[game.id]?.voteType1 || 0,
+          voteType2: resultsMap[game.id]?.voteType2 || 0,
+          voteType3: resultsMap[game.id]?.voteType3 || 0,
+          voteType4: resultsMap[game.id]?.voteType4 || 0,
+          voteType5: resultsMap[game.id]?.voteType5 || 0,
           voters: resultsMap[game.id]?.voters || [],
           voterDetails: resultsMap[game.id]?.voterDetails || [],
         })) || [];

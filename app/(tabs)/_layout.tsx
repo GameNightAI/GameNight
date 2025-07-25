@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Library, User, Vote, Wrench } from 'lucide-react-native';
+import { Calendar, Library, User, Vote, Wrench } from 'lucide-react-native';
+
+const EVENTS_SCREEN = false; // Set to true to show events screen
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -40,6 +42,16 @@ export default function TabLayout() {
           headerTitle: 'Game Tools',
         }}
       />
+      {EVENTS_SCREEN && <Tabs.Screen
+        name="events"
+        options={{
+          title: 'Events',
+          tabBarIcon: ({ color, size }) => (
+            <Calendar color={color} size={size} />
+          ),
+          headerTitle: 'Schedule Events',
+        }}
+      />}
       <Tabs.Screen
         name="polls"
         options={{

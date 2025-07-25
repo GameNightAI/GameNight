@@ -8,6 +8,7 @@ import { usePollResults } from '@/hooks/usePollResults';
 import { GameResultCard } from '@/components/PollGameResultCard';
 import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
+import { VOTING_OPTIONS } from '@/components/votingOptions';
 
 export default function LocalPollResultsScreen() {
   const router = useRouter();
@@ -72,10 +73,13 @@ export default function LocalPollResultsScreen() {
     );
   }
 
-  // Sort games by total positive votes (heart votes count double)
+  // Update score calculation to use voteType1, voteType2, etc.
   const scoredResults = gameResults.map(game => ({
     ...game,
-    score: (game.double_thumbs_up * 2) + game.thumbs_up - game.thumbs_down
+    score: VOTING_OPTIONS.reduce((sum, voteType) => {
+      const voteCount = game[voteType.value] || 0;
+      return sum + voteCount * voteType.score;
+    }, 0)
   }));
   scoredResults.sort((a, b) => b.score - a.score);
 
