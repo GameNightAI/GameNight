@@ -286,20 +286,10 @@ export default function PollsScreen() {
     if (loading) return <LoadingState />;
     if (error) return <ErrorState message={error} onRetry={() => { }} />;
     if (!gameResults || gameResults.length === 0) return <Text style={{ padding: 16, color: '#888' }}>No votes yet.</Text>;
-    // Sort by score: double_thumbs_up * 2 + thumbs_up - thumbs_down, descending
-    const sortedGames = [...gameResults].sort((a, b) => (
-      (b.double_thumbs_up * 2 + b.thumbs_up - b.thumbs_down) -
-      (a.double_thumbs_up * 2 + a.thumbs_up - a.thumbs_down)
-    ));
-    const games = sortedGames.map(g => ({
-      name: g.name,
-      thumbs_up: g.thumbs_up,
-      double_thumbs_up: g.double_thumbs_up,
-      thumbs_down: g.thumbs_down,
-    }));
+
     return (
       <PollScreenCard
-        games={games}
+        games={gameResults}
         onViewDetails={() => router.push({ pathname: '/poll/[id]/results', params: { id: pollId } })}
       />
     );
