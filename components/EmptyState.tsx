@@ -109,7 +109,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
         {/* Main heading */}
         <Text style={styles.title}>Add games to your collection!</Text>
-        
+
         {/* Subtitle */}
         <Text style={styles.subtitle}>
           Start building your board game collection and unlock these benefits:
@@ -121,12 +121,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             <Star size={20} color="#ff9654" />
             <Text style={styles.benefitText}>Track your collection</Text>
           </View>
-          
+
           <View style={styles.benefitItem}>
             <Filter size={20} color="#ff9654" />
             <Text style={styles.benefitText}>Easily filter to find the right game</Text>
           </View>
-          
+
           <View style={styles.benefitItem}>
             <Users size={20} color="#ff9654" />
             <Text style={styles.benefitText}>Let your friends vote on what they want to play</Text>
@@ -178,7 +178,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             </View>
           </Modal>
         )}
-        
+
         <AddGameModal
           isVisible={addGameModalVisible}
           onClose={() => setAddGameModalVisible(false)}
@@ -233,7 +233,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff5ef',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 14,
+    marginTop: 24,
   },
   title: {
     fontFamily: 'Poppins-Bold',
@@ -247,14 +248,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
     maxWidth: 300,
     lineHeight: 24,
   },
   benefitsList: {
     width: '100%',
     maxWidth: 320,
-    marginBottom: 40,
+    marginBottom: 10,
   },
   benefitItem: {
     flexDirection: 'row',
