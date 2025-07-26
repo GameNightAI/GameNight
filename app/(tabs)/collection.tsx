@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { RefreshCw, X, Search, Plus, Camera } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
@@ -13,12 +13,13 @@ import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
-import { FilterGameModal } from '@/components/FilterGameModal';
+import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
 import { AddGameModal } from '@/components/AddGameModal';
 import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
   const [games, setGames] = useState<Game[]>([]);
+  // const [filteredGames, setFilteredGames] useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +29,14 @@ export default function CollectionScreen() {
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
-  const { players, time, unlimited } = useLocalSearchParams<{
-    players?: string;
-    time?: string;
-    unlimited?: string;
-  }>();
+  
+  const [playerCount, setPlayerCount] = useState<string>('');
+  const [playTime, setPlayTime] = useState([]);
+  const [age, setAge] = useState([]);
+  const [gameType, setGameType] = useState([]);
+  const [complexity, setComplexity] = useState([]);
 
-  const isFiltered = Boolean(players || time);
+  const isFiltered = Boolean(playerCount || playTime);
 
   const loadGames = useCallback(async () => {
     try {
@@ -63,37 +65,22 @@ export default function CollectionScreen() {
         min_players: game.min_players,
         max_players: game.max_players,
         playing_time: game.playing_time,
-        minPlaytime: game.minplaytime || 0,
-        maxPlaytime: game.maxplaytime || 0,
+        minPlaytime: game.minplaytime,
+        maxPlaytime: game.maxplaytime,
         description: game.description || '',
-        minAge: game.min_age || 0,
+        minAge: game.min_age,
         is_cooperative: game.is_cooperative || false,
         is_teambased: game.is_teambased || false,
-        complexity: game.complexity || 1,
+        complexity: game.complexity,
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc || '',
         average: game.average,
         bayesaverage: game.bayesaverage,
       }));
 
-      // Filter games based on player count and play time
-      const filteredGames = mappedGames.filter(game => {
-        let matches = true;
-
-        if (players) {
-          const count = parseInt(players === '15+' ? '15' : players);
-          matches &&= (game.min_players <= count || count === 15) && game.max_players >= count;
-        }
-
-        if (time && unlimited !== '1') {
-          const maxTime = parseInt(time);
-          matches &&= game.playing_time <= maxTime;
-        }
-
-        return matches;
-      });
-
+      const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
+      
     } catch (err) {
       console.error('Error in loadGames:', err);
       setError(err instanceof Error ? err.message : 'Failed to load games');
@@ -101,7 +88,7 @@ export default function CollectionScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [router, players, time, unlimited]);
+  }, [router]);
 
   const handleDelete = useCallback(async () => {
     if (!gameToDelete) return;
@@ -191,14 +178,9 @@ export default function CollectionScreen() {
     }
   };
 
-  const handleFilter = (players: string, time?: string, unlimited?: boolean) => {
-    const params: { players: string; time?: string; unlimited?: string } = { players };
-    if (time) {
-      params.time = time;
-      params.unlimited = unlimited ? '1' : '0';
-    }
-    router.setParams(params);
-  };
+  const handleFilter = useCallback(() => {
+    loadGames();
+  }, [loadGames]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -227,11 +209,7 @@ export default function CollectionScreen() {
         username={null}
         onRefresh={handleSync}
         loadGames={loadGames}
-        message={
-          isFiltered
-            ? `No games found for ${players} players${time ? ` within ${time}${unlimited === '1' ? '+' : ''} minutes` : ''}`
-            : undefined
-        }
+        message={isFiltered ? 'No games found' : undefined}
         buttonText={isFiltered ? "Clear Filters" : undefined}
         showSyncButton={!isFiltered}
       />
@@ -335,6 +313,16 @@ export default function CollectionScreen() {
         isVisible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         onSearch={handleFilter}
+        playerCount={playerCount}
+        playTime={playTime}
+        age={age}
+        gameType={gameType}
+        complexity={complexity}
+        setPlayerCount={setPlayerCount}
+        setPlayTime={setPlayTime}
+        setAge={setAge}
+        setGameType={setGameType}
+        setComplexity={setComplexity}
       />
 
       <AddGameModal
