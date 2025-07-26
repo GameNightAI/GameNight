@@ -309,43 +309,45 @@ export default function PollsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => setCreateModalVisible(true)}
-        >
-          <Plus size={20} color="#ffffff" />
-          <Text style={styles.createButtonText}>Create Poll</Text>
-        </TouchableOpacity>
-        <View style={styles.tabsWrapper}>
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-              onPress={() => setActiveTab('all')}
-            >
-              <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-                All Polls ({allPolls.length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'created' && styles.activeTab]}
-              onPress={() => setActiveTab('created')}
-            >
-              <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
-                My Polls ({polls.length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'other' && styles.activeTab]}
-              onPress={() => setActiveTab('other')}
-            >
-              <Text style={[styles.tabText, activeTab === 'other' && styles.activeTabText]}>
-                Voted In ({otherUsersPolls.length})
-              </Text>
-            </TouchableOpacity>
+      {currentPolls.length > 0 && (
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => setCreateModalVisible(true)}
+          >
+            <Plus size={20} color="#ffffff" />
+            <Text style={styles.createButtonText}>Create Poll</Text>
+          </TouchableOpacity>
+          <View style={styles.tabsWrapper}>
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+                onPress={() => setActiveTab('all')}
+              >
+                <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+                  All Polls ({allPolls.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'created' && styles.activeTab]}
+                onPress={() => setActiveTab('created')}
+              >
+                <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
+                  My Polls ({polls.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'other' && styles.activeTab]}
+                onPress={() => setActiveTab('other')}
+              >
+                <Text style={[styles.tabText, activeTab === 'other' && styles.activeTabText]}>
+                  Voted In ({otherUsersPolls.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       {/* --- Banner notification for new votes --- */}
       {newVotes && (
