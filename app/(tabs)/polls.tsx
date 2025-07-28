@@ -479,7 +479,7 @@ export default function PollsScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.localVoteButtonMobile} onPress={() => router.push(`/poll/local/${item.id}`)}>
                       <Users size={18} color="#10b981" />
-                      <Text style={styles.localVoteButtonTextMobile}>Local</Text>
+                      <Text style={styles.localVoteButtonTextMobile}>In-Person</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.duplicateButtonMobile} onPress={() => handleDuplicatePoll(item.id)}>
                       <Copy size={18} color="#4b5563" />

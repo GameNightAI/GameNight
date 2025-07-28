@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Plus, BarChart, Search, CheckSquare, Share2 } from 'lucide-react-native';
 
 interface PollsEmptyStateProps {
@@ -9,8 +9,8 @@ interface PollsEmptyStateProps {
 export const PollsEmptyState: React.FC<PollsEmptyStateProps> = ({ onCreate }) => {
   return (
     <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <BarChart size={48} color="#ff9654" style={styles.icon} />
+      <View style={[styles.iconContainer, Platform.OS !== 'web' && styles.iconContainerMobile]}>
+        <BarChart size={48} color="#ff9654" />
       </View>
       <Text style={styles.title}>No Polls Yet</Text>
       <Text style={styles.subtitle}>
@@ -65,6 +65,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
     marginTop: 14,
+  },
+  iconContainerMobile: {
+    marginTop: 0, // Remove top margin on mobile screens
   },
   title: {
     fontFamily: 'Poppins-Bold',
