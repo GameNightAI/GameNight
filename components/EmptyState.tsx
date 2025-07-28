@@ -103,7 +103,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         style={styles.container}
       >
         {/* Die icon */}
-        <View style={styles.iconContainer}>
+        <View style={[styles.iconContainer, Platform.OS !== 'web' && styles.iconContainerMobile]}>
           <Dice6 size={48} color="#ff9654" />
         </View>
 
@@ -235,6 +235,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
     marginTop: 24,
+  },
+  iconContainerMobile: {
+    marginBottom: 24,
+    marginTop: 0,
   },
   title: {
     fontFamily: 'Poppins-Bold',
