@@ -70,7 +70,7 @@ export default function ImageAnalyzer() {
        run 2 terminals
        1. npx expo start --web --port 19006 (explicit port labelling here)
           *run in dev mode (not default expo go)
-       2. run netlify dev --port 8082 (or relabel the port in line 64)
+       2. netlify dev --port 8082 (or relabel the port in line 64)
       */
       const functionURL = isLocalhost
         ? 'http://localhost:8082/.netlify/functions/analyze'
