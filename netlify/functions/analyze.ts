@@ -7,7 +7,18 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      body: 'Method Not Allowed',
+      body: JSON.stringify({ error: 'Method Not Allowed' }),
+    };
+  }
+
+  // Check if required environment variables are set
+  if (!process.env.OPENAI_API_KEY) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: 'OpenAI API key is not configured',
+        details: 'Please check your environment variables'
+      }),
     };
   }
 
@@ -18,7 +29,7 @@ export const handler: Handler = async (event) => {
     if (!imageBase64) {
       return {
         statusCode: 400,
-        body: 'Missing image data',
+        body: JSON.stringify({ error: 'Missing image data' }),
       };
     }
 
@@ -62,30 +73,55 @@ export const handler: Handler = async (event) => {
 
     try {
       let resultText = completion.choices[0]?.message?.content || '[]';
-      console.log('resultText', resultText);
+
+      if (!resultText || resultText.trim() === '') {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'OpenAI returned empty response' }),
+        };
+      }
+
       resultText = resultText.trim();
+
       if (resultText.startsWith('```')) {
         // Remove code block markers
         resultText = resultText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
       }
+
+      if (!resultText || resultText === '') {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'OpenAI response is empty after processing' }),
+        };
+      }
+
       boardGames = JSON.parse(resultText);
-    } catch (err) {
-      console.error('Failed to parse JSON:', err);
+
+    } catch (err: any) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to parse OpenAI response.' }),
+        body: JSON.stringify({
+          error: 'Failed to parse OpenAI response.',
+          details: err.message,
+          rawResponse: completion.choices[0]?.message?.content
+        }),
       };
     }
-
     return {
       statusCode: 200,
-      body: JSON.stringify({ boardGames }),
+      body: JSON.stringify({
+        boardGames
+      }),
     };
+
   } catch (error: any) {
-    console.error('OpenAI error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to analyze image' }),
+      body: JSON.stringify({
+        error: 'Failed to analyze image',
+        details: error.message,
+        type: error.name
+      }),
     };
   }
 };
