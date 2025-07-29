@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/services/supabase';
+import { ArrowLeft } from 'lucide-react-native';
 
 export default function ImageAnalyzer() {
   const [image, setImage] = useState<{
@@ -20,6 +22,10 @@ export default function ImageAnalyzer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleBackToCollection = () => {
+    router.push('/(tabs)/collection');
+  };
 
   const pickImage = async (fromCamera: boolean) => {
     let result: ImagePicker.ImagePickerResult;
@@ -75,7 +81,9 @@ export default function ImageAnalyzer() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ imageBase64: base64 }),
+        body: JSON.stringify({
+          imageBase64: base64
+        }),
       });
 
       const json = await res.json();
@@ -102,6 +110,7 @@ export default function ImageAnalyzer() {
             imageUri: image.uri,
             imageName: image.name,
             boardGames: JSON.stringify(json.boardGames),
+            collectionComparison: json.collectionComparison ? JSON.stringify(json.collectionComparison) : undefined,
           },
         } as any);
       } else {
@@ -126,41 +135,52 @@ export default function ImageAnalyzer() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Image Analyzer</Text>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.button} onPress={() => pickImage(true)}>
-          <Text style={styles.buttonText}>Take Photo</Text>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleBackToCollection}
+        >
+          <ArrowLeft size={24} color="#1a2b5f" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => pickImage(false)}>
-          <Text style={styles.buttonText}>Pick from Gallery</Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Image Analyzer</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      {image && (
-        <View style={styles.previewContainer}>
-          <Image source={{ uri: image.uri }} style={styles.imagePreview} />
-          <Text style={styles.imageName}>{image.name}</Text>
+      <View style={styles.content}>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.button} onPress={() => pickImage(true)}>
+            <Text style={styles.buttonText}>Take Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={() => pickImage(false)}>
+            <Text style={styles.buttonText}>Pick from Gallery</Text>
+          </TouchableOpacity>
         </View>
-      )}
 
-      <TouchableOpacity
-        style={[styles.analyzeButton, (!image || loading) && { opacity: 0.5 }]}
-        onPress={handleAnalyze}
-        disabled={!image || loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.analyzeButtonText}>Analyze Image</Text>
+        {image && (
+          <View style={styles.previewContainer}>
+            <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+            <Text style={styles.imageName}>{image.name}</Text>
+          </View>
         )}
-      </TouchableOpacity>
 
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
+        <TouchableOpacity
+          style={[styles.analyzeButton, (!image || loading) && { opacity: 0.5 }]}
+          onPress={handleAnalyze}
+          disabled={!image || loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.analyzeButtonText}>Analyze Image</Text>
+          )}
+        </TouchableOpacity>
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -181,14 +201,32 @@ async function convertToBase64(blob: Blob): Promise<string> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: '#f7f9fc',
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#1a2b5f',
+  },
+  headerSpacer: {
+    width: 40, // Space for back button
+  },
+  content: {
+    flex: 1,
+    padding: 20,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -212,7 +250,7 @@ const styles = StyleSheet.create({
   imagePreview: {
     width: 200,
     height: 200,
-    borderRadius: 12,
+    borderRadius: 0,
     marginBottom: 8,
   },
   imageName: {
