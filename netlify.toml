@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build:web"
+  command = "npm install --legacy-peer-deps && npm run build:web"
   functions = "netlify/functions"
   publish = "dist" # Expo exports to "dist" directory, not "build"
 
