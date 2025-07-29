@@ -79,13 +79,18 @@ export default function ImageAnalyzerResults() {
         return;
       }
 
-      // Get the selected games data
-      const selectedGameData = parsedBoardGames.filter((game: any) =>
-        selectedGames.has(game.bgg_id)
-      );
+      // Get the selected games data from database results (only games that are in the database)
+      const selectedGameData = databaseResults?.filter((result: any) =>
+        selectedGames.has(result.detected.bgg_id) && result.inDatabase
+      ) || [];
+
+      if (selectedGameData.length === 0) {
+        setAddError('No valid games selected for collection. Only games found in the database can be added.');
+        return;
+      }
 
       // Check which games are already in the collection
-      const bggIds = selectedGameData.map((game: any) => game.bgg_id);
+      const bggIds = selectedGameData.map((result: any) => result.detected.bgg_id);
       const { data: existingGames } = await supabase
         .from('collections')
         .select('bgg_game_id')
@@ -93,7 +98,7 @@ export default function ImageAnalyzerResults() {
         .in('bgg_game_id', bggIds);
 
       const existingBggIds = new Set(existingGames?.map(g => g.bgg_game_id) || []);
-      const newGames = selectedGameData.filter((game: any) => !existingBggIds.has(game.bgg_id));
+      const newGames = selectedGameData.filter((result: any) => !existingBggIds.has(result.detected.bgg_id));
 
       const duplicateCount = selectedGameData.length - newGames.length;
 
@@ -102,49 +107,23 @@ export default function ImageAnalyzerResults() {
         return;
       }
 
-      // Get detailed game info from BGG API for new games
-      const gameDataPromises = newGames.map(async (game: any) => {
-        try {
-          const response = await fetch(`https://boardgamegeek.com/xmlapi2/thing?id=${game.bgg_id}&stats=1`);
-          const xmlText = await response.text();
+      // Create game data from database results (no need to fetch from BGG API)
+      const gameData = newGames.map((result: any) => {
+        const detectedGame = result.detected;
+        const databaseGame = result.gameData;
 
-          const parser = new XMLParser({
-            ignoreAttributes: false,
-            attributeNamePrefix: '',
-          });
-
-          const result = parser.parse(xmlText);
-          const gameInfo = result.items.item;
-
-          return {
-            user_id: user.id,
-            bgg_game_id: game.bgg_id,
-            name: game.title,
-            thumbnail: gameInfo.thumbnail,
-            min_players: parseInt(gameInfo.minplayers?.value || '1'),
-            max_players: parseInt(gameInfo.maxplayers?.value || '4'),
-            playing_time: parseInt(gameInfo.playingtime?.value || '60'),
-            year_published: gameInfo.yearpublished?.value ? parseInt(gameInfo.yearpublished.value) : null,
-            description: gameInfo.description || '',
-          };
-        } catch (error) {
-          console.error(`Error fetching details for game ${game.bgg_id}:`, error);
-          // Return basic data if API call fails
-          return {
-            user_id: user.id,
-            bgg_game_id: game.bgg_id,
-            name: game.title,
-            thumbnail: null,
-            min_players: 1,
-            max_players: 4,
-            playing_time: 60,
-            year_published: null,
-            description: '',
-          };
-        }
+        return {
+          user_id: user.id,
+          bgg_game_id: databaseGame?.id, // Use database game ID
+          name: databaseGame?.name || detectedGame.title, // Use database name if available
+          thumbnail: databaseGame?.image_url || null,
+          min_players: databaseGame?.min_players || 1,
+          max_players: databaseGame?.max_players || 4,
+          playing_time: databaseGame?.playing_time || 60,
+          year_published: databaseGame?.year_published || null,
+          description: databaseGame?.description || '',
+        };
       });
-
-      const gameData = await Promise.all(gameDataPromises);
 
       // Insert the games into the collection
       const { error: insertError } = await supabase

@@ -268,15 +268,9 @@ export default function CollectionScreen() {
             <RefreshCw size={20} color="#ff9654" />
             <Text style={styles.syncButtonText}>Sync with BGG</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.analyzeButton}
-            onPress={() => router.push('/image-analyzer/' as any)}
-          >
-            <Camera size={20} color="#ff9654" />
-            <Text style={styles.analyzeButtonText}>Analyze Image</Text>
-          </TouchableOpacity>
-          
+
+
+
         </ScrollView>
       </View>
 
@@ -425,21 +419,5 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
-  analyzeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ff9654',
-    marginLeft: 4,
-  },
-  analyzeButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
-    marginLeft: 8,
-  },
+
 });
