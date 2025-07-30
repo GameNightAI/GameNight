@@ -30,7 +30,7 @@ export default function CollectionScreen() {
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
   
-  const [playerCount, setPlayerCount] = useState<string>('');
+  const [playerCount, setPlayerCount] = useState([]);
   const [playTime, setPlayTime] = useState([]);
   const [age, setAge] = useState([]);
   const [gameType, setGameType] = useState([]);
