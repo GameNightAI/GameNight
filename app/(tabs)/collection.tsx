@@ -190,6 +190,9 @@ export default function CollectionScreen() {
   const clearFilters = () => {
     setPlayerCount('');
     setPlayTime([]);
+    setAge([]);
+    setGameType([]);
+    setComplexity([]);
   };
 
   useEffect(() => {
