@@ -33,7 +33,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
           (game.min_players <= p.value || p.value === 15)
           && game.max_players >= p.value
         );
-      }
+      });
       is_match &&= count_filter;
     }
     
