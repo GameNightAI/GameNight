@@ -207,7 +207,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       <TouchableOpacity
         style={styles.refreshButton}
-        onPress={handleClearFilters)}
+        onPress={handleClearFilters}
       >
         <RefreshCw size={18} color="#ffffff" />
         <Text style={styles.refreshText}>{buttonText}</Text>
