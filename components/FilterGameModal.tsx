@@ -39,7 +39,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       playTime.map(t => {
       // This should really incorporate game.minplaytime and game.maxplaytime
         //console.log(t);
-        time_filter ||= (t.min < game.playing_time && game.playing_time < t.max); // any (||=)
+        time_filter ||= (t.min <= game.playing_time && game.playing_time <= t.max); // any (||=)
       });
       is_match &&= time_filter;
     }
@@ -48,7 +48,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       let age_filter = false;
       age.map(a => {
         //console.log(a);
-        age_filter ||= (a.min < game.minAge && game.minAge < a.max);
+        age_filter ||= (a.min <= game.minAge && game.minAge <= a.max);
       });
       is_match &&= age_filter;
     }
