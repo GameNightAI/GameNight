@@ -102,17 +102,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         entering={FadeIn.duration(500)}
         style={styles.container}
       >
-        {/* Die icon */}
-        <View style={[styles.iconContainer, Platform.OS !== 'web' && styles.iconContainerMobile]}>
-          <Dice6 size={48} color="#ff9654" />
-        </View>
-
         {/* Main heading */}
         <Text style={styles.title}>Add games to your collection!</Text>
 
         {/* Subtitle */}
         <Text style={styles.subtitle}>
-          Start building your board game collection and unlock these benefits:
+          Unlock these benefits:
         </Text>
 
         {/* Benefits list */}
@@ -137,9 +132,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <TouchableOpacity
           style={styles.addGameButton}
           onPress={() => setAddGameModalVisible(true)}
+          activeOpacity={0.8}
         >
           <Plus size={20} color="#ffffff" />
-          <Text style={styles.addGameButtonText}>Add Game</Text>
+          <Text style={styles.addGameButtonText}>Add Games</Text>
         </TouchableOpacity>
 
         {/* Or divider */}
@@ -149,6 +145,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <TouchableOpacity
           style={styles.importButton}
           onPress={openImportModal}
+          activeOpacity={0.8}
         >
           <Search size={20} color="#ffffff" />
           <Text style={styles.importButtonText}>Import BGG Collection</Text>
@@ -194,7 +191,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       entering={FadeIn.duration(500)}
       style={styles.container}
     >
-      <Dice6 size={48} color="#8d8d8d" />
       <Text style={styles.emptyTitle}>No Games Found</Text>
       <Text style={styles.emptyMessage}>
         {message || (username ?
@@ -226,20 +222,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f7f9fc',
     padding: 20,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    backgroundColor: '#fff5ef',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-    marginTop: 24,
-  },
-  iconContainerMobile: {
-    marginBottom: 24,
-    marginTop: 0,
-  },
   title: {
     fontFamily: 'Poppins-Bold',
     fontSize: 24,
@@ -252,14 +234,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: 16,
     maxWidth: 300,
     lineHeight: 24,
   },
   benefitsList: {
     width: '100%',
     maxWidth: 320,
-    marginBottom: 10,
+    marginBottom: 16,
+    //borderColor: 'red',
+    //borderWidth: 1,
   },
   benefitItem: {
     flexDirection: 'row',

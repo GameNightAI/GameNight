@@ -108,7 +108,7 @@ export default function LoginScreen() {
         <Link href="/auth/reset-password" asChild>
           <TouchableOpacity style={styles.forgotPasswordLink}>
             <Text style={styles.forgotPasswordText}>
-              Forgot your password?
+              <Text style={{ fontFamily: 'Poppins-SemiBold' }}>Forgot your password?</Text>
             </Text>
           </TouchableOpacity>
         </Link>
@@ -116,7 +116,7 @@ export default function LoginScreen() {
         <Link href="/auth/register" asChild>
           <TouchableOpacity style={styles.registerLink}>
             <Text style={styles.registerText}>
-              Don't have an account? Create one
+              Don't have an account? <Text style={styles.signInText}>Create one</Text>
             </Text>
           </TouchableOpacity>
         </Link>
@@ -233,5 +233,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
     textDecorationLine: 'underline',
+  },
+  signInText: {
+    textDecorationLine: 'underline',
+    fontFamily: 'Poppins-SemiBold',
   },
 });

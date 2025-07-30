@@ -144,7 +144,7 @@ export default function RegisterScreen() {
         <Link href="/auth/login" asChild>
           <TouchableOpacity style={styles.loginLink}>
             <Text style={styles.loginText}>
-              Already have an account? Sign in
+              Already have an account? <Text style={styles.signInText}>Sign in</Text>
             </Text>
           </TouchableOpacity>
         </Link>
@@ -251,5 +251,9 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
+  },
+  signInText: {
+    textDecorationLine: 'underline',
+    fontFamily: 'Poppins-SemiBold',
   },
 });
