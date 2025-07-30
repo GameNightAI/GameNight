@@ -36,7 +36,13 @@ export default function CollectionScreen() {
   const [gameType, setGameType] = useState([]);
   const [complexity, setComplexity] = useState([]);
 
-  const isFiltered = Boolean(playerCount || playTime);
+  const isFiltered = Boolean(
+    playerCount
+    || (playTime && playTime.length)
+    || (age && age.length)
+    || (gameType && gameType.length)
+    || (complexity && complexity.length)
+  );
 
   const loadGames = useCallback(async () => {
     try {
@@ -216,6 +222,7 @@ export default function CollectionScreen() {
         message={isFiltered ? 'No games found' : undefined}
         buttonText={isFiltered ? "Clear Filters" : undefined}
         showSyncButton={!isFiltered}
+        handleClearFilters={clearFilters}
       />
     );
   }
