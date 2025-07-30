@@ -6,6 +6,7 @@ import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
 import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE } from '@/components/votingOptions';
+import { getUsername } from '@/utils/storage';
 
 interface GameVotes {
   voteType1: number;
@@ -126,11 +127,25 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       console.log('Votes loaded:', votes);
 
-      // Get user identifier for vote checking
+      // Get user identifier for vote checking with better fallback
       let identifier = null;
-      if (user?.email) {
-        identifier = user.email;
-      } else {
+      try {
+        if (user?.email) {
+          identifier = user.email;
+        } else {
+          // Try to get saved username from storage
+          const savedUsername = await getUsername();
+          if (savedUsername) {
+            identifier = savedUsername;
+          } else {
+            // Fallback to anonymous ID
+            const anonId = await getOrCreateAnonId();
+            identifier = anonId;
+          }
+        }
+      } catch (error) {
+        console.warn('Could not get user identifier:', error);
+        // Try anonymous ID as last resort
         try {
           const anonId = await getOrCreateAnonId();
           identifier = anonId;
@@ -183,8 +198,8 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           complexity: game.complexity || 1,
           complexity_tier: game.complexity_tier || 1,
           complexity_desc: game.complexity_desc || '',
-          average: game.average ?? null, // <-- Added this line
-          bayesaverage: game.bayesaverage ?? null, // <-- Add this line for type compatibility
+          average: game.average ?? null,
+          bayesaverage: game.bayesaverage ?? null,
           votes: voteData,
           userVote,
         };
