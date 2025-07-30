@@ -27,17 +27,51 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     // TODO: Change this to multiselect
     if (playerCount) {
       const count = parseInt(playerCount)
-      is_match &&= (game.min_players <= count || count === 15) && game.max_players >= count;
+      is_match &&= (
+        // ignore game.min_players when 15+ is selected, since the number of actual players is arbitrarily large in this case.
+        (game.min_players <= count || count === 15)
+        && game.max_players >= count
+      );
     }
     
     if (playTime && playTime.length) {
       let time_filter = false;
-      playTime.map((t) => {
+      playTime.map(t => {
       // This should really incorporate game.minplaytime and game.maxplaytime
-        time_filter ||= (t.min < game.playing_time && game.playing_time < t.max);
+        console.log(t);
+        time_filter ||= (t.min < game.playing_time && game.playing_time < t.max); // any (||=)
       });
       is_match &&= time_filter;
     }
+    
+    if (age && age.length) {
+      let age_filter = false;
+      age.map(a => {
+        age_filter ||= (age.min < game.minAge && game.minAge < age.max);
+      });
+      is_match &&= age_filter;
+    }
+    
+    if (gameType && gameType.length) {
+      let type_filter = false;
+      gameType.map(t => {
+        let col;
+        switch (t) {
+          case 'Competitive':
+            type_filter ||= !game.is_cooperative
+          case 'Cooperative':
+            type_filter ||= game.is_cooperative
+          case 'Team-based':
+            type_filter ||= game.is_teambased
+        }
+      });
+      is_match &&= type_filter;
+    }
+    
+    if (complexity && complexity.length) {
+      is_match &&= complexity.includes(game.complexity_tier);
+    }
+    
     return is_match;
   });
 };
