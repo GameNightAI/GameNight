@@ -8,9 +8,7 @@ import { GameResultCard } from '@/components/PollGameResultCard';
 import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRef } from 'react';
-import { VOTING_OPTIONS } from '@/components/votingOptions';
 
 export default function PollResultsScreen() {
   const router = useRouter();
@@ -20,6 +18,8 @@ export default function PollResultsScreen() {
   // --- Real-time vote listening ---
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
+
+  const { poll, games, results, hasVoted, voteUpdated, loading, error, reload } = usePollResults(id);
 
   useEffect(() => {
     if (!id) return;
@@ -47,8 +47,6 @@ export default function PollResultsScreen() {
     };
   }, [id]);
 
-  const { pollTitle, gameResults, hasVoted, loading, error } = usePollResults(id as string | undefined);
-
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -69,16 +67,10 @@ export default function PollResultsScreen() {
     fetchComments();
 
     // Check if user just updated their votes
-    const checkForVoteUpdate = async () => {
-      if (!id) return;
-      const voteUpdated = await AsyncStorage.getItem(`vote_updated_${id}`);
-      if (voteUpdated === 'true') {
-        Toast.show({ type: 'success', text1: 'Vote updated!' });
-        await AsyncStorage.removeItem(`vote_updated_${id}`);
-      }
-    };
-    checkForVoteUpdate();
-  }, [id]);
+    if (voteUpdated) {
+      Toast.show({ type: 'success', text1: 'Vote updated!' });
+    }
+  }, [id, voteUpdated]);
 
   if (loading) return <LoadingState />;
 
@@ -92,41 +84,6 @@ export default function PollResultsScreen() {
       />
     );
   }
-
-  // Update score calculation to use voteType1, voteType2, etc.
-  const scoredResults = gameResults.map(game => ({
-    ...game,
-    score: VOTING_OPTIONS.reduce((sum, voteType) => {
-      const voteCount = game[voteType.value] || 0;
-      return sum + voteCount * voteType.score;
-    }, 0)
-  }));
-  scoredResults.sort((a, b) => b.score - a.score);
-
-  // Assign ranks, handling ties (all tied items get tie: true)
-  let lastScore: number | null = null;
-  let lastRank = 0;
-  let tieGroup: number[] = [];
-  const tempRanked: any[] = [];
-  scoredResults.forEach((game, idx) => {
-    if (lastScore === null || game.score !== lastScore) {
-      // Assign tie: true to all in previous tieGroup if more than 1
-      if (tieGroup.length > 1) {
-        tieGroup.forEach(i => tempRanked[i].tie = true);
-      }
-      tieGroup = [idx];
-      lastRank = idx + 1;
-    } else {
-      tieGroup.push(idx);
-    }
-    tempRanked.push({ ...game, rank: lastRank, tie: false });
-    lastScore = game.score;
-  });
-  // Final group
-  if (tieGroup.length > 1) {
-    tieGroup.forEach(i => tempRanked[i].tie = true);
-  }
-  const rankedResults = tempRanked;
 
   const getRankingIcon = (rank: number) => {
     switch (rank) {
@@ -165,7 +122,7 @@ export default function PollResultsScreen() {
           <Text style={styles.backLink}>&larr; Back to Polls</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Poll Results</Text>
-        <Text style={styles.subtitle}>{pollTitle}</Text>
+        <Text style={styles.subtitle}>{poll?.title}</Text>
       </View>
       {/* --- Banner notification for new votes --- */}
       {newVotes && (
@@ -188,7 +145,7 @@ export default function PollResultsScreen() {
           </Text>
           <TouchableOpacity onPress={() => {
             setNewVotes(false);
-            // Optionally, trigger a refetch of results here
+            reload(); // Trigger a refetch of results
           }}>
             <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: 16 }}>Dismiss</Text>
           </TouchableOpacity>
@@ -211,7 +168,7 @@ export default function PollResultsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {rankedResults.length === 0 ? (
+        {results.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No votes have been cast yet.</Text>
           </View>
@@ -220,29 +177,27 @@ export default function PollResultsScreen() {
             <View style={styles.resultsHeader}>
               <Text style={styles.resultsTitle}>Ranking Results</Text>
               <Text style={styles.resultsSubtitle}>
-                {rankedResults.length} game{rankedResults.length !== 1 ? 's' : ''} ranked by votes
+                {results.length} game{results.length !== 1 ? 's' : ''} ranked by votes
               </Text>
             </View>
 
-            {rankedResults.map((game, index) => (
-              <View key={game.id} style={styles.resultItem}>
+            {results.map((result, index) => (
+              <View key={result.game.id} style={styles.resultItem}>
                 <View style={styles.rankingContainer}>
-                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(game.rank) }]}>
-                    {getRankingIcon(game.rank)}
-                    <Text style={styles.rankingNumber}>{game.rank}</Text>
+                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(result.ranking) }]}>
+                    {getRankingIcon(result.ranking)}
+                    <Text style={styles.rankingNumber}>{result.ranking}</Text>
                   </View>
                   <View style={styles.rankingInfo}>
                     <Text style={styles.rankingLabel}>
-                      {game.tie
-                        ? `Tied for ${game.rank}${getOrdinalSuffix(game.rank)} Place`
-                        : `${game.rank}${getOrdinalSuffix(game.rank)} Place`}
+                      {`${result.ranking}${getOrdinalSuffix(result.ranking)} Place`}
                     </Text>
-                    {/* <Text style={styles.scoreText}>
-                      Score: {game.score}
-                    </Text> */}
+                    <Text style={styles.scoreText}>
+                      Score: {result.totalScore} ({result.totalVotes} votes)
+                    </Text>
                   </View>
                 </View>
-                <GameResultCard game={game} />
+                <GameResultCard game={result.game} />
               </View>
             ))}
             {/* Comments Section at the bottom of the scrollview */}
