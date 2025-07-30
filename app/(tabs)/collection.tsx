@@ -14,12 +14,12 @@ import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
 import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
-import { AddGameModal } from '@/components/AddGameModal';
+import { AddGameModal } from '@/components/AddGameModal'; 
 import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
   const [games, setGames] = useState<Game[]>([]);
-  // const [filteredGames, setFilteredGames] useState<Game[]>([]);
+  // const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -188,7 +188,8 @@ export default function CollectionScreen() {
   }, [loadGames]);
 
   const clearFilters = () => {
-    router.push('/collection');
+    setPlayerCount('');
+    setPlayTime([]);
   };
 
   useEffect(() => {
