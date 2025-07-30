@@ -74,7 +74,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       let complexity_filter = false;
       complexity.map(c => {
         console.log(c);
-        age_filter ||= game.complexity_tier === c.value
+        complexity_filter ||= game.complexity_tier === c.value
       });  
       is_match &&= complexity_filter
     }
