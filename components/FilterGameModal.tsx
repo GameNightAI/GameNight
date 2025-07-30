@@ -214,6 +214,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isMulti
         isClearable
         closeMenuOnSelect={false}
+        styles={{
+          container: styles.dropDownContainer,
+        }}
       />
 
       <Select
