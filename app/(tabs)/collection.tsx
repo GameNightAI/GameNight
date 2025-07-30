@@ -94,7 +94,7 @@ export default function CollectionScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [playerCount, playTime, age, gameType, complexity]);
+  }, []);
 
   const handleDelete = useCallback(async () => {
     if (!gameToDelete) return;
