@@ -11,6 +11,7 @@ interface Game {
   name: string;
   yearPublished?: string;
   thumbnail?: string;
+  image_url?: string;
 }
 
 interface AddGameModalProps {
@@ -62,7 +63,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           .in('id', ids)
           .order('rank');
 
-        setSearchResults(games);
+        setSearchResults(games || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -76,9 +77,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     return debounce(fetchSearchResults, 500);
   }, [fetchSearchResults]);
 
-  const handleSearch = (text) => {
+  const handleSearch = (text: string) => {
     setSearchQuery(text);
-    if (!searchQuery.trim()) {
+    if (!text.trim()) {
       setError('Please enter a search term');
       return;
     }
@@ -192,6 +193,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         data={searchResults}
         keyExtractor={(item) => item.id}
         style={styles.resultsList}
+        keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
           <View style={styles.resultItem}>
             <Image
@@ -249,7 +251,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Platform.OS === 'ios' ? 20 : 10,
   },
   webOverlay: {
     position: 'fixed',
@@ -269,7 +271,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '85%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -358,7 +360,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#f7f9fc',
-    padding: 16,
+    padding: 12,
+    paddingLeft: 8,
     borderRadius: 12,
     marginBottom: 12,
   },
@@ -398,7 +401,9 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: 80,
     height: 80,
-    borderRadius: 8,
+    borderRadius: 4,
+    marginLeft: 0,
+    marginRight: 6,
     backgroundColor: '#f0f0f0',
   },
 });
