@@ -112,7 +112,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   // const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   // const [showComplexityDropdown, setShowComplexityDropdown] = useState(false);
 
-  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
+  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']).map(_ => ({value: parseInt(_), label: _}));
   const timeOptions = [
     {value: 30, min: 1, max: 30, label: '30 minutes or less'},
     {value: 31, min: 31, max: 60, label: '31-60 minutes'},
@@ -129,8 +129,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     {value: 14, min: 14, max: 15, label: '14-15'},
     {value: 16, min: 16, max: 999, label: '16 and up'},
   ];
-  const typeOptions = ['Competitive', 'Cooperative', 'Team-based'].map((_) => ({value: _, label: _}));
-  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'].map((_, i) => {return {value: i+1, label: _}});
+  const typeOptions = ['Competitive', 'Cooperative', 'Team-based'].map(_ => ({value: _, label: _}));
+  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'].map((_, i) => ({value: i+1, label: _}));
 
   const handleFilter = () => {
     const players = playerCount === '15+' ? '15' : playerCount;
@@ -154,8 +154,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </Text>
 
       <View style={[styles.inputSection, { zIndex: 2 }]}>
-
-        <View style={styles.dropdownContainer}>
+         <View style={styles.dropdownContainer}>
           <TouchableOpacity
             style={styles.dropdownButton}
             onPress={() => {
@@ -184,8 +183,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
                       playerCount === option && styles.dropdownItemSelected
                     ]}
                     onPress={() => {
-                      setPlayerCount(option);
-                      setShowPlayerDropdown(false);
+                      // setPlayerCount(option);
+                      // setShowPlayerDropdown(false);
                     }}
                   >
                     <Text style={[
@@ -200,15 +199,23 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             </View>
           )}
         </View>
-      </View>
+      </View> 
+
+      <Select
+        placeholder="Select player count"
+        value={playerCount}
+        onChange={setPlayerCount}
+        options={playerOptions}
+        defaultValue={[]}
+        isMulti
+        isClearable
+        closeMenuOnSelect={false}
+      />
 
       <Select
         placeholder="Select play time"
         value={playTime}
-        onChange={option => {
-          console.log('Selected option:', option);
-          setPlayTime(option);
-        }}
+        onChange={setPlayTime}
         options={timeOptions}
         defaultValue={[]}
         isMulti
@@ -216,7 +223,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         closeMenuOnSelect={false}
         styles={{
           container: styles.dropDownContainer,
-          menu: styles.dropDown
+          menu: styles.dropDown,
+          menuList:styles.dropDown,
         }}
       />
 
