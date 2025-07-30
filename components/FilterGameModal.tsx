@@ -216,6 +216,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         closeMenuOnSelect={false}
         styles={{
           container: styles.dropDownContainer,
+          menu: styles.dropDown
         }}
       />
 
