@@ -556,7 +556,10 @@ export default function PollsScreen() {
             </Animated.View>
           );
         }}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          currentPolls.length === 0 && { flex: 1, justifyContent: 'center' }
+        ]}
         ListEmptyComponent={
           <PollsEmptyState onCreate={() => setCreateModalVisible(true)} />
         }
