@@ -7,7 +7,7 @@ import { Game } from '@/types/game';
 interface FilterGameModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSearch: (players: string, time?: string, unlimited?: boolean) => void;
+  onApplyFilter: () => void;
   playerCount: any;
   playTime: any;
   age: any;
@@ -39,7 +39,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       playTime.map(t => {
       // This should really incorporate game.minplaytime and game.maxplaytime
         console.log(t);
-        time_filter ||= (t.value.min < game.playing_time && game.playing_time < t.value.max); // any (||=)
+        time_filter ||= (t.min < game.playing_time && game.playing_time < t.max); // any (||=)
       });
       is_match &&= time_filter;
     }
@@ -86,7 +86,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
 export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   isVisible,
   onClose,
-  onSearch,
+  onApplyFilter,
   playerCount,
   playTime,
   age,
@@ -114,11 +114,11 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
   const timeOptions = [
-    {value: {min: 1, max: 30}, label: '30 minutes or less'},
-    {value: {min: 31, max: 60}, label: '31-60 minutes'},
-    {value: {min: 61, max: 90}, label: '61-90 minutes'},
-    {value: {min: 91, max: 120}, label: '91-120 minutes'},
-    {value: {min: 120, max: 999999999}, label: '120 minutes or more'},
+    {value: 30, min: 1, max: 30, label: '30 minutes or less'},
+    {value: 31, min: 31, max: 60, label: '31-60 minutes'},
+    {value: 61, min: 61, max: 90, label: '61-90 minutes'},
+    {value: 91, min: 91, max: 120, label: '91-120 minutes'},
+    {value: 121, min: 121, max: 999999999, label: 'More than 120 minutes'},
   ];
   const ageOptions = [
     {value: {min: 0, max: 5}, label: '5 and under'},
@@ -132,10 +132,11 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const typeOptions = ['Competitive', 'Cooperative', 'Team-based'].map((_) => ({value: _, label: _}));
   const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'].map((_, i) => {return {value: i+1, label: _}});
 
-  const handleSearch = () => {
+  const handleFilter = () => {
     const players = playerCount === '15+' ? '15' : playerCount;
     const time = playTime === '120+' ? '120' : playTime;
-    onSearch(players, time, playTime === '120+');
+    onApplyFilter()
+    //onSearch(players, time, playTime === '120+');
     onClose();
   };
 
