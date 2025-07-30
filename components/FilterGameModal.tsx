@@ -38,7 +38,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       let time_filter = false;
       playTime.map(t => {
       // This should really incorporate game.minplaytime and game.maxplaytime
-        console.log(t);
+        //console.log(t);
         time_filter ||= (t.min < game.playing_time && game.playing_time < t.max); // any (||=)
       });
       is_match &&= time_filter;
@@ -47,7 +47,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     if (age && age.length) {
       let age_filter = false;
       age.map(a => {
-        console.log(a);
+        //console.log(a);
         age_filter ||= (a.value.min < game.minAge && game.minAge < a.value.max);
       });
       is_match &&= age_filter;
@@ -56,7 +56,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     if (gameType && gameType.length) {
       let type_filter = false;
       gameType.map(t => {
-        console.log(t);
+        //console.log(t);
         let col;
         switch (t.value) {
           case 'Competitive':
@@ -73,7 +73,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     if (complexity && complexity.length) {
       let complexity_filter = false;
       complexity.map(c => {
-        console.log(c);
+        //console.log(c);
         complexity_filter ||= game.complexity_tier === c.value
       });  
       is_match &&= complexity_filter
@@ -254,7 +254,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
       <TouchableOpacity
         style={[styles.searchButton, styles.searchButtonDisabled]}
-        onPress={handleSearch}
+        onPress={handleFilter}
       >
         <Search color="#fff" size={20} />
         <Text style={styles.searchButtonText}>Filter Games</Text>
