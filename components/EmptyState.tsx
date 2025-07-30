@@ -12,6 +12,7 @@ interface EmptyStateProps {
   message?: string;
   buttonText?: string;
   showSyncButton?: boolean;
+  handleClearFilters: any;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -20,7 +21,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   loadGames,
   message,
   buttonText = "Refresh",
-  showSyncButton = false
+  showSyncButton = false,
+  handleClearFilters
 }) => {
   const [inputUsername, setInputUsername] = useState('');
   const [error, setError] = useState('');
@@ -205,7 +207,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       <TouchableOpacity
         style={styles.refreshButton}
-        onPress={() => router.push('/collection')}
+        onPress={handleClearFilters)}
       >
         <RefreshCw size={18} color="#ffffff" />
         <Text style={styles.refreshText}>{buttonText}</Text>
