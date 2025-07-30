@@ -25,13 +25,16 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     let is_match = true;
     
     // TODO: Change this to multiselect
-    if (playerCount) {
-      const count = parseInt(playerCount)
-      is_match &&= (
+    if (playerCount && playerCount.length) {
+      let count_filter = false
+      playerCount.map(p => {
         // ignore game.min_players when 15+ is selected, since the number of actual players is arbitrarily large in this case.
-        (game.min_players <= count || count === 15)
-        && game.max_players >= count
-      );
+        count_filter ||= (
+          (game.min_players <= p.value || p.value === 15)
+          && game.max_players >= p.value
+        );
+      }
+      is_match &&= count_filter;
     }
     
     if (playTime && playTime.length) {
@@ -163,7 +166,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             }}
           >
             <Text style={styles.dropdownButtonText}>
-              {playerCount || 'Select player count'}
+              Select player count
             </Text>
             <ChevronDown size={20} color="#666666" />
           </TouchableOpacity>
