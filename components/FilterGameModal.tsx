@@ -122,8 +122,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   ];
   const ageOptions = [
     {value: 0, min: 0, max: 5, label: '5 and under'},
-    {value: 6, min: 6, max: 7}, label: '6-7'},
-    {value: 8, min: 8, max: 9}, label: '8-9'},
+    {value: 6, min: 6, max: 7, label: '6-7'},
+    {value: 8, min: 8, max: 9, label: '8-9'},
     {value: 10, min: 10, max: 11, label: '10-11'},
     {value: 12, min: 12, max: 13, label: '12-13'},
     {value: 14, min: 14, max: 15, label: '14-15'},
