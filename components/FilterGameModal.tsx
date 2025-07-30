@@ -39,7 +39,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       playTime.map(t => {
       // This should really incorporate game.minplaytime and game.maxplaytime
         console.log(t);
-        time_filter ||= (t.min < game.playing_time && game.playing_time < t.max); // any (||=)
+        time_filter ||= (t.value.min < game.playing_time && game.playing_time < t.value.max); // any (||=)
       });
       is_match &&= time_filter;
     }
@@ -47,7 +47,8 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     if (age && age.length) {
       let age_filter = false;
       age.map(a => {
-        age_filter ||= (age.min < game.minAge && game.minAge < age.max);
+        console.log(a);
+        age_filter ||= (a.value.min < game.minAge && game.minAge < a.value.max);
       });
       is_match &&= age_filter;
     }
@@ -55,8 +56,9 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     if (gameType && gameType.length) {
       let type_filter = false;
       gameType.map(t => {
+        console.log(t);
         let col;
-        switch (t) {
+        switch (t.value) {
           case 'Competitive':
             type_filter ||= !game.is_cooperative
           case 'Cooperative':
@@ -69,7 +71,12 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     }
     
     if (complexity && complexity.length) {
-      is_match &&= complexity.includes(game.complexity_tier);
+      let complexity_filter = false;
+      complexity.map(c => {
+        console.log(c);
+        age_filter ||= game.complexity_tier === c.value
+      });  
+      is_match &&= complexity_filter
     }
     
     return is_match;
