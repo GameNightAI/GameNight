@@ -48,7 +48,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       let age_filter = false;
       age.map(a => {
         //console.log(a);
-        age_filter ||= (a.value.min < game.minAge && game.minAge < a.value.max);
+        age_filter ||= (a.min < game.minAge && game.minAge < a.max);
       });
       is_match &&= age_filter;
     }
@@ -121,13 +121,13 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     {value: 121, min: 121, max: 999999999, label: 'More than 120 minutes'},
   ];
   const ageOptions = [
-    {value: {min: 0, max: 5}, label: '5 and under'},
-    {value: {min: 6, max: 7}, label: '6-7'},
-    {value: {min: 8, max: 9}, label: '8-9'},
-    {value: {min: 10, max: 11}, label: '10-11'},
-    {value: {min: 12, max: 13}, label: '12-13'},
-    {value: {min: 14, max: 15}, label: '14-15'},
-    {value: {min: 16, max: 999}, label: '16 and up'},
+    {value: 0, min: 0, max: 5, label: '5 and under'},
+    {value: 6, min: 6, max: 7}, label: '6-7'},
+    {value: 8, min: 8, max: 9}, label: '8-9'},
+    {value: 10, min: 10, max: 11, label: '10-11'},
+    {value: 12, min: 12, max: 13, label: '12-13'},
+    {value: 14, min: 14, max: 15, label: '14-15'},
+    {value: 16, min: 16, max: 999, label: '16 and up'},
   ];
   const typeOptions = ['Competitive', 'Cooperative', 'Team-based'].map((_) => ({value: _, label: _}));
   const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'].map((_, i) => {return {value: i+1, label: _}});
