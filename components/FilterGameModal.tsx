@@ -400,6 +400,10 @@ const styles = StyleSheet.create({
   },
   dropdownItem: {
     padding: '8px 4px',
+    paddingtop: 4,
+    paddingbottom: 4,
+    paddingleft: 8,
+    paddingright: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
