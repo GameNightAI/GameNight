@@ -162,6 +162,11 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             ...baseStyles,
             ...styles.dropDown,
           }),
+          option: (baseStyles, state) => ({
+            ...baseStyles,
+            ...styles.dropdownItem,
+            ...styles.dropdownItemSelected,
+          }),
         }}
       />
 
