@@ -37,11 +37,11 @@ export default function CollectionScreen() {
   const [complexity, setComplexity] = useState([]);
 
   const isFiltered = Boolean(
-    (playerCount && playerCount.length)
-    || (playTime && playTime.length)
-    || (age && age.length)
-    || (gameType && gameType.length)
-    || (complexity && complexity.length)
+    playerCount.length
+    || playTime.length
+    || age.length
+    || gameType.length
+    || complexity.length
   );
 
   const loadGames = useCallback(async () => {
