@@ -148,15 +148,15 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         styles={{
           container: (baseStyles, state) => ({
             ...baseStyles,
-            styles.dropDownContainer,
+            ...styles.dropDownContainer,
           }),
           menu: (baseStyles, state) => ({
             ...baseStyles,
-            styles.dropDown,
+            ...styles.dropDown,
           }),
           menuList: (baseStyles, state) => ({
             ...baseStyles,
-            styles.dropDown,
+            ...styles.dropDown,
           }),
         }}
       />
