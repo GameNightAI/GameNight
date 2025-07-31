@@ -20,72 +20,6 @@ interface FilterGameModalProps {
   setComplexity: any;
 }
 
-export const filterGames = (games, playerCount, playTime, age, gameType, complexity) => {
-  return games.filter((game) => {
-    let is_match = true;
-    
-    // TODO: Change this to multiselect
-    if (playerCount && playerCount.length) {
-      let count_filter = false
-      playerCount.map(p => {
-        // ignore game.min_players when 15+ is selected, since the number of actual players is arbitrarily large in this case.
-        count_filter ||= (
-          (game.min_players <= p.value || p.value === 15)
-          && game.max_players >= p.value
-        );
-      });
-      is_match &&= count_filter;
-    }
-    
-    if (playTime && playTime.length) {
-      let time_filter = false;
-      playTime.map(t => {
-      // This should really incorporate game.minplaytime and game.maxplaytime
-        //console.log(t);
-        time_filter ||= (t.min <= game.playing_time && game.playing_time <= t.max); // any (||=)
-      });
-      is_match &&= time_filter;
-    }
-    
-    if (age && age.length) {
-      let age_filter = false;
-      age.map(a => {
-        //console.log(a);
-        age_filter ||= (a.min <= game.minAge && game.minAge <= a.max);
-      });
-      is_match &&= age_filter;
-    }
-    
-    if (gameType && gameType.length) {
-      let type_filter = false;
-      gameType.map(t => {
-        //console.log(t);
-        let col;
-        switch (t.value) {
-          case 'Competitive':
-            type_filter ||= !game.is_cooperative
-          case 'Cooperative':
-            type_filter ||= game.is_cooperative
-          case 'Team-based':
-            type_filter ||= game.is_teambased
-        }
-      });
-      is_match &&= type_filter;
-    }
-    
-    if (complexity && complexity.length) {
-      let complexity_filter = false;
-      complexity.map(c => {
-        //console.log(c);
-        complexity_filter ||= game.complexity_tier === c.value
-      });  
-      is_match &&= complexity_filter
-    }
-    
-    return is_match;
-  });
-};
-
 export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   isVisible,
   onClose,
@@ -115,7 +49,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   // const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   // const [showComplexityDropdown, setShowComplexityDropdown] = useState(false);
 
-  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']).map(_ => ({value: parseInt(_), label: _}));
+  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
+    .map(_ => ({value: parseInt(_), label: _}));
   const timeOptions = [
     {value: 30, min: 1, max: 30, label: '30 minutes or less'},
     {value: 31, min: 31, max: 60, label: '31-60 minutes'},
@@ -132,13 +67,15 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     {value: 14, min: 14, max: 15, label: '14-15'},
     {value: 16, min: 16, max: 999, label: '16 and up'},
   ];
-  const typeOptions = ['Competitive', 'Cooperative', 'Team-based'].map(_ => ({value: _, label: _}));
-  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'].map((_, i) => ({value: i+1, label: _}));
+  const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
+    .map(_ => ({value: _, label: _}));
+  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy']
+    .map((_, i) => ({value: i+1, label: _}));
 
   const handleFilter = () => {
     const players = playerCount === '15+' ? '15' : playerCount;
     const time = playTime === '120+' ? '120' : playTime;
-    onApplyFilter()
+    //onApplyFilter()
     //onSearch(players, time, playTime === '120+');
     onClose();
   };
@@ -298,6 +235,72 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </View>
     </Modal>
   );
+};
+
+export const filterGames = (games, playerCount, playTime, age, gameType, complexity) => {
+  return games.filter((game) => {
+    let is_match = true;
+    
+    // TODO: Change this to multiselect
+    if (playerCount && playerCount.length) {
+      let count_filter = false
+      playerCount.map(p => {
+        // ignore game.min_players when 15+ is selected, since the number of actual players is arbitrarily large in this case.
+        count_filter ||= (
+          (game.min_players <= p.value || p.value === 15)
+          && game.max_players >= p.value
+        );
+      });
+      is_match &&= count_filter;
+    }
+    
+    if (playTime && playTime.length) {
+      let time_filter = false;
+      playTime.map(t => {
+      // This should really incorporate game.minplaytime and game.maxplaytime
+        //console.log(t);
+        time_filter ||= (t.min <= game.playing_time && game.playing_time <= t.max); // any (||=)
+      });
+      is_match &&= time_filter;
+    }
+    
+    if (age && age.length) {
+      let age_filter = false;
+      age.map(a => {
+        //console.log(a);
+        age_filter ||= (a.min <= game.minAge && game.minAge <= a.max);
+      });
+      is_match &&= age_filter;
+    }
+    
+    if (gameType && gameType.length) {
+      let type_filter = false;
+      gameType.map(t => {
+        //console.log(t);
+        let col;
+        switch (t.value) {
+          case 'Competitive':
+            type_filter ||= !game.is_cooperative
+          case 'Cooperative':
+            type_filter ||= game.is_cooperative
+          case 'Team-based':
+            type_filter ||= game.is_teambased
+        }
+      });
+      is_match &&= type_filter;
+    }
+    
+    if (complexity && complexity.length) {
+      let complexity_filter = false;
+      complexity.map(c => {
+        //console.log(c);
+        complexity_filter ||= game.complexity_tier === c.value
+      });  
+      is_match &&= complexity_filter
+    }
+    
+    return is_match;
+  });
 };
 
 const screenHeight = Dimensions.get('window').height;
