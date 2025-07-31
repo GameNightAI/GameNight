@@ -47,11 +47,11 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
     .map(_ => ({value: parseInt(_), label: _}));
   const timeOptions = [
-    {value: 1, min: 1, max: 30, label: '30 minutes or less'},
-    {value: 31, min: 31, max: 60, label: '31-60 minutes'},
-    {value: 61, min: 61, max: 90, label: '61-90 minutes'},
-    {value: 91, min: 91, max: 120, label: '91-120 minutes'},
-    {value: 121, min: 121, max: 999999999, label: 'More than 120 minutes'},
+    {value: 1, min: 1, max: 30, label: '30 min or less'},
+    {value: 31, min: 31, max: 60, label: '31-60 min'},
+    {value: 61, min: 61, max: 90, label: '61-90 min'},
+    {value: 91, min: 91, max: 120, label: '91-120 min'},
+    {value: 121, min: 121, max: 999999999, label: 'More than 120 min'},
   ];
   const ageOptions = [
     {value: 0, min: 0, max: 5, label: '5 and under'},
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   dropdownItem: {
-    padding: 16,
+    padding: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
