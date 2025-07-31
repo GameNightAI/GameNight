@@ -2,9 +2,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions, Linking } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react-native';
+import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react-native';
 
-import { VOTING_OPTIONS, ICON_MAP, VoteType } from './votingOptions';
+import { VOTING_OPTIONS, ICON_MAP, VoteType, getIconColor } from './votingOptions';
 
 // Utility to get score by voteType
 const getScoreByVoteType = (voteType: string): number => {
@@ -15,7 +15,7 @@ const getScoreByVoteType = (voteType: string): number => {
 // Utility to get background color by score
 const getVoteBgColor = (score: number, isSelected: boolean): string => {
   if (!isSelected) return '#f5f5f5';
-  if (score > 0) return '#bbf7d0'; // green-200
+  if (score > 1) return '#bbf7d0'; // green-200
   if (score < 0) return '#fecaca'; // red-200
   return '#fef9c3'; // yellow-100
 };
@@ -59,9 +59,9 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
       isSmallScreen && styles.voteButtonSmall,
       {
         backgroundColor: getVoteBgColor(score, isSelected),
-        borderColor: isSelected ? (score > 0 ? '#22c55e' : score < 0 ? '#ef4444' : '#eab308') : 'transparent',
+        borderColor: isSelected ? (score > 1 ? '#22c55e' : score < 0 ? '#ef4444' : '#eab308') : 'transparent',
         borderWidth: isSelected ? 3 : 2,
-        shadowColor: isSelected ? (score > 0 ? '#22c55e' : score < 0 ? '#ef4444' : '#eab308') : 'transparent',
+        shadowColor: isSelected ? (score > 1 ? '#22c55e' : score < 0 ? '#ef4444' : '#eab308') : 'transparent',
         shadowOpacity: isSelected ? 0.25 : 0,
         shadowRadius: isSelected ? 8 : 0,
         elevation: isSelected ? 4 : 0,
@@ -69,16 +69,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
     ];
   };
 
-  const getIconColor = (voteType: string) => {
-    if (selectedVote === voteType) {
-      switch (voteType) {
-        case 'thumbs_down': return '#ef4444';
-        case 'thumbs_up': return '#10b981';
-        case 'heart': return '#ec4899';
-      }
-    }
-    return '#666666';
-  };
+
 
   const [isExpanded, setIsExpanded] = React.useState(false);
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
@@ -133,7 +124,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
                   onPress={() => onVote(game.id, option.value)}
                   disabled={disabled}
                 >
-                  <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value)} />
+                  <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value, selectedVote === option.value)} />
                 </TouchableOpacity>
               );
             })}

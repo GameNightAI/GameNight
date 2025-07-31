@@ -5,7 +5,7 @@ import { getOrCreateAnonId } from '@/utils/anon';
 import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
-import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE } from '@/components/votingOptions';
+import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE, getVoteTypeKeyFromScore } from '@/components/votingOptions';
 import { getUsername } from '@/utils/storage';
 
 interface GameVotes {
@@ -160,19 +160,25 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         // Find votes for this specific game using the game's ID
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
+        // Initialize vote counts with zeros
         const voteData: GameVotes = {
-          votes: {
-            voteType1: gameVotes.filter(v => v.vote_type === 3).length,
-            voteType2: gameVotes.filter(v => v.vote_type === 2).length,
-            voteType3: gameVotes.filter(v => v.vote_type === 1).length,
-            voteType4: gameVotes.filter(v => v.vote_type === 0).length,
-            voteType5: gameVotes.filter(v => v.vote_type === -3).length,
-          },
+          votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type,
           })),
         };
+
+        // Initialize all vote types to 0 using VOTING_OPTIONS
+        VOTING_OPTIONS.forEach(option => {
+          voteData.votes[option.value] = 0;
+        });
+
+        // Count votes using the utility function
+        gameVotes.forEach(vote => {
+          const voteTypeKey = getVoteTypeKeyFromScore(vote.vote_type);
+          voteData.votes[voteTypeKey]++;
+        });
 
         // Find user's vote for this game
         const userVote = identifier ?

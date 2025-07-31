@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { VOTING_OPTIONS, ICON_MAP } from './votingOptions';
+import { VOTING_OPTIONS, ICON_MAP, getIconColor } from './votingOptions';
 
 interface GameVoteSummary {
   name: string;
@@ -56,7 +56,7 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
           const IconComponent = ICON_MAP[option.icon];
           return (
             <View style={styles.voteCol} key={option.value}>
-              <IconComponent />
+              <IconComponent color={getIconColor(option.value, true)} />
             </View>
           );
         })}
