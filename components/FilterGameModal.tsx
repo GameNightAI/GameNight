@@ -145,36 +145,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isMulti
         isClearable
         closeMenuOnSelect={false}
-        styles={{
-          control: (baseStyles, state) => {
-          console.log(state);
-          return {
-            ...baseStyles,
-            ...styles.dropDownContainer,
-          }},
-          container: (baseStyles, state) => ({
-            ...baseStyles,
-            ...styles.dropDownContainer,
-          }),
-          menu: (baseStyles, state) => ({
-            ...baseStyles,
-            ...styles.dropDown,
-          }),
-          menuList: (baseStyles, state) => ({
-            ...baseStyles,
-            ...styles.dropDown,
-          }),
-          option: (baseStyles, state) => ({
-            ...baseStyles,
-            ...styles.dropdownItem,
-            ...styles.dropdownItemText,
-          }),
-          placeholder: (baseStyles, state) => ({
-            ...baseStyles,
-            fontFamily: 'Poppins-Regular',
-            fontSize: 16,
-          }),
-        }}
+        styles={selectStyles}
       />
 
       <Select
@@ -186,6 +157,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isMulti
         isClearable
         closeMenuOnSelect={false}
+        styles={selectStyles}
       />
 
       <Select
@@ -197,6 +169,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isMulti
         isClearable
         closeMenuOnSelect={false}
+        styles={selectStyles}
       />
 
       <Select
@@ -211,6 +184,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isMulti
         isClearable
         closeMenuOnSelect={false}
+        styles={selectStyles}
       />
 
       <Select
@@ -222,6 +196,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isMulti
         isClearable
         closeMenuOnSelect={false}
+        styles={selectStyles}
       />
 
       <TouchableOpacity
@@ -456,5 +431,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
     marginLeft: 8,
-  },
+  },  
 });
+
+const selectStyles = {
+  control: (baseStyles, state) => {
+  console.log(state);
+  return {
+    ...baseStyles,
+    ...styles.dropDownContainer,
+  }},
+  container: (baseStyles, state) => ({
+    ...baseStyles,
+    ...styles.dropDownContainer,
+    marginBottom: 8,
+  }),
+  menu: (baseStyles, state) => ({
+    ...baseStyles,
+    ...styles.dropDown,
+  }),
+  menuList: (baseStyles, state) => ({
+    ...baseStyles,
+    ...styles.dropDown,
+  }),
+  option: (baseStyles, state) => ({
+    ...baseStyles,
+    ...styles.dropdownItem,
+    ...styles.dropdownItemText,
+  }),
+  placeholder: (baseStyles, state) => ({
+    ...baseStyles,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+  }),
+};
