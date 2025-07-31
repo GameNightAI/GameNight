@@ -39,8 +39,9 @@ export default function PollsScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isMobile = width < 768;
+  const isSmallMobile = width < 380 || height < 700;
   const [openResultsPollId, setOpenResultsPollId] = useState<string | null>(null);
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
@@ -321,40 +322,61 @@ export default function PollsScreen() {
   const isCreator = activeTab === 'created';
   // userId is managed by useState and set in useEffect
 
+  // Dynamic styles for small mobile screens
+  const getScaledStyle = (baseStyle: any, scale: number = 1) => {
+    if (!isSmallMobile) return baseStyle;
+    return {
+      ...baseStyle,
+      fontSize: baseStyle.fontSize ? baseStyle.fontSize * scale : undefined,
+      paddingHorizontal: baseStyle.paddingHorizontal ? baseStyle.paddingHorizontal * scale : undefined,
+      paddingVertical: baseStyle.paddingVertical ? baseStyle.paddingVertical * scale : undefined,
+      padding: baseStyle.padding ? baseStyle.padding * scale : undefined,
+      marginBottom: baseStyle.marginBottom ? baseStyle.marginBottom * scale : undefined,
+      marginTop: baseStyle.marginTop ? baseStyle.marginTop * scale : undefined,
+      marginLeft: baseStyle.marginLeft ? baseStyle.marginLeft * scale : undefined,
+      marginRight: baseStyle.marginRight ? baseStyle.marginRight * scale : undefined,
+      gap: baseStyle.gap ? baseStyle.gap * scale : undefined,
+      borderRadius: baseStyle.borderRadius ? baseStyle.borderRadius * scale : undefined,
+      minWidth: baseStyle.minWidth ? baseStyle.minWidth * scale : undefined,
+      width: baseStyle.width ? baseStyle.width * scale : undefined,
+      height: baseStyle.height ? baseStyle.height * scale : undefined,
+    };
+  };
+
   return (
     <View style={styles.container}>
       {currentPolls.length > 0 && (
-        <View style={styles.header}>
+        <View style={getScaledStyle(styles.header, 0.75)}>
           <TouchableOpacity
-            style={styles.createButton}
+            style={getScaledStyle(styles.createButton, 0.75)}
             onPress={() => setCreateModalVisible(true)}
           >
-            <Plus size={20} color="#ffffff" />
-            <Text style={styles.createButtonText}>Create Poll</Text>
+            <Plus size={isSmallMobile ? 15 : 20} color="#ffffff" />
+            <Text style={getScaledStyle(styles.createButtonText, 0.75)}>Create Poll</Text>
           </TouchableOpacity>
-          <View style={styles.tabsWrapper}>
-            <View style={styles.tabContainer}>
+          <View style={getScaledStyle(styles.tabsWrapper, 0.75)}>
+            <View style={getScaledStyle(styles.tabContainer, 0.75)}>
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+                style={[getScaledStyle(styles.tab, 0.75), activeTab === 'all' && getScaledStyle(styles.activeTab, 0.75)]}
                 onPress={() => setActiveTab('all')}
               >
-                <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+                <Text style={[getScaledStyle(styles.tabText, 0.75), activeTab === 'all' && getScaledStyle(styles.activeTabText, 0.75)]}>
                   All Polls ({allPolls.length})
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'created' && styles.activeTab]}
+                style={[getScaledStyle(styles.tab, 0.75), activeTab === 'created' && getScaledStyle(styles.activeTab, 0.75)]}
                 onPress={() => setActiveTab('created')}
               >
-                <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
+                <Text style={[getScaledStyle(styles.tabText, 0.75), activeTab === 'created' && getScaledStyle(styles.activeTabText, 0.75)]}>
                   My Polls ({polls.length})
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'other' && styles.activeTab]}
+                style={[getScaledStyle(styles.tab, 0.75), activeTab === 'other' && getScaledStyle(styles.activeTab, 0.75)]}
                 onPress={() => setActiveTab('other')}
               >
-                <Text style={[styles.tabText, activeTab === 'other' && styles.activeTabText]}>
+                <Text style={[getScaledStyle(styles.tabText, 0.75), activeTab === 'other' && getScaledStyle(styles.activeTabText, 0.75)]}>
                   Voted In ({otherUsersPolls.length})
                 </Text>
               </TouchableOpacity>
@@ -369,7 +391,7 @@ export default function PollsScreen() {
           backgroundColor: '#fffbe6',
           borderBottomWidth: 1,
           borderBottomColor: '#ffe58f',
-          padding: 14,
+          padding: isSmallMobile ? 10.5 : 14,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -379,14 +401,14 @@ export default function PollsScreen() {
           right: 0,
           zIndex: 10,
         }}>
-          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: 15 }}>
+          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: isSmallMobile ? 11.25 : 15 }}>
             New votes have been cast! Pull to refresh or tap below.
           </Text>
           <TouchableOpacity onPress={() => {
             setNewVotes(false);
             // Optionally, trigger a refetch of polls here
           }}>
-            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: 16 }}>Dismiss</Text>
+            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: isSmallMobile ? 12 : 16 }}>Dismiss</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -394,27 +416,27 @@ export default function PollsScreen() {
       {showShareLink && (
         <Animated.View
           entering={FadeIn.duration(200)}
-          style={styles.shareLinkContainer}
+          style={getScaledStyle(styles.shareLinkContainer, 0.75)}
         >
-          <View style={styles.shareLinkHeader}>
-            <Text style={styles.shareLinkTitle}>Share Link</Text>
+          <View style={getScaledStyle(styles.shareLinkHeader, 0.75)}>
+            <Text style={getScaledStyle(styles.shareLinkTitle, 0.75)}>Share Link</Text>
             <TouchableOpacity
               onPress={() => setShowShareLink(null)}
-              style={styles.closeShareLinkButton}
+              style={getScaledStyle(styles.closeShareLinkButton, 0.75)}
             >
-              <X size={20} color="#666666" />
+              <X size={isSmallMobile ? 15 : 20} color="#666666" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.shareLinkContent}>
+          <View style={getScaledStyle(styles.shareLinkContent, 0.75)}>
             <TextInput
-              style={styles.shareLinkInput}
+              style={getScaledStyle(styles.shareLinkInput, 0.75)}
               value={showShareLink}
               editable={false}
               selectTextOnFocus
             />
             <TouchableOpacity
-              style={styles.copyButton}
+              style={getScaledStyle(styles.copyButton, 0.75)}
               onPress={async () => {
                 try {
                   await Clipboard.setStringAsync(showShareLink);
@@ -428,15 +450,15 @@ export default function PollsScreen() {
               }}
             >
               {showCopiedConfirmation ? (
-                <Check size={20} color="#4CAF50" />
+                <Check size={isSmallMobile ? 15 : 20} color="#4CAF50" />
               ) : (
-                <Copy size={20} color="#ff9654" />
+                <Copy size={isSmallMobile ? 15 : 20} color="#ff9654" />
               )}
             </TouchableOpacity>
           </View>
 
           {showCopiedConfirmation && (
-            <Text style={styles.copiedConfirmation}>Link copied to clipboard!</Text>
+            <Text style={getScaledStyle(styles.copiedConfirmation, 0.75)}>Link copied to clipboard!</Text>
           )}
         </Animated.View>
       )}
@@ -449,36 +471,36 @@ export default function PollsScreen() {
           return (
             <Animated.View
               entering={FadeIn.delay(index * 100)}
-              style={styles.pollCard}
+              style={getScaledStyle(styles.pollCard, 0.75)}
             >
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <Pressable
                   style={({ hovered }) => [
-                    styles.pollTitleContainer,
-                    hovered && Platform.OS === 'web' ? styles.pollTitleContainerHover : null,
+                    getScaledStyle(styles.pollTitleContainer, 0.75),
+                    hovered && Platform.OS === 'web' ? getScaledStyle(styles.pollTitleContainerHover, 0.75) : null,
                   ]}
                   onPress={() => router.push({ pathname: '/poll/[id]', params: { id: item.id } })}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                    <Text style={[styles.pollTitle, { textDecorationLine: 'underline', color: '#1a2b5f', fontSize: 18, paddingTop: 8, marginBottom: 0, flexShrink: 1 }]} numberOfLines={2}>{item.title}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
-                      <Calendar size={16} color="#8d8d8d" style={{ paddingTop: 8, marginBottom: 0, marginRight: 4 }} />
-                      <Text style={[styles.pollDate, { paddingTop: 8, marginBottom: 0 }]} numberOfLines={1}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isSmallMobile ? 1.5 : 2 }}>
+                    <Text style={[getScaledStyle(styles.pollTitle, 0.75), { textDecorationLine: 'underline', color: '#1a2b5f', fontSize: isSmallMobile ? 13.5 : 18, paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0, flexShrink: 1 }]} numberOfLines={2}>{item.title}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: isSmallMobile ? 9 : 12 }}>
+                      <Calendar size={isSmallMobile ? 12 : 16} color="#8d8d8d" style={{ paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0, marginRight: isSmallMobile ? 3 : 4 }} />
+                      <Text style={[getScaledStyle(styles.pollDate, 0.75), { paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0 }]} numberOfLines={1}>
                         {new Date(item.created_at).toLocaleDateString()}
                       </Text>
                     </View>
                   </View>
                   {item.description && (
-                    <Text style={styles.pollDescription}>{item.description}</Text>
+                    <Text style={getScaledStyle(styles.pollDescription, 0.75)}>{item.description}</Text>
                   )}
                 </Pressable>
-                <View style={{ alignItems: 'flex-end', minWidth: 40 }}>
+                <View style={{ alignItems: 'flex-end', minWidth: isSmallMobile ? 30 : 40 }}>
                   {item.user_id === currentUserId && (
                     <TouchableOpacity
-                      style={styles.deleteCircle}
+                      style={getScaledStyle(styles.deleteCircle, 0.75)}
                       onPress={() => setPollToDelete(item)}
                     >
-                      <Text style={{ fontSize: 20, color: '#e74c3c', fontWeight: 'bold' }}>×</Text>
+                      <Text style={{ fontSize: isSmallMobile ? 15 : 20, color: '#e74c3c', fontWeight: 'bold' }}>×</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -486,32 +508,32 @@ export default function PollsScreen() {
               {/* Action buttons */}
               {isMobile ? (
                 <>
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                    <TouchableOpacity style={styles.shareButtonMobile} onPress={() => handleShare(item.id)}>
-                      <Share2 size={18} color="#ff9654" />
-                      <Text style={styles.shareLinkButtonTextMobile}>Share</Text>
+                  <View style={{ flexDirection: 'row', gap: isSmallMobile ? 6 : 8, marginTop: isSmallMobile ? 9 : 12 }}>
+                    <TouchableOpacity style={getScaledStyle(styles.shareButtonMobile, 0.75)} onPress={() => handleShare(item.id)}>
+                      <Share2 size={isSmallMobile ? 13.5 : 18} color="#ff9654" />
+                      <Text style={getScaledStyle(styles.shareLinkButtonTextMobile, 0.75)}>Share</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.localVoteButtonMobile} onPress={() => router.push(`/poll/local/${item.id}`)}>
-                      <Users size={18} color="#10b981" />
-                      <Text style={styles.localVoteButtonTextMobile}>In-Person</Text>
+                    <TouchableOpacity style={getScaledStyle(styles.localVoteButtonMobile, 0.75)} onPress={() => router.push(`/poll/local/${item.id}`)}>
+                      <Users size={isSmallMobile ? 13.5 : 18} color="#10b981" />
+                      <Text style={getScaledStyle(styles.localVoteButtonTextMobile, 0.75)}>In-Person</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.duplicateButtonMobile} onPress={() => handleDuplicatePoll(item.id)}>
-                      <Copy size={18} color="#4b5563" />
-                      <Text style={styles.duplicateButtonTextMobile}>Duplicate</Text>
+                    <TouchableOpacity style={getScaledStyle(styles.duplicateButtonMobile, 0.75)} onPress={() => handleDuplicatePoll(item.id)}>
+                      <Copy size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
+                      <Text style={getScaledStyle(styles.duplicateButtonTextMobile, 0.75)}>Duplicate</Text>
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity
                     style={[
-                      styles.resultsButtonMobile,
+                      getScaledStyle(styles.resultsButtonMobile, 0.75),
                       item.voteCount === 0 && { backgroundColor: '#e5e7eb' }
                     ]}
                     onPress={() => setOpenResultsPollId(isDropdownOpen ? null : item.id)}
                     disabled={item.voteCount === 0}
                   >
-                    <BarChart3 size={18} color={item.voteCount === 0 ? '#6b7280' : '#2563eb'} />
+                    <BarChart3 size={isSmallMobile ? 13.5 : 18} color={item.voteCount === 0 ? '#6b7280' : '#2563eb'} />
                     <Text
                       style={[
-                        styles.resultsButtonTextMobile,
+                        getScaledStyle(styles.resultsButtonTextMobile, 0.75),
                         item.voteCount === 0 && { color: '#6b7280' }
                       ]}
                     >
@@ -519,33 +541,33 @@ export default function PollsScreen() {
                     </Text>
                   </TouchableOpacity>
                   {isDropdownOpen && (
-                    <View style={{ marginTop: 8 }}>
+                    <View style={{ marginTop: isSmallMobile ? 6 : 8 }}>
                       <PollResultsDropdown pollId={item.id} />
                     </View>
                   )}
                 </>
               ) : (
-                <View style={{ flexDirection: 'row', gap: 12, marginTop: 18 }}>
-                  <TouchableOpacity style={styles.shareButtonDesktop} onPress={() => handleShare(item.id)}>
-                    <Share2 size={18} color="#ff9654" />
-                    <Text style={styles.shareLinkButtonTextDesktop}>Share</Text>
+                <View style={{ flexDirection: 'row', gap: isSmallMobile ? 9 : 12, marginTop: isSmallMobile ? 13.5 : 18 }}>
+                  <TouchableOpacity style={getScaledStyle(styles.shareButtonDesktop, 0.75)} onPress={() => handleShare(item.id)}>
+                    <Share2 size={isSmallMobile ? 13.5 : 18} color="#ff9654" />
+                    <Text style={getScaledStyle(styles.shareLinkButtonTextDesktop, 0.75)}>Share</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.localVoteButtonDesktop} onPress={() => router.push(`/poll/local/${item.id}`)}>
-                    <Users size={18} color="#10b981" />
-                    <Text style={styles.localVoteButtonTextDesktop}>In-Person</Text>
+                  <TouchableOpacity style={getScaledStyle(styles.localVoteButtonDesktop, 0.75)} onPress={() => router.push(`/poll/local/${item.id}`)}>
+                    <Users size={isSmallMobile ? 13.5 : 18} color="#10b981" />
+                    <Text style={getScaledStyle(styles.localVoteButtonTextDesktop, 0.75)}>In-Person</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
-                      styles.resultsButtonDesktop,
+                      getScaledStyle(styles.resultsButtonDesktop, 0.75),
                       item.voteCount === 0 && { backgroundColor: '#e5e7eb' }
                     ]}
                     onPress={() => setOpenResultsPollId(isDropdownOpen ? null : item.id)}
                     disabled={item.voteCount === 0}
                   >
-                    <BarChart3 size={18} color={item.voteCount === 0 ? '#6b7280' : '#2563eb'} />
+                    <BarChart3 size={isSmallMobile ? 13.5 : 18} color={item.voteCount === 0 ? '#6b7280' : '#2563eb'} />
                     <Text
                       style={[
-                        styles.resultsButtonTextDesktop,
+                        getScaledStyle(styles.resultsButtonTextDesktop, 0.75),
                         item.voteCount === 0 && { color: '#6b7280' }
                       ]}
                     >
@@ -553,17 +575,17 @@ export default function PollsScreen() {
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.duplicateButtonDesktop}
+                    style={getScaledStyle(styles.duplicateButtonDesktop, 0.75)}
                     onPress={() => handleDuplicatePoll(item.id)}
                   >
-                    <Copy size={18} color="#4b5563" />
-                    <Text style={styles.duplicateButtonTextDesktop}>Duplicate</Text>
+                    <Copy size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
+                    <Text style={getScaledStyle(styles.duplicateButtonTextDesktop, 0.75)}>Duplicate</Text>
                   </TouchableOpacity>
                 </View>
               )}
               {/* Dropdown for desktop, below poll card */}
               {!isMobile && isDropdownOpen && (
-                <View style={{ marginTop: 8 }}>
+                <View style={{ marginTop: isSmallMobile ? 6 : 8 }}>
                   <PollResultsDropdown pollId={item.id} />
                 </View>
               )}
@@ -571,7 +593,7 @@ export default function PollsScreen() {
           );
         }}
         contentContainerStyle={[
-          styles.listContent,
+          getScaledStyle(styles.listContent, 0.75),
           currentPolls.length === 0 && { flex: 1, justifyContent: 'center' }
         ]}
         ListEmptyComponent={
