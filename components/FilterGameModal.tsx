@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   dropdownItem: {
-    padding: '8px, 4px',
+    padding: '8px 4px',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
