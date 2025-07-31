@@ -48,6 +48,8 @@ export default function UpdatePasswordScreen() {
       } else {
         setSuccess(true);
         Toast.show({ type: 'success', text1: 'Password Updated', text2: 'You can now log in with your new password.' });
+        // Clear the session after successful password update
+        await supabase.auth.signOut();
         setTimeout(() => router.replace('/auth/login'), 2000);
       }
     } catch (err) {
