@@ -146,10 +146,12 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isClearable
         closeMenuOnSelect={false}
         styles={{
-          control: (baseStyles, state) => ({
+          control: (baseStyles, state) => {
+          console.log(state);
+          return {
             ...baseStyles,
             ...styles.dropDownContainer,
-          }),
+          }},
           container: (baseStyles, state) => ({
             ...baseStyles,
             ...styles.dropDownContainer,
@@ -166,6 +168,11 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             ...baseStyles,
             ...styles.dropdownItem,
             ...styles.dropdownItemText,
+          }),
+          placeholder: (baseStyles, state) => ({
+            ...baseStyles,
+            fontFamily: 'Poppins-Regular',
+            fontSize: 16,
           }),
         }}
       />
