@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
-import { VOTING_OPTIONS } from '@/components/votingOptions';
+import { VOTING_OPTIONS, getVoteTypeKeyFromScore } from '@/components/votingOptions';
 import { getVotedFlag, getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
 
 interface GameVotes {
@@ -134,18 +134,23 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
         const voteData: GameVotes = {
-          votes: {
-            voteType1: gameVotes.filter(v => v.vote_type === 3).length,
-            voteType2: gameVotes.filter(v => v.vote_type === 2).length,
-            voteType3: gameVotes.filter(v => v.vote_type === 1).length,
-            voteType4: gameVotes.filter(v => v.vote_type === 0).length,
-            voteType5: gameVotes.filter(v => v.vote_type === -3).length,
-          },
+          votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type,
           })) || [],
         };
+
+        // Initialize all vote types to 0 using VOTING_OPTIONS
+        VOTING_OPTIONS.forEach(option => {
+          voteData.votes[option.value] = 0;
+        });
+
+        // Count votes using the utility function
+        gameVotes.forEach(vote => {
+          const voteTypeKey = getVoteTypeKeyFromScore(vote.vote_type);
+          voteData.votes[voteTypeKey]++;
+        });
 
         return {
           id: game.id,
@@ -187,7 +192,7 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
 
         // Use array manipulation for cleaner code
         const totalScore = VOTING_OPTIONS.reduce((score, option) => {
-          const voteTypeKey = `voteType${option.score === 3 ? 1 : option.score === 2 ? 2 : option.score === 1 ? 3 : option.score === 0 ? 4 : 5}`;
+          const voteTypeKey = getVoteTypeKeyFromScore(option.score);
           const voteCount = game.votes.votes[voteTypeKey] || 0;
           return score + (option.score * voteCount);
         }, 0);

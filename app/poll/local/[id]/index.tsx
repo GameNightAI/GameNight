@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
-import { VoteType, VOTE_TYPE_TO_SCORE, SCORE_TO_VOTE_TYPE } from '@/components/votingOptions';
+import { VoteType, VOTE_TYPE_TO_SCORE, SCORE_TO_VOTE_TYPE, getVoteTypeKeyFromScore, VOTING_OPTIONS } from '@/components/votingOptions';
 import { VoterNameInput } from '@/components/PollVoterNameInput';
 import { GameCard } from '@/components/PollGameCard';
 import { LoadingState } from '@/components/LoadingState';
@@ -98,25 +98,22 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
 
         // Use the same mapping logic as usePollResults
         const voteData = {
-          votes: {
-            voteType1: 0,
-            voteType2: 0,
-            voteType3: 0,
-            voteType4: 0,
-            voteType5: 0,
-          },
+          votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type as VoteType,
           })),
         };
 
-        // Map vote types using SCORE_TO_VOTE_TYPE like usePollResults does
+        // Initialize all vote types to 0 using VOTING_OPTIONS
+        VOTING_OPTIONS.forEach(option => {
+          voteData.votes[option.value] = 0;
+        });
+
+        // Count votes using the utility function
         gameVotes.forEach(vote => {
-          const voteTypeKey = SCORE_TO_VOTE_TYPE[vote.vote_type];
-          if (voteTypeKey && voteData.votes[voteTypeKey] !== undefined) {
-            voteData.votes[voteTypeKey]++;
-          }
+          const voteTypeKey = getVoteTypeKeyFromScore(vote.vote_type);
+          (voteData.votes as any)[voteTypeKey]++;
         });
 
         return {

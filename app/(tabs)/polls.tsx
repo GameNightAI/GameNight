@@ -288,14 +288,18 @@ export default function PollsScreen() {
     if (!results || results.length === 0) return <Text style={{ padding: 16, color: '#888' }}>No votes yet.</Text>;
 
     // Transform the data to match PollScreenCard's expected format
-    const transformedGames = results.map(result => ({
-      ...result.game,
-      voteType1: result.game.votes?.votes?.voteType1 || 0,
-      voteType2: result.game.votes?.votes?.voteType2 || 0,
-      voteType3: result.game.votes?.votes?.voteType3 || 0,
-      voteType4: result.game.votes?.votes?.voteType4 || 0,
-      voteType5: result.game.votes?.votes?.voteType5 || 0,
-    }));
+    const transformedGames = results.map(result => {
+      const transformedGame = { ...result.game } as any;
+
+      // Flatten the nested votes structure using forEach
+      if (result.game.votes?.votes) {
+        Object.entries(result.game.votes.votes).forEach(([voteType, count]) => {
+          transformedGame[voteType] = count || 0;
+        });
+      }
+
+      return transformedGame;
+    });
 
     return (
       <PollScreenCard
