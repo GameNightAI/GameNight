@@ -282,14 +282,24 @@ export default function PollsScreen() {
 
   // Helper to render poll results dropdown
   function PollResultsDropdown({ pollId }: { pollId: string }) {
-    const { gameResults, loading, error } = usePollResults(pollId);
+    const { results, loading, error } = usePollResults(pollId);
     if (loading) return <LoadingState />;
     if (error) return <ErrorState message={error} onRetry={() => { }} />;
-    if (!gameResults || gameResults.length === 0) return <Text style={{ padding: 16, color: '#888' }}>No votes yet.</Text>;
+    if (!results || results.length === 0) return <Text style={{ padding: 16, color: '#888' }}>No votes yet.</Text>;
+
+    // Transform the data to match PollScreenCard's expected format
+    const transformedGames = results.map(result => ({
+      ...result.game,
+      voteType1: result.game.votes?.votes?.voteType1 || 0,
+      voteType2: result.game.votes?.votes?.voteType2 || 0,
+      voteType3: result.game.votes?.votes?.voteType3 || 0,
+      voteType4: result.game.votes?.votes?.voteType4 || 0,
+      voteType5: result.game.votes?.votes?.voteType5 || 0,
+    }));
 
     return (
       <PollScreenCard
-        games={gameResults}
+        games={transformedGames}
         onViewDetails={() => router.push({ pathname: '/poll/[id]/results', params: { id: pollId } })}
       />
     );

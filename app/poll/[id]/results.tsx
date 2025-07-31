@@ -168,7 +168,7 @@ export default function PollResultsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {results.length === 0 ? (
+        {!results || results.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No votes have been cast yet.</Text>
           </View>
@@ -201,7 +201,7 @@ export default function PollResultsScreen() {
               </View>
             ))}
             {/* Comments Section at the bottom of the scrollview */}
-            {comments.length > 0 && (
+            {comments && comments.length > 0 && (
               <View style={styles.commentsContainer}>
                 <Text style={styles.commentsTitle}>Comments</Text>
                 {comments.map((c, idx) => (

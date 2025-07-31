@@ -1,8 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
-import { GameResult } from '@/hooks/usePollResults';
 import { VOTING_OPTIONS, ICON_MAP, SCORE_TO_VOTE_TYPE } from './votingOptions';
+import { Game } from '@/types/game';
+
+interface GameVotes {
+  votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
+  voters: { name: string; vote_type: number }[];
+}
+
+interface PollGame extends Game {
+  votes: GameVotes;
+  userVote?: number | null;
+}
 
 // Utility to get score by voteType
 const getScoreByVoteType = (voteType: string): number => {
@@ -17,22 +27,42 @@ const getVoteBgColor = (score: number): string => {
   return '#fef9c3'; // yellow-100
 };
 
-export function GameResultCard({ game }: { game: GameResult }) {
+export function GameResultCard({ game }: { game: PollGame }) {
   const [showVoters, setShowVoters] = useState(false);
-  // Calculate total votes and score using new voting options
-  const totalVotes = VOTING_OPTIONS.reduce((sum, opt) => sum + (game[opt.value] || 0), 0);
-  const totalScore = VOTING_OPTIONS.reduce((sum, opt) => sum + (game[opt.value] || 0) * opt.score, 0);
+
+  // Ensure game.votes exists
+  if (!game.votes) {
+    console.warn('Game votes is undefined for game:', game.id);
+    return (
+      <View style={styles.card}>
+        <Text style={styles.name}>{game.name}</Text>
+        <Text style={styles.errorText}>Vote data unavailable</Text>
+      </View>
+    );
+  }
+
+  // Calculate total votes and score using array manipulation
+  const totalVotes = Object.values(game.votes.votes).reduce((sum, count) => sum + count, 0);
+
+  const totalScore = VOTING_OPTIONS.reduce((sum, opt) => {
+    const voteTypeKey = `voteType${opt.score === 3 ? 1 : opt.score === 2 ? 2 : opt.score === 1 ? 3 : opt.score === 0 ? 4 : 5}`;
+    const voteCount = game.votes.votes[voteTypeKey] || 0;
+    return sum + (opt.score * voteCount);
+  }, 0);
 
   // Group voters by their vote type
   const getVotersByType = () => {
     const votersByType: Record<string, string[]> = {};
     VOTING_OPTIONS.forEach(opt => { votersByType[opt.value] = []; });
-    game.voterDetails.forEach(voter => {
-      const voteTypeKey = SCORE_TO_VOTE_TYPE[voter.vote_type];
-      if (voteTypeKey && votersByType[voteTypeKey]) {
-        votersByType[voteTypeKey].push(voter.name);
-      }
-    });
+
+    if (game.votes.voters && Array.isArray(game.votes.voters)) {
+      game.votes.voters.forEach(voter => {
+        const voteTypeKey = SCORE_TO_VOTE_TYPE[voter.vote_type];
+        if (voteTypeKey && votersByType[voteTypeKey]) {
+          votersByType[voteTypeKey].push(voter.name);
+        }
+      });
+    }
     return votersByType;
   };
   const votersByType = getVotersByType();
@@ -46,11 +76,13 @@ export function GameResultCard({ game }: { game: GameResult }) {
         {VOTING_OPTIONS.map(function (option: typeof VOTING_OPTIONS[number]) {
           const score = getScoreByVoteType(option.value);
           const IconComponent = ICON_MAP[option.icon];
+          const voteTypeKey = `voteType${option.score === 3 ? 1 : option.score === 2 ? 2 : option.score === 1 ? 3 : option.score === 0 ? 4 : 5}`;
+          const voteCount = game.votes.votes[voteTypeKey] || 0;
           return (
             <View style={styles.voteItem} key={option.value}>
               <View style={styles.voteIconContainer}>
                 {typeof IconComponent === 'function' ? <IconComponent /> : <Text>?</Text>}
-                <Text style={[styles.voteCount, { backgroundColor: getVoteBgColor(score), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, minWidth: 28, textAlign: 'center' }]}>{game[option.value] || 0}</Text>
+                <Text style={[styles.voteCount, { backgroundColor: getVoteBgColor(score), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, minWidth: 28, textAlign: 'center' }]}>{voteCount}</Text>
               </View>
               <Text style={styles.voteLabel}>{option.label}</Text>
             </View>
@@ -208,5 +240,12 @@ const styles = StyleSheet.create({
     color: '#666666',
     lineHeight: 20,
     marginLeft: 22,
+  },
+  errorText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
