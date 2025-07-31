@@ -31,7 +31,6 @@ export default function RootLayout() {
         <Stack.Screen
           name="(tabs)"
           options={{ headerShown: false }}
-          initialParams={{ screen: 'collection' }}
         />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />

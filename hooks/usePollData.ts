@@ -9,11 +9,7 @@ import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE } from '@/components/votingOptions';
 import { getUsername } from '@/utils/storage';
 
 interface GameVotes {
-  voteType1: number;
-  voteType2: number;
-  voteType3: number;
-  voteType4: number;
-  voteType5: number;
+  votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
   voters: { name: string; vote_type: number }[];
 }
 
@@ -165,11 +161,13 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
         const voteData: GameVotes = {
-          voteType1: gameVotes.filter(v => v.vote_type === 3).length,
-          voteType2: gameVotes.filter(v => v.vote_type === 2).length,
-          voteType3: gameVotes.filter(v => v.vote_type === 1).length,
-          voteType4: gameVotes.filter(v => v.vote_type === 0).length,
-          voteType5: gameVotes.filter(v => v.vote_type === -3).length,
+          votes: {
+            voteType1: gameVotes.filter(v => v.vote_type === 3).length,
+            voteType2: gameVotes.filter(v => v.vote_type === 2).length,
+            voteType3: gameVotes.filter(v => v.vote_type === 1).length,
+            voteType4: gameVotes.filter(v => v.vote_type === 0).length,
+            voteType5: gameVotes.filter(v => v.vote_type === -3).length,
+          },
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type,

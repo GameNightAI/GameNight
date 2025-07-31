@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const USERNAME_KEY = 'voter_name';
 const VOTED_PREFIX = 'voted_';
 const VOTE_UPDATED_PREFIX = 'vote_updated_';
+const LAST_TAB_KEY = 'last_visited_tab';
 
 // Safari-compatible storage with fallbacks
 class SafariCompatibleStorage {
@@ -94,6 +95,15 @@ export const getVoteUpdatedFlag = async (pollId: string): Promise<boolean> => {
 
 export const removeVoteUpdatedFlag = async (pollId: string): Promise<void> => {
   await storage.removeItem(`${VOTE_UPDATED_PREFIX}${pollId}`);
+};
+
+// Tab navigation storage methods
+export const saveLastVisitedTab = async (tabName: string): Promise<void> => {
+  await storage.setItem(LAST_TAB_KEY, tabName);
+};
+
+export const getLastVisitedTab = async (): Promise<string | null> => {
+  return await storage.getItem(LAST_TAB_KEY);
 };
 
 // Export the storage instance for direct access if needed

@@ -6,11 +6,7 @@ import { VOTING_OPTIONS } from '@/components/votingOptions';
 import { getVotedFlag, getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
 
 interface GameVotes {
-  voteType1: number;
-  voteType2: number;
-  voteType3: number;
-  voteType4: number;
-  voteType5: number;
+  votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
   voters: { name: string; vote_type: number }[];
 }
 
@@ -138,15 +134,17 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
         const voteData: GameVotes = {
-          voteType1: gameVotes.filter(v => v.vote_type === 3).length,
-          voteType2: gameVotes.filter(v => v.vote_type === 2).length,
-          voteType3: gameVotes.filter(v => v.vote_type === 1).length,
-          voteType4: gameVotes.filter(v => v.vote_type === 0).length,
-          voteType5: gameVotes.filter(v => v.vote_type === -3).length,
+          votes: {
+            voteType1: gameVotes.filter(v => v.vote_type === 3).length,
+            voteType2: gameVotes.filter(v => v.vote_type === 2).length,
+            voteType3: gameVotes.filter(v => v.vote_type === 1).length,
+            voteType4: gameVotes.filter(v => v.vote_type === 0).length,
+            voteType5: gameVotes.filter(v => v.vote_type === -3).length,
+          },
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type,
-          })),
+          })) || [],
         };
 
         return {
@@ -176,15 +174,25 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
 
       // Calculate results
       const gameResults: GameResult[] = formattedGames.map(game => {
+        // Ensure game.votes exists
+        if (!game.votes) {
+          console.warn('Game votes is undefined for game:', game.id);
+          return {
+            game,
+            totalScore: 0,
+            totalVotes: 0,
+            ranking: 0,
+          };
+        }
+
+        // Use array manipulation for cleaner code
         const totalScore = VOTING_OPTIONS.reduce((score, option) => {
-          const voteCount = game.votes[`voteType${option.score === 3 ? 1 : option.score === 2 ? 2 : option.score === 1 ? 3 : option.score === 0 ? 4 : 5}` as keyof GameVotes] || 0;
+          const voteTypeKey = `voteType${option.score === 3 ? 1 : option.score === 2 ? 2 : option.score === 1 ? 3 : option.score === 0 ? 4 : 5}`;
+          const voteCount = game.votes.votes[voteTypeKey] || 0;
           return score + (option.score * voteCount);
         }, 0);
 
-        const totalVotes = Object.values(game.votes).reduce((sum, count) => {
-          if (typeof count === 'number') return sum + count;
-          return sum;
-        }, 0) - game.votes.voters.length; // Subtract voters array length
+        const totalVotes = Object.values(game.votes.votes).reduce((sum, count) => sum + count, 0);
 
         return {
           game,

@@ -98,11 +98,13 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
 
         // Use the same mapping logic as usePollResults
         const voteData = {
-          voteType1: 0,
-          voteType2: 0,
-          voteType3: 0,
-          voteType4: 0,
-          voteType5: 0,
+          votes: {
+            voteType1: 0,
+            voteType2: 0,
+            voteType3: 0,
+            voteType4: 0,
+            voteType5: 0,
+          },
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type as VoteType,
@@ -112,8 +114,8 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
         // Map vote types using SCORE_TO_VOTE_TYPE like usePollResults does
         gameVotes.forEach(vote => {
           const voteTypeKey = SCORE_TO_VOTE_TYPE[vote.vote_type];
-          if (voteTypeKey && voteData[voteTypeKey] !== undefined) {
-            voteData[voteTypeKey]++;
+          if (voteTypeKey && voteData.votes[voteTypeKey] !== undefined) {
+            voteData.votes[voteTypeKey]++;
           }
         });
 
