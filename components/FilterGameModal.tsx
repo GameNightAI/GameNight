@@ -42,12 +42,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   // const [gameType, setGameType] = useState([]);
   // const [complexity, setComplexity] = useState([]);
   
-  // Dropdown visibility states
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
-  // const [showTimeDropdown, setShowTimeDropdown] = useState(false);
-  // const [showAgeDropdown, setShowAgeDropdown] = useState(false);
-  // const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  // const [showComplexityDropdown, setShowComplexityDropdown] = useState(false);
 
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
     .map(_ => ({value: parseInt(_), label: _}));
@@ -150,6 +145,20 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isMulti
         isClearable
         closeMenuOnSelect={false}
+        styles={{
+          container: (baseStyles, state) => ({
+            ...baseStyles,
+            styles.dropDownContainer,
+          }),
+          menu: (baseStyles, state) => ({
+            ...baseStyles,
+            styles.dropDown,
+          }),
+          menuList: (baseStyles, state) => ({
+            ...baseStyles,
+            styles.dropDown,
+          }),
+        }}
       />
 
       <Select
@@ -161,11 +170,6 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isMulti
         isClearable
         closeMenuOnSelect={false}
-        styles={{
-          container: styles.dropDownContainer,
-          menu: styles.dropDown,
-          menuList:styles.dropDown,
-        }}
       />
 
       <Select
@@ -242,56 +246,45 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     let is_match = true;
     
     if (playerCount.length) {
-      is_match &&= playerCount.some(p => {
-        // ignore game.min_players when 15+ is selected, since the number of actual players is arbitrarily large in this case.
-        return (
-          (game.min_players <= p.value || p.value === 15)
-          && p.value <= game.max_players
-        );
-      });
+      is_match &&= playerCount.some(p => (
+        // Ignore game.min_players when 15+ is selected, since the number of actual players is arbitrarily large in this case.
+        (game.min_players <= p.value || p.value === 15)
+        && p.value <= game.max_players    
+      ));
     }
     
     if (playTime.length) {
-      let time_filter = false;
-      playTime.map(t => {
-      // Perhaps this should incorporate game.minplaytime and game.maxplaytime
-        time_filter ||= (t.min <= game.playing_time && game.playing_time <= t.max);
-      });
-      is_match &&= time_filter;
+      is_match &&= playTime.some(t => (
+        // Perhaps this should incorporate game.minplaytime and game.maxplaytime
+        t.min <= game.playing_time
+        && game.playing_time <= t.max
+      ));
     }
     
     if (age.length) {
-      let age_filter = false;
-      age.map(a => {
-        age_filter ||= (a.min <= game.minAge && game.minAge <= a.max);
-      });
-      is_match &&= age_filter;
+      is_match &&= age.some(a => (
+        a.min <= game.minAge
+        && game.minAge <= a.max
+      ));
     }
     
     if (gameType.length) {
-      let type_filter = false;
-      gameType.map(t => {
-        //console.log(t);
-        let col;
+      is_match &&= gameType.some(t => {
         switch (t.value) {
           case 'Competitive':
-            type_filter ||= !game.is_cooperative
+            return !game.is_cooperative
           case 'Cooperative':
-            type_filter ||= game.is_cooperative
+            return game.is_cooperative
           case 'Team-based':
-            type_filter ||= game.is_teambased
+            return game.is_teambased
         }
       });
-      is_match &&= type_filter;
     }
     
     if (complexity.length) {
-      let complexity_filter = false;
-      complexity.map(c => {
-        //console.log(c);
-        complexity_filter ||= game.complexity_tier === c.value
-      });  
-      is_match &&= complexity_filter
+      is_match &&= complexity.some(c => (
+        game.complexity_tier === c.value
+      ));
     }
     
     return is_match;
