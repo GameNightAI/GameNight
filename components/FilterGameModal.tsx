@@ -52,7 +52,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
     .map(_ => ({value: parseInt(_), label: _}));
   const timeOptions = [
-    {value: 30, min: 1, max: 30, label: '30 minutes or less'},
+    {value: 1, min: 1, max: 30, label: '30 minutes or less'},
     {value: 31, min: 31, max: 60, label: '31-60 minutes'},
     {value: 61, min: 61, max: 90, label: '61-90 minutes'},
     {value: 91, min: 91, max: 120, label: '91-120 minutes'},
@@ -241,39 +241,34 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
   return games.filter((game) => {
     let is_match = true;
     
-    // TODO: Change this to multiselect
-    if (playerCount && playerCount.length) {
-      let count_filter = false
-      playerCount.map(p => {
+    if (playerCount.length) {
+      is_match &&= playerCount.some(p => {
         // ignore game.min_players when 15+ is selected, since the number of actual players is arbitrarily large in this case.
-        count_filter ||= (
+        return (
           (game.min_players <= p.value || p.value === 15)
-          && game.max_players >= p.value
+          && p.value <= game.max_players
         );
       });
-      is_match &&= count_filter;
     }
     
-    if (playTime && playTime.length) {
+    if (playTime.length) {
       let time_filter = false;
       playTime.map(t => {
-      // This should really incorporate game.minplaytime and game.maxplaytime
-        //console.log(t);
-        time_filter ||= (t.min <= game.playing_time && game.playing_time <= t.max); // any (||=)
+      // Perhaps this should incorporate game.minplaytime and game.maxplaytime
+        time_filter ||= (t.min <= game.playing_time && game.playing_time <= t.max);
       });
       is_match &&= time_filter;
     }
     
-    if (age && age.length) {
+    if (age.length) {
       let age_filter = false;
       age.map(a => {
-        //console.log(a);
         age_filter ||= (a.min <= game.minAge && game.minAge <= a.max);
       });
       is_match &&= age_filter;
     }
     
-    if (gameType && gameType.length) {
+    if (gameType.length) {
       let type_filter = false;
       gameType.map(t => {
         //console.log(t);
@@ -290,7 +285,7 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
       is_match &&= type_filter;
     }
     
-    if (complexity && complexity.length) {
+    if (complexity.length) {
       let complexity_filter = false;
       complexity.map(c => {
         //console.log(c);
