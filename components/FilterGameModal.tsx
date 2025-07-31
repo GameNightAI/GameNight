@@ -126,7 +126,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
                       styles.dropdownItemText,
                       playerCount === option && styles.dropdownItemTextSelected
                     ]}>
-                      {option} {option === '1' ? 'player' : 'players'}
+                      {option.value} {option.value === '1' ? 'player' : 'players'}
                     </Text>
                   </TouchableOpacity>
                 ))}
