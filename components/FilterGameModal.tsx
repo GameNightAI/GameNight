@@ -112,7 +112,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
               >
                 {playerOptions.map((option) => (
                   <TouchableOpacity
-                    key={option}
+                    key={option.value}
                     style={[
                       styles.dropdownItem,
                       playerCount === option && styles.dropdownItemSelected
@@ -146,6 +146,10 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         isClearable
         closeMenuOnSelect={false}
         styles={{
+          control: (baseStyles, state) => ({
+            ...baseStyles,
+            ...styles.dropDownContainer,
+          }),
           container: (baseStyles, state) => ({
             ...baseStyles,
             ...styles.dropDownContainer,
