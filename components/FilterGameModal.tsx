@@ -399,8 +399,8 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   dropdownItem: {
-    paddingtop: 4,
-    paddingbottom: 4,
+    paddingtop: 2,
+    paddingbottom: 2,
     paddingleft: 8,
     paddingright: 8,
     borderBottomWidth: 1,
