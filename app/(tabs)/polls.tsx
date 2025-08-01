@@ -237,7 +237,6 @@ export default function PollsScreen() {
 
       {showShareLink && (
         <Animated.View
-          entering={FadeIn.duration(200)}
           style={styles.shareLinkContainer}
         >
           <View style={styles.shareLinkHeader}>
@@ -290,7 +289,6 @@ export default function PollsScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
           <Animated.View
-            entering={FadeIn.delay(index * 100)}
             style={styles.pollCard}
           >
             <View style={styles.pollMainRow}>

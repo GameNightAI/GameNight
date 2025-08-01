@@ -58,7 +58,6 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Animated.View
-        entering={FadeIn.duration(400)}
         style={styles.profileHeader}
       >
         <View style={styles.avatarContainer}>
@@ -68,7 +67,6 @@ export default function ProfileScreen() {
       </Animated.View>
 
       <Animated.View
-        entering={FadeIn.delay(200).duration(400)}
         style={styles.statsContainer}
       >
         <Text style={styles.sectionTitle}>App Information</Text>
@@ -108,7 +106,6 @@ export default function ProfileScreen() {
       </Animated.View>
 
       <Animated.View
-        entering={FadeIn.delay(400).duration(400)}
         style={styles.actionsContainer}
       >
         <TouchableOpacity
