@@ -213,7 +213,7 @@ export default function CollectionScreen() {
     return <ErrorState message={error} onRetry={loadGames} />;
   }
 
-  if (games.length === 0 && !loading) {
+  if (filterModalVisible && games.length === 0 && !loading) {
     return (
       <EmptyState
         username={null}
