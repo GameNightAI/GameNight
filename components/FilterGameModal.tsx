@@ -54,7 +54,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     {value: 121, min: 121, max: 999999999, label: 'More than 120 min'},
   ];
   const ageOptions = [
-    {value: 0, min: 0, max: 5, label: '5 and under'},
+    {value: 1, min: 1, max: 5, label: '5 and under'},
     {value: 6, min: 6, max: 7, label: '6-7'},
     {value: 8, min: 8, max: 9, label: '8-9'},
     {value: 10, min: 10, max: 11, label: '10-11'},
@@ -238,7 +238,8 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
     
     if (playerCount.length) {
       is_match &&= playerCount.some(p => (
-        // Ignore game.min_players when 15+ is selected, since the number of actual players is arbitrarily large in this case.
+        // Ignore game.min_players when 15+ is selected,
+        // since the number of actual players could be arbitrarily large in this case.
         (game.min_players <= p.value || p.value === 15)
         && p.value <= game.max_players    
       ));
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
 
 const selectStyles = {
   control: (baseStyles, state) => {
-  console.log(state);
+  // console.log(state);
   return {
     ...baseStyles,
     ...styles.dropDownContainer,
