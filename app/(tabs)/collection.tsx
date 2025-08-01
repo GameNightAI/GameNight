@@ -286,7 +286,7 @@ export default function CollectionScreen() {
         data={games}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item, index }) => (
-          <Animated.View entering={FadeIn.delay(index * 100).duration(300)}>
+          <Animated.View>
             <GameItem
               game={item}
               onDelete={() => setGameToDelete(item)}
