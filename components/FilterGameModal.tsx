@@ -125,12 +125,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       />
 
       <Select
-        placeholder="Select Co-op/Competitive"
+        placeholder="Select co-op / competitive"
         value={gameType}
-        onChange={(option) => {
-          console.log('Selected option:', option);
-          setGameType(option);
-        }}
+        onChange={setGameType}
         defaultValue={[]}
         options={typeOptions}
         isMulti
@@ -411,6 +408,10 @@ const selectStyles = {
     ...styles.dropDown,
   }),
   multiValueLabel: (baseStyles, state) => ({
+    ...baseStyles,
+    fontFamily: 'Poppins-Regular',
+  }),
+  noOptionsMessage: (baseStyles, state) => ({
     ...baseStyles,
     fontFamily: 'Poppins-Regular',
   }),
