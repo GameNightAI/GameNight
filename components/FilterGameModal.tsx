@@ -88,54 +88,6 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         Filter your collection to find the perfect game for your group. All filters are optional.
       </Text>
 
-      <View style={[styles.inputSection, { zIndex: 2 }]}>
-         <View style={styles.dropdownContainer}>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={() => {
-              setShowPlayerDropdown(!showPlayerDropdown);
-              //setShowTimeDropdown(false);
-            }}
-          >
-            <Text style={styles.dropdownButtonText}>
-              Select player count
-            </Text>
-            <ChevronDown size={20} color="#666666" />
-          </TouchableOpacity>
-
-          {showPlayerDropdown && (
-            <View style={[styles.dropdown, styles.dropdownAbsolute]}>
-              <ScrollView
-                style={styles.dropdownScroll}
-                showsVerticalScrollIndicator={true}
-                nestedScrollEnabled={true}
-              >
-                {playerOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.dropdownItem,
-                      playerCount === option && styles.dropdownItemSelected
-                    ]}
-                    onPress={() => {
-                      // setPlayerCount(option);
-                      // setShowPlayerDropdown(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.dropdownItemText,
-                      playerCount === option && styles.dropdownItemTextSelected
-                    ]}>
-                      {option.value} {option.value === '1' ? 'player' : 'players'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      </View> 
-
       <Select
         placeholder="Select player count"
         value={playerCount}
