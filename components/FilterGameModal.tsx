@@ -457,6 +457,10 @@ const selectStyles = {
     ...baseStyles,
     ...styles.dropDown,
   }),
+  multiValueLabel: (baseStyles, state) => ({
+    ...baseStyles,
+    fontFamily: 'Poppins-Regular',
+  }),
   option: (baseStyles, state) => ({
     ...baseStyles,
     ...styles.dropdownItem,
