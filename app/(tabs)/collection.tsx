@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { RefreshCw, X, Search, Plus, Camera } from 'lucide-react-native';
+import { RefreshCw, X, ListFilter, Plus, Camera } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 
 import { supabase } from '@/services/supabase';
@@ -36,13 +36,13 @@ export default function CollectionScreen() {
   const [gameType, setGameType] = useState([]);
   const [complexity, setComplexity] = useState([]);
 
-  const isFiltered = Boolean(
-    playerCount.length
-    || playTime.length
-    || age.length
-    || gameType.length
-    || complexity.length
-  );
+  const isFiltered = ([
+    playerCount,
+    playTime,
+    age,
+    gameType,
+    complexity,
+  ]).some(_ => _.length);
 
   const loadGames = useCallback(async () => {
     try {
@@ -243,7 +243,7 @@ export default function CollectionScreen() {
             style={styles.filterButton}
             onPress={() => setFilterModalVisible(true)}
           >
-            <Search size={20} color="#ff9654" />
+            <ListFilter size={20} color="#ff9654" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.filterButton}

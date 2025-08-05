@@ -35,15 +35,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   setGameType,
   setComplexity,
 }) => {
-  // Filter states
-  // const [playerCount, setPlayerCount] = useState<string>('');
-  // const [playTime, setPlayTime] = useState([]);
-  // const [age, setAge] = useState([]);
-  // const [gameType, setGameType] = useState([]);
-  // const [complexity, setComplexity] = useState([]);
   
-  const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
-
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
     .map(_ => ({value: parseInt(_), label: _}));
   const timeOptions = [
@@ -68,8 +60,6 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     .map((_, i) => ({value: i+1, label: _}));
 
   const handleFilter = () => {
-    const players = playerCount === '15+' ? '15' : playerCount;
-    const time = playTime === '120+' ? '120' : playTime;
     //onApplyFilter()
     //onSearch(players, time, playTime === '120+');
     onClose();
@@ -85,71 +75,77 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </View>
 
       <Text style={styles.description}>
-        Filter your collection to find the perfect game for your group. All filters are optional.
+        Filter your collection to find the perfect game for your group.{'\n'}
+        All filters are optional.
       </Text>
 
       <Select
-        placeholder="Select player count"
+        placeholder="Player count"
         value={playerCount}
         onChange={setPlayerCount}
         options={playerOptions}
         defaultValue={[]}
         isMulti
         isClearable
+        blurInputOnSelect
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
 
       <Select
-        placeholder="Select play time"
+        placeholder="Play time"
         value={playTime}
         onChange={setPlayTime}
         options={timeOptions}
         defaultValue={[]}
         isMulti
         isClearable
+        blurInputOnSelect
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
 
       <Select
-        placeholder="Select age range"
+        placeholder="Age range"
         value={age}
         onChange={setAge}
         defaultValue={[]}
         options={ageOptions}
         isMulti
         isClearable
+        blurInputOnSelect
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
 
       <Select
-        placeholder="Select co-op / competitive"
+        placeholder="Co-op / competitive"
         value={gameType}
         onChange={setGameType}
         defaultValue={[]}
         options={typeOptions}
         isMulti
         isClearable
+        blurInputOnSelect
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
 
       <Select
-        placeholder="Select game complexity"
+        placeholder="Game complexity"
         value={complexity}
         onChange={setComplexity}
         defaultValue={[]}
         options={complexityOptions}
         isMulti
         isClearable
+        blurInputOnSelect
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
 
       <TouchableOpacity
-        style={[styles.searchButton, styles.searchButtonDisabled]}
+        style={styles.searchButton}
         onPress={handleFilter}
       >
         <Search color="#fff" size={20} />
@@ -182,24 +178,27 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 };
 
 export const filterGames = (games, playerCount, playTime, age, gameType, complexity) => {
-  return games.filter((game) => {
+  return games.filter(game => {
     let is_match = true;
     
     if (playerCount.length) {
       is_match &&= playerCount.some(p => (
         // Ignore game.min_players when 15+ is selected,
-        // since the number of actual players could be arbitrarily large in this case.
+        // since the number of actual players could be arbitrarily large.
         (game.min_players <= p.value || p.value === 15)
         && p.value <= game.max_players    
       ));
     }
     
     if (playTime.length) {
-      is_match &&= playTime.some(t => (
-        // Perhaps this should incorporate game.minplaytime and game.maxplaytime
-        t.min <= game.playing_time
-        && game.playing_time <= t.max
-      ));
+      is_match &&= playTime.some(t => {
+        const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
+        // Perhaps this should incorporate game.minplaytime and game.maxplaytime more sensibly
+        return (
+          t.min <= game.playing_time
+          && game.playing_time <= t.max
+        );
+      });
     }
     
     if (age.length) {
