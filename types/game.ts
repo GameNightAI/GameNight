@@ -12,6 +12,7 @@ export interface Game {
   description: string;
   minAge: number;
   is_cooperative: Boolean;
+  is_teambased: Boolean;
   complexity: number;
   complexity_tier: number;
   complexity_desc: string;

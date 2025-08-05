@@ -24,7 +24,8 @@ create view collections_games with (security_invoker = on) as
     games.suggested_playerage,
     games.bayesaverage,
     games.average,
-    games.image_url as thumbnail,
+    games.image_url,
+    games.thumbnail,
     collections.created_at,
     complexity_view.id as complexity_tier,
     complexity_view.description as complexity_desc

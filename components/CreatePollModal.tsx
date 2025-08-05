@@ -46,7 +46,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
   const timeOptions = ['30', '60', '90', '120+'];
   const ageOptions = ['6+', '8+', '10+', '12+', '14+', '16+'];
-  const typeOptions = ['Any', 'Cooperative', 'Competitive'];
+  const typeOptions = ['Any', 'Cooperative', 'Competitive', 'Team-based'];
   const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'];
 
   useEffect(() => {
@@ -98,9 +98,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         playing_time: game.playing_time,
         yearPublished: game.year_published,
         description: game.description,
-        image: game.thumbnail,
+        image: game.image_url,
         minAge: game.min_age,
         is_cooperative: game.is_cooperative,
+        is_teambased: game.is_teambased,
         complexity: game.complexity,
         minPlaytime: game.minplaytime,
         maxPlaytime: game.maxplaytime,
@@ -142,9 +143,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     }
 
     if (gameType && gameType !== 'Any') {
-      filtered = filtered.filter(game =>
-        gameType === 'Cooperative' ? game.is_cooperative : !game.is_cooperative
-      );
+      filtered = filtered.filter(game => {
+        switch (gameType) {
+          case 'Cooperative': return game.is_cooperative;
+          case 'Competitive': return !game.is_cooperative;
+          case 'Team-based': return game.is_teambased;
+          default: return true;
+        }
+      });
     }
 
     if (complexity) {

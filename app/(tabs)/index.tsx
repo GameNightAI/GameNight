@@ -67,7 +67,6 @@ export default function ToolsScreen() {
           return (
             <Animated.View
               key={tool.id}
-              entering={FadeIn.delay(index * 150).duration(400)}
               style={styles.toolCard}
             >
               <TouchableOpacity

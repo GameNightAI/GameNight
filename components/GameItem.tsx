@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Linking } from 'react-native';
 import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain } from 'lucide-react-native';
 import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 
@@ -99,7 +99,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 <Calendar size={16} color="#ff9654" />
                 <Text style={styles.detailLabel}>Publication Year</Text>
                 <Text style={styles.detailValue}>
-                  {game.yearPublished || 'Unknown'}
+                  {(game.yearPublished >= 0 ? game.yearPublished : -game.yearPublished + ' BCE') || 'Unknown'}
                 </Text>
               </View>
 
@@ -127,10 +127,19 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 <Baby size={16} color="#e74c3c" />
                 <Text style={styles.detailLabel}>Minimum Age</Text>
                 <Text style={styles.detailValue}>
-                  {game.minAge ? `${game.minAge}+` : 'N/A'}
+                  {game.minAge ? `${game.minAge}` : 'N/A'}
                 </Text>
               </View>
             </View>
+            
+            <View style={styles.detailRow}>
+              <TouchableOpacity onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}/`)}>
+                <Text style={styles.infoText}>
+                  View on BGG
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
           </View>
         </Animated.View>
       )}

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { RefreshCw, X, Search, Plus, Camera } from 'lucide-react-native';
+import { RefreshCw, X, ListFilter, Plus, Camera } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 
 import { supabase } from '@/services/supabase';
@@ -13,28 +13,36 @@ import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
-import { FindGameModal } from '@/components/FindGameModal';
-import { AddGameModal } from '@/components/AddGameModal';
+import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
+import { AddGameModal } from '@/components/AddGameModal'; 
 import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
   const [games, setGames] = useState<Game[]>([]);
+  // const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
-  const [findModalVisible, setFindModalVisible] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
-  const { players, time, unlimited } = useLocalSearchParams<{
-    players?: string;
-    time?: string;
-    unlimited?: string;
-  }>();
+  
+  const [playerCount, setPlayerCount] = useState([]);
+  const [playTime, setPlayTime] = useState([]);
+  const [age, setAge] = useState([]);
+  const [gameType, setGameType] = useState([]);
+  const [complexity, setComplexity] = useState([]);
 
-  const isFiltered = Boolean(players || time);
+  const isFiltered = ([
+    playerCount,
+    playTime,
+    age,
+    gameType,
+    complexity,
+  ]).some(_ => _.length);
 
   const loadGames = useCallback(async () => {
     try {
@@ -59,40 +67,26 @@ export default function CollectionScreen() {
         name: game.name,
         yearPublished: game.year_published,
         thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
-        image: game.thumbnail || 'https://via.placeholder.com/300?text=No+Image',
+        image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
         min_players: game.min_players,
         max_players: game.max_players,
         playing_time: game.playing_time,
-        minPlaytime: game.minplaytime || 0,
-        maxPlaytime: game.maxplaytime || 0,
+        minPlaytime: game.minplaytime,
+        maxPlaytime: game.maxplaytime,
         description: game.description || '',
-        minAge: game.min_age || 0,
+        minAge: game.min_age,
         is_cooperative: game.is_cooperative || false,
-        complexity: game.complexity || 1,
+        is_teambased: game.is_teambased || false,
+        complexity: game.complexity,
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc || '',
         average: game.average,
         bayesaverage: game.bayesaverage,
       }));
 
-      // Filter games based on player count and play time
-      const filteredGames = mappedGames.filter(game => {
-        let matches = true;
-
-        if (players) {
-          const playerCount = parseInt(players);
-          matches = matches && game.min_players <= playerCount && game.max_players >= playerCount;
-        }
-
-        if (time && unlimited !== '1') {
-          const maxTime = parseInt(time);
-          matches = matches && game.playing_time <= maxTime;
-        }
-
-        return matches;
-      });
-
+      const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
+      
     } catch (err) {
       console.error('Error in loadGames:', err);
       setError(err instanceof Error ? err.message : 'Failed to load games');
@@ -100,7 +94,7 @@ export default function CollectionScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [router, players, time, unlimited]);
+  }, [playerCount, playTime, age, gameType, complexity]);
 
   const handleDelete = useCallback(async () => {
     if (!gameToDelete) return;
@@ -190,14 +184,9 @@ export default function CollectionScreen() {
     }
   };
 
-  const handleFind = (players: string, time?: string, unlimited?: boolean) => {
-    const params: { players: string; time?: string; unlimited?: string } = { players };
-    if (time) {
-      params.time = time;
-      params.unlimited = unlimited ? '1' : '0';
-    }
-    router.setParams(params);
-  };
+  const handleFilter = useCallback(() => {
+    loadGames();
+  }, [loadGames]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -205,7 +194,11 @@ export default function CollectionScreen() {
   }, [loadGames]);
 
   const clearFilters = () => {
-    router.push('/collection');
+    setPlayerCount('');
+    setPlayTime([]);
+    setAge([]);
+    setGameType([]);
+    setComplexity([]);
   };
 
   useEffect(() => {
@@ -220,19 +213,16 @@ export default function CollectionScreen() {
     return <ErrorState message={error} onRetry={loadGames} />;
   }
 
-  if (games.length === 0 && !loading) {
+  if ((!filterModalVisible) && games.length === 0 && !loading) {
     return (
       <EmptyState
         username={null}
         onRefresh={handleSync}
         loadGames={loadGames}
-        message={
-          isFiltered
-            ? `No games found for ${players} players${time ? ` within ${time}${unlimited === '1' ? '+' : ''} minutes` : ''}`
-            : undefined
-        }
+        message={isFiltered ? 'No games found' : undefined}
         buttonText={isFiltered ? "Clear Filters" : undefined}
         showSyncButton={!isFiltered}
+        handleClearFilters={clearFilters}
       />
     );
   }
@@ -250,13 +240,13 @@ export default function CollectionScreen() {
           contentContainerStyle={styles.actionsSection}
         >
           <TouchableOpacity
-            style={styles.findButton}
-            onPress={() => setFindModalVisible(true)}
+            style={styles.filterButton}
+            onPress={() => setFilterModalVisible(true)}
           >
-            <Search size={20} color="#ff9654" />
+            <ListFilter size={20} color="#ff9654" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.findButton}
+            style={styles.filterButton}
             onPress={() => setAddGameModalVisible(true)}
           >
             <Plus size={20} color="#ff9654" />
@@ -290,7 +280,7 @@ export default function CollectionScreen() {
         data={games}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item, index }) => (
-          <Animated.View entering={FadeIn.delay(index * 100).duration(300)}>
+          <Animated.View>
             <GameItem
               game={item}
               onDelete={() => setGameToDelete(item)}
@@ -324,10 +314,20 @@ export default function CollectionScreen() {
         loading={syncing}
       />
 
-      <FindGameModal
-        isVisible={findModalVisible}
-        onClose={() => setFindModalVisible(false)}
-        onSearch={handleFind}
+      <FilterGameModal
+        isVisible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onSearch={handleFilter}
+        playerCount={playerCount}
+        playTime={playTime}
+        age={age}
+        gameType={gameType}
+        complexity={complexity}
+        setPlayerCount={setPlayerCount}
+        setPlayTime={setPlayTime}
+        setAge={setAge}
+        setGameType={setGameType}
+        setComplexity={setComplexity}
       />
 
       <AddGameModal
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  findButton: {
+  filterButton: {
     backgroundColor: '#fff',
     width: 40,
     height: 40,
