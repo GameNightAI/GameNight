@@ -1,10 +1,35 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Library, User, Vote, Wrench } from 'lucide-react-native';
+import { Calendar, Library, User, Vote, Wrench } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { saveLastVisitedTab, getLastVisitedTab } from '@/utils/storage';
+
+const EVENTS_SCREEN = false; // Set to true to show events screen
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const [initialTab, setInitialTab] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load the last visited tab on component mount
+    const loadLastTab = async () => {
+      const lastTab = await getLastVisitedTab();
+      if (lastTab) {
+        setInitialTab(lastTab);
+      } else {
+        // If no last tab is saved, default to collection and save it
+        setInitialTab('collection');
+        saveLastVisitedTab('collection');
+      }
+    };
+    loadLastTab();
+  }, []);
+
+  const handleTabPress = (tabName: string) => {
+    // Save the current tab when user switches tabs
+    saveLastVisitedTab(tabName);
+  };
 
   return (
     <Tabs
@@ -19,6 +44,23 @@ export default function TabLayout() {
         tabBarLabelStyle: styles.tabBarLabel,
         headerStyle: styles.header,
         headerTitleStyle: styles.headerTitle,
+      }}
+      initialRouteName={initialTab || undefined}
+      screenListeners={{
+        tabPress: (e) => {
+          // Extract tab name from the target route
+          const routeName = e.target;
+          let tabName = 'collection'; // default
+
+          if (routeName) {
+            if (routeName.includes('collection')) tabName = 'collection';
+            else if (routeName.includes('index')) tabName = 'index';
+            else if (routeName.includes('polls')) tabName = 'polls';
+            else if (routeName.includes('profile')) tabName = 'profile';
+          }
+
+          handleTabPress(tabName);
+        },
       }}>
       <Tabs.Screen
         name="collection"
@@ -40,6 +82,16 @@ export default function TabLayout() {
           headerTitle: 'Game Tools',
         }}
       />
+      {EVENTS_SCREEN && <Tabs.Screen
+        name="events"
+        options={{
+          title: 'Events',
+          tabBarIcon: ({ color, size }) => (
+            <Calendar color={color} size={size} />
+          ),
+          headerTitle: 'Schedule Events',
+        }}
+      />}
       <Tabs.Screen
         name="polls"
         options={{

@@ -5,23 +5,17 @@ import { getOrCreateAnonId } from '@/utils/anon';
 import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
-
-export enum VoteType {
-  THUMBS_DOWN = 'thumbs_down',
-  THUMBS_UP = 'thumbs_up',
-  DOUBLE_THUMBS_UP = 'double_thumbs_up',
-}
+import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE, getVoteTypeKeyFromScore } from '@/components/votingOptions';
+import { getUsername } from '@/utils/storage';
 
 interface GameVotes {
-  thumbs_down: number;
-  thumbs_up: number;
-  double_thumbs_up: number;
-  voters: { name: string; vote_type: VoteType }[];
+  votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
+  voters: { name: string; vote_type: number }[];
 }
 
 interface PollGame extends Game {
   votes: GameVotes;
-  userVote?: VoteType | null;
+  userVote?: number | null;
 }
 
 export const usePollData = (pollId: string | string[] | undefined) => {
@@ -32,7 +26,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
   const [error, setError] = useState<string | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [pendingVotes, setPendingVotes] = useState<Record<number, VoteType>>({});
+  const [pendingVotes, setPendingVotes] = useState<Record<number, number>>({});
 
   useEffect(() => {
     if (pollId) loadPoll(pollId.toString());
@@ -129,11 +123,25 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       console.log('Votes loaded:', votes);
 
-      // Get user identifier for vote checking
+      // Get user identifier for vote checking with better fallback
       let identifier = null;
-      if (user?.email) {
-        identifier = user.email;
-      } else {
+      try {
+        if (user?.email) {
+          identifier = user.email;
+        } else {
+          // Try to get saved username from storage
+          const savedUsername = await getUsername();
+          if (savedUsername) {
+            identifier = savedUsername;
+          } else {
+            // Fallback to anonymous ID
+            const anonId = await getOrCreateAnonId();
+            identifier = anonId;
+          }
+        }
+      } catch (error) {
+        console.warn('Could not get user identifier:', error);
+        // Try anonymous ID as last resort
         try {
           const anonId = await getOrCreateAnonId();
           identifier = anonId;
@@ -152,19 +160,29 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         // Find votes for this specific game using the game's ID
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
+        // Initialize vote counts with zeros
         const voteData: GameVotes = {
-          thumbs_down: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_DOWN).length,
-          thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_UP).length,
-          double_thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.DOUBLE_THUMBS_UP).length,
+          votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
-            vote_type: v.vote_type as VoteType,
+            vote_type: v.vote_type,
           })),
         };
 
+        // Initialize all vote types to 0 using VOTING_OPTIONS
+        VOTING_OPTIONS.forEach(option => {
+          voteData.votes[option.value] = 0;
+        });
+
+        // Count votes using the utility function
+        gameVotes.forEach(vote => {
+          const voteTypeKey = getVoteTypeKeyFromScore(vote.vote_type);
+          voteData.votes[voteTypeKey]++;
+        });
+
         // Find user's vote for this game
         const userVote = identifier ?
-          gameVotes.find(v => v.voter_name === identifier)?.vote_type as VoteType || null
+          gameVotes.find(v => v.voter_name === identifier)?.vote_type ?? null
           : null;
 
         return {
@@ -184,8 +202,8 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           complexity: game.complexity || 1,
           complexity_tier: game.complexity_tier || 1,
           complexity_desc: game.complexity_desc || '',
-          average: game.average ?? null, // <-- Added this line
-          bayesaverage: game.bayesaverage ?? null, // <-- Add this line for type compatibility
+          average: game.average ?? null,
+          bayesaverage: game.bayesaverage ?? null,
           votes: voteData,
           userVote,
         };
@@ -194,10 +212,10 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       console.log('Formatted games:', formattedGames);
 
       // Set initial pending votes from user's existing votes
-      const initialVotes: Record<number, VoteType> = {};
+      const initialVotes: Record<number, number> = {};
       userVotes.forEach(v => {
-        if (v.game_id && v.vote_type) {
-          initialVotes[v.game_id] = v.vote_type as VoteType;
+        if (v.game_id && typeof v.vote_type === 'number') {
+          initialVotes[v.game_id] = v.vote_type;
         }
       });
 

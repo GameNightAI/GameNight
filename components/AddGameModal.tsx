@@ -1,15 +1,17 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator, FlatList, Image } from 'react-native';
-import { Search, X, Plus } from 'lucide-react-native';
+import { Search, X, Plus, Camera } from 'lucide-react-native';
 import { XMLParser } from 'fast-xml-parser';
 import { supabase } from '@/services/supabase';
 import { debounce } from 'lodash';
+import { useRouter } from 'expo-router';
 
 interface Game {
   id: string;
   name: string;
   yearPublished?: string;
   thumbnail?: string;
+  image_url?: string;
 }
 
 interface AddGameModalProps {
@@ -23,6 +25,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   onClose,
   onGameAdded,
 }) => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -33,7 +36,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     try {
       // Perform an API request based on the search term
       const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(term)}&type=boardgame`);
-      
+
       const xmlText = await response.text();
 
       const parser = new XMLParser({
@@ -42,25 +45,25 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       });
 
       const result = parser.parse(xmlText);
-      
+
       // No search results returned by API
       if (!result.items || !result.items.item) {
         setSearchResults([]);
       } else {
-      
+
         const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
 
         const ids = items
           .filter((item: any) => item.name.type === 'primary')
           .map((item: any) => item.id);
 
-        const {data: games } = await supabase
+        const { data: games } = await supabase
           .from('games')
           .select()
           .in('id', ids)
           .order('rank');
-          
-        setSearchResults(games);
+
+        setSearchResults(games || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -74,9 +77,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     return debounce(fetchSearchResults, 500);
   }, [fetchSearchResults]);
 
-  const handleSearch = (text) => {
+  const handleSearch = (text: string) => {
     setSearchQuery(text);
-    if (!searchQuery.trim()) {
+    if (!text.trim()) {
       setError('Please enter a search term');
       return;
     }
@@ -160,6 +163,19 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         Search for games to add to your collection
       </Text>
 
+      <View style={styles.analyzeContainer}>
+        <TouchableOpacity
+          style={styles.analyzeButton}
+          onPress={() => {
+            onClose();
+            router.push('/image-analyzer/' as any);
+          }}
+        >
+          <Camera size={20} color="#ff9654" />
+          <Text style={styles.analyzeButtonText}>Analyze Image</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.input}
@@ -177,6 +193,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         data={searchResults}
         keyExtractor={(item) => item.id}
         style={styles.resultsList}
+        keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
           <View style={styles.resultItem}>
             <Image
@@ -234,7 +251,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Platform.OS === 'ios' ? 20 : 10,
   },
   webOverlay: {
     position: 'fixed',
@@ -254,7 +271,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '85%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -280,6 +297,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     marginBottom: 20,
+  },
+  analyzeContainer: {
+    marginBottom: 20,
+  },
+  analyzeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+  },
+  analyzeButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    marginLeft: 8,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -323,7 +360,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#f7f9fc',
-    padding: 16,
+    padding: 12,
+    paddingLeft: 8,
     borderRadius: 12,
     marginBottom: 12,
   },
@@ -363,7 +401,9 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: 80,
     height: 80,
-    borderRadius: 8,
+    borderRadius: 4,
+    marginLeft: 0,
+    marginRight: 6,
     backgroundColor: '#f0f0f0',
   },
 });

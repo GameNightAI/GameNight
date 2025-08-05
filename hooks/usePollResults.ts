@@ -1,183 +1,235 @@
-import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/services/supabase';
+import { Poll, Vote } from '@/types/poll';
+import { Game } from '@/types/game';
+import { VOTING_OPTIONS, getVoteTypeKeyFromScore } from '@/components/votingOptions';
+import { getVotedFlag, getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
 
-export type GameResult = {
-  id: number;
-  name: string;
-  thumbs_up: number;
-  double_thumbs_up: number;
-  thumbs_down: number;
-  voters: string[];
-  voterDetails: { name: string; vote_type: string }[];
-};
+interface GameVotes {
+  votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
+  voters: { name: string; vote_type: number }[];
+}
 
-export function usePollResults(pollId?: string) {
-  const [pollTitle, setPollTitle] = useState('');
-  const [gameResults, setGameResults] = useState<GameResult[]>([]);
-  const [hasVoted, setHasVoted] = useState(false);
+interface PollGame extends Game {
+  votes: GameVotes;
+  userVote?: number | null;
+}
+
+export interface GameResult {
+  game: PollGame;
+  totalScore: number;
+  totalVotes: number;
+  ranking: number;
+}
+
+export const usePollResults = (pollId: string | string[] | undefined) => {
+  const [poll, setPoll] = useState<Poll | null>(null);
+  const [games, setGames] = useState<PollGame[]>([]);
+  const [results, setResults] = useState<GameResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [voteUpdated, setVoteUpdated] = useState(false);
 
   useEffect(() => {
-    if (!pollId) {
-      setError('Invalid poll ID');
-      setLoading(false);
-      return;
-    }
+    if (pollId) loadResults(pollId.toString());
+  }, [pollId]);
 
-    async function fetchData() {
+  const loadResults = async (id: string) => {
+    try {
       setLoading(true);
       setError(null);
 
+      // Check if user has voted
       try {
-        console.log('Fetching poll results for ID:', pollId);
+        const votedFlag = await getVotedFlag(id);
+        setHasVoted(votedFlag);
+      } catch (storageError) {
+        console.warn('Error checking voted flag:', storageError);
+        setHasVoted(false);
+      }
 
-        // Check local vote flag
-        const votedFlag = await AsyncStorage.getItem(`voted_${pollId}`);
-        console.log('Local voted flag:', votedFlag);
-
-        // Fetch poll info
-        const { data: pollData, error: pollError } = await supabase
-          .from('polls')
-          .select('title, user_id')
-          .eq('id', pollId)
-          .single();
-
-        if (pollError) {
-          console.error('Poll fetch error:', pollError);
-          throw pollError;
+      // Check if votes were updated
+      try {
+        const voteUpdatedFlag = await getVoteUpdatedFlag(id);
+        setVoteUpdated(voteUpdatedFlag);
+        if (voteUpdatedFlag) {
+          // Clear the flag after reading it
+          await removeVoteUpdatedFlag(id);
         }
+      } catch (storageError) {
+        console.warn('Error checking vote updated flag:', storageError);
+        setVoteUpdated(false);
+      }
 
-        console.log('Poll data:', pollData);
-        setPollTitle(pollData.title);
+      // Get the poll details
+      const { data: pollData, error: pollError } = await supabase
+        .from('polls')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
 
-        // Get current user ID
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          console.warn('Auth error (continuing as anonymous):', authError);
-        }
+      if (pollError) {
+        console.error('Poll error:', pollError);
+        throw new Error('Poll not found or has been deleted');
+      }
 
-        const currentUserId = authData.user?.id;
-        console.log('Current user ID:', currentUserId);
+      if (!pollData) {
+        throw new Error('Poll not found');
+      }
 
-        if (currentUserId === pollData.user_id) {
-          // Poll creator can always see results
-          console.log('User is poll creator, allowing access to results');
-          setHasVoted(true);
-        } else if (votedFlag !== 'true') {
-          console.log('User has not voted, denying access to results');
-          setHasVoted(false);
-          setLoading(false);
-          return;
-        } else {
-          console.log('User has voted, allowing access to results');
-          setHasVoted(true);
-        }
+      setPoll(pollData);
 
-        // Fetch votes
-        const { data: votes, error: votesError } = await supabase
-          .from('votes')
-          .select('game_id, vote_type, voter_name')
-          .eq('poll_id', pollId);
+      // Get the games in this poll
+      const { data: pollGames, error: gamesError } = await supabase
+        .from('poll_games')
+        .select('game_id')
+        .eq('poll_id', id);
 
-        if (votesError) {
-          console.error('Votes fetch error:', votesError);
-          throw votesError;
-        }
+      if (gamesError) {
+        console.error('Poll games error:', gamesError);
+        throw gamesError;
+      }
 
-        console.log('Votes data:', votes);
+      if (!pollGames || pollGames.length === 0) {
+        setGames([]);
+        setResults([]);
+        setLoading(false);
+        return;
+      }
 
-        // Aggregate votes by game
-        const resultsMap: Record<
-          number,
-          {
-            thumbs_up: number;
-            double_thumbs_up: number;
-            thumbs_down: number;
-            voters: string[];
-            voterDetails: { name: string; vote_type: string }[];
-          }
-        > = {};
+      const gameIds = pollGames.map(pg => pg.game_id);
 
-        votes?.forEach(({ game_id, vote_type, voter_name }) => {
-          if (!game_id) return; // Skip votes without game_id
+      // Get the actual game details from games table
+      const { data: gamesData, error: gameDetailsError } = await supabase
+        .from('games')
+        .select('*')
+        .in('id', gameIds);
 
-          if (!resultsMap[game_id]) {
-            resultsMap[game_id] = {
-              thumbs_up: 0,
-              double_thumbs_up: 0,
-              thumbs_down: 0,
-              voters: [],
-              voterDetails: []
-            };
-          }
+      if (gameDetailsError) {
+        console.error('Game details error:', gameDetailsError);
+        throw gameDetailsError;
+      }
 
-          if (vote_type === 'thumbs_up') resultsMap[game_id].thumbs_up++;
-          else if (vote_type === 'double_thumbs_up') resultsMap[game_id].double_thumbs_up++;
-          else if (vote_type === 'thumbs_down') resultsMap[game_id].thumbs_down++;
+      if (!gamesData || gamesData.length === 0) {
+        setGames([]);
+        setResults([]);
+        setLoading(false);
+        return;
+      }
 
-          if (voter_name && !resultsMap[game_id].voters.includes(voter_name)) {
-            resultsMap[game_id].voters.push(voter_name);
-          }
+      // Get votes for this poll
+      const { data: votes, error: votesError } = await supabase
+        .from('votes')
+        .select('*')
+        .eq('poll_id', id);
 
-          // Add detailed voter information
-          if (voter_name) {
-            resultsMap[game_id].voterDetails.push({
-              name: voter_name,
-              vote_type: vote_type
-            });
-          }
+      if (votesError) {
+        console.error('Votes error:', votesError);
+        throw votesError;
+      }
+
+      // Map games data to the expected format
+      const formattedGames = gamesData.map(game => {
+        const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
+
+        const voteData: GameVotes = {
+          votes: {} as Record<string, number>,
+          voters: gameVotes.map(v => ({
+            name: v.voter_name || 'Anonymous',
+            vote_type: v.vote_type,
+          })) || [],
+        };
+
+        // Initialize all vote types to 0 using VOTING_OPTIONS
+        VOTING_OPTIONS.forEach(option => {
+          voteData.votes[option.value] = 0;
         });
 
-        console.log('Results map:', resultsMap);
+        // Count votes using the utility function
+        gameVotes.forEach(vote => {
+          const voteTypeKey = getVoteTypeKeyFromScore(vote.vote_type);
+          voteData.votes[voteTypeKey]++;
+        });
 
-        // Fetch game details
-        const gameIds = Object.keys(resultsMap).map(Number);
-        console.log('Game IDs to fetch:', gameIds);
-
-        if (gameIds.length === 0) {
-          console.log('No games with votes found');
-          setGameResults([]);
-          setLoading(false);
-          return;
-        }
-
-        const { data: gamesData, error: gamesError } = await supabase
-          .from('games')
-          .select('id, name')
-          .in('id', gameIds);
-
-        if (gamesError) {
-          console.error('Games fetch error:', gamesError);
-          throw gamesError;
-        }
-
-        console.log('Games data:', gamesData);
-
-        const combinedResults: GameResult[] = gamesData?.map((game) => ({
+        return {
           id: game.id,
           name: game.name || 'Unknown Game',
-          thumbs_up: resultsMap[game.id]?.thumbs_up || 0,
-          double_thumbs_up: resultsMap[game.id]?.double_thumbs_up || 0,
-          thumbs_down: resultsMap[game.id]?.thumbs_down || 0,
-          voters: resultsMap[game.id]?.voters || [],
-          voterDetails: resultsMap[game.id]?.voterDetails || [],
-        })) || [];
+          yearPublished: game.year_published || null,
+          thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
+          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+          min_players: game.min_players || 1,
+          max_players: game.max_players || 1,
+          playing_time: game.playing_time || 0,
+          minPlaytime: game.minplaytime || 0,
+          maxPlaytime: game.maxplaytime || 0,
+          description: game.description || '',
+          minAge: game.min_age || 0,
+          is_cooperative: game.is_cooperative || false,
+          complexity: game.complexity || 1,
+          complexity_tier: game.complexity_tier || 1,
+          complexity_desc: game.complexity_desc || '',
+          average: game.average ?? null,
+          bayesaverage: game.bayesaverage ?? null,
+          votes: voteData,
+        };
+      });
 
-        console.log('Combined results:', combinedResults);
-        setGameResults(combinedResults);
-      } catch (err) {
-        console.error('Error in fetchData:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load poll results');
-        setHasVoted(false);
-      } finally {
-        setLoading(false);
-      }
+      setGames(formattedGames);
+
+      // Calculate results
+      const gameResults: GameResult[] = formattedGames.map(game => {
+        // Ensure game.votes exists
+        if (!game.votes) {
+          console.warn('Game votes is undefined for game:', game.id);
+          return {
+            game,
+            totalScore: 0,
+            totalVotes: 0,
+            ranking: 0,
+          };
+        }
+
+        // Use array manipulation for cleaner code
+        const totalScore = VOTING_OPTIONS.reduce((score, option) => {
+          const voteTypeKey = getVoteTypeKeyFromScore(option.score);
+          const voteCount = game.votes.votes[voteTypeKey] || 0;
+          return score + (option.score * voteCount);
+        }, 0);
+
+        const totalVotes = Object.values(game.votes.votes).reduce((sum, count) => sum + count, 0);
+
+        return {
+          game,
+          totalScore,
+          totalVotes,
+          ranking: 0, // Will be set after sorting
+        };
+      });
+
+      // Sort by total score (descending) and assign rankings
+      gameResults.sort((a, b) => b.totalScore - a.totalScore);
+      gameResults.forEach((result, index) => {
+        result.ranking = index + 1;
+      });
+
+      setResults(gameResults);
+    } catch (err) {
+      console.error('Error in loadResults:', err);
+      setError((err as Error).message || 'Failed to load results');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    fetchData();
-  }, [pollId]);
-
-  return { pollTitle, gameResults, hasVoted, loading, error };
-}
+  return {
+    poll,
+    games,
+    results,
+    hasVoted,
+    voteUpdated,
+    loading,
+    error,
+    reload: () => pollId && loadResults(pollId.toString()),
+  };
+};

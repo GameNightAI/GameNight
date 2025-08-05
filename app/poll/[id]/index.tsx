@@ -1,17 +1,23 @@
 // poll/PollScreen.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Toast from 'react-native-toast-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
-import { usePollData, VoteType } from '@/hooks/usePollData';
+import { usePollData } from '@/hooks/usePollData';
+import { VoteType, VOTE_TYPE_TO_SCORE, SCORE_TO_VOTE_TYPE } from '@/components/votingOptions';
 import { VoterNameInput } from '@/components/PollVoterNameInput';
 import { GameCard } from '@/components/PollGameCard';
 import { PollResultsButton } from '@/components/PollResultsButton';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { getOrCreateAnonId } from '@/utils/anon';
+import {
+  saveUsername,
+  getUsername,
+  saveVotedFlag,
+  saveVoteUpdatedFlag
+} from '@/utils/storage';
 import { BarChart3 } from 'lucide-react-native';
 
 export default function PollScreen() {
@@ -36,17 +42,28 @@ export default function PollScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [comment, setComment] = useState('');
+  const [hasPreviousVotes, setHasPreviousVotes] = useState(false);
+  const [storageInitialized, setStorageInitialized] = useState(false);
 
+  // Initialize storage and voter name
   useEffect(() => {
-    (async () => {
-      // Single device: prefill with user email/username if logged in
-      if (user && (user.email || user.username)) {
-        setVoterName(user.username || user.email);
-      } else {
-        const savedName = await AsyncStorage.getItem('voter_name');
-        if (savedName) setVoterName(savedName);
+    const initializeStorage = async () => {
+      try {
+        // Single device: prefill with user email/username if logged in
+        if (user && (user.email || user.username)) {
+          setVoterName(user.username || user.email);
+        } else {
+          const savedName = await getUsername();
+          if (savedName) setVoterName(savedName);
+        }
+        setStorageInitialized(true);
+      } catch (error) {
+        console.warn('Error initializing storage:', error);
+        setStorageInitialized(true); // Continue anyway
       }
-    })();
+    };
+
+    initializeStorage();
   }, [user]);
 
   useEffect(() => {
@@ -75,15 +92,48 @@ export default function PollScreen() {
     }
   }, [poll]);
 
+  // Check for previous votes with better error handling
+  const checkPreviousVotes = useCallback(async (name: string, pollId: string) => {
+    try {
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        setHasPreviousVotes(false);
+        return;
+      }
+
+      const { data: previousVotes, error: previousVotesError } = await supabase
+        .from('votes')
+        .select('id')
+        .eq('poll_id', pollId)
+        .eq('voter_name', trimmedName);
+
+      if (previousVotesError) {
+        console.warn('Error checking previous votes:', previousVotesError);
+        setHasPreviousVotes(false);
+        return;
+      }
+
+      setHasPreviousVotes(previousVotes && previousVotes.length > 0);
+    } catch (error) {
+      console.warn('Error in checkPreviousVotes:', error);
+      setHasPreviousVotes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (storageInitialized && voterName && id) {
+      checkPreviousVotes(voterName, id as string);
+    }
+  }, [voterName, id, storageInitialized, checkPreviousVotes]);
+
   const handleVote = (gameId: number, voteType: VoteType) => {
     setPendingVotes(prev => {
       const updated = { ...prev };
-      if (updated[gameId] === voteType) {
-        // If the same icon is clicked again, unselect it
+      const score = VOTE_TYPE_TO_SCORE[voteType];
+      if (updated[gameId] === score) {
         delete updated[gameId];
       } else {
-        // If a different icon is clicked, only select that one
-        updated[gameId] = voteType;
+        updated[gameId] = score;
       }
       return updated;
     });
@@ -100,6 +150,7 @@ export default function PollScreen() {
       });
       return;
     }
+
     try {
       setSubmitting(true);
 
@@ -112,73 +163,72 @@ export default function PollScreen() {
       }
       const finalName = trimmedName;
 
-      console.log('Submitting votes with name:', finalName);
-      console.log('Pending votes:', pendingVotes);
+      // Check if the voter has previously voted on any game in this poll
+      const { data: previousVotes, error: previousVotesError } = await supabase
+        .from('votes')
+        .select('id, game_id, vote_type')
+        .eq('poll_id', id)
+        .eq('voter_name', finalName);
 
-      let updated = false; // Track if any votes were updated
+      if (previousVotesError) {
+        console.error('Error checking previous votes:', previousVotesError);
+        throw previousVotesError;
+      }
+
+      const hasPreviousVotes = previousVotes && previousVotes.length > 0;
+      let updated = false; // Track if any votes were updated or inserted as an update
 
       // Submit each vote
-      for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
+      for (const [gameIdStr, score] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
 
-        console.log(`Processing vote for game ${gameId}: ${voteType}`);
+        // Check for existing vote for this game
+        const existing = previousVotes?.find(v => v.game_id === gameId);
 
-        // Check for existing vote
-        const { data: existing, error: selectError } = await supabase
-          .from('votes')
-          .select('id, vote_type')
-          .eq('poll_id', id)
-          .eq('game_id', gameId)
-          .eq('voter_name', finalName);
-
-        if (selectError) {
-          console.error('Error checking existing votes:', selectError);
-          throw selectError;
-        }
-
-        console.log('Existing votes found:', existing);
-
-        if (existing && existing.length > 0) {
-          const vote = existing[0];
-          console.log('vote.vote_type:', vote.vote_type);
-          console.log('voteType:', voteType);
-          if (vote.vote_type !== voteType) {
-            console.log(`Updating existing vote ${vote.id} from ${vote.vote_type} to ${voteType}`);
+        if (existing) {
+          if (existing.vote_type !== score) {
             const { error: updateError } = await supabase
               .from('votes')
-              .update({ vote_type: voteType })
-              .eq('id', vote.id);
-
+              .update({ vote_type: score })
+              .eq('id', existing.id);
             if (updateError) {
               console.error('Error updating vote:', updateError);
               throw updateError;
             }
-            updated = true; // Mark as updated
-          } else {
-            console.log('Vote already exists with same type, skipping');
+            updated = true;
           }
         } else {
-          console.log(`Creating new vote for game ${gameId}`);
           const { error: insertError } = await supabase.from('votes').insert({
             poll_id: id,
             game_id: gameId,
-            vote_type: voteType,
+            vote_type: score,
             voter_name: finalName,
           });
-
           if (insertError) {
             console.error('Error inserting vote:', insertError);
             throw insertError;
           }
+          // If the voter has previously voted on any other game, mark as updated
+          if (hasPreviousVotes) {
+            updated = true;
+          }
         }
       }
 
-      // Save voter name for future use
-      await AsyncStorage.setItem('voter_name', finalName);
+      // Save voter name for future use with error handling
+      try {
+        await saveUsername(finalName);
+      } catch (storageError) {
+        console.warn('Failed to save username to storage:', storageError);
+      }
 
       // Set flag if votes were updated
       if (updated) {
-        await AsyncStorage.setItem(`vote_updated_${id}`, 'true');
+        try {
+          await saveVoteUpdatedFlag(id as string);
+        } catch (storageError) {
+          console.warn('Failed to save vote updated flag:', storageError);
+        }
       }
 
       // Insert comment if present
@@ -194,10 +244,16 @@ export default function PollScreen() {
       }
 
       // Mark as voted in local storage for results access
-      await AsyncStorage.setItem(`voted_${id}`, 'true');
+      try {
+        await saveVotedFlag(id as string);
+      } catch (storageError) {
+        console.warn('Failed to save voted flag:', storageError);
+      }
+
       await reload();
       setComment(''); // Clear comment after successful submission
       navigateToResults();
+
       // Only show toast for new votes, not updated votes
       if (!updated) {
         Toast.show({ type: 'success', text1: 'Votes submitted!' });
@@ -209,8 +265,6 @@ export default function PollScreen() {
       setSubmitting(false);
     }
   };
-
-  // Remove finishMultiUserVoting and multi-user session logic
 
   const navigateToResults = () => {
     router.push({ pathname: '/poll/[id]/results', params: { id: id as string } });
@@ -239,7 +293,7 @@ export default function PollScreen() {
         <Text style={styles.subtitle}>
           {isCreator
             ? (creatorName ? `Poll created by ${creatorName}` : 'Poll created by you')
-            : 'Vote for as many games as you like! ❤️ = Excited, 👍 = Would play, 👎 = Not Interested'}
+            : 'Vote for as many games as you like or none at all!'}
         </Text>
       </View>
 
@@ -270,9 +324,9 @@ export default function PollScreen() {
           games.map((game, i) => (
             <GameCard
               key={game.id}
-              game={game}
+              game={game as any} // Allow for missing image_url, etc.
               index={i}
-              selectedVote={pendingVotes[game.id] ?? game.userVote}
+              selectedVote={pendingVotes[game.id] !== undefined && pendingVotes[game.id] !== null ? SCORE_TO_VOTE_TYPE[pendingVotes[game.id]] as VoteType : (game.userVote !== undefined && game.userVote !== null ? SCORE_TO_VOTE_TYPE[game.userVote] as VoteType : undefined)}
               onVote={handleVote}
               disabled={submitting}
             />
@@ -301,7 +355,7 @@ export default function PollScreen() {
             disabled={submitting}
           >
             <Text style={styles.submitVotesButtonText}>
-              {submitting ? 'Submitting...' : 'Submit My Votes'}
+              {submitting ? 'Submitting...' : (hasPreviousVotes ? 'Update Vote' : 'Submit My Votes')}
             </Text>
           </TouchableOpacity>
         </View>

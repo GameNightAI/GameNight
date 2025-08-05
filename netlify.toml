@@ -1,13 +1,12 @@
 [build]
-  command = "npm run build:web"
-  # functions = "netlify/functions"  # Temporarily disabled for deployment
+  command = "npm install --legacy-peer-deps && npm run build:web"
+  functions = "netlify/functions"
   publish = "dist" # Expo exports to "dist" directory, not "build"
 
-# Temporarily disabled for deployment
-# [[redirects]]
-#   from = "/api/*"
-#   to = "/.netlify/functions/:splat"
-#   status = 200
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
 
 [[redirects]]
   from = "*"

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
-import { VoteType } from '@/hooks/usePollData';
+import { VoteType, VOTE_TYPE_TO_SCORE, SCORE_TO_VOTE_TYPE, getVoteTypeKeyFromScore, VOTING_OPTIONS } from '@/components/votingOptions';
 import { VoterNameInput } from '@/components/PollVoterNameInput';
 import { GameCard } from '@/components/PollGameCard';
 import { LoadingState } from '@/components/LoadingState';
@@ -16,7 +16,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pendingVotes, setPendingVotes] = useState<Record<number, VoteType>>({});
+  const [pendingVotes, setPendingVotes] = useState<Record<number, number>>({});
 
   useEffect(() => {
     if (pollId) loadLocalPoll(pollId.toString());
@@ -96,15 +96,25 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
       const formattedGames = gamesData.map(game => {
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
+        // Use the same mapping logic as usePollResults
         const voteData = {
-          thumbs_down: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_DOWN).length,
-          thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.THUMBS_UP).length,
-          double_thumbs_up: gameVotes.filter(v => v.vote_type === VoteType.DOUBLE_THUMBS_UP).length,
+          votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
             name: v.voter_name || 'Anonymous',
             vote_type: v.vote_type as VoteType,
           })),
         };
+
+        // Initialize all vote types to 0 using VOTING_OPTIONS
+        VOTING_OPTIONS.forEach(option => {
+          voteData.votes[option.value] = 0;
+        });
+
+        // Count votes using the utility function
+        gameVotes.forEach(vote => {
+          const voteTypeKey = getVoteTypeKeyFromScore(vote.vote_type);
+          (voteData.votes as any)[voteTypeKey]++;
+        });
 
         return {
           id: game.id,
@@ -194,10 +204,11 @@ export default function LocalPollScreen() {
   const handleVote = (gameId: number, voteType: VoteType) => {
     setPendingVotes(prev => {
       const updated = { ...prev };
-      if (updated[gameId] === voteType) {
+      const score = VOTE_TYPE_TO_SCORE[voteType];
+      if (updated[gameId] === score) {
         delete updated[gameId];
       } else {
-        updated[gameId] = voteType;
+        updated[gameId] = score;
       }
       return updated;
     });
@@ -223,7 +234,7 @@ export default function LocalPollScreen() {
         return;
       }
       const finalName = trimmedName;
-      for (const [gameIdStr, voteType] of Object.entries(pendingVotes)) {
+      for (const [gameIdStr, score] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
         const { data: existing, error: selectError } = await supabase
           .from('votes')
@@ -234,10 +245,10 @@ export default function LocalPollScreen() {
         if (selectError) throw selectError;
         if (existing && existing.length > 0) {
           const vote = existing[0];
-          if (vote.vote_type !== voteType) {
+          if (vote.vote_type !== score) {
             const { error: updateError } = await supabase
               .from('votes')
-              .update({ vote_type: voteType })
+              .update({ vote_type: score })
               .eq('id', vote.id);
             if (updateError) throw updateError;
           }
@@ -245,7 +256,7 @@ export default function LocalPollScreen() {
           const { error: insertError } = await supabase.from('votes').insert({
             poll_id: id,
             game_id: gameId,
-            vote_type: voteType,
+            vote_type: score,
             voter_name: finalName,
           });
           if (insertError) throw insertError;
@@ -321,9 +332,9 @@ export default function LocalPollScreen() {
           games.map((game, i) => (
             <GameCard
               key={game.id}
-              game={game}
+              game={game as any}
               index={i}
-              selectedVote={pendingVotes[game.id]}
+              selectedVote={pendingVotes[game.id] !== undefined && pendingVotes[game.id] !== null ? SCORE_TO_VOTE_TYPE[pendingVotes[game.id]] as VoteType : undefined}
               onVote={handleVote}
               disabled={submitting}
             />

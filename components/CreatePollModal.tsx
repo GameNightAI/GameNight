@@ -11,12 +11,14 @@ interface CreatePollModalProps {
   isVisible: boolean;
   onClose: () => void;
   onSuccess: (pollType: 'single-user' | 'multi-user-device') => void;
+  preselectedGames?: Game[]; // New prop for preselected games
 }
 
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   isVisible,
   onClose,
   onSuccess,
+  preselectedGames,
 }) => {
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
@@ -50,6 +52,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   useEffect(() => {
     if (isVisible) {
       loadGames();
+      if (preselectedGames && preselectedGames.length > 0) {
+        setSelectedGames(preselectedGames);
+      }
     }
   }, [isVisible]);
 

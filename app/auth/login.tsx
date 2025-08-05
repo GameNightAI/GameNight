@@ -46,8 +46,8 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Animated.View 
-        entering={FadeIn.duration(600)} 
+      <Animated.View
+        entering={FadeIn.duration(600)}
         style={styles.header}
       >
         <Image
@@ -63,8 +63,8 @@ export default function LoginScreen() {
         </View>
       </Animated.View>
 
-      <Animated.View 
-        entering={FadeIn.delay(300).duration(600)} 
+      <Animated.View
+        entering={FadeIn.delay(300).duration(600)}
         style={styles.formContainer}
       >
         <View style={styles.inputContainer}>
@@ -101,14 +101,22 @@ export default function LoginScreen() {
         >
           <LogIn color="#fff" size={20} />
           <Text style={styles.buttonText}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in...' : 'Login'}
           </Text>
         </TouchableOpacity>
+
+        <Link href="/auth/reset-password" asChild>
+          <TouchableOpacity style={styles.forgotPasswordLink}>
+            <Text style={styles.forgotPasswordText}>
+              <Text style={{ fontFamily: 'Poppins-SemiBold' }}>Forgot your password?</Text>
+            </Text>
+          </TouchableOpacity>
+        </Link>
 
         <Link href="/auth/register" asChild>
           <TouchableOpacity style={styles.registerLink}>
             <Text style={styles.registerText}>
-              Don't have an account? Create one
+              Don't have an account? <Text style={styles.signInText}>Create one</Text>
             </Text>
           </TouchableOpacity>
         </Link>
@@ -215,5 +223,19 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
+  },
+  forgotPasswordLink: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  forgotPasswordText: {
+    color: '#1a2b5f',
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    textDecorationLine: 'underline',
+  },
+  signInText: {
+    textDecorationLine: 'underline',
+    fontFamily: 'Poppins-SemiBold',
   },
 });

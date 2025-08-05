@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LoadingState } from '@/components/LoadingState';
@@ -7,13 +8,16 @@ import { usePollResults } from '@/hooks/usePollResults';
 import { GameResultCard } from '@/components/PollGameResultCard';
 import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
+import { VOTING_OPTIONS } from '@/components/votingOptions';
 
 export default function LocalPollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
+  const [newVotes, setNewVotes] = useState(false);
+  const subscriptionRef = useRef<any>(null);
 
-  const { pollTitle, gameResults, hasVoted, loading, error } = usePollResults(id as string | undefined);
+  const { poll, results, hasVoted, loading, error } = usePollResults(id as string | undefined);
 
   useEffect(() => {
     // Fetch poll comments
@@ -29,6 +33,33 @@ export default function LocalPollResultsScreen() {
     fetchComments();
   }, [id]);
 
+  // --- Real-time vote listening subscription ---
+  useEffect(() => {
+    if (!id) return;
+    // Subscribe to new votes for this poll
+    const channel = supabase
+      .channel('votes-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+          filter: `poll_id=eq.${id}`,
+        },
+        (payload) => {
+          setNewVotes(true);
+        }
+      )
+      .subscribe();
+    subscriptionRef.current = channel;
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
+  }, [id]);
+
   if (loading) return <LoadingState />;
 
   if (error) {
@@ -42,58 +73,29 @@ export default function LocalPollResultsScreen() {
     );
   }
 
-  // Sort games by total positive votes (heart votes count double)
-  const scoredResults = gameResults.map(game => ({
-    ...game,
-    score: (game.double_thumbs_up * 2) + game.thumbs_up - game.thumbs_down
-  }));
-  scoredResults.sort((a, b) => b.score - a.score);
+  // The results from usePollResults already have proper rankings and scores
+  // No need to recalculate them here
 
-  // Assign ranks, handling ties (all tied items get tie: true)
-  let lastScore: number | null = null;
-  let lastRank = 0;
-  let tieGroup: number[] = [];
-  const tempRanked: any[] = [];
-  scoredResults.forEach((game, idx) => {
-    if (lastScore === null || game.score !== lastScore) {
-      // Assign tie: true to all in previous tieGroup if more than 1
-      if (tieGroup.length > 1) {
-        tieGroup.forEach(i => tempRanked[i].tie = true);
-      }
-      tieGroup = [idx];
-      lastRank = idx + 1;
-    } else {
-      tieGroup.push(idx);
-    }
-    tempRanked.push({ ...game, rank: lastRank, tie: false });
-    lastScore = game.score;
-  });
-  // Final group
-  if (tieGroup.length > 1) {
-    tieGroup.forEach(i => tempRanked[i].tie = true);
-  }
-  const rankedResults = tempRanked;
-
-  const getRankingIcon = (index: number) => {
-    switch (index) {
-      case 0:
-        return <Trophy size={24} color="#FFD700" />;
+  const getRankingIcon = (rank: number) => {
+    switch (rank) {
       case 1:
-        return <Medal size={24} color="#C0C0C0" />;
+        return <Trophy size={24} color="#FFC300" />; // Higher-contrast gold
       case 2:
+        return <Medal size={24} color="#A6B1C2" />;
+      case 3:
         return <Award size={24} color="#CD7F32" />;
       default:
         return null;
     }
   };
 
-  const getRankingColor = (index: number) => {
-    switch (index) {
-      case 0:
-        return '#FFD700';
+  const getRankingColor = (rank: number) => {
+    switch (rank) {
       case 1:
-        return '#C0C0C0';
+        return '#FFC300'; // Higher-contrast gold
       case 2:
+        return '#A6B1C2';
+      case 3:
         return '#CD7F32';
       default:
         return '#666666';
@@ -111,15 +113,42 @@ export default function LocalPollResultsScreen() {
           <Text style={styles.backLink}>&larr; Back to Polls</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Local Poll Results</Text>
-        <Text style={styles.subtitle}>{pollTitle}</Text>
+        <Text style={styles.subtitle}>{poll?.title}</Text>
       </View>
+      {/* --- Banner notification for new votes --- */}
+      {newVotes && (
+        <View style={{
+          backgroundColor: '#fffbe6',
+          borderBottomWidth: 1,
+          borderBottomColor: '#ffe58f',
+          padding: 14,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+        }}>
+          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: 15 }}>
+            New votes have been cast! Pull to refresh or tap below.
+          </Text>
+          <TouchableOpacity onPress={() => {
+            setNewVotes(false);
+            // Optionally, trigger a refetch of results here
+          }}>
+            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: 16 }}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {rankedResults.length === 0 ? (
+        {!results || results.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No votes have been cast yet.</Text>
           </View>
@@ -128,30 +157,31 @@ export default function LocalPollResultsScreen() {
             <View style={styles.resultsHeader}>
               <Text style={styles.resultsTitle}>Ranking Results</Text>
               <Text style={styles.resultsSubtitle}>
-                {rankedResults.length} game{rankedResults.length !== 1 ? 's' : ''} ranked by votes
+                {results.length} game{results.length !== 1 ? 's' : ''} ranked by votes
               </Text>
             </View>
 
-            {rankedResults.map((game, index) => (
-              <View key={game.id} style={styles.resultItem}>
+            {results.map((result, index) => (
+              <View key={result.game.id} style={styles.resultItem}>
                 <View style={styles.rankingContainer}>
-                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(game.rank - 1) }]}>
-                    {getRankingIcon(game.rank - 1)}
-                    <Text style={styles.rankingNumber}>{game.rank}</Text>
+                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(result.ranking) }]}>
+                    {getRankingIcon(result.ranking)}
+                    <Text style={styles.rankingNumber}>{result.ranking}</Text>
                   </View>
                   <View style={styles.rankingInfo}>
                     <Text style={styles.rankingLabel}>
-                      {game.tie
-                        ? `Tied for ${game.rank}${getOrdinalSuffix(game.rank)} Place`
-                        : `${game.rank}${getOrdinalSuffix(game.rank)} Place`}
+                      {`${result.ranking}${getOrdinalSuffix(result.ranking)} Place`}
+                    </Text>
+                    <Text style={styles.scoreText}>
+                      Score: {result.totalScore} ({result.totalVotes} votes)
                     </Text>
                   </View>
                 </View>
-                <GameResultCard game={game} />
+                <GameResultCard game={result.game} />
               </View>
             ))}
             {/* Comments Section at the bottom of the scrollview */}
-            {comments.length > 0 && (
+            {comments && comments.length > 0 && (
               <View style={styles.commentsContainer}>
                 <Text style={styles.commentsTitle}>Comments</Text>
                 {comments.map((c, idx) => (
@@ -271,6 +301,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1a2b5f',
     marginBottom: 2,
+  },
+  scoreText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
   },
   emptyState: {
     flex: 1,

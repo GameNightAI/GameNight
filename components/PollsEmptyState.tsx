@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Plus } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { Filter, Plus, Search, CheckSquare, Share2 } from 'lucide-react-native';
 
 interface PollsEmptyStateProps {
   onCreate: () => void;
@@ -9,17 +9,24 @@ interface PollsEmptyStateProps {
 export const PollsEmptyState: React.FC<PollsEmptyStateProps> = ({ onCreate }) => {
   return (
     <View style={styles.container}>
-      <Plus size={48} color="#ff9654" style={styles.icon} />
       <Text style={styles.title}>No Polls Yet</Text>
       <Text style={styles.subtitle}>
-        Create a poll to help your group decide what to play! Here’s how:
+        Create a poll to help your group decide what board game to play!
       </Text>
+
       <View style={styles.stepsContainer}>
-        <Text style={styles.step}><Text style={styles.stepNumber}>1.</Text> Tap <Text style={styles.highlight}>"Create Poll"</Text> above.</Text>
-        <Text style={styles.step}><Text style={styles.stepNumber}>2.</Text> Enter a title and description.</Text>
-        <Text style={styles.step}><Text style={styles.stepNumber}>3.</Text> Add games from your collection.</Text>
-        <Text style={styles.step}><Text style={styles.stepNumber}>4.</Text> Share the poll link with friends.</Text>
-        <Text style={styles.step}><Text style={styles.stepNumber}>5.</Text> Watch the votes come in!</Text>
+        <View style={styles.stepRow}>
+          <Filter size={20} color="#ff9654" style={styles.stepIcon} />
+          <Text style={styles.stepText}><Text style={{ fontFamily: 'Poppins-SemiBold' }}>Filter</Text> – View your collection or find something new </Text>
+        </View>
+        <View style={styles.stepRow}>
+          <CheckSquare size={20} color="#ff9654" style={styles.stepIcon} />
+          <Text style={styles.stepText}><Text style={{ fontFamily: 'Poppins-SemiBold' }}>Select</Text> – Add games to your poll</Text>
+        </View>
+        <View style={styles.stepRow}>
+          <Share2 size={20} color="#ff9654" style={styles.stepIcon} />
+          <Text style={styles.stepText}><Text style={{ fontFamily: 'Poppins-SemiBold' }}>Share</Text> – Send the poll via link or vote together on one device!</Text>
+        </View>
       </View>
       <TouchableOpacity
         style={styles.button}
@@ -29,57 +36,86 @@ export const PollsEmptyState: React.FC<PollsEmptyStateProps> = ({ onCreate }) =>
         <Plus size={20} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.buttonText}>Create Poll</Text>
       </TouchableOpacity>
+      <Text style={styles.note}>
+        Note: Registered users can change their votes anytime. Anonymous voters can revote until they close their browser.
+      </Text>
+
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 48,
-    paddingHorizontal: 24,
-  },
-  icon: {
-    marginBottom: 16,
+    backgroundColor: '#f7f9fc',
+    padding: 20,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
     color: '#1a2b5f',
-    marginBottom: 8,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   subtitle: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 15,
-    color: '#666',
+    fontSize: 16,
+    color: '#666666',
     textAlign: 'center',
     marginBottom: 20,
+    maxWidth: 320,
+    lineHeight: 24,
   },
   stepsContainer: {
-    alignItems: 'flex-start',
-    marginBottom: 20,
+    width: '100%',
+    marginBottom: 0,
+    alignItems: 'center',
+    //borderColor: 'red',
+    //borderWidth: 1,
   },
-  step: {
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    width: '100%',
+    maxWidth: 320,
+  },
+  stepIcon: {
+    marginRight: 12,
+  },
+  stepText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 15,
     color: '#444',
-    marginBottom: 4,
+    flex: 1,
   },
-  stepNumber: {
-    color: '#ff9654',
-    fontWeight: 'bold',
-  },
-  highlight: {
-    color: '#ff9654',
-    fontWeight: 'bold',
+  note: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 13,
+    color: '#8d8d8d',
+    textAlign: 'center',
+    maxWidth: 300,
+    lineHeight: 18,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#ff9654',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 320,
+    marginBottom: 20,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   buttonText: {
     color: '#fff',
