@@ -87,7 +87,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         defaultValue={[]}
         isMulti
         isClearable
-        blurInputOnSelect
+        isSearchable={false}
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
@@ -100,7 +100,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         defaultValue={[]}
         isMulti
         isClearable
-        blurInputOnSelect
+        isSearchable={false}
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
@@ -113,7 +113,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         options={ageOptions}
         isMulti
         isClearable
-        blurInputOnSelect
+        isSearchable={false}
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
@@ -126,7 +126,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         options={typeOptions}
         isMulti
         isClearable
-        blurInputOnSelect
+        isSearchable={false}
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
@@ -139,7 +139,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         options={complexityOptions}
         isMulti
         isClearable
-        blurInputOnSelect
+        isSearchable={false}
         closeMenuOnSelect={false}
         styles={selectStyles}
       />
