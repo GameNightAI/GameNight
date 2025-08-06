@@ -5,9 +5,9 @@ import { LoadingState } from '@/components/LoadingState';
 import { getLastVisitedTab } from '@/utils/storage';
 
 export default function Index() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [redirectPath, setRedirectPath] = useState('/(tabs)');
+  const [redirectPath, setRedirectPath] = useState<string>('/(tabs)');
 
   useEffect(() => {
     async function getSession() {
@@ -20,6 +20,9 @@ export default function Index() {
           const lastTab = await getLastVisitedTab();
           if (lastTab) {
             setRedirectPath(`/(tabs)/${lastTab}`);
+          } else {
+            // Default to collection if no last tab is saved
+            setRedirectPath('/(tabs)/collection');
           }
         }
       } catch (error) {
@@ -40,5 +43,5 @@ export default function Index() {
     return <Redirect href="/auth/login" />;
   }
 
-  return <Redirect href={redirectPath} />;
+  return <Redirect href={redirectPath as any} />;
 }
