@@ -13,6 +13,10 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { ArrowLeft } from 'lucide-react-native';
 
+// Sample images
+const sampleImage1 = require('@/assets/images/sample-game-1.png');
+const sampleImage2 = require('@/assets/images/sample-game-2.png');
+
 export default function ImageAnalyzer() {
   const [image, setImage] = useState<{
     uri: string;
@@ -51,6 +55,16 @@ export default function ImageAnalyzer() {
       });
       setError(null); // Clear any previous errors
     }
+  };
+
+  const selectSampleImage = (sampleNumber: number) => {
+    const sampleImage = sampleNumber === 1 ? sampleImage1 : sampleImage2;
+    setImage({
+      uri: Image.resolveAssetSource(sampleImage).uri,
+      name: `sample-game-${sampleNumber}.png`,
+      type: 'image/png',
+    });
+    setError(null); // Clear any previous errors
   };
 
   const handleAnalyze = async () => {
@@ -142,7 +156,7 @@ export default function ImageAnalyzer() {
         >
           <ArrowLeft size={24} color="#1a2b5f" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Image Analyzer</Text>
+        <Text style={styles.headerTitle}>Add Games Through Photos</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -156,10 +170,27 @@ export default function ImageAnalyzer() {
           </TouchableOpacity>
         </View>
 
+        <Text style={styles.sectionTitle}>Or try with sample images:</Text>
+        <View style={styles.sampleImagesRow}>
+          <TouchableOpacity
+            style={styles.sampleImageContainer}
+            onPress={() => selectSampleImage(1)}
+          >
+            <Image source={sampleImage1} style={styles.sampleImage} />
+            <Text style={styles.sampleImageText}>Sample 1</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sampleImageContainer}
+            onPress={() => selectSampleImage(2)}
+          >
+            <Image source={sampleImage2} style={styles.sampleImage} />
+            <Text style={styles.sampleImageText}>Sample 2</Text>
+          </TouchableOpacity>
+        </View>
+
         {image && (
           <View style={styles.previewContainer}>
             <Image source={{ uri: image.uri }} style={styles.imagePreview} />
-            <Text style={styles.imageName}>{image.name}</Text>
           </View>
         )}
 
@@ -261,8 +292,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a2b5f',
     padding: 14,
     borderRadius: 8,
-    alignItems: 'center',
     marginBottom: 16,
+    width: '75%',
+    maxWidth: 260,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
   },
   analyzeButtonText: {
     color: '#fff',
@@ -276,10 +311,43 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderWidth: 1,
     borderColor: '#fcc',
+    width: '75%',
+    maxWidth: 260,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
   },
   errorText: {
     color: '#c33',
     textAlign: 'center',
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a2b5f',
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  sampleImagesRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 20,
+  },
+  sampleImageContainer: {
+    alignItems: 'center',
+  },
+  sampleImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  sampleImageText: {
+    fontSize: 12,
+    color: '#666',
     fontWeight: '500',
   },
 });

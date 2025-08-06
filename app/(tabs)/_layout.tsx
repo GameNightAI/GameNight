@@ -45,7 +45,7 @@ export default function TabLayout() {
         headerStyle: styles.header,
         headerTitleStyle: styles.headerTitle,
       }}
-      initialRouteName={initialTab || undefined}
+      initialRouteName={initialTab || 'collection'}
       screenListeners={{
         tabPress: (e) => {
           // Extract tab name from the target route

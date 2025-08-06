@@ -5,6 +5,9 @@ import { XMLParser } from 'fast-xml-parser';
 import { supabase } from '@/services/supabase';
 import { debounce } from 'lodash';
 import { useRouter } from 'expo-router';
+import { AddImageModal } from './AddImageModal';
+import { AddResultsModal } from './AddResultsModal';
+import { useAddGameModalFlow } from '@/hooks/useAddGameModalFlow';
 
 interface Game {
   id: string;
@@ -32,6 +35,11 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
 
+  const {
+    modalState,
+    modalActions,
+  } = useAddGameModalFlow();
+
   const fetchSearchResults = useCallback(async (term: string) => {
     try {
       // Perform an API request based on the search term
@@ -50,7 +58,6 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       if (!result.items || !result.items.item) {
         setSearchResults([]);
       } else {
-
         const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
 
         const ids = items
@@ -150,11 +157,28 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     }
   };
 
-  const content = (
+  const handleImageAnalysisComplete = (imageData: { uri: string; name: string; type: string }, analysisResults?: any) => {
+    modalActions.setImageData(imageData);
+    if (analysisResults) {
+      modalActions.setAnalysisResults(analysisResults);
+    }
+    modalActions.next();
+  };
+
+  const handleCloseModal = () => {
+    modalActions.reset();
+    onClose();
+  };
+
+  const handleBackToSelect = () => {
+    modalActions.back();
+  };
+
+  const renderSelectStep = () => (
     <View style={styles.dialog}>
       <View style={styles.header}>
         <Text style={styles.title}>Add Game</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+        <TouchableOpacity style={styles.closeButton} onPress={handleCloseModal}>
           <X size={20} color="#666666" />
         </TouchableOpacity>
       </View>
@@ -166,10 +190,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       <View style={styles.analyzeContainer}>
         <TouchableOpacity
           style={styles.analyzeButton}
-          onPress={() => {
-            onClose();
-            router.push('/image-analyzer/' as any);
-          }}
+          onPress={() => modalActions.next()}
         >
           <Camera size={20} color="#ff9654" />
           <Text style={styles.analyzeButtonText}>Analyze Image</Text>
@@ -222,6 +243,34 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     </View>
   );
 
+  const content = (() => {
+    switch (modalState.step) {
+      case 'select':
+        return renderSelectStep();
+      case 'image':
+        return (
+          <AddImageModal
+            isVisible={true}
+            onClose={handleCloseModal}
+            onNext={handleImageAnalysisComplete}
+            onBack={handleBackToSelect}
+          />
+        );
+      case 'results':
+        return (
+          <AddResultsModal
+            isVisible={true}
+            onClose={handleCloseModal}
+            onBack={handleBackToSelect}
+            imageData={modalState.imageData || null}
+            analysisResults={modalState.analysisResults || null}
+          />
+        );
+      default:
+        return renderSelectStep();
+    }
+  })();
+
   if (Platform.OS === 'web') {
     if (!isVisible) return null;
     return (
@@ -236,7 +285,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       visible={isVisible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={handleCloseModal}
     >
       <View style={styles.overlay}>
         {content}
