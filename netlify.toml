@@ -8,6 +8,7 @@
   command = "npx expo start --web --port 19006"
   port = 8082
   targetPort = 19006
+  publish = "dist"
 
 [[redirects]]
   from = "/api/*"

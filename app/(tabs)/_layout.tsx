@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar, Library, User, Vote, Wrench } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -11,6 +11,9 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const [initialTab, setInitialTab] = useState<string | null>(null);
 
+  // Use fallback values for web platform
+  const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
+
   useEffect(() => {
     // Load the last visited tab on component mount
     const loadLastTab = async () => {
@@ -18,9 +21,9 @@ export default function TabLayout() {
       if (lastTab) {
         setInitialTab(lastTab);
       } else {
-        // If no last tab is saved, default to collection and save it
-        setInitialTab('collection');
-        saveLastVisitedTab('collection');
+        // If no last tab is saved, default to index (tools) and save it
+        setInitialTab('index');
+        saveLastVisitedTab('index');
       }
     };
     loadLastTab();
@@ -33,19 +36,22 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="collection"
       screenOptions={{
         headerShown: true,
         tabBarActiveTintColor: '#ff9654',
         tabBarInactiveTintColor: '#8d8d8d',
         tabBarStyle: [
           styles.tabBar,
-          { paddingBottom: Math.max(8, insets.bottom) }
+          {
+            paddingBottom: Math.max(8, safeAreaBottom),
+            height: 60 + Math.max(8, safeAreaBottom)
+          }
         ],
         tabBarLabelStyle: styles.tabBarLabel,
         headerStyle: styles.header,
         headerTitleStyle: styles.headerTitle,
       }}
-      initialRouteName={initialTab || 'collection'}
       screenListeners={{
         tabPress: (e) => {
           // Get the tab name from the event target
@@ -53,7 +59,7 @@ export default function TabLayout() {
           console.log('Tab pressed, full routeName:', routeName);
 
           // Try to extract tab name from the route
-          let tabName = 'collection'; // default
+          let tabName = 'index'; // default
 
           if (routeName) {
             // Try different approaches to extract the tab name
@@ -135,7 +141,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a2b5f',
     borderTopWidth: 0,
     elevation: 0,
-    height: 60,
     paddingTop: 8,
   },
   tabBarLabel: {

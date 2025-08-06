@@ -1,12 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Shuffle, Dice6, Trophy } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: screenHeight } = Dimensions.get('window');
 
 export default function ToolsScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  // Use fallback values for web platform
+  const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
 
   const tools = [
     {
@@ -60,7 +65,7 @@ export default function ToolsScreen() {
       </View>
 
       {/* Tools Content Section */}
-      <View style={styles.toolsSection}>
+      <View style={[styles.toolsSection, { paddingBottom: 80 + safeAreaBottom }]}>
         {tools.map((tool, index) => {
           const IconComponent = tool.icon;
 
@@ -156,7 +161,6 @@ const styles = StyleSheet.create({
     marginTop: -30,
     paddingTop: 30,
     paddingHorizontal: 20,
-    paddingBottom: 40,
     minHeight: screenHeight * 0.6, // Ensure minimum height for content
   },
   toolCard: {

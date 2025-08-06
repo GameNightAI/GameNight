@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
 import { Poll } from '@/types/poll';
@@ -26,7 +27,11 @@ interface PollWithVoteCount extends Poll {
 }
 
 export default function PollsScreen() {
+  const insets = useSafeAreaInsets();
   const [polls, setPolls] = useState<PollWithVoteCount[]>([]);
+
+  // Use fallback values for web platform
+  const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
   const [allPolls, setAllPolls] = useState<PollWithVoteCount[]>([]);
   const [otherUsersPolls, setOtherUsersPolls] = useState<PollWithVoteCount[]>([]);
   const [creatorMap, setCreatorMap] = useState<Record<string, string>>({});
@@ -594,6 +599,7 @@ export default function PollsScreen() {
         }}
         contentContainerStyle={[
           getScaledStyle(styles.listContent, 0.75),
+          { paddingBottom: 80 + safeAreaBottom },
           currentPolls.length === 0 && { flex: 1, justifyContent: 'center' }
         ]}
         ListEmptyComponent={
@@ -744,7 +750,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 0,
     paddingTop: 0,
-    paddingBottom: 32,
+    paddingBottom: 80, // Base padding for tab bar
   },
   pollCard: {
     backgroundColor: '#ffffff',
