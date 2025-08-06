@@ -12,6 +12,13 @@ interface CreatePollModalProps {
   onClose: () => void;
   onSuccess: (pollType: 'single-user' | 'multi-user-device') => void;
   preselectedGames?: Game[]; // New prop for preselected games
+  initialFilters?: {
+    playerCount: string;
+    playTime: string;
+    minAge: string;
+    gameType: string;
+    complexity: string;
+  };
 }
 
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
@@ -19,6 +26,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   onClose,
   onSuccess,
   preselectedGames,
+  initialFilters,
 }) => {
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
@@ -55,8 +63,16 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       if (preselectedGames && preselectedGames.length > 0) {
         setSelectedGames(preselectedGames);
       }
+      // Apply initial filters if provided
+      if (initialFilters) {
+        setPlayerCount(initialFilters.playerCount);
+        setPlayTime(initialFilters.playTime);
+        setMinAge(initialFilters.minAge);
+        setGameType(initialFilters.gameType);
+        setComplexity(initialFilters.complexity);
+      }
     }
-  }, [isVisible]);
+  }, [isVisible, initialFilters]);
 
   useEffect(() => {
     filterGames();
