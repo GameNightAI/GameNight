@@ -1,31 +1,11 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
-import { useRouter, Redirect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Shuffle, Dice6, Trophy } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { useEffect, useState } from 'react';
-import { getLastVisitedTab } from '@/utils/storage';
 
 const { height: screenHeight } = Dimensions.get('window');
 
 export default function ToolsScreen() {
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-  const [redirectTo, setRedirectTo] = useState('/(tabs)/collection');
-
-  useEffect(() => {
-    // Check if this is the default route and redirect to the appropriate tab
-    const checkAndRedirect = async () => {
-      const lastTab = await getLastVisitedTab();
-      if (lastTab && lastTab !== 'index') {
-        setRedirectTo(`/(tabs)/${lastTab}`);
-      }
-      setShouldRedirect(true);
-    };
-    checkAndRedirect();
-  }, []);
-
-  if (shouldRedirect) {
-    return <Redirect href={redirectTo as any} />;
-  }
   const router = useRouter();
 
   const tools = [

@@ -48,17 +48,31 @@ export default function TabLayout() {
       initialRouteName={initialTab || 'collection'}
       screenListeners={{
         tabPress: (e) => {
-          // Extract tab name from the target route
+          // Get the tab name from the event target
           const routeName = e.target;
+          console.log('Tab pressed, full routeName:', routeName);
+
+          // Try to extract tab name from the route
           let tabName = 'collection'; // default
 
           if (routeName) {
-            if (routeName.includes('collection')) tabName = 'collection';
-            else if (routeName.includes('index')) tabName = 'index';
-            else if (routeName.includes('polls')) tabName = 'polls';
-            else if (routeName.includes('profile')) tabName = 'profile';
+            // Try different approaches to extract the tab name
+            const routeParts = routeName.split('/');
+            const lastPart = routeParts[routeParts.length - 1];
+
+            // Check if the last part is a valid tab name
+            if (['collection', 'index', 'polls', 'profile'].includes(lastPart)) {
+              tabName = lastPart;
+            } else {
+              // Fallback to string matching
+              if (routeName.includes('collection')) tabName = 'collection';
+              else if (routeName.includes('index') || routeName.includes('tools')) tabName = 'index';
+              else if (routeName.includes('polls')) tabName = 'polls';
+              else if (routeName.includes('profile')) tabName = 'profile';
+            }
           }
 
+          console.log('Extracted tabName:', tabName);
           handleTabPress(tabName);
         },
       }}>
