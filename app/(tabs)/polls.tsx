@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable, useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users } from 'lucide-react-native';
+import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users, Edit } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { Poll } from '@/types/poll';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { CreatePollModal } from '@/components/CreatePollModal';
+import { EditPollModal } from '@/components/EditPollModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { PollsEmptyState } from '@/components/PollsEmptyState';
 import { Calendar, Shield } from 'lucide-react-native';
@@ -40,6 +41,8 @@ export default function PollsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [pollToEdit, setPollToEdit] = useState<Poll | null>(null);
   const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
   const [showShareLink, setShowShareLink] = useState<string | null>(null);
   const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
@@ -265,36 +268,41 @@ export default function PollsScreen() {
     }
   };
 
-  const handleDuplicatePoll = async (pollId: string) => {
-    try {
-      // Get poll games
-      const { data: pollGames, error: pollGamesError } = await supabase
-        .from('poll_games')
-        .select('game_id')
-        .eq('poll_id', pollId);
-      if (pollGamesError) throw pollGamesError;
-      if (!pollGames || pollGames.length === 0) {
-        setError('No games found in poll.');
-        return;
-      }
-      const gameIds = pollGames.map(pg => pg.game_id);
-      // Get game details
-      const { data: gamesData, error: gamesError } = await supabase
-        .from('games')
-        .select('*')
-        .in('id', gameIds);
-      if (gamesError) throw gamesError;
-      if (!gamesData || gamesData.length === 0) {
-        setError('No game details found.');
-        return;
-      }
-      setPreselectedGames(gamesData);
-      setCreateModalVisible(true);
-    } catch (err) {
-      console.error('Error duplicating poll:', err);
-      setError(err instanceof Error ? err.message : 'Failed to duplicate poll');
-    }
+  const handleEditPoll = async (poll: Poll) => {
+    setPollToEdit(poll);
+    setEditModalVisible(true);
   };
+
+  /* const handleDuplicatePoll = async (pollId: string) => {
+     try {
+      //  Get poll games
+       const { data: pollGames, error: pollGamesError } = await supabase
+         .from('poll_games')
+         .select('game_id')
+         .eq('poll_id', pollId);
+       if (pollGamesError) throw pollGamesError;
+       if (!pollGames || pollGames.length === 0) {
+         setError('No games found in poll.');
+         return;
+       }
+       const gameIds = pollGames.map(pg => pg.game_id);
+      //  Get game details
+       const { data: gamesData, error: gamesError } = await supabase
+         .from('games')
+         .select('*')
+         .in('id', gameIds);
+       if (gamesError) throw gamesError;
+       if (!gamesData || gamesData.length === 0) {
+         setError('No game details found.');
+         return;
+       }
+       setPreselectedGames(gamesData);
+       setCreateModalVisible(true);
+     } catch (err) {
+       console.error('Error duplicating poll:', err);
+       setError(err instanceof Error ? err.message : 'Failed to duplicate poll');
+     }
+   }; */
 
   // Helper to render poll results dropdown
   function PollResultsDropdown({ pollId }: { pollId: string }) {
@@ -532,10 +540,16 @@ export default function PollsScreen() {
                       <Users size={isSmallMobile ? 13.5 : 18} color="#10b981" />
                       <Text style={getScaledStyle(styles.localVoteButtonTextMobile, 0.75)}>In-Person</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={getScaledStyle(styles.duplicateButtonMobile, 0.75)} onPress={() => handleDuplicatePoll(item.id)}>
+                    {item.user_id === currentUserId && (
+                      <TouchableOpacity style={getScaledStyle(styles.editButtonMobile, 0.75)} onPress={() => handleEditPoll(item)}>
+                        <Edit size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
+                        <Text style={getScaledStyle(styles.editButtonTextMobile, 0.75)}>Edit</Text>
+                      </TouchableOpacity>
+                    )}
+                    {/* <TouchableOpacity style={getScaledStyle(styles.duplicateButtonMobile, 0.75)} onPress={() => handleDuplicatePoll(item.id)}>
                       <Copy size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
                       <Text style={getScaledStyle(styles.duplicateButtonTextMobile, 0.75)}>Duplicate</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                   </View>
                   <TouchableOpacity
                     style={[
@@ -589,13 +603,22 @@ export default function PollsScreen() {
                       Results ({item.voteCount})
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
+                  {item.user_id === currentUserId && (
+                    <TouchableOpacity
+                      style={getScaledStyle(styles.editButtonDesktop, 0.75)}
+                      onPress={() => handleEditPoll(item)}
+                    >
+                      <Edit size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
+                      <Text style={getScaledStyle(styles.editButtonTextDesktop, 0.75)}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
+                  {/*<TouchableOpacity
                     style={getScaledStyle(styles.duplicateButtonDesktop, 0.75)}
                     onPress={() => handleDuplicatePoll(item.id)}
                   >
                     <Copy size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
                     <Text style={getScaledStyle(styles.duplicateButtonTextDesktop, 0.75)}>Duplicate</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
               )}
               {/* Dropdown for desktop, below poll card */}
@@ -629,6 +652,22 @@ export default function PollsScreen() {
           loadPolls();
         }}
         preselectedGames={preselectedGames || undefined}
+      />
+
+      <EditPollModal
+        isVisible={editModalVisible}
+        onClose={() => {
+          setEditModalVisible(false);
+          setPollToEdit(null);
+        }}
+        onSuccess={() => {
+          setEditModalVisible(false);
+          setPollToEdit(null);
+          loadPolls();
+        }}
+        pollId={pollToEdit?.id || ''}
+        pollTitle={pollToEdit?.title || ''}
+        pollDescription={pollToEdit?.description}
       />
 
       <ConfirmationDialog
@@ -996,6 +1035,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#1a2b5f',
+  },
+  editButtonDesktop: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  editButtonTextDesktop: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#4b5563',
+  },
+  editButtonMobile: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  editButtonTextMobile: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#4b5563',
   },
   duplicateButtonDesktop: {
     flex: 1,

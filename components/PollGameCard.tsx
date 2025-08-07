@@ -15,7 +15,7 @@ const getScoreByVoteType = (voteType: string): number => {
 // Utility to get background color by score
 const getVoteBgColor = (score: number, isSelected: boolean): string => {
   if (!isSelected) return '#f5f5f5';
-  if (score > 1) return '#bbf7d0'; // green-200
+  if (score > 2) return '#bbf7d0'; // green-200
   if (score < 0) return '#fecaca'; // red-200
   return '#fef9c3'; // yellow-100
 };

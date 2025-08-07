@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import Select from 'react-select';
+import { useDeviceType } from '@/hooks/useDeviceType';
+import { isSafari } from '@/utils/safari-polyfill';
 
 interface CreatePollModalProps {
   isVisible: boolean;
@@ -28,6 +30,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   preselectedGames,
   initialFilters,
 }) => {
+  const deviceType = useDeviceType();
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
@@ -43,6 +46,29 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [minAge, setMinAge] = useState<any[]>([]);
   const [gameType, setGameType] = useState<any[]>([]);
   const [complexity, setComplexity] = useState<any[]>([]);
+
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(false);
+  const [isSmallMobile, setIsSmallMobile] = useState(false);
+
+  useEffect(() => {
+    const updateScreenSize = () => {
+      const { width, height } = Dimensions.get('window');
+      setIsMobile(width < 768);
+      setIsSmallMobile(width < 380 || height < 700);
+    };
+
+    updateScreenSize();
+
+    const handleResize = () => {
+      updateScreenSize();
+    };
+
+    if (Platform.OS === 'web') {
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
 
   // Filter options
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
@@ -310,23 +336,219 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setComplexity(newValue || []);
   };
 
+  // Responsive styles based on screen size
+  const getResponsiveStyles = () => {
+    const baseScale = isSmallMobile ? 0.85 : 1;
+
+    return {
+      dialog: {
+        ...styles.dialog,
+        maxWidth: isMobile ? '95%' as any : 800,
+        maxHeight: isMobile ? '90%' as any : 600,
+        paddingHorizontal: isMobile ? 16 : 20,
+        borderRadius: isMobile ? 8 : 12,
+      },
+      title: {
+        ...styles.title,
+        fontSize: isMobile ? 18 : 20,
+      },
+      label: {
+        ...styles.label,
+        fontSize: isMobile ? 15 : 16,
+      },
+      sublabel: {
+        ...styles.sublabel,
+        fontSize: isMobile ? 13 : 14,
+      },
+      titleInput: {
+        ...styles.titleInput,
+        fontSize: isMobile ? 15 : 16,
+        padding: isMobile ? 10 : 12,
+      },
+      descriptionInput: {
+        ...styles.descriptionInput,
+        fontSize: isMobile ? 15 : 16,
+        padding: isMobile ? 10 : 12,
+        minHeight: isMobile ? 70 : 80,
+      },
+      gameName: {
+        ...styles.gameName,
+        fontSize: isMobile ? 15 : 16,
+      },
+      playerCount: {
+        ...styles.playerCount,
+        fontSize: isMobile ? 13 : 14,
+      },
+      createButton: {
+        ...styles.createButton,
+        padding: isMobile ? 12 : 13,
+        margin: isMobile ? 12 : 16,
+      },
+      createButtonText: {
+        ...styles.createButtonText,
+        fontSize: isMobile ? 12 : 13,
+      },
+      selectAllButton: {
+        ...styles.selectAllButton,
+        paddingHorizontal: isMobile ? 10 : 12,
+        paddingVertical: isMobile ? 5 : 6,
+      },
+      selectAllButtonText: {
+        ...styles.selectAllButtonText,
+        fontSize: isMobile ? 11 : 12,
+      },
+      clearAllButton: {
+        ...styles.clearAllButton,
+        paddingHorizontal: isMobile ? 10 : 12,
+        paddingVertical: isMobile ? 5 : 6,
+      },
+      clearAllButtonText: {
+        ...styles.clearAllButtonText,
+        fontSize: isMobile ? 11 : 12,
+      },
+      gameItem: {
+        ...styles.gameItem,
+        padding: isMobile ? 12 : 16,
+        marginBottom: isMobile ? 6 : 8,
+      },
+      checkbox: {
+        ...styles.checkbox,
+        width: isMobile ? 20 : 24,
+        height: isMobile ? 20 : 24,
+      },
+      absoluteCloseButton: {
+        ...styles.absoluteCloseButton,
+        top: isMobile ? 20 : 26,
+        right: isMobile ? 16 : 20,
+        padding: isMobile ? 4 : 6,
+      },
+    };
+  };
+
+  // Safari-compatible select styles
+  const getSelectStyles = () => {
+    const baseSelectStyles = {
+      control: (baseStyles: any, state: any) => {
+        return {
+          ...baseStyles,
+          fontFamily: 'Poppins-Regular',
+          fontSize: isMobile ? 15 : 16,
+          borderColor: '#e1e5ea',
+          borderRadius: isMobile ? 8 : 12,
+          minHeight: isMobile ? 44 : 48,
+          boxShadow: 'none',
+          '&:hover': {
+            borderColor: '#ff9654',
+          },
+          // Safari-specific fixes
+          ...(isSafari() && {
+            WebkitAppearance: 'none',
+            WebkitBorderRadius: isMobile ? 8 : 12,
+          }),
+        }
+      },
+      container: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        marginBottom: isMobile ? 10 : 12,
+      }),
+      menu: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        backgroundColor: '#ffffff',
+        borderRadius: isMobile ? 8 : 12,
+        borderWidth: 1,
+        borderColor: '#e1e5ea',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+        zIndex: 9999,
+        position: 'absolute',
+        maxHeight: 'none',
+        overflow: 'hidden',
+        // Safari-specific fixes
+        ...(isSafari() && {
+          WebkitBorderRadius: isMobile ? 8 : 12,
+        }),
+      }),
+      menuList: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        maxHeight: isMobile ? 180 : 200,
+        overflow: 'auto',
+        // Safari-specific scrollbar styling
+        ...(isSafari() && {
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#c1c1c1',
+            borderRadius: '4px',
+          },
+        }),
+      }),
+      multiValueLabel: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: isMobile ? 13 : 14,
+      }),
+      noOptionsMessage: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: isMobile ? 14 : 16,
+      }),
+      option: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: isMobile ? 15 : 16,
+        color: state.isSelected ? '#ff9654' : '#333333',
+        backgroundColor: state.isSelected ? '#fff5ef' : 'transparent',
+        '&:hover': {
+          backgroundColor: '#fff5ef',
+        },
+      }),
+      placeholder: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: isMobile ? 15 : 16,
+        color: '#999999',
+      }),
+    };
+
+    return baseSelectStyles;
+  };
+
   if (!isVisible) return null;
+
+  const responsiveStyles = getResponsiveStyles();
+  const selectStyles = getSelectStyles();
 
   return (
     <View style={styles.overlay}>
       <div style={{
-        maxWidth: '95vw',
-        maxHeight: '80vh',
+        maxWidth: isMobile ? '95vw' : '90vw',
+        maxHeight: isMobile ? '90vh' : '80vh',
         width: '100%',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
+        padding: isMobile ? 10 : 20,
       }}>
-        <View style={[styles.dialog, { height: '100%', display: 'flex', flexDirection: 'column', flex: 1, maxWidth: undefined, maxHeight: undefined }]}>
+        <View style={[responsiveStyles.dialog, {
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          maxWidth: isMobile ? '100%' : undefined,
+          maxHeight: isMobile ? '100%' : undefined
+        }]}>
           <TouchableOpacity
-            style={styles.absoluteCloseButton}
+            style={responsiveStyles.absoluteCloseButton}
             onPress={() => {
               onClose();
               resetForm();
@@ -334,19 +556,23 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             accessibilityLabel="Close"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <X size={24} color="#666666" />
+            <X size={isMobile ? 20 : 24} color="#666666" />
           </TouchableOpacity>
           <View style={styles.header}>
-            <Text style={styles.title}>Create Poll</Text>
+            <Text style={responsiveStyles.title}>Create Poll</Text>
           </View>
-          <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            style={{ flex: 1, minHeight: 0 }}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={!isMobile}
+          >
             <View style={styles.titleSection}>
-              <Text style={styles.label}>Poll Title (Optional)</Text>
-              <Text style={styles.sublabel}>
+              <Text style={responsiveStyles.label}>Poll Title (Optional)</Text>
+              <Text style={responsiveStyles.sublabel}>
                 Customize your poll title or keep the auto-generated name
               </Text>
               <TextInput
-                style={styles.titleInput}
+                style={responsiveStyles.titleInput}
                 value={pollTitle}
                 onChangeText={setPollTitle}
                 placeholder="Enter a custom title or keep the default"
@@ -356,12 +582,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             </View>
 
             <View style={styles.descriptionSection}>
-              <Text style={styles.label}>Description (Optional)</Text>
-              <Text style={styles.sublabel}>
+              <Text style={responsiveStyles.label}>Description (Optional)</Text>
+              <Text style={responsiveStyles.sublabel}>
                 Add context, instructions, or any additional information for voters
               </Text>
               <TextInput
-                style={styles.descriptionInput}
+                style={responsiveStyles.descriptionInput}
                 value={pollDescription}
                 onChangeText={setPollDescription}
                 placeholder="e.g., Vote for your top 3 games, or Let's decide what to play this weekend"
@@ -374,8 +600,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             </View>
 
             <View style={styles.filterSection}>
-              <Text style={styles.label}>Filter Games</Text>
-              <Text style={styles.sublabel}>
+              <Text style={responsiveStyles.label}>Filter Games</Text>
+              <Text style={responsiveStyles.sublabel}>
                 Filter your collection to find the perfect games for your poll. All filters are optional.
               </Text>
 
@@ -453,8 +679,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <View style={styles.gamesSection}>
               <View style={styles.gamesHeader}>
                 <View style={styles.gamesHeaderLeft}>
-                  <Text style={styles.label}>Select Games</Text>
-                  <Text style={styles.sublabel}>
+                  <Text style={responsiveStyles.label}>Select Games</Text>
+                  <Text style={responsiveStyles.sublabel}>
                     {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
                       ? `Games that match your filters`
                       : 'Choose games from your collection to include in the poll'}
@@ -462,16 +688,16 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 </View>
                 <View style={styles.gamesHeaderRight}>
                   <TouchableOpacity
-                    style={styles.selectAllButton}
+                    style={responsiveStyles.selectAllButton}
                     onPress={() => setSelectedGames([...filteredGames])}
                   >
-                    <Text style={styles.selectAllButtonText}>Select All</Text>
+                    <Text style={responsiveStyles.selectAllButtonText}>Select All</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.clearAllButton}
+                    style={responsiveStyles.clearAllButton}
                     onPress={() => setSelectedGames([])}
                   >
-                    <Text style={styles.clearAllButtonText}>Clear All</Text>
+                    <Text style={responsiveStyles.clearAllButtonText}>Clear All</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -487,23 +713,23 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                     <TouchableOpacity
                       key={game.id}
                       style={[
-                        styles.gameItem,
+                        responsiveStyles.gameItem,
                         isSelected && styles.gameItemSelected
                       ]}
                       onPress={() => toggleGameSelection(game)}
                     >
                       <View style={styles.gameInfo}>
-                        <Text style={styles.gameName}>{game.name}</Text>
-                        <Text style={styles.playerCount}>
+                        <Text style={responsiveStyles.gameName}>{game.name}</Text>
+                        <Text style={responsiveStyles.playerCount}>
                           {game.min_players}-{game.max_players} players • {game.playing_time} min
                         </Text>
                       </View>
                       <View style={[
-                        styles.checkbox,
+                        responsiveStyles.checkbox,
                         isSelected && styles.checkboxSelected
                       ]}>
                         {isSelected && (
-                          <Check size={16} color="#ffffff" />
+                          <Check size={isMobile ? 14 : 16} color="#ffffff" />
                         )}
                       </View>
                     </TouchableOpacity>
@@ -515,12 +741,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           <View style={styles.footer}>
             {error && <Text style={styles.errorText}>{error}</Text>}
             <TouchableOpacity
-              style={[styles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
+              style={[responsiveStyles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
               onPress={handleCreatePoll}
               disabled={loading || selectedGames.length === 0}
             >
-              <Plus size={20} color="#fff" />
-              <Text style={styles.createButtonText}>{loading ? 'Creating...' : 'Create Poll'}</Text>
+              <Plus size={isMobile ? 18 : 20} color="#fff" />
+              <Text style={responsiveStyles.createButtonText}>{loading ? 'Creating...' : 'Create Poll'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -593,14 +819,12 @@ const styles = StyleSheet.create<Styles>({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: 20,
+    padding: Platform.OS === 'web' ? 20 : 10,
   },
   dialog: {
     backgroundColor: 'white',
     borderRadius: 12,
     width: '100%',
-    maxWidth: 800,
-    maxHeight: 600,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -617,24 +841,24 @@ const styles = StyleSheet.create<Styles>({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Platform.OS === 'web' ? 20 : 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e1e5ea',
-    minHeight: 40,
+    minHeight: Platform.OS === 'web' ? 40 : 36,
     position: 'relative',
-    marginHorizontal: -20,
+    marginHorizontal: Platform.OS === 'web' ? -20 : -16,
   },
   closeButton: {
-    padding: 4,
+    padding: Platform.OS === 'web' ? 4 : 2,
   },
   title: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
+    fontSize: Platform.OS === 'web' ? 20 : 18,
     color: '#1a2b5f',
     marginTop: 10,
   },
   content: {
-    paddingVertical: 20,
+    paddingVertical: Platform.OS === 'web' ? 20 : 16,
   },
   scrollContent: {
     paddingBottom: 0,
@@ -642,58 +866,58 @@ const styles = StyleSheet.create<Styles>({
     paddingHorizontal: 0,
   },
   titleSection: {
-    marginBottom: 20,
+    marginBottom: Platform.OS === 'web' ? 20 : 16,
     width: '100%',
-    paddingTop: 8,
+    paddingTop: Platform.OS === 'web' ? 8 : 6,
   },
   titleInput: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
     color: '#333333',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: Platform.OS === 'web' ? 12 : 8,
+    padding: Platform.OS === 'web' ? 12 : 10,
     marginTop: 8,
   },
   descriptionSection: {
-    marginBottom: 20,
+    marginBottom: Platform.OS === 'web' ? 20 : 16,
     width: '100%',
   },
   descriptionInput: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
     color: '#333333',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: Platform.OS === 'web' ? 12 : 8,
+    padding: Platform.OS === 'web' ? 12 : 10,
     marginTop: 8,
-    minHeight: 80,
+    minHeight: Platform.OS === 'web' ? 80 : 70,
     textAlignVertical: 'top',
   },
   label: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
     color: '#1a2b5f',
     marginBottom: 8,
   },
   sublabel: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 14 : 13,
     color: '#666666',
     marginBottom: 12,
   },
   filterSection: {
-    marginBottom: 20,
+    marginBottom: Platform.OS === 'web' ? 20 : 16,
     width: '100%',
     position: 'relative',
     zIndex: 1000,
   },
   filterItem: {
-    marginBottom: 12,
+    marginBottom: Platform.OS === 'web' ? 12 : 10,
     position: 'relative',
   },
   filterButton: {
@@ -703,9 +927,9 @@ const styles = StyleSheet.create<Styles>({
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
-    borderRadius: 12,
-    padding: 12,
-    minHeight: 48,
+    borderRadius: Platform.OS === 'web' ? 12 : 8,
+    padding: Platform.OS === 'web' ? 12 : 10,
+    minHeight: Platform.OS === 'web' ? 48 : 44,
   },
   filterButtonActive: {
     borderColor: '#ff9654',
@@ -714,29 +938,30 @@ const styles = StyleSheet.create<Styles>({
   filterButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Platform.OS === 'web' ? 8 : 6,
     flex: 1,
   },
   filterButtonText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
     color: '#333333',
   },
   filterButtonTextActive: {
     color: '#ff9654',
     fontFamily: 'Poppins-SemiBold',
+    fontSize: Platform.OS === 'web' ? 16 : 15,
   },
   filterButtonRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Platform.OS === 'web' ? 8 : 6,
   },
   clearButton: {
     padding: 2,
   },
   dropdown: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: Platform.OS === 'web' ? 12 : 8,
     marginTop: 4,
     borderWidth: 1,
     borderColor: '#e1e5ea',
@@ -745,13 +970,13 @@ const styles = StyleSheet.create<Styles>({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    maxHeight: 200,
+    maxHeight: Platform.OS === 'web' ? 200 : 180,
   },
   dropdownScroll: {
-    maxHeight: 200,
+    maxHeight: Platform.OS === 'web' ? 200 : 180,
   },
   dropdownItem: {
-    padding: 12,
+    padding: Platform.OS === 'web' ? 12 : 10,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -760,15 +985,16 @@ const styles = StyleSheet.create<Styles>({
   },
   dropdownItemText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
     color: '#333333',
   },
   dropdownItemTextSelected: {
     color: '#ff9654',
     fontFamily: 'Poppins-SemiBold',
+    fontSize: Platform.OS === 'web' ? 16 : 15,
   },
   gamesSection: {
-    marginTop: 8,
+    marginTop: Platform.OS === 'web' ? 8 : 6,
     width: '100%',
     marginBottom: 0,
     paddingBottom: 0,
@@ -777,47 +1003,47 @@ const styles = StyleSheet.create<Styles>({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: Platform.OS === 'web' ? 12 : 10,
   },
   gamesHeaderLeft: {
     flex: 1,
   },
   gamesHeaderRight: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Platform.OS === 'web' ? 8 : 6,
   },
   selectAllButton: {
     backgroundColor: '#ff9654',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
+    paddingVertical: Platform.OS === 'web' ? 6 : 5,
+    borderRadius: Platform.OS === 'web' ? 6 : 5,
   },
   selectAllButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 12 : 11,
     color: '#ffffff',
   },
   clearAllButton: {
     backgroundColor: '#f8f9fa',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
+    paddingVertical: Platform.OS === 'web' ? 6 : 5,
+    borderRadius: Platform.OS === 'web' ? 6 : 5,
     borderWidth: 1,
     borderColor: '#e1e5ea',
   },
   clearAllButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 12 : 11,
     color: '#666666',
   },
   gameItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: Platform.OS === 'web' ? 16 : 12,
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: Platform.OS === 'web' ? 12 : 8,
+    marginBottom: Platform.OS === 'web' ? 8 : 6,
     borderWidth: 1,
     borderColor: '#e1e5ea',
   },
@@ -830,19 +1056,19 @@ const styles = StyleSheet.create<Styles>({
   },
   gameName: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
     color: '#333333',
     marginBottom: 4,
   },
   playerCount: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 14 : 13,
     color: '#666666',
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: Platform.OS === 'web' ? 24 : 20,
+    height: Platform.OS === 'web' ? 24 : 20,
+    borderRadius: Platform.OS === 'web' ? 6 : 4,
     borderWidth: 2,
     borderColor: '#e1e5ea',
     backgroundColor: '#ffffff',
@@ -855,7 +1081,7 @@ const styles = StyleSheet.create<Styles>({
   },
   noGamesText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 14 : 13,
     color: '#666666',
     textAlign: 'center',
     marginTop: 20,
@@ -863,21 +1089,21 @@ const styles = StyleSheet.create<Styles>({
   },
   errorText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 14 : 13,
     color: '#e74c3c',
     textAlign: 'center',
     marginTop: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ff9654',
-    padding: 13,
-    paddingRight: 16,
-    margin: 16,
-    borderRadius: 10,
+    padding: Platform.OS === 'web' ? 13 : 12,
+    paddingRight: Platform.OS === 'web' ? 16 : 14,
+    margin: Platform.OS === 'web' ? 16 : 12,
+    borderRadius: Platform.OS === 'web' ? 10 : 8,
     gap: 3,
   },
   createButtonDisabled: {
@@ -885,17 +1111,17 @@ const styles = StyleSheet.create<Styles>({
   },
   createButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 13,
+    fontSize: Platform.OS === 'web' ? 13 : 12,
     color: '#ffffff',
   },
   absoluteCloseButton: {
     position: 'absolute',
-    top: 26,
-    right: 20,
+    top: Platform.OS === 'web' ? 26 : 20,
+    right: Platform.OS === 'web' ? 20 : 16,
     zIndex: 100,
     backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 16,
-    padding: 6,
+    borderRadius: Platform.OS === 'web' ? 16 : 12,
+    padding: Platform.OS === 'web' ? 6 : 4,
     elevation: 2,
     borderWidth: 1,
     borderColor: '#e74c3c',
@@ -903,9 +1129,9 @@ const styles = StyleSheet.create<Styles>({
   footer: {
     paddingTop: 0,
     paddingBottom: 0,
-    paddingLeft: 14,
-    paddingRight: 14,
-    minHeight: 30,
+    paddingLeft: Platform.OS === 'web' ? 14 : 12,
+    paddingRight: Platform.OS === 'web' ? 14 : 12,
+    minHeight: Platform.OS === 'web' ? 30 : 28,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e1e5ea',
