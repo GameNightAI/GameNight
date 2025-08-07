@@ -211,11 +211,11 @@ export default function CollectionScreen() {
   // Convert collection filters to CreatePollModal format
   const convertFiltersForPoll = () => {
     const convertedFilters = {
-      playerCount: playerCount.length > 0 ? (playerCount[0] as any)?.value?.toString() || '' : '',
-      playTime: playTime.length > 0 ? (playTime[0] as any)?.max?.toString() || '' : '',
-      minAge: age.length > 0 ? (age[0] as any)?.min?.toString() + '+' || '' : '',
-      gameType: gameType.length > 0 ? (gameType[0] as any)?.value || '' : '',
-      complexity: complexity.length > 0 ? (complexity[0] as any)?.label || '' : '',
+      playerCount: playerCount,
+      playTime: playTime,
+      minAge: age,
+      gameType: gameType,
+      complexity: complexity,
     };
     return convertedFilters;
   };
@@ -369,7 +369,8 @@ export default function CollectionScreen() {
         onClose={() => setCreatePollModalVisible(false)}
         onSuccess={(pollType) => {
           setCreatePollModalVisible(false);
-          // Navigate to polls tab or show success message
+          // Navigate to polls tab with refresh parameter
+          router.push('/(tabs)/polls?refresh=true');
           Toast.show({ type: 'success', text1: 'Poll created successfully!' });
         }}
         initialFilters={convertFiltersForPoll()}

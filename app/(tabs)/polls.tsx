@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable, useWindowDimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
@@ -28,6 +28,8 @@ interface PollWithVoteCount extends Poll {
 
 export default function PollsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const params = useLocalSearchParams();
   const [polls, setPolls] = useState<PollWithVoteCount[]>([]);
 
   // Use fallback values for web platform
@@ -42,7 +44,6 @@ export default function PollsScreen() {
   const [showShareLink, setShowShareLink] = useState<string | null>(null);
   const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
-  const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { width, height } = useWindowDimensions();
   const isMobile = width < 768;
@@ -55,6 +56,15 @@ export default function PollsScreen() {
   useEffect(() => {
     loadPolls();
   }, []);
+
+  // Handle refresh parameter from URL
+  useEffect(() => {
+    if (params.refresh === 'true') {
+      loadPolls();
+      // Clear the refresh parameter from URL
+      router.setParams({ refresh: undefined });
+    }
+  }, [params.refresh]);
 
   // --- Real-time vote listening subscription ---
   useEffect(() => {
