@@ -35,29 +35,29 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   setGameType,
   setComplexity,
 }) => {
-  
+
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
-    .map(_ => ({value: parseInt(_), label: _}));
+    .map(_ => ({ value: parseInt(_), label: _ }));
   const timeOptions = [
-    {value: 1, min: 1, max: 30, label: '30 min or less'},
-    {value: 31, min: 31, max: 60, label: '31-60 min'},
-    {value: 61, min: 61, max: 90, label: '61-90 min'},
-    {value: 91, min: 91, max: 120, label: '91-120 min'},
-    {value: 121, min: 121, max: 999999999, label: 'More than 120 min'},
+    { value: 1, min: 1, max: 30, label: '30 min or less' },
+    { value: 31, min: 31, max: 60, label: '31-60 min' },
+    { value: 61, min: 61, max: 90, label: '61-90 min' },
+    { value: 91, min: 91, max: 120, label: '91-120 min' },
+    { value: 121, min: 121, max: 999999999, label: 'More than 120 min' },
   ];
   const ageOptions = [
-    {value: 1, min: 1, max: 5, label: '5 and under'},
-    {value: 6, min: 6, max: 7, label: '6-7'},
-    {value: 8, min: 8, max: 9, label: '8-9'},
-    {value: 10, min: 10, max: 11, label: '10-11'},
-    {value: 12, min: 12, max: 13, label: '12-13'},
-    {value: 14, min: 14, max: 15, label: '14-15'},
-    {value: 16, min: 16, max: 999, label: '16 and up'},
+    { value: 1, min: 1, max: 5, label: '5 and under' },
+    { value: 6, min: 6, max: 7, label: '6-7' },
+    { value: 8, min: 8, max: 9, label: '8-9' },
+    { value: 10, min: 10, max: 11, label: '10-11' },
+    { value: 12, min: 12, max: 13, label: '12-13' },
+    { value: 14, min: 14, max: 15, label: '14-15' },
+    { value: 16, min: 16, max: 999, label: '16 and up' },
   ];
   const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
-    .map(_ => ({value: _, label: _}));
+    .map(_ => ({ value: _, label: _ }));
   const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy']
-    .map((_, i) => ({value: i+1, label: _}));
+    .map((_, i) => ({ value: i + 1, label: _ }));
 
   const handleFilter = () => {
     //onApplyFilter()
@@ -180,16 +180,16 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 export const filterGames = (games, playerCount, playTime, age, gameType, complexity) => {
   return games.filter(game => {
     let is_match = true;
-    
+
     if (playerCount.length) {
       is_match &&= playerCount.some(p => (
         // Ignore game.min_players when 15+ is selected,
         // since the number of actual players could be arbitrarily large.
         (game.min_players <= p.value || p.value === 15)
-        && p.value <= game.max_players    
+        && p.value <= game.max_players
       ));
     }
-    
+
     if (playTime.length) {
       is_match &&= playTime.some(t => {
         const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
@@ -200,14 +200,14 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
         );
       });
     }
-    
+
     if (age.length) {
       is_match &&= age.some(a => (
         a.min <= game.minAge
         && game.minAge <= a.max
       ));
     }
-    
+
     if (gameType.length) {
       is_match &&= gameType.some(t => {
         switch (t.value) {
@@ -220,13 +220,13 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
         }
       });
     }
-    
+
     if (complexity.length) {
       is_match &&= complexity.some(c => (
         game.complexity_tier === c.value
       ));
     }
-    
+
     return is_match;
   });
 };
@@ -383,16 +383,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
     marginLeft: 8,
-  },  
+  },
 });
 
 const selectStyles = {
   control: (baseStyles, state) => {
-  // console.log(state);
-  return {
-    ...baseStyles,
-    ...styles.dropDownContainer,
-  }},
+    // console.log(state);
+    return {
+      ...baseStyles,
+      ...styles.dropDownContainer,
+    }
+  },
   container: (baseStyles, state) => ({
     ...baseStyles,
     ...styles.dropDownContainer,

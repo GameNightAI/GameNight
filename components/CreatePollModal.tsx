@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Modal, Platform, ScrollView, Dimensions, TextInput, TouchableWithoutFeedback, Keyboard, Pressable, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
-
+import Select from 'react-select';
 
 interface CreatePollModalProps {
   isVisible: boolean;
   onClose: () => void;
   onSuccess: (pollType: 'single-user' | 'multi-user-device') => void;
-  preselectedGames?: Game[]; // New prop for preselected games
+  preselectedGames?: Game[];
   initialFilters?: {
-    playerCount: string;
-    playTime: string;
-    minAge: string;
-    gameType: string;
-    complexity: string;
+    playerCount: any[];
+    playTime: any[];
+    minAge: any[];
+    gameType: any[];
+    complexity: any[];
   };
 }
 
@@ -37,25 +37,36 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [defaultTitle, setDefaultTitle] = useState('');
   const [pollDescription, setPollDescription] = useState('');
 
-  // Filter states
-  const [playerCount, setPlayerCount] = useState<string>('');
-  const [playTime, setPlayTime] = useState<string>('');
-  const [minAge, setMinAge] = useState<string>('');
-  const [gameType, setGameType] = useState<string>('');
-  const [complexity, setComplexity] = useState<string>('');
+  // Filter states - changed to arrays for multi-select
+  const [playerCount, setPlayerCount] = useState<any[]>([]);
+  const [playTime, setPlayTime] = useState<any[]>([]);
+  const [minAge, setMinAge] = useState<any[]>([]);
+  const [gameType, setGameType] = useState<any[]>([]);
+  const [complexity, setComplexity] = useState<any[]>([]);
 
-  // Dropdown visibility states
-  const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
-  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
-  const [showAgeDropdown, setShowAgeDropdown] = useState(false);
-  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  const [showComplexityDropdown, setShowComplexityDropdown] = useState(false);
-
-  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+']);
-  const timeOptions = ['30', '60', '90', '120+'];
-  const ageOptions = ['6+', '8+', '10+', '12+', '14+', '16+'];
-  const typeOptions = ['Any', 'Cooperative', 'Competitive', 'Team-based'];
-  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy'];
+  // Filter options
+  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
+    .map(_ => ({ value: parseInt(_), label: _ }));
+  const timeOptions = [
+    { value: 1, min: 1, max: 30, label: '30 min or less' },
+    { value: 31, min: 31, max: 60, label: '31-60 min' },
+    { value: 61, min: 61, max: 90, label: '61-90 min' },
+    { value: 91, min: 91, max: 120, label: '91-120 min' },
+    { value: 121, min: 121, max: 999999999, label: 'More than 120 min' },
+  ];
+  const ageOptions = [
+    { value: 1, min: 1, max: 5, label: '5 and under' },
+    { value: 6, min: 6, max: 7, label: '6-7' },
+    { value: 8, min: 8, max: 9, label: '8-9' },
+    { value: 10, min: 10, max: 11, label: '10-11' },
+    { value: 12, min: 12, max: 13, label: '12-13' },
+    { value: 14, min: 14, max: 15, label: '14-15' },
+    { value: 16, min: 16, max: 999, label: '16 and up' },
+  ];
+  const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
+    .map(_ => ({ value: _, label: _ }));
+  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy']
+    .map((_, i) => ({ value: i + 1, label: _ }));
 
   useEffect(() => {
     if (isVisible) {
@@ -137,58 +148,66 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const filterGames = () => {
     let filtered = [...availableGames];
 
-    if (playerCount) {
-      const count = parseInt(playerCount === '15+' ? '15' : playerCount);
+    if (playerCount.length) {
       filtered = filtered.filter(game =>
-        game.min_players <= count && game.max_players >= count
+        playerCount.some(p => (
+          // Ignore game.min_players when 15+ is selected,
+          // since the number of actual players could be arbitrarily large.
+          (game.min_players <= p.value || p.value === 15)
+          && p.value <= game.max_players
+        ))
       );
     }
 
-    if (playTime) {
-      const maxTime = parseInt(playTime === '120+' ? '120' : playTime);
+    if (playTime.length) {
       filtered = filtered.filter(game =>
-        game.playing_time <= maxTime || (playTime === '120+' && game.playing_time >= 120)
+        playTime.some(t => {
+          const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
+          return (
+            t.min <= game.playing_time
+            && game.playing_time <= t.max
+          );
+        })
       );
     }
 
-    if (minAge) {
-      const age = parseInt(minAge.replace('+', ''));
+    if (minAge.length) {
       filtered = filtered.filter(game =>
-        !game.minAge || game.minAge <= age
+        minAge.some(a => (
+          a.min <= game.minAge
+          && game.minAge <= a.max
+        ))
       );
     }
 
-    if (gameType && gameType !== 'Any') {
-      filtered = filtered.filter(game => {
-        switch (gameType) {
-          case 'Cooperative': return game.is_cooperative;
-          case 'Competitive': return !game.is_cooperative;
-          case 'Team-based': return game.is_teambased;
-          default: return true;
-        }
-      });
+    if (gameType.length) {
+      filtered = filtered.filter(game =>
+        gameType.some(t => {
+          switch (t.value) {
+            case 'Competitive':
+              return !game.is_cooperative;
+            case 'Cooperative':
+              return game.is_cooperative;
+            case 'Team-based':
+              return game.is_teambased;
+            default:
+              return true;
+          }
+        })
+      );
     }
 
-    if (complexity) {
-      filtered = filtered.filter(game => {
-        if (!game.complexity_tier) return false;
-        switch (complexity) {
-          case 'Light': return game.complexity_tier <= 1;
-          case 'Medium Light': return game.complexity_tier <= 2;
-          case 'Medium': return game.complexity_tier <= 3;
-          case 'Medium Heavy': return game.complexity_tier <= 4;
-          case 'Heavy': return game.complexity_tier <= 5;
-          default: return true;
-        }
-      });
+    if (complexity.length) {
+      filtered = filtered.filter(game =>
+        complexity.some(c => (
+          game.complexity_tier === c.value
+        ))
+      );
     }
 
     setFilteredGames(filtered);
-    setSelectedGames(prev =>
-      prev.filter(game =>
-        filtered.some(g => g.id === game.id)
-      )
-    );
+    // Don't automatically remove selected games when filters change
+    // This prevents scroll jumping when selecting filter options
   };
 
   const handleCreatePoll = async () => {
@@ -233,12 +252,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       if (gamesError) throw gamesError;
 
       // Copy poll link to clipboard
-      const pollUrl = `${Platform.select({ web: window.location.origin, default: '' })}/poll/${poll.id}/`;
+      const pollUrl = `${window.location.origin}/poll/${poll.id}/`;
       await Clipboard.setStringAsync(pollUrl);
       Toast.show({ type: 'success', text1: 'Poll link copied to clipboard!' });
 
       // Pass pollType to onSuccess for downstream handling
-      onSuccess('single-user'); // Assuming single-user for now
+      onSuccess('single-user');
       resetForm();
     } catch (err) {
       console.error('Error creating poll:', err);
@@ -253,16 +272,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setError(null);
     setPollTitle('');
     setPollDescription('');
-    setPlayerCount('');
-    setPlayTime('');
-    setMinAge('');
-    setGameType('');
-    setComplexity('');
-    setShowPlayerDropdown(false);
-    setShowTimeDropdown(false);
-    setShowAgeDropdown(false);
-    setShowTypeDropdown(false);
-    setShowComplexityDropdown(false);
+    setPlayerCount([]);
+    setPlayTime([]);
+    setMinAge([]);
+    setGameType([]);
+    setComplexity([]);
   };
 
   const toggleGameSelection = (game: Game) => {
@@ -276,63 +290,30 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     });
   };
 
-  const closeAllDropdowns = () => {
-    setShowPlayerDropdown(false);
-    setShowTimeDropdown(false);
-    setShowAgeDropdown(false);
-    setShowTypeDropdown(false);
-    setShowComplexityDropdown(false);
+  const handlePlayerCountChange = (newValue: any) => {
+    setPlayerCount(newValue || []);
   };
 
-  const toggleDropdown = (dropdown: string) => {
-    closeAllDropdowns();
-    switch (dropdown) {
-      case 'player':
-        setShowPlayerDropdown(true);
-        break;
-      case 'time':
-        setShowTimeDropdown(true);
-        break;
-      case 'age':
-        setShowAgeDropdown(true);
-        break;
-      case 'type':
-        setShowTypeDropdown(true);
-        break;
-      case 'complexity':
-        setShowComplexityDropdown(true);
-        break;
-    }
+  const handlePlayTimeChange = (newValue: any) => {
+    setPlayTime(newValue || []);
   };
 
-  const clearFilter = (filterType: string) => {
-    switch (filterType) {
-      case 'player':
-        setPlayerCount('');
-        setShowPlayerDropdown(false);
-        break;
-      case 'time':
-        setPlayTime('');
-        setShowTimeDropdown(false);
-        break;
-      case 'age':
-        setMinAge('');
-        setShowAgeDropdown(false);
-        break;
-      case 'type':
-        setGameType('');
-        setShowTypeDropdown(false);
-        break;
-      case 'complexity':
-        setComplexity('');
-        setShowComplexityDropdown(false);
-        break;
-    }
+  const handleMinAgeChange = (newValue: any) => {
+    setMinAge(newValue || []);
   };
 
-  let content;
-  if (Platform.OS === 'web') {
-    content = (
+  const handleGameTypeChange = (newValue: any) => {
+    setGameType(newValue || []);
+  };
+
+  const handleComplexityChange = (newValue: any) => {
+    setComplexity(newValue || []);
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <View style={styles.overlay}>
       <div style={{
         maxWidth: '95vw',
         maxHeight: '80vh',
@@ -394,336 +375,79 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
             <View style={styles.filterSection}>
               <Text style={styles.label}>Filter Games</Text>
+              <Text style={styles.sublabel}>
+                Filter your collection to find the perfect games for your poll. All filters are optional.
+              </Text>
 
-              {/* Player Count Filter */}
-              <View style={styles.filterItem}>
-                <TouchableOpacity
-                  style={[styles.filterButton, playerCount ? styles.filterButtonActive : undefined]}
-                  onPress={() => {
-                    if (showPlayerDropdown && playerCount) {
-                      clearFilter('player');
-                    } else {
-                      toggleDropdown('player');
-                    }
-                  }}
-                >
-                  <View style={styles.filterButtonContent}>
-                    <Users size={20} color={playerCount ? "#ff9654" : "#666666"} />
-                    <Text style={[styles.filterButtonText, playerCount ? styles.filterButtonTextActive : undefined]}>
-                      {playerCount ? `${playerCount} players` : 'Player count'}
-                    </Text>
-                  </View>
-                  <View style={styles.filterButtonRight}>
-                    {playerCount && (
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          clearFilter('player');
-                        }}
-                        style={styles.clearButton}
-                      >
-                        <X size={16} color="#ff9654" />
-                      </TouchableOpacity>
-                    )}
-                    {showPlayerDropdown ? (
-                      <ChevronUp size={20} color="#666666" />
-                    ) : (
-                      <ChevronDown size={20} color="#666666" />
-                    )}
-                  </View>
-                </TouchableOpacity>
+              <Select
+                placeholder="Player count"
+                value={playerCount}
+                onChange={handlePlayerCountChange}
+                options={playerOptions}
+                defaultValue={[]}
+                isMulti
+                isClearable
+                isSearchable={false}
+                closeMenuOnSelect={false}
+                blurInputOnSelect={false}
+                styles={selectStyles}
+              />
 
-                {showPlayerDropdown && (
-                  <View style={styles.dropdown}>
-                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                      {playerOptions.map((option) => (
-                        <TouchableOpacity
-                          key={option}
-                          style={[
-                            styles.dropdownItem,
-                            playerCount === option && styles.dropdownItemSelected
-                          ]}
-                          onPress={() => {
-                            setPlayerCount(option);
-                            setShowPlayerDropdown(false);
-                          }}
-                        >
-                          <Text style={[
-                            styles.dropdownItemText,
-                            playerCount === option && styles.dropdownItemTextSelected
-                          ]}>
-                            {option} {option === '1' ? 'player' : 'players'}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
+              <Select
+                placeholder="Play time"
+                value={playTime}
+                onChange={handlePlayTimeChange}
+                options={timeOptions}
+                defaultValue={[]}
+                isMulti
+                isClearable
+                isSearchable={false}
+                closeMenuOnSelect={false}
+                blurInputOnSelect={false}
+                styles={selectStyles}
+              />
 
-              {/* Play Time Filter */}
-              <View style={styles.filterItem}>
-                <TouchableOpacity
-                  style={[styles.filterButton, playTime ? styles.filterButtonActive : undefined]}
-                  onPress={() => {
-                    if (showTimeDropdown && playTime) {
-                      clearFilter('time');
-                    } else {
-                      toggleDropdown('time');
-                    }
-                  }}
-                >
-                  <View style={styles.filterButtonContent}>
-                    <Clock size={20} color={playTime ? "#ff9654" : "#666666"} />
-                    <Text style={[styles.filterButtonText, playTime ? styles.filterButtonTextActive : undefined]}>
-                      {playTime ? `${playTime} minutes${playTime === '120+' ? ' or more' : ''}` : 'Play time'}
-                    </Text>
-                  </View>
-                  <View style={styles.filterButtonRight}>
-                    {playTime && (
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          clearFilter('time');
-                        }}
-                        style={styles.clearButton}
-                      >
-                        <X size={16} color="#ff9654" />
-                      </TouchableOpacity>
-                    )}
-                    {showTimeDropdown ? (
-                      <ChevronUp size={20} color="#666666" />
-                    ) : (
-                      <ChevronDown size={20} color="#666666" />
-                    )}
-                  </View>
-                </TouchableOpacity>
+              <Select
+                placeholder="Age range"
+                value={minAge}
+                onChange={handleMinAgeChange}
+                defaultValue={[]}
+                options={ageOptions}
+                isMulti
+                isClearable
+                isSearchable={false}
+                closeMenuOnSelect={false}
+                blurInputOnSelect={false}
+                styles={selectStyles}
+              />
 
-                {showTimeDropdown && (
-                  <View style={styles.dropdown}>
-                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                      {timeOptions.map((option) => (
-                        <TouchableOpacity
-                          key={option}
-                          style={[
-                            styles.dropdownItem,
-                            playTime === option && styles.dropdownItemSelected
-                          ]}
-                          onPress={() => {
-                            setPlayTime(option);
-                            setShowTimeDropdown(false);
-                          }}
-                        >
-                          <Text style={[
-                            styles.dropdownItemText,
-                            playTime === option && styles.dropdownItemTextSelected
-                          ]}>
-                            {option} minutes{option === '120+' ? ' or more' : ''}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
+              <Select
+                placeholder="Co-op / competitive"
+                value={gameType}
+                onChange={handleGameTypeChange}
+                defaultValue={[]}
+                options={typeOptions}
+                isMulti
+                isClearable
+                isSearchable={false}
+                closeMenuOnSelect={false}
+                blurInputOnSelect={false}
+                styles={selectStyles}
+              />
 
-              {/* Minimum Age Filter */}
-              <View style={styles.filterItem}>
-                <TouchableOpacity
-                  style={[styles.filterButton, minAge ? styles.filterButtonActive : undefined]}
-                  onPress={() => {
-                    if (showAgeDropdown && minAge) {
-                      clearFilter('age');
-                    } else {
-                      toggleDropdown('age');
-                    }
-                  }}
-                >
-                  <View style={styles.filterButtonContent}>
-                    <Baby size={20} color={minAge ? "#ff9654" : "#666666"} />
-                    <Text style={[styles.filterButtonText, minAge ? styles.filterButtonTextActive : undefined]}>
-                      {minAge ? `${minAge} years` : 'Youngest player age'}
-                    </Text>
-                  </View>
-                  <View style={styles.filterButtonRight}>
-                    {minAge && (
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          clearFilter('age');
-                        }}
-                        style={styles.clearButton}
-                      >
-                        <X size={16} color="#ff9654" />
-                      </TouchableOpacity>
-                    )}
-                    {showAgeDropdown ? (
-                      <ChevronUp size={20} color="#666666" />
-                    ) : (
-                      <ChevronDown size={20} color="#666666" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-
-                {showAgeDropdown && (
-                  <View style={styles.dropdown}>
-                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                      {ageOptions.map((option) => (
-                        <TouchableOpacity
-                          key={option}
-                          style={[
-                            styles.dropdownItem,
-                            minAge === option && styles.dropdownItemSelected
-                          ]}
-                          onPress={() => {
-                            setMinAge(option);
-                            setShowAgeDropdown(false);
-                          }}
-                        >
-                          <Text style={[
-                            styles.dropdownItemText,
-                            minAge === option && styles.dropdownItemTextSelected
-                          ]}>
-                            {option} years
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-              {/* Game Type Filter */}
-              <View style={styles.filterItem}>
-                <TouchableOpacity
-                  style={[styles.filterButton, gameType ? styles.filterButtonActive : undefined]}
-                  onPress={() => {
-                    if (showTypeDropdown && gameType) {
-                      clearFilter('type');
-                    } else {
-                      toggleDropdown('type');
-                    }
-                  }}
-                >
-                  <View style={styles.filterButtonContent}>
-                    <Users2 size={20} color={gameType ? "#ff9654" : "#666666"} />
-                    <Text style={[styles.filterButtonText, gameType ? styles.filterButtonTextActive : undefined]}>
-                      {gameType || 'Co-op/Competitive'}
-                    </Text>
-                  </View>
-                  <View style={styles.filterButtonRight}>
-                    {gameType && (
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          clearFilter('type');
-                        }}
-                        style={styles.clearButton}
-                      >
-                        <X size={16} color="#ff9654" />
-                      </TouchableOpacity>
-                    )}
-                    {showTypeDropdown ? (
-                      <ChevronUp size={20} color="#666666" />
-                    ) : (
-                      <ChevronDown size={20} color="#666666" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-
-                {showTypeDropdown && (
-                  <View style={styles.dropdown}>
-                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                      {typeOptions.map((option) => (
-                        <TouchableOpacity
-                          key={option}
-                          style={[
-                            styles.dropdownItem,
-                            gameType === option && styles.dropdownItemSelected
-                          ]}
-                          onPress={() => {
-                            setGameType(option);
-                            setShowTypeDropdown(false);
-                          }}
-                        >
-                          <Text style={[
-                            styles.dropdownItemText,
-                            gameType === option && styles.dropdownItemTextSelected
-                          ]}>
-                            {option}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-              {/* Complexity Filter */}
-              <View style={styles.filterItem}>
-                <TouchableOpacity
-                  style={[styles.filterButton, complexity ? styles.filterButtonActive : undefined]}
-                  onPress={() => {
-                    if (showComplexityDropdown && complexity) {
-                      clearFilter('complexity');
-                    } else {
-                      toggleDropdown('complexity');
-                    }
-                  }}
-                >
-                  <View style={styles.filterButtonContent}>
-                    <Brain size={20} color={complexity ? "#ff9654" : "#666666"} />
-                    <Text style={[styles.filterButtonText, complexity ? styles.filterButtonTextActive : undefined]}>
-                      {complexity || 'Game complexity'}
-                    </Text>
-                  </View>
-                  <View style={styles.filterButtonRight}>
-                    {complexity && (
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          clearFilter('complexity');
-                        }}
-                        style={styles.clearButton}
-                      >
-                        <X size={16} color="#ff9654" />
-                      </TouchableOpacity>
-                    )}
-                    {showComplexityDropdown ? (
-                      <ChevronUp size={20} color="#666666" />
-                    ) : (
-                      <ChevronDown size={20} color="#666666" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-
-                {showComplexityDropdown && (
-                  <View style={styles.dropdown}>
-                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                      {complexityOptions.map((option) => (
-                        <TouchableOpacity
-                          key={option}
-                          style={[
-                            styles.dropdownItem,
-                            complexity === option && styles.dropdownItemSelected
-                          ]}
-                          onPress={() => {
-                            setComplexity(option);
-                            setShowComplexityDropdown(false);
-                          }}
-                        >
-                          <Text style={[
-                            styles.dropdownItemText,
-                            complexity === option && styles.dropdownItemTextSelected
-                          ]}>
-                            {option}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
+              <Select
+                placeholder="Game complexity"
+                value={complexity}
+                onChange={handleComplexityChange}
+                defaultValue={[]}
+                options={complexityOptions}
+                isMulti
+                isClearable
+                isSearchable={false}
+                closeMenuOnSelect={false}
+                blurInputOnSelect={false}
+                styles={selectStyles}
+              />
             </View>
 
             <View style={styles.gamesSection}>
@@ -731,7 +455,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 <View style={styles.gamesHeaderLeft}>
                   <Text style={styles.label}>Select Games</Text>
                   <Text style={styles.sublabel}>
-                    {(playerCount || playTime || minAge || gameType || complexity)
+                    {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
                       ? `Games that match your filters`
                       : 'Choose games from your collection to include in the poll'}
                   </Text>
@@ -801,504 +525,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           </View>
         </View>
       </div>
-    );
-  } else {
-    content = (
-      <View style={[styles.dialog, { flex: 1, display: 'flex', flexDirection: 'column' }]}>
-        <TouchableOpacity
-          style={styles.absoluteCloseButton}
-          onPress={() => {
-            onClose();
-            resetForm();
-          }}
-          accessibilityLabel="Close"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <X size={24} color="#666666" />
-        </TouchableOpacity>
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Poll</Text>
-        </View>
-        <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.titleSection}>
-            <Text style={styles.label}>Poll Title (Optional)</Text>
-            <Text style={styles.sublabel}>
-              Customize your poll title or keep the auto-generated name
-            </Text>
-            <TextInput
-              style={styles.titleInput}
-              value={pollTitle}
-              onChangeText={setPollTitle}
-              placeholder="Enter a custom title or keep the default"
-              placeholderTextColor="#999999"
-              maxLength={100}
-            />
-          </View>
-
-          <View style={styles.descriptionSection}>
-            <Text style={styles.label}>Description (Optional)</Text>
-            <Text style={styles.sublabel}>
-              Add context, instructions, or any additional information for voters
-            </Text>
-            <TextInput
-              style={styles.descriptionInput}
-              value={pollDescription}
-              onChangeText={setPollDescription}
-              placeholder="e.g., Vote for your top 3 games, or Let's decide what to play this weekend"
-              placeholderTextColor="#999999"
-              maxLength={500}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.label}>Filter Games</Text>
-
-            {/* Player Count Filter */}
-            <View style={styles.filterItem}>
-              <TouchableOpacity
-                style={[styles.filterButton, playerCount ? styles.filterButtonActive : undefined]}
-                onPress={() => {
-                  if (showPlayerDropdown && playerCount) {
-                    clearFilter('player');
-                  } else {
-                    toggleDropdown('player');
-                  }
-                }}
-              >
-                <View style={styles.filterButtonContent}>
-                  <Users size={20} color={playerCount ? "#ff9654" : "#666666"} />
-                  <Text style={[styles.filterButtonText, playerCount ? styles.filterButtonTextActive : undefined]}>
-                    {playerCount ? `${playerCount} players` : 'Player count'}
-                  </Text>
-                </View>
-                <View style={styles.filterButtonRight}>
-                  {playerCount && (
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        clearFilter('player');
-                      }}
-                      style={styles.clearButton}
-                    >
-                      <X size={16} color="#ff9654" />
-                    </TouchableOpacity>
-                  )}
-                  {showPlayerDropdown ? (
-                    <ChevronUp size={20} color="#666666" />
-                  ) : (
-                    <ChevronDown size={20} color="#666666" />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {showPlayerDropdown && (
-                <View style={styles.dropdown}>
-                  <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                    {playerOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={[
-                          styles.dropdownItem,
-                          playerCount === option && styles.dropdownItemSelected
-                        ]}
-                        onPress={() => {
-                          setPlayerCount(option);
-                          setShowPlayerDropdown(false);
-                        }}
-                      >
-                        <Text style={[
-                          styles.dropdownItemText,
-                          playerCount === option && styles.dropdownItemTextSelected
-                        ]}>
-                          {option} {option === '1' ? 'player' : 'players'}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-
-            {/* Play Time Filter */}
-            <View style={styles.filterItem}>
-              <TouchableOpacity
-                style={[styles.filterButton, playTime ? styles.filterButtonActive : undefined]}
-                onPress={() => {
-                  if (showTimeDropdown && playTime) {
-                    clearFilter('time');
-                  } else {
-                    toggleDropdown('time');
-                  }
-                }}
-              >
-                <View style={styles.filterButtonContent}>
-                  <Clock size={20} color={playTime ? "#ff9654" : "#666666"} />
-                  <Text style={[styles.filterButtonText, playTime ? styles.filterButtonTextActive : undefined]}>
-                    {playTime ? `${playTime} minutes${playTime === '120+' ? ' or more' : ''}` : 'Play time'}
-                  </Text>
-                </View>
-                <View style={styles.filterButtonRight}>
-                  {playTime && (
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        clearFilter('time');
-                      }}
-                      style={styles.clearButton}
-                    >
-                      <X size={16} color="#ff9654" />
-                    </TouchableOpacity>
-                  )}
-                  {showTimeDropdown ? (
-                    <ChevronUp size={20} color="#666666" />
-                  ) : (
-                    <ChevronDown size={20} color="#666666" />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {showTimeDropdown && (
-                <View style={styles.dropdown}>
-                  <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                    {timeOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={[
-                          styles.dropdownItem,
-                          playTime === option && styles.dropdownItemSelected
-                        ]}
-                        onPress={() => {
-                          setPlayTime(option);
-                          setShowTimeDropdown(false);
-                        }}
-                      >
-                        <Text style={[
-                          styles.dropdownItemText,
-                          playTime === option && styles.dropdownItemTextSelected
-                        ]}>
-                          {option} minutes{option === '120+' ? ' or more' : ''}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-
-            {/* Minimum Age Filter */}
-            <View style={styles.filterItem}>
-              <TouchableOpacity
-                style={[styles.filterButton, minAge ? styles.filterButtonActive : undefined]}
-                onPress={() => {
-                  if (showAgeDropdown && minAge) {
-                    clearFilter('age');
-                  } else {
-                    toggleDropdown('age');
-                  }
-                }}
-              >
-                <View style={styles.filterButtonContent}>
-                  <Baby size={20} color={minAge ? "#ff9654" : "#666666"} />
-                  <Text style={[styles.filterButtonText, minAge ? styles.filterButtonTextActive : undefined]}>
-                    {minAge ? `${minAge} years` : 'Youngest player age'}
-                  </Text>
-                </View>
-                <View style={styles.filterButtonRight}>
-                  {minAge && (
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        clearFilter('age');
-                      }}
-                      style={styles.clearButton}
-                    >
-                      <X size={16} color="#ff9654" />
-                    </TouchableOpacity>
-                  )}
-                  {showAgeDropdown ? (
-                    <ChevronUp size={20} color="#666666" />
-                  ) : (
-                    <ChevronDown size={20} color="#666666" />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {showAgeDropdown && (
-                <View style={styles.dropdown}>
-                  <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                    {ageOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={[
-                          styles.dropdownItem,
-                          minAge === option && styles.dropdownItemSelected
-                        ]}
-                        onPress={() => {
-                          setMinAge(option);
-                          setShowAgeDropdown(false);
-                        }}
-                      >
-                        <Text style={[
-                          styles.dropdownItemText,
-                          minAge === option && styles.dropdownItemTextSelected
-                        ]}>
-                          {option} years
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-
-            {/* Game Type Filter */}
-            <View style={styles.filterItem}>
-              <TouchableOpacity
-                style={[styles.filterButton, gameType ? styles.filterButtonActive : undefined]}
-                onPress={() => {
-                  if (showTypeDropdown && gameType) {
-                    clearFilter('type');
-                  } else {
-                    toggleDropdown('type');
-                  }
-                }}
-              >
-                <View style={styles.filterButtonContent}>
-                  <Users2 size={20} color={gameType ? "#ff9654" : "#666666"} />
-                  <Text style={[styles.filterButtonText, gameType ? styles.filterButtonTextActive : undefined]}>
-                    {gameType || 'Co-op/Competitive'}
-                  </Text>
-                </View>
-                <View style={styles.filterButtonRight}>
-                  {gameType && (
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        clearFilter('type');
-                      }}
-                      style={styles.clearButton}
-                    >
-                      <X size={16} color="#ff9654" />
-                    </TouchableOpacity>
-                  )}
-                  {showTypeDropdown ? (
-                    <ChevronUp size={20} color="#666666" />
-                  ) : (
-                    <ChevronDown size={20} color="#666666" />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {showTypeDropdown && (
-                <View style={styles.dropdown}>
-                  <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                    {typeOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={[
-                          styles.dropdownItem,
-                          gameType === option && styles.dropdownItemSelected
-                        ]}
-                        onPress={() => {
-                          setGameType(option);
-                          setShowTypeDropdown(false);
-                        }}
-                      >
-                        <Text style={[
-                          styles.dropdownItemText,
-                          gameType === option && styles.dropdownItemTextSelected
-                        ]}>
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-
-            {/* Complexity Filter */}
-            <View style={styles.filterItem}>
-              <TouchableOpacity
-                style={[styles.filterButton, complexity ? styles.filterButtonActive : undefined]}
-                onPress={() => {
-                  if (showComplexityDropdown && complexity) {
-                    clearFilter('complexity');
-                  } else {
-                    toggleDropdown('complexity');
-                  }
-                }}
-              >
-                <View style={styles.filterButtonContent}>
-                  <Brain size={20} color={complexity ? "#ff9654" : "#666666"} />
-                  <Text style={[styles.filterButtonText, complexity ? styles.filterButtonTextActive : undefined]}>
-                    {complexity || 'Game complexity'}
-                  </Text>
-                </View>
-                <View style={styles.filterButtonRight}>
-                  {complexity && (
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        clearFilter('complexity');
-                      }}
-                      style={styles.clearButton}
-                    >
-                      <X size={16} color="#ff9654" />
-                    </TouchableOpacity>
-                  )}
-                  {showComplexityDropdown ? (
-                    <ChevronUp size={20} color="#666666" />
-                  ) : (
-                    <ChevronDown size={20} color="#666666" />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {showComplexityDropdown && (
-                <View style={styles.dropdown}>
-                  <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                    {complexityOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={[
-                          styles.dropdownItem,
-                          complexity === option && styles.dropdownItemSelected
-                        ]}
-                        onPress={() => {
-                          setComplexity(option);
-                          setShowComplexityDropdown(false);
-                        }}
-                      >
-                        <Text style={[
-                          styles.dropdownItemText,
-                          complexity === option && styles.dropdownItemTextSelected
-                        ]}>
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.gamesSection}>
-            <View style={styles.gamesHeader}>
-              <View style={styles.gamesHeaderLeft}>
-                <Text style={styles.label}>Select Games</Text>
-                <Text style={styles.sublabel}>
-                  {(playerCount || playTime || minAge || gameType || complexity)
-                    ? `Games that match your filters`
-                    : 'Choose games from your collection to include in the poll'}
-                </Text>
-              </View>
-              <View style={styles.gamesHeaderRight}>
-                <TouchableOpacity
-                  style={styles.selectAllButton}
-                  onPress={() => setSelectedGames([...filteredGames])}
-                >
-                  <Text style={styles.selectAllButtonText}>Select All</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.clearAllButton}
-                  onPress={() => setSelectedGames([])}
-                >
-                  <Text style={styles.clearAllButtonText}>Clear All</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {filteredGames.length === 0 ? (
-              <Text style={styles.noGamesText}>
-                No games found matching your filters
-              </Text>
-            ) : (
-              filteredGames.map(game => {
-                const isSelected = selectedGames.some(g => g.id === game.id);
-                return (
-                  <TouchableOpacity
-                    key={game.id}
-                    style={[
-                      styles.gameItem,
-                      isSelected && styles.gameItemSelected
-                    ]}
-                    onPress={() => toggleGameSelection(game)}
-                  >
-                    <View style={styles.gameInfo}>
-                      <Text style={styles.gameName}>{game.name}</Text>
-                      <Text style={styles.playerCount}>
-                        {game.min_players}-{game.max_players} players • {game.playing_time} min
-                      </Text>
-                    </View>
-                    <View style={[
-                      styles.checkbox,
-                      isSelected && styles.checkboxSelected
-                    ]}>
-                      {isSelected && (
-                        <Check size={16} color="#ffffff" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
-        </ScrollView>
-        <View style={styles.footer}>
-          {error && <Text style={styles.errorText}>{error}</Text>}
-          <TouchableOpacity
-            style={[styles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
-            onPress={handleCreatePoll}
-            disabled={loading || selectedGames.length === 0}
-          >
-            <Plus size={20} color="#fff" />
-            <Text style={styles.createButtonText}>{loading ? 'Creating...' : 'Create Poll'}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  if (Platform.OS === 'web') {
-    if (!isVisible) return null;
-    return (
-      <View style={styles.webOverlay}>
-        {content}
-      </View>
-    );
-  }
-
-  return (
-    <Modal
-      visible={isVisible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-    >
-      <TouchableWithoutFeedback onPress={() => { onClose(); resetForm(); }}>
-        <View style={styles.overlay}>
-          <Pressable style={{ flex: 1 }} onPress={() => { }} />
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-          >
-            <View style={{ width: '100%', maxWidth: screenWidth * 0.95, maxHeight: screenHeight * 0.8, flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              {content}
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+    </View>
   );
 };
+
 type Styles = {
   overlay: ViewStyle;
-  webOverlay: ViewStyle;
   dialog: ViewStyle;
   header: ViewStyle;
   closeButton: ViewStyle;
@@ -1347,25 +579,11 @@ type Styles = {
   createButtonText: TextStyle;
   scrollContent: ViewStyle;
   footer: ViewStyle;
+  absoluteCloseButton: ViewStyle;
 };
 
-const screenWidth = Dimensions.get('window').width;
-const screenHeight = Dimensions.get('window').height;
-
-const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, footer: ViewStyle }>({
+const styles = StyleSheet.create<Styles>({
   overlay: {
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    zIndex: 9999,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  webOverlay: {
     position: 'fixed',
     top: 0,
     left: 0,
@@ -1381,8 +599,8 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, foot
     backgroundColor: 'white',
     borderRadius: 12,
     width: '100%',
-    maxWidth: screenWidth * 0.95,
-    maxHeight: screenHeight * 0.8,
+    maxWidth: 800,
+    maxHeight: 600,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -1404,7 +622,7 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, foot
     borderBottomColor: '#e1e5ea',
     minHeight: 40,
     position: 'relative',
-    marginHorizontal: -20, // counteract dialog padding for full-width header
+    marginHorizontal: -20,
   },
   closeButton: {
     padding: 4,
@@ -1422,7 +640,6 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, foot
     paddingBottom: 0,
     paddingTop: 0,
     paddingHorizontal: 0,
-    // backgroundColor: 'green',
   },
   titleSection: {
     marginBottom: 20,
@@ -1472,6 +689,8 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, foot
   filterSection: {
     marginBottom: 20,
     width: '100%',
+    position: 'relative',
+    zIndex: 1000,
   },
   filterItem: {
     marginBottom: 12,
@@ -1553,7 +772,6 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, foot
     width: '100%',
     marginBottom: 0,
     paddingBottom: 0,
-    //backgroundColor: 'red'
   },
   gamesHeader: {
     flexDirection: 'row',
@@ -1657,23 +875,23 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, foot
     justifyContent: 'center',
     backgroundColor: '#ff9654',
     padding: 13,
-    paddingRight: 16,// 20% less than 16
-    margin: 16, // 20% less than 20
-    borderRadius: 10, // 20% less than 12
-    gap: 3, // 20% less than 8
+    paddingRight: 16,
+    margin: 16,
+    borderRadius: 10,
+    gap: 3,
   },
   createButtonDisabled: {
     opacity: 0.7,
   },
   createButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 13, // 20% less than 16
+    fontSize: 13,
     color: '#ffffff',
   },
   absoluteCloseButton: {
     position: 'absolute',
-    top: 26, // match header padding, shifted down 2px
-    right: 20, // match header padding
+    top: 26,
+    right: 20,
     zIndex: 100,
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 16,
@@ -1685,9 +903,9 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, foot
   footer: {
     paddingTop: 0,
     paddingBottom: 0,
-    paddingLeft: 14, // 30% less than 20
-    paddingRight: 14, // 30% less than 20
-    minHeight: 30, // add a minHeight to shrink the container
+    paddingLeft: 14,
+    paddingRight: 14,
+    minHeight: 30,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e1e5ea',
@@ -1696,3 +914,70 @@ const styles = StyleSheet.create<Styles & { absoluteCloseButton: ViewStyle, foot
     zIndex: 10,
   },
 });
+
+const selectStyles = {
+  control: (baseStyles: any, state: any) => {
+    return {
+      ...baseStyles,
+      fontFamily: 'Poppins-Regular',
+      fontSize: 16,
+      borderColor: '#e1e5ea',
+      borderRadius: 12,
+      minHeight: 48,
+      boxShadow: 'none',
+      '&:hover': {
+        borderColor: '#ff9654',
+      },
+    }
+  },
+  container: (baseStyles: any, state: any) => ({
+    ...baseStyles,
+    marginBottom: 12,
+  }),
+  menu: (baseStyles: any, state: any) => ({
+    ...baseStyles,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 9999,
+    position: 'absolute',
+    maxHeight: 'none',
+    overflow: 'hidden',
+  }),
+  menuList: (baseStyles: any, state: any) => ({
+    ...baseStyles,
+    maxHeight: 200,
+    overflow: 'auto',
+  }),
+  multiValueLabel: (baseStyles: any, state: any) => ({
+    ...baseStyles,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+  }),
+  noOptionsMessage: (baseStyles: any, state: any) => ({
+    ...baseStyles,
+    fontFamily: 'Poppins-Regular',
+  }),
+  option: (baseStyles: any, state: any) => ({
+    ...baseStyles,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: state.isSelected ? '#ff9654' : '#333333',
+    backgroundColor: state.isSelected ? '#fff5ef' : 'transparent',
+    '&:hover': {
+      backgroundColor: '#fff5ef',
+    },
+  }),
+  placeholder: (baseStyles: any, state: any) => ({
+    ...baseStyles,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#999999',
+  }),
+};
