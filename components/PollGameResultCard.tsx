@@ -89,7 +89,7 @@ export function GameResultCard({ game }: { game: PollGame }) {
                     'voteType1': Laugh,
                     'voteType2': SmilePlus,
                     'voteType3': Smile,
-                    'voteType4': HelpCircle,
+                    // 'voteType4': HelpCircle,
                     'voteType5': ThumbsDown,
                   };
                   const DirectIcon = iconMap[option.value as keyof typeof iconMap];
