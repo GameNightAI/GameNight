@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dimensions, Platform } from 'react-native';
 
 export interface DeviceType {
@@ -10,34 +10,45 @@ export interface DeviceType {
   platform: string;
 }
 
-export function useDeviceType(): DeviceType {
-  const [deviceType, setDeviceType] = useState<DeviceType>(() => {
-    const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-    const platform = Platform.OS;
+// Debounce function to limit how often we update dimensions
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
-    return {
-      isMobile: screenWidth < 768 || platform !== 'web',
-      isTablet: screenWidth >= 768 && screenWidth < 1024 && platform === 'web',
-      isDesktop: screenWidth >= 1024 && platform === 'web',
-      screenWidth,
-      screenHeight,
-      platform,
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
     };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+export function useDeviceType(): DeviceType {
+  const [dimensions, setDimensions] = useState(() => {
+    const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+    return { screenWidth, screenHeight };
   });
+
+  // Debounce the dimensions to prevent excessive updates
+  const debouncedDimensions = useDebounce(dimensions, 150); // 150ms debounce
+
+  const deviceType: DeviceType = {
+    isMobile: debouncedDimensions.screenWidth < 768 || Platform.OS !== 'web',
+    isTablet: debouncedDimensions.screenWidth >= 768 && debouncedDimensions.screenWidth < 1024 && Platform.OS === 'web',
+    isDesktop: debouncedDimensions.screenWidth >= 1024 && Platform.OS === 'web',
+    screenWidth: debouncedDimensions.screenWidth,
+    screenHeight: debouncedDimensions.screenHeight,
+    platform: Platform.OS,
+  };
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
       const { width: screenWidth, height: screenHeight } = window;
-      const platform = Platform.OS;
-
-      setDeviceType({
-        isMobile: screenWidth < 768 || platform !== 'web',
-        isTablet: screenWidth >= 768 && screenWidth < 1024 && platform === 'web',
-        isDesktop: screenWidth >= 1024 && platform === 'web',
-        screenWidth,
-        screenHeight,
-        platform,
-      });
+      setDimensions({ screenWidth, screenHeight });
     });
 
     return () => subscription?.remove();

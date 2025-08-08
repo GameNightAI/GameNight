@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable } from 'react-native';
+import { useDebouncedWindowDimensions } from '@/hooks/useDebouncedWindowDimensions';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users, Edit } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -48,7 +49,7 @@ export default function PollsScreen() {
   const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const { width, height } = useWindowDimensions();
+  const { width, height } = useDebouncedWindowDimensions();
   const isMobile = width < 768;
   const isSmallMobile = width < 380 || height < 700;
   const [openResultsPollId, setOpenResultsPollId] = useState<string | null>(null);
@@ -56,45 +57,8 @@ export default function PollsScreen() {
   const subscriptionRef = useRef<any>(null);
   const [preselectedGames, setPreselectedGames] = useState<Game[] | null>(null);
 
-  useEffect(() => {
-    loadPolls();
-  }, []);
-
-  // Handle refresh parameter from URL
-  useEffect(() => {
-    if (params.refresh === 'true') {
-      loadPolls();
-      // Clear the refresh parameter from URL
-      router.setParams({ refresh: undefined });
-    }
-  }, [params.refresh]);
-
-  // --- Real-time vote listening subscription ---
-  useEffect(() => {
-    // Subscribe to new votes for any poll
-    const channel = supabase
-      .channel('votes-listener')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'votes',
-        },
-        (payload) => {
-          setNewVotes(true);
-        }
-      )
-      .subscribe();
-    subscriptionRef.current = channel;
-    return () => {
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-      }
-    };
-  }, []);
-
-  const loadPolls = async () => {
+  // Memoize the loadPolls function to prevent unnecessary re-creations
+  const loadPolls = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -195,9 +159,73 @@ export default function PollsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
-  const handleShare = async (pollId: string) => {
+  useEffect(() => {
+    loadPolls();
+  }, [loadPolls]);
+
+  // Handle refresh parameter from URL
+  useEffect(() => {
+    if (params.refresh === 'true') {
+      loadPolls();
+      // Clear the refresh parameter from URL
+      router.setParams({ refresh: undefined });
+    }
+  }, [params.refresh, loadPolls, router]);
+
+  // --- Real-time vote listening subscription ---
+  useEffect(() => {
+    // Subscribe to new votes for any poll
+    const channel = supabase
+      .channel('votes-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+        },
+        (payload) => {
+          setNewVotes(true);
+        }
+      )
+      .subscribe();
+    subscriptionRef.current = channel;
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
+  }, []);
+
+  // Memoize the scaled style function to prevent recalculation on every render
+  const getScaledStyle = useCallback((baseStyle: any, scale: number = 1) => {
+    if (!isSmallMobile) return baseStyle;
+    return {
+      ...baseStyle,
+      fontSize: baseStyle.fontSize ? baseStyle.fontSize * scale : undefined,
+      paddingHorizontal: baseStyle.paddingHorizontal ? baseStyle.paddingHorizontal * scale : undefined,
+      paddingVertical: baseStyle.paddingVertical ? baseStyle.paddingVertical * scale : undefined,
+      padding: baseStyle.padding ? baseStyle.padding * scale : undefined,
+      marginBottom: baseStyle.marginBottom ? baseStyle.marginBottom * scale : undefined,
+      marginTop: baseStyle.marginTop ? baseStyle.marginTop * scale : undefined,
+      marginLeft: baseStyle.marginLeft ? baseStyle.marginLeft * scale : undefined,
+      marginRight: baseStyle.marginRight ? baseStyle.marginRight * scale : undefined,
+      gap: baseStyle.gap ? baseStyle.gap * scale : undefined,
+      borderRadius: baseStyle.borderRadius ? baseStyle.borderRadius * scale : undefined,
+      minWidth: baseStyle.minWidth ? baseStyle.minWidth * scale : undefined,
+      width: baseStyle.width ? baseStyle.width * scale : undefined,
+      height: baseStyle.height ? baseStyle.height * scale : undefined,
+    };
+  }, [isSmallMobile]);
+
+  // Memoize current polls to prevent unnecessary re-renders
+  const currentPolls = useMemo(() => {
+    return activeTab === 'all' ? allPolls : activeTab === 'created' ? polls : otherUsersPolls;
+  }, [activeTab, allPolls, polls, otherUsersPolls]);
+
+  const handleShare = useCallback(async (pollId: string) => {
     // Use a proper base URL for React Native
     const baseUrl = Platform.select({
       web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
@@ -247,9 +275,9 @@ export default function PollsScreen() {
         alert(`Share this link: ${shareUrl}`);
       }
     }
-  };
+  }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!pollToDelete) return;
 
     try {
@@ -266,46 +294,15 @@ export default function PollsScreen() {
       console.error('Error deleting poll:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete poll');
     }
-  };
+  }, [pollToDelete, loadPolls]);
 
-  const handleEditPoll = async (poll: Poll) => {
+  const handleEditPoll = useCallback((poll: Poll) => {
     setPollToEdit(poll);
     setEditModalVisible(true);
-  };
+  }, []);
 
-  /* const handleDuplicatePoll = async (pollId: string) => {
-     try {
-      //  Get poll games
-       const { data: pollGames, error: pollGamesError } = await supabase
-         .from('poll_games')
-         .select('game_id')
-         .eq('poll_id', pollId);
-       if (pollGamesError) throw pollGamesError;
-       if (!pollGames || pollGames.length === 0) {
-         setError('No games found in poll.');
-         return;
-       }
-       const gameIds = pollGames.map(pg => pg.game_id);
-      //  Get game details
-       const { data: gamesData, error: gamesError } = await supabase
-         .from('games')
-         .select('*')
-         .in('id', gameIds);
-       if (gamesError) throw gamesError;
-       if (!gamesData || gamesData.length === 0) {
-         setError('No game details found.');
-         return;
-       }
-       setPreselectedGames(gamesData);
-       setCreateModalVisible(true);
-     } catch (err) {
-       console.error('Error duplicating poll:', err);
-       setError(err instanceof Error ? err.message : 'Failed to duplicate poll');
-     }
-   }; */
-
-  // Helper to render poll results dropdown
-  function PollResultsDropdown({ pollId }: { pollId: string }) {
+  // Helper to render poll results dropdown - memoized to prevent unnecessary re-renders
+  const PollResultsDropdown = useCallback(({ pollId }: { pollId: string }) => {
     const { results, loading, error } = usePollResults(pollId);
     if (loading) return <LoadingState />;
     if (error) return <ErrorState message={error} onRetry={() => { }} />;
@@ -331,7 +328,7 @@ export default function PollsScreen() {
         onViewDetails={() => router.push({ pathname: '/poll/[id]/results', params: { id: pollId } })}
       />
     );
-  }
+  }, [router]);
 
   if (loading) {
     return <LoadingState />;
@@ -341,30 +338,8 @@ export default function PollsScreen() {
     return <ErrorState message={error} onRetry={loadPolls} />;
   }
 
-  const currentPolls = activeTab === 'all' ? allPolls : activeTab === 'created' ? polls : otherUsersPolls;
   const isCreator = activeTab === 'created';
   // userId is managed by useState and set in useEffect
-
-  // Dynamic styles for small mobile screens
-  const getScaledStyle = (baseStyle: any, scale: number = 1) => {
-    if (!isSmallMobile) return baseStyle;
-    return {
-      ...baseStyle,
-      fontSize: baseStyle.fontSize ? baseStyle.fontSize * scale : undefined,
-      paddingHorizontal: baseStyle.paddingHorizontal ? baseStyle.paddingHorizontal * scale : undefined,
-      paddingVertical: baseStyle.paddingVertical ? baseStyle.paddingVertical * scale : undefined,
-      padding: baseStyle.padding ? baseStyle.padding * scale : undefined,
-      marginBottom: baseStyle.marginBottom ? baseStyle.marginBottom * scale : undefined,
-      marginTop: baseStyle.marginTop ? baseStyle.marginTop * scale : undefined,
-      marginLeft: baseStyle.marginLeft ? baseStyle.marginLeft * scale : undefined,
-      marginRight: baseStyle.marginRight ? baseStyle.marginRight * scale : undefined,
-      gap: baseStyle.gap ? baseStyle.gap * scale : undefined,
-      borderRadius: baseStyle.borderRadius ? baseStyle.borderRadius * scale : undefined,
-      minWidth: baseStyle.minWidth ? baseStyle.minWidth * scale : undefined,
-      width: baseStyle.width ? baseStyle.width * scale : undefined,
-      height: baseStyle.height ? baseStyle.height * scale : undefined,
-    };
-  };
 
   return (
     <View style={styles.container}>
