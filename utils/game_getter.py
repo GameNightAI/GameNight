@@ -1,3 +1,4 @@
+import os
 import csv
 import urllib.request
 import urllib.error
@@ -5,12 +6,14 @@ import xml.etree.ElementTree as ET
 import itertools
 import time
 import string
+from supabase import create_client
 # from bs4 import BeautifulSoup
 # from optparse import OptionParser
 
 CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks'
 INPUT_PATH = 'boardgames_ranks.csv'
 OUTPUT_PATH = 'output.csv'
+EXPANSION_OUTPUT_PATH = 'expansion_output.csv'
 SLEEP_TIME = 10 # seconds to wait after receiving a urllib.request error
 DASH = '–' # NOT the hyphen character on the keyboard
 DESCRIPTION_NCHARS = 0 # number of description characters to store in the output, since we currently have a database size limit
@@ -48,6 +51,12 @@ def parse_xml(text):
             best_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+')).replace(DASH, '-')
           elif result.attrib['name'] == 'recommmendedwith':
             rec_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+')).replace(DASH, '-')
+    # Don't get expansions of expansions, just of base games
+    expansions = []
+    if game.attrib['type'] == 'boardgame':
+      for link in game.findall('link'):
+        if link.attrib['type'] == 'boardgameexpansion':
+          expansions.append({'id': link.attrib['id'], 'name': link.attrib['value']})
             
     row = dict(
       id = game.attrib['id'],
@@ -65,10 +74,11 @@ def parse_xml(text):
       description = game.findtext('description', default='')[:DESCRIPTION_NCHARS],
       is_cooperative = has_taxonomy(game, 'boardgamemechanic', 'Cooperative Game'),
       is_teambased = has_taxonomy(game, 'boardgamemechanic', 'Team-Based Game'),
-      is_legacy = has_taxonomy(game, 'boardgamemechanic', 'Legacy Game'),
-      is_childrens = has_taxonomy(game, 'boardgamecategory', "Children's Game"),
+      # is_legacy = has_taxonomy(game, 'boardgamemechanic', 'Legacy Game'),
+      # is_childrens = has_taxonomy(game, 'boardgamecategory', "Children's Game"),
       min_age = int(game.find('minage').attrib['value']) or '',
-      suggested_playerage = suggested_playerage
+      suggested_playerage = suggested_playerage,
+      expansions = expansions
     )
     
     if INCLUDE_BGG_TAXONOMY:
@@ -83,14 +93,33 @@ def urllib_error_handler(err):
   print(f'Waiting {SLEEP_TIME} seconds before resubmitting request...')
   time.sleep(SLEEP_TIME)
 
+def get_game_cols():
+  supabase = create_client(
+    os.environ.get('SUPABASE_URL'),
+    os.environ.get('SUPABASE_KEY')
+  )
+
+  response = (
+    supabase.table('games')
+      .select('*')
+      .limit(1)
+      .execute()
+  )
+
+  return response.data[0].keys()
+
 def main():
   
   # parser = OptionParser()
   # parser.add_option()
+  game_cols = get_game_cols()
 
   reader = csv.DictReader(open(INPUT_PATH, 'r', encoding='utf-8'))
-  writer = csv.DictWriter(open(OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=reader.fieldnames)
+  writer = csv.DictWriter(open(OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=game_cols, extrasaction='ignore')
   writer.writeheader()
+  
+  expansion_writer = csv.DictWriter(open(EXPANSION_OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=['base_id', 'base_name', 'expansion_id', 'expansion_name'])
+  expansion_writer.writeheader()
   
   # Make API calls in batches of 20 games at a time
   for batch in itertools.batched(reader, 20):
@@ -109,7 +138,9 @@ def main():
       try:
         response = urllib.request.urlopen(url)
       except urllib.error.HTTPError as err:
-        if err.code == 429: # Too many requests
+        # 429: Too many requests
+        # 502: Bad gateway
+        if err.code in [429, 502]: 
           urllib_error_handler(err)
         else:
           raise
@@ -121,8 +152,20 @@ def main():
     for g in parse_xml(response.read()):
       game = games[g['id']]
       game.update(g)
+      # We want 0 to show up as NULL in the database for sorting/filtering purposes
+      game['year_published'] = game['yearpublished']
       print(game)
       writer.writerow(game)
       
+      for e in game['expansions']:
+        expansion_writer.writerow({
+          'base_id': game['id'],
+          'base_name': game['name'],
+          'expansion_id': e['id'],
+          'expansion_name': e['name']
+        })
+      
+      
 if __name__ == '__main__':
+
   main()
