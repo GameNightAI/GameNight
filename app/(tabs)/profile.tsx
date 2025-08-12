@@ -87,7 +87,7 @@ export default function ProfileScreen() {
             <TouchableOpacity onPress={() => Linking.openURL('mailto:GameNyteApp@gmail.com')}>
               <Mail size={64} color="#666666" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => Linking.openURL('https://discord.gg/QdVWfscN')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://discord.gg/FPX4hatRK2')}>
               <Image
                 source={require('@/assets/images/discord_symbol.svg')}
                 resizeMode="contain"
