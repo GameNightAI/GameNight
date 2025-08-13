@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import * as Clipboard from 'expo-clipboard';
@@ -12,7 +12,7 @@ import { isSafari } from '@/utils/safari-polyfill';
 interface CreatePollModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSuccess: (pollType: 'single-user' | 'multi-user-device') => void;
+  onSuccess: (pollType: 'single-user' | 'multi-user-device' | 'add-games', addedGames?: Game[]) => void;
   preselectedGames?: Game[];
   initialFilters?: {
     playerCount: any[];
@@ -21,6 +21,7 @@ interface CreatePollModalProps {
     gameType: any[];
     complexity: any[];
   };
+  isAddingToExistingPoll?: boolean;
 }
 
 export const CreatePollModal: React.FC<CreatePollModalProps> = ({
@@ -29,6 +30,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   onSuccess,
   preselectedGames,
   initialFilters,
+  isAddingToExistingPoll = false,
 }) => {
   const deviceType = useDeviceType();
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
@@ -189,10 +191,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       filtered = filtered.filter(game =>
         playTime.some(t => {
           const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
-          return (
-            t.min <= game.playing_time
-            && game.playing_time <= t.max
-          );
+          return time && t.min <= time && time <= t.max;
         })
       );
     }
@@ -234,6 +233,39 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setFilteredGames(filtered);
     // Don't automatically remove selected games when filters change
     // This prevents scroll jumping when selecting filter options
+  };
+
+  const handleAddGames = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (selectedGames.length === 0) {
+        setError('Please select at least one game to add.');
+        setLoading(false);
+        return;
+      }
+
+      // Filter out games that are already in the poll (preselectedGames)
+      const newGames = selectedGames.filter(game =>
+        !preselectedGames?.some(preselected => preselected.id === game.id)
+      );
+
+      if (newGames.length === 0) {
+        setError('All selected games are already in the poll.');
+        setLoading(false);
+        return;
+      }
+
+      // Return the new games to the parent component
+      onSuccess('add-games', newGames);
+      resetForm();
+    } catch (err) {
+      console.error('Error adding games:', err);
+      setError(err instanceof Error ? err.message : 'Failed to add games');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreatePoll = async () => {
@@ -416,6 +448,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         width: isMobile ? 20 : 24,
         height: isMobile ? 20 : 24,
       },
+      absoluteBackButton: {
+        ...styles.absoluteBackButton,
+        top: isMobile ? 20 : 26,
+        left: isMobile ? 16 : 20,
+        padding: isMobile ? 4 : 6,
+      },
       absoluteCloseButton: {
         ...styles.absoluteCloseButton,
         top: isMobile ? 20 : 26,
@@ -547,6 +585,19 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           maxWidth: isMobile ? '100%' : undefined,
           maxHeight: isMobile ? '100%' : undefined
         }]}>
+          {isAddingToExistingPoll && (
+            <TouchableOpacity
+              style={responsiveStyles.absoluteBackButton}
+              onPress={() => {
+                onClose();
+                resetForm();
+              }}
+              accessibilityLabel="Back to Edit Poll"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <ArrowLeft size={isMobile ? 20 : 24} color="#666666" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={responsiveStyles.absoluteCloseButton}
             onPress={() => {
@@ -559,50 +610,59 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <X size={isMobile ? 20 : 24} color="#666666" />
           </TouchableOpacity>
           <View style={styles.header}>
-            <Text style={responsiveStyles.title}>Create Poll</Text>
+            <Text style={responsiveStyles.title}>
+              {isAddingToExistingPoll ? 'Add More Games' : 'Create Poll'}
+            </Text>
           </View>
           <ScrollView
             style={{ flex: 1, minHeight: 0 }}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={!isMobile}
           >
-            <View style={styles.titleSection}>
-              <Text style={responsiveStyles.label}>Poll Title (Optional)</Text>
-              <Text style={responsiveStyles.sublabel}>
-                Customize your poll title or keep the auto-generated name
-              </Text>
-              <TextInput
-                style={responsiveStyles.titleInput}
-                value={pollTitle}
-                onChangeText={setPollTitle}
-                placeholder="Enter a custom title or keep the default"
-                placeholderTextColor="#999999"
-                maxLength={100}
-              />
-            </View>
+            {!isAddingToExistingPoll && (
+              <>
+                <View style={styles.titleSection}>
+                  <Text style={responsiveStyles.label}>Poll Title (Optional)</Text>
+                  <Text style={responsiveStyles.sublabel}>
+                    Customize your poll title or keep the auto-generated name
+                  </Text>
+                  <TextInput
+                    style={responsiveStyles.titleInput}
+                    value={pollTitle}
+                    onChangeText={setPollTitle}
+                    placeholder="Enter a custom title or keep the default"
+                    placeholderTextColor="#999999"
+                    maxLength={100}
+                  />
+                </View>
 
-            <View style={styles.descriptionSection}>
-              <Text style={responsiveStyles.label}>Description (Optional)</Text>
-              <Text style={responsiveStyles.sublabel}>
-                Add context, instructions, or any additional information for voters
-              </Text>
-              <TextInput
-                style={responsiveStyles.descriptionInput}
-                value={pollDescription}
-                onChangeText={setPollDescription}
-                placeholder="e.g., Vote for your top 3 games, or Let's decide what to play this weekend"
-                placeholderTextColor="#999999"
-                maxLength={500}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-            </View>
+                <View style={styles.descriptionSection}>
+                  <Text style={responsiveStyles.label}>Description (Optional)</Text>
+                  <Text style={responsiveStyles.sublabel}>
+                    Add context, instructions, or any additional information for voters
+                  </Text>
+                  <TextInput
+                    style={responsiveStyles.descriptionInput}
+                    value={pollDescription}
+                    onChangeText={setPollDescription}
+                    placeholder="e.g., Vote for your top 3 games, or Let's decide what to play this weekend"
+                    placeholderTextColor="#999999"
+                    maxLength={500}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+              </>
+            )}
 
             <View style={styles.filterSection}>
               <Text style={responsiveStyles.label}>Filter Games</Text>
               <Text style={responsiveStyles.sublabel}>
-                Filter your collection to find the perfect games for your poll. All filters are optional.
+                {isAddingToExistingPoll
+                  ? 'Filter your collection to find additional games to add to the poll. All filters are optional.'
+                  : 'Filter your collection to find the perfect games for your poll. All filters are optional.'
+                }
               </Text>
 
               <Select
@@ -683,7 +743,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   <Text style={responsiveStyles.sublabel}>
                     {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
                       ? `Games that match your filters`
-                      : 'Choose games from your collection to include in the poll'}
+                      : isAddingToExistingPoll
+                        ? 'Choose additional games from your collection to add to the poll'
+                        : 'Choose games from your collection to include in the poll'}
                   </Text>
                 </View>
                 <View style={styles.gamesHeaderRight}>
@@ -721,7 +783,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                       <View style={styles.gameInfo}>
                         <Text style={responsiveStyles.gameName}>{game.name}</Text>
                         <Text style={responsiveStyles.playerCount}>
-                          {game.min_players}-{game.max_players} players • {game.playing_time} min
+                          {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
                         </Text>
                       </View>
                       <View style={[
@@ -742,11 +804,13 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             {error && <Text style={styles.errorText}>{error}</Text>}
             <TouchableOpacity
               style={[responsiveStyles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
-              onPress={handleCreatePoll}
+              onPress={isAddingToExistingPoll ? handleAddGames : handleCreatePoll}
               disabled={loading || selectedGames.length === 0}
             >
               <Plus size={isMobile ? 18 : 20} color="#fff" />
-              <Text style={responsiveStyles.createButtonText}>{loading ? 'Creating...' : 'Create Poll'}</Text>
+              <Text style={responsiveStyles.createButtonText}>
+                {loading ? (isAddingToExistingPoll ? 'Adding...' : 'Creating...') : (isAddingToExistingPoll ? 'Add Games' : 'Create Poll')}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -805,6 +869,7 @@ type Styles = {
   createButtonText: TextStyle;
   scrollContent: ViewStyle;
   footer: ViewStyle;
+  absoluteBackButton: ViewStyle;
   absoluteCloseButton: ViewStyle;
 };
 
@@ -912,6 +977,7 @@ const styles = StyleSheet.create<Styles>({
   },
   filterSection: {
     marginBottom: Platform.OS === 'web' ? 20 : 16,
+    marginTop: Platform.OS === 'web' ? 10 : 8,
     width: '100%',
     position: 'relative',
     zIndex: 1000,
@@ -1113,6 +1179,18 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-SemiBold',
     fontSize: Platform.OS === 'web' ? 13 : 12,
     color: '#ffffff',
+  },
+  absoluteBackButton: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 26 : 20,
+    left: Platform.OS === 'web' ? 20 : 16,
+    zIndex: 100,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: Platform.OS === 'web' ? 16 : 12,
+    padding: Platform.OS === 'web' ? 6 : 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#1d4ed8',
   },
   absoluteCloseButton: {
     position: 'absolute',

@@ -95,6 +95,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
       ...styles.buttonRow,
       flexDirection: (isMobile ? 'column' : 'row') as 'row' | 'column',
       gap: isMobile ? 8 : 12,
+      width: '100%' as any,
     },
   };
 
@@ -183,9 +184,11 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
       }
       setSuccessMessage(message);
 
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccessMessage(null), 5000);
-      onClose();
+      // Show success message for 3 seconds before closing
+      setTimeout(() => {
+        setSuccessMessage(null);
+        onClose();
+      }, 3000);
     } catch (err) {
       console.error('Error adding games to collection:', err);
       setAddError(err instanceof Error ? err.message : 'Failed to add games to collection');
@@ -305,6 +308,12 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
       setHasQueried(true);
       setLoadingDatabase(true);
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoadingDatabase(false);
+          return;
+        }
+
         const searchPromises = parsedBoardGames.map(async (detectedGame: any) => {
           const detectedTitle = detectedGame.title;
 
@@ -346,12 +355,26 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
 
           const bestMatch = fuzzyMatches?.[0];
 
+          // Check if the game is already in the user's collection
+          let inCollection = false;
+          if (bestMatch?.game?.id) {
+            const { data: collectionCheck } = await supabase
+              .from('collections')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('bgg_game_id', bestMatch.game.id)
+              .single();
+
+            inCollection = !!collectionCheck;
+          }
+
           return {
             detected: detectedGame,
             fuzzyMatches: fuzzyMatches || [],
             bestMatch: bestMatch || null,
             inDatabase: !!bestMatch,
             gameData: bestMatch?.game || null,
+            inCollection: inCollection,
           };
         });
 
@@ -389,35 +412,36 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
-        <View style={styles.resultsSection}>
-          {loadingDatabase && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#1a2b5f" />
-              <Text style={styles.loadingText}>Searching database for matches...</Text>
-            </View>
-          )}
+      <View style={styles.contentContainer}>
+        {loadingDatabase && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1a2b5f" />
+            <Text style={styles.loadingText}>Searching database for matches...</Text>
+          </View>
+        )}
 
-          {!loadingDatabase && parsedBoardGames && parsedBoardGames.length > 0 && (
-            <View style={styles.boardGamesSection}>
-              <Text style={styles.sectionTitle}>Detected Games ({parsedBoardGames.length} found)</Text>
+        {!loadingDatabase && parsedBoardGames && parsedBoardGames.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Detected Games ({parsedBoardGames.length} found)</Text>
 
+            <ScrollView style={styles.gamesScrollView} showsVerticalScrollIndicator={true}>
               {isMobile ? (
                 // Mobile card layout
-                // console.log('Using mobile layout, screen width:', Dimensions.get('window').width)
                 <View style={styles.mobileGameList}>
                   {parsedBoardGames.map((game: any, index: number) => {
                     const comparison = databaseResults?.find(
                       (comp: any) => comp.detected.bgg_id === game.bgg_id
                     );
                     const isSelected = selectedGames.has(game.bgg_id);
+                    const isInCollection = comparison?.inCollection || false;
 
                     return (
-                      <View key={index} style={styles.mobileGameCard}>
+                      <View key={index} style={[styles.mobileGameCard, isInCollection && styles.gameAlreadyInCollection]}>
                         <View style={styles.mobileCardContent}>
                           <TouchableOpacity
                             style={[styles.mobileCheckbox, isSelected && styles.checkboxSelected]}
                             onPress={() => handleGameSelection(game.bgg_id)}
+                            disabled={isInCollection}
                           >
                             {isSelected && <Check size={12} color="#fff" />}
                           </TouchableOpacity>
@@ -430,7 +454,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
                               >
                                 <Image
                                   source={{ uri: comparison.gameData.image_url }}
-                                  style={styles.mobileGameThumbnail}
+                                  style={[styles.mobileGameThumbnail, isInCollection && styles.greyedOutImage]}
                                   resizeMode="cover"
                                 />
                               </TouchableOpacity>
@@ -443,9 +467,14 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
 
                           <View style={styles.mobileGameInfo}>
                             {comparison && comparison.gameData ? (
-                              <Text style={styles.mobileDatabaseTitle}>{comparison.gameData.name}</Text>
+                              <Text style={[styles.mobileDatabaseTitle, isInCollection && styles.greyedOutText]}>
+                                {comparison.gameData.name}
+                              </Text>
                             ) : (
                               <Text style={styles.mobileStatusText}>Not in database</Text>
+                            )}
+                            {isInCollection && (
+                              <Text style={styles.alreadyInCollectionText}>Already in collection</Text>
                             )}
                           </View>
                         </View>
@@ -455,7 +484,6 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
                 </View>
               ) : (
                 // Desktop table layout
-                // console.log('Using desktop layout, screen width:', Dimensions.get('window').width)
                 <View style={styles.comparisonTable}>
                   <View style={styles.tableHeader}>
                     <View style={styles.checkboxCell}>
@@ -474,13 +502,15 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
                       (comp: any) => comp.detected.bgg_id === game.bgg_id
                     );
                     const isSelected = selectedGames.has(game.bgg_id);
+                    const isInCollection = comparison?.inCollection || false;
 
                     return (
-                      <View key={index} style={styles.tableRow}>
+                      <View key={index} style={[styles.tableRow, isInCollection && styles.gameAlreadyInCollection]}>
                         <View style={styles.checkboxCell}>
                           <TouchableOpacity
                             style={[styles.checkbox, isSelected && styles.checkboxSelected]}
                             onPress={() => handleGameSelection(game.bgg_id)}
+                            disabled={isInCollection}
                           >
                             {isSelected && <Check size={12} color="#fff" />}
                           </TouchableOpacity>
@@ -493,7 +523,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
                             >
                               <Image
                                 source={{ uri: comparison.gameData.image_url }}
-                                style={styles.gameThumbnail}
+                                style={[styles.gameThumbnail, isInCollection && styles.greyedOutImage]}
                                 resizeMode="cover"
                               />
                             </TouchableOpacity>
@@ -505,9 +535,14 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
                         </View>
                         <View style={styles.databaseGameCell}>
                           {comparison && comparison.gameData ? (
-                            <Text style={styles.databaseGameTitle}>{comparison.gameData.name}</Text>
+                            <Text style={[styles.databaseGameTitle, isInCollection && styles.greyedOutText]}>
+                              {comparison.gameData.name}
+                            </Text>
                           ) : (
                             <Text style={styles.statusTextUnknown}>Not in database</Text>
+                          )}
+                          {isInCollection && (
+                            <Text style={styles.alreadyInCollectionText}>Already in collection</Text>
                           )}
                         </View>
                       </View>
@@ -515,52 +550,54 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
                   })}
                 </View>
               )}
+            </ScrollView>
+          </>
+        )}
 
-              <View style={styles.addToCollectionSection}>
-                <View style={responsiveStyles.buttonRow}>
-                  <TouchableOpacity
-                    style={[styles.addToCollectionButton, addingToCollection && { opacity: 0.7 }]}
-                    onPress={handleAddSelectedToCollection}
-                    disabled={addingToCollection}
-                  >
-                    {addingToCollection ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text style={styles.addToCollectionButtonText}>
-                        Add Game{selectedGames.size !== 1 ? 's' : ''} to Collection
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+        {parsedBoardGames && parsedBoardGames.length === 0 && (
+          <View style={styles.resultCard}>
+            <Text style={styles.resultText}>No board games detected in the image.</Text>
+          </View>
+        )}
 
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={onBack}
-                  >
-                    <Text style={styles.cancelButtonText}>Cancel Upload</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {showNoSelectionWarning && (
-                  <Text style={styles.warningText}>Please select at least one game to add to your collection</Text>
+        {/* Sticky action buttons at bottom */}
+        {!loadingDatabase && parsedBoardGames && parsedBoardGames.length > 0 && (
+          <View style={styles.stickyActionButtons}>
+            <View style={responsiveStyles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.addToCollectionButton, addingToCollection && { opacity: 0.7 }]}
+                onPress={handleAddSelectedToCollection}
+                disabled={addingToCollection}
+              >
+                {addingToCollection ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.addToCollectionButtonText}>
+                    Add Game{selectedGames.size !== 1 ? 's' : ''} to Collection
+                  </Text>
                 )}
-                {successMessage && (
-                  <Text style={styles.successText}>{successMessage}</Text>
-                )}
-                {addError && (
-                  <Text style={styles.errorText}>{addError}</Text>
-                )}
-              </View>
+              </TouchableOpacity>
 
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={onBack}
+              >
+                <Text style={styles.cancelButtonText}>Cancel Upload</Text>
+              </TouchableOpacity>
             </View>
-          )}
 
-          {parsedBoardGames && parsedBoardGames.length === 0 && (
-            <View style={styles.resultCard}>
-              <Text style={styles.resultText}>No board games detected in the image.</Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+            {showNoSelectionWarning && (
+              <Text style={styles.warningText}>Please select at least one game to add to your collection</Text>
+            )}
+            {successMessage && (
+              <Text style={styles.successText}>{successMessage}</Text>
+            )}
+            {addError && (
+              <Text style={styles.errorText}>{addError}</Text>
+            )}
+          </View>
+        )}
+      </View>
 
       {/* Thumbnail Modal */}
       <ThumbnailModal
@@ -644,8 +681,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#1a2b5f',
   },
-  content: {
+  contentContainer: {
     flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  gamesScrollView: {
+    flex: 1,
+    marginBottom: 16,
   },
   imageSection: {
     alignItems: 'center',
@@ -807,24 +850,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
+    minWidth: 0,
   },
   addToCollectionButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#fff',
+    textAlign: 'center',
   },
   cancelButton: {
-    backgroundColor: '#1a2b5f',
+    backgroundColor: '#6c757d',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
+    minWidth: 0,
   },
   cancelButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#fff',
+    textAlign: 'center',
   },
   // Mobile styles
   mobileGameList: {
@@ -862,21 +911,25 @@ const styles = StyleSheet.create({
   },
   mobileCardContent: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
+    flexWrap: 'wrap',
   },
   mobileThumbnailSection: {
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   mobileThumbnailContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   mobileGameThumbnail: {
     width: 80,
     height: 80,
     borderRadius: 8,
+    flexShrink: 0,
   },
   mobileNoThumbnail: {
     width: 80,
@@ -885,6 +938,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   mobileNoThumbnailText: {
     fontFamily: 'Poppins-Regular',
@@ -894,7 +948,8 @@ const styles = StyleSheet.create({
   },
   mobileGameInfo: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    minWidth: 0,
   },
   mobileDatabaseTitle: {
     fontFamily: 'Poppins-Regular',
@@ -958,5 +1013,31 @@ const styles = StyleSheet.create({
     color: '#10b981',
     marginTop: 8,
     textAlign: 'center',
+  },
+  stickyActionButtons: {
+    backgroundColor: '#fff',
+    padding: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  gameAlreadyInCollection: {
+    opacity: 0.5,
+  },
+  greyedOutImage: {
+    opacity: 0.7,
+  },
+  greyedOutText: {
+    color: '#999999',
+  },
+  alreadyInCollectionText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 10,
+    color: '#999999',
+    marginTop: 4,
   },
 });

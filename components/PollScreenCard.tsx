@@ -61,6 +61,15 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
           );
         })}
       </View>
+      {/* Labels row */}
+      <View style={styles.labelsRow}>
+        <View style={{ flex: 1 }} />
+        {VOTING_OPTIONS.map(option => (
+          <View style={styles.voteCol} key={option.value}>
+            <Text style={styles.voteTypeLabel}>{option.label}</Text>
+          </View>
+        ))}
+      </View>
       {rankedResults.map((game, idx) => {
         // Alternate row shading for desktop/web
         const rowStyle = [
@@ -159,6 +168,14 @@ const styles = StyleSheet.create({
     paddingRight: 0,
     minHeight: Platform.OS === 'web' ? 28 : undefined,
   },
+  labelsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Platform.OS === 'web' ? 2 : 4,
+    paddingLeft: 0,
+    paddingRight: 0,
+    minHeight: Platform.OS === 'web' ? 20 : undefined,
+  },
   gameRowColumns: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,6 +204,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Poppins-Regular',
     color: '#222',
+  },
+  voteTypeLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 10,
+    color: '#666666',
+    marginTop: 2,
+    textAlign: 'center',
   },
   rankNumber: {
     fontFamily: 'Poppins-SemiBold',
