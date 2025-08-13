@@ -437,7 +437,8 @@ export default function PollsScreen() {
               style={getScaledStyle(styles.copyButton, 0.75)}
               onPress={async () => {
                 try {
-                  await Clipboard.setStringAsync(showShareLink);
+                  // Copy only the link value, not the text input content
+                  await Clipboard.setStringAsync(showShareLink || '');
                   setShowCopiedConfirmation(true);
                   setTimeout(() => {
                     setShowCopiedConfirmation(false);
