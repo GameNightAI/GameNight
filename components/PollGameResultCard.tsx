@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { VOTING_OPTIONS, ICON_MAP, SCORE_TO_VOTE_TYPE, getVoteTypeKeyFromScore, getIconColor } from './votingOptions';
-import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown } from 'lucide-react-native';
 import { Game } from '@/types/game';
 
 interface GameVotes {
@@ -14,12 +13,6 @@ interface PollGame extends Game {
   votes: GameVotes;
   userVote?: number | null;
 }
-
-// Utility to get score by voteType
-const getScoreByVoteType = (voteType: string): number => {
-  const option = VOTING_OPTIONS.find(opt => opt.value === voteType);
-  return option ? option.score : 0;
-};
 
 // Utility to get background color by score
 const getVoteBgColor = (score: number): string => {
@@ -42,14 +35,8 @@ export function GameResultCard({ game }: { game: PollGame }) {
     );
   }
 
-  // Calculate total votes and score using array manipulation
+  // Calculate total votes using array manipulation
   const totalVotes = Object.values(game.votes.votes).reduce((sum, count) => sum + count, 0);
-
-  const totalScore = VOTING_OPTIONS.reduce((sum, opt) => {
-    const voteTypeKey = getVoteTypeKeyFromScore(opt.score);
-    const voteCount = game.votes.votes[voteTypeKey] || 0;
-    return sum + (opt.score * voteCount);
-  }, 0);
 
   // Group voters by their vote type
   const getVotersByType = () => {
@@ -75,37 +62,23 @@ export function GameResultCard({ game }: { game: PollGame }) {
       </View>
       <View style={styles.votesContainer}>
         {VOTING_OPTIONS.map(function (option: typeof VOTING_OPTIONS[number]) {
-          const score = getScoreByVoteType(option.value);
-          const IconComponent = ICON_MAP[option.icon];
+          const score = option.score; // Get the score from the option for coloring
           const voteTypeKey = getVoteTypeKeyFromScore(option.score);
           const voteCount = game.votes.votes[voteTypeKey] || 0;
-          console.log('Rendering icon for:', option.value, 'IconComponent:', IconComponent);
           return (
             <View style={styles.voteItem} key={option.value}>
               <View style={styles.voteIconContainer}>
                 {(() => {
-                  // Try direct icon mapping first
-                  const iconMap = {
-                    'voteType1': Laugh,
-                    'voteType2': SmilePlus,
-                    'voteType3': Smile,
-                    // 'voteType4': HelpCircle,
-                    'voteType5': ThumbsDown,
-                  };
-                  const DirectIcon = iconMap[option.value as keyof typeof iconMap];
-                  console.log('Direct icon for', option.value, ':', DirectIcon);
-
-                  if (DirectIcon) {
-                    return <DirectIcon size={24} color={getIconColor(option.value)} />;
-                  }
-
-                  // Fallback to ICON_MAP
+                  // Use ICON_MAP from votingOptions
                   const IconComponent = ICON_MAP[option.icon];
-                  if (typeof IconComponent === 'function') {
+
+                  // Check if IconComponent is a valid React component (can be function or object with render method)
+                  if (IconComponent && (typeof IconComponent === 'function' || typeof IconComponent === 'object')) {
                     return <IconComponent size={24} color={getIconColor(option.value)} />;
                   }
 
-                  return <Text style={{ fontSize: 24, color: getIconColor(option.value) }}>{option.label.charAt(0)}</Text>;
+                  // Return null if no icon found
+                  return null;
                 })()}
                 <Text style={[styles.voteCount, { backgroundColor: getVoteBgColor(score), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, minWidth: 28, textAlign: 'center' }]}>{voteCount}</Text>
               </View>
@@ -137,7 +110,10 @@ export function GameResultCard({ game }: { game: PollGame }) {
                     <View style={styles.voteTypeHeader}>
                       {(() => {
                         const IconComponent = ICON_MAP[option.icon];
-                        return <Text style={{ fontSize: 16, color: getIconColor(option.value) }}>{option.label.charAt(0)}</Text>;
+                        if (IconComponent && (typeof IconComponent === 'function' || typeof IconComponent === 'object')) {
+                          return <IconComponent size={16} color={getIconColor(option.value)} />;
+                        }
+                        return null;
                       })()}
                       <Text style={[styles.voteTypeLabel]}>
                         {option.label} ({votersByType[option.value].length})

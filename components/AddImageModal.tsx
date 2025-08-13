@@ -19,7 +19,6 @@ import { ArrowLeft, Camera, Upload, X } from 'lucide-react-native';
 import { Alert } from 'react-native';
 
 // Sample images
-const sampleImage1 = require('@/assets/images/sample-game-1.png');
 const sampleImage2 = require('@/assets/images/sample-game-2.png');
 
 interface AddImageModalProps {
@@ -130,9 +129,8 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   };
 
   const selectSampleImage = (sampleNumber: number) => {
-    const sampleImage = sampleNumber === 1 ? sampleImage1 : sampleImage2;
     const imageData = {
-      uri: Image.resolveAssetSource(sampleImage).uri,
+      uri: Image.resolveAssetSource(sampleImage2).uri,
       name: `sample-game-${sampleNumber}.png`,
       type: 'image/png',
     };
@@ -174,10 +172,28 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         }),
       });
 
-      const result = await res.json();
-
+      // Check if response is ok before trying to parse JSON
       if (!res.ok) {
-        throw new Error(result.error || `HTTP error! status: ${res.status}`);
+        let errorMessage = `Server error (${res.status})`;
+
+        try {
+          // Try to get error details from response
+          const errorResult = await res.json();
+          errorMessage = errorResult.error || errorMessage;
+        } catch (parseError) {
+          // If JSON parsing fails, use status text or default message
+          errorMessage = res.statusText || errorMessage;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      let result;
+      try {
+        result = await res.json();
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Invalid response from server. Please try again.');
       }
 
       // Handle backend response structure
@@ -209,7 +225,23 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
       }
     } catch (err) {
       console.error('Analysis error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to analyze image');
+
+      // Provide more specific error messages based on error type
+      let userErrorMessage = 'Failed to analyze image';
+
+      if (err instanceof Error) {
+        if (err.message.includes('500') || err.message.includes('Internal Server Error')) {
+          userErrorMessage = 'OpenAI service is temporarily unavailable. Please try again in a few minutes.';
+        } else if (err.message.includes('Invalid response')) {
+          userErrorMessage = 'Server returned an invalid response. Please try again.';
+        } else if (err.message.includes('Server error')) {
+          userErrorMessage = `Server error: ${err.message}`;
+        } else {
+          userErrorMessage = err.message;
+        }
+      }
+
+      setError(userErrorMessage);
     } finally {
       setLoading(false);
     }
@@ -236,35 +268,23 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         {!image && (
           <>
             <View style={styles.sampleSection}>
-              <Text style={styles.sectionTitle}>Instructions</Text>
-              <Text style={styles.description}>
-                Take a photo or upload an image to automatically detect and add them to your collection
-              </Text>
+              {/* <Text style={styles.description}>
+                Take a photo or upload an image to automatically detect and add them to your collection:
+              </Text> */}
+              <View style={styles.bulletPoints}>
+                <Text style={styles.bulletPoint}>• Take a clear photo with good lighting</Text>
+                <Text style={styles.bulletPoint}>• Ensure boxes are oriented so game names are visible</Text>
+                <Text style={styles.bulletPoint}>• Remove any obstructions</Text>
+                <Text style={[styles.bulletPoint, { textAlign: 'center' }]}>OR</Text>
+                <Text style={styles.bulletPoint}>• Choose a photo from your library</Text>
+              </View>
               <View style={styles.sampleButtons}>
-                <View style={styles.sampleButton}>
-                  <TouchableOpacity
-                    style={styles.sampleImageContainer}
-                    onPress={() => showFullSizeImage(sampleImage1)}
-                  >
-                    <Image source={sampleImage1} style={styles.sampleImage} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.sampleButtonTextContainer}
-                    onPress={() => selectSampleImage(1)}
-                  >
-                  </TouchableOpacity>
-                </View>
                 <View style={styles.sampleButton}>
                   <TouchableOpacity
                     style={styles.sampleImageContainer}
                     onPress={() => showFullSizeImage(sampleImage2)}
                   >
                     <Image source={sampleImage2} style={styles.sampleImage} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.sampleButtonTextContainer}
-                    onPress={() => selectSampleImage(2)}
-                  >
                   </TouchableOpacity>
                 </View>
               </View>
@@ -274,16 +294,18 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
               <Text style={styles.sectionTitle}>Upload Image</Text>
 
               <View style={styles.uploadButtons}>
-                <TouchableOpacity
-                  style={styles.uploadButton}
-                  onPress={() => {
-                    console.log('Take Photo button pressed');
-                    pickImage(true);
-                  }}
-                >
-                  <Camera size={24} color="#ff9654" />
-                  <Text style={styles.uploadButtonText}>Take Photo</Text>
-                </TouchableOpacity>
+                {isMobile && (
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={() => {
+                      console.log('Take Photo button pressed');
+                      pickImage(true);
+                    }}
+                  >
+                    <Camera size={24} color="#ff9654" />
+                    <Text style={styles.uploadButtonText}>Take Photo</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={styles.uploadButton}
                   onPress={() => {
@@ -307,6 +329,25 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
               <Image source={{ uri: image.uri }} style={styles.previewImage} />
             </View>
 
+            {/* Analyze button - shown when image is selected */}
+            <TouchableOpacity
+              style={[
+                styles.analyzeButton,
+                loading && styles.analyzeButtonDisabled
+              ]}
+              onPress={handleAnalyze}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Camera size={20} color="#fff" />
+                  <Text style={styles.analyzeButtonText}>Analyze Image</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
             <View style={styles.previewButtons}>
               <TouchableOpacity
                 style={styles.retakeButton}
@@ -315,7 +356,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                   setError(null);
                 }}
               >
-                <Text style={styles.retakeButtonText}>Retake Photo or Upload New Image</Text>
+                <Text style={styles.retakeButtonText}>Change Photo</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -323,26 +364,6 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
 
         {error && <Text style={styles.errorText}>{error}</Text>}
 
-        {/* Analyze button - only shown when image is selected */}
-        {image && (
-          <TouchableOpacity
-            style={[
-              styles.analyzeButton,
-              loading && styles.analyzeButtonDisabled
-            ]}
-            onPress={handleAnalyze}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Camera size={20} color="#fff" />
-                <Text style={styles.analyzeButtonText}>Analyze Image</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
       </ScrollView>
     </View>
   );
@@ -363,7 +384,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         <TouchableOpacity
           style={styles.fullSizeImageContainer}
           activeOpacity={1}
-          onPress={() => { }} // Prevent closing when tapping the image
+          onPress={hideFullSizeImage}
         >
           <Image
             source={fullSizeImageSource}
@@ -531,48 +552,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ff9654',
   },
-  sampleSection: {
-    marginBottom: 20,
-  },
-  sampleButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  sampleButton: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 0,
-    borderRadius: 0,
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  sampleImageContainer: {
-    width: '100%',
-    height: '100%',
-    minHeight: 120,
-    maxHeight: 200,
-    marginBottom: 8,
-    // borderWidth: 2,
-    // borderColor: '#ff0000',
-  },
-  sampleButtonTextContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  sampleImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 0,
-    resizeMode: 'contain',
-    // borderWidth: 1,
-    // borderColor: '#00ff00',
-  },
-  sampleButtonText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
-  },
   errorText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
@@ -589,39 +568,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 8,
     gap: 8,
+    marginBottom: 10, // Added margin bottom for spacing
   },
   analyzeButtonDisabled: {
     opacity: 0.5,
   },
   analyzeButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
+    fontSize: isMobile ? 12 : 16,
     color: '#fff',
-  },
-  fullSizeOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullSizeImageContainer: {
-    position: 'relative',
-    width: '90%',
-    height: '80%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullSizeImage: {
-    width: '100%',
-    height: '100%',
-  },
-  fullSizeCloseButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-    padding: 8,
   },
   scrollContent: {
     flex: 1,
@@ -639,7 +594,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ff9654',
+    backgroundColor: '#6c757d',
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -651,5 +606,71 @@ const styles = StyleSheet.create({
     fontSize: isMobile ? 12 : 16,
     color: '#fff',
     textAlign: 'center',
+  },
+  sampleSection: {
+    marginBottom: 20,
+  },
+  sampleButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  sampleButton: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 0,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent'
+  },
+  sampleImageContainer: {
+    width: 120,
+    height: 120,
+    overflow: 'hidden',
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: '#e0e0e0',
+  },
+  sampleImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  bulletPoints: {
+    marginBottom: 10,
+  },
+  bulletPoint: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 5,
+  },
+  fullSizeOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullSizeImageContainer: {
+    position: 'relative',
+    width: '90%',
+    height: '80%',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  fullSizeImage: {
+    width: '100%',
+    height: '100%',
+  },
+  fullSizeCloseButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    padding: 8,
   },
 });

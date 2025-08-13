@@ -118,14 +118,16 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
             {VOTING_OPTIONS.map(option => {
               const IconComponent = ICON_MAP[option.icon];
               return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={getButtonStyle(option.value)}
-                  onPress={() => onVote(game.id, option.value)}
-                  disabled={disabled}
-                >
-                  <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value, selectedVote === option.value)} />
-                </TouchableOpacity>
+                <View key={option.value} style={styles.voteButtonWrapper}>
+                  <TouchableOpacity
+                    style={getButtonStyle(option.value)}
+                    onPress={() => onVote(game.id, option.value)}
+                    disabled={disabled}
+                  >
+                    <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value, selectedVote === option.value)} />
+                  </TouchableOpacity>
+                  <Text style={styles.voteButtonLabel}>{option.label}</Text>
+                </View>
               );
             })}
           </View>
@@ -268,6 +270,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  voteButtonWrapper: {
+    alignItems: 'center',
+    gap: 4,
+  },
   voteButtonsContainerMobile: {
     justifyContent: 'space-around',
     paddingHorizontal: 8,
@@ -281,6 +287,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  voteButtonLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 10,
+    color: '#666666',
+    marginTop: 2,
+    textAlign: 'center',
   },
   voteButtonSmall: {
     width: 28,

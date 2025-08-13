@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown } from 'lucide-react-native';
+import { Meh, Smile, Laugh, HelpCircle, ThumbsDown } from 'lucide-react-native';
 
 export const VOTING_OPTIONS = [
   { value: 'voteType1', icon: 'voteType1Icon', label: 'Excited', score: 3 },
@@ -15,8 +15,8 @@ export type IconName = typeof VOTING_OPTIONS[number]['icon'];
 
 export const ICON_MAP: Record<IconName, React.ComponentType<any> | string> = {
   voteType1Icon: Laugh,
-  voteType2Icon: SmilePlus,
-  voteType3Icon: Smile,
+  voteType2Icon: Smile,
+  voteType3Icon: Meh,
   // voteType4Icon: HelpCircle,
   voteType5Icon: ThumbsDown,
 };

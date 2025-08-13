@@ -4,7 +4,8 @@ import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as U
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import Toast from 'react-native-toast-message';
-import Select from 'react-select';
+import { CreatePollModal } from './CreatePollModal';
+
 
 interface EditPollModalProps {
   isVisible: boolean;
@@ -25,43 +26,17 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 }) => {
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
-  const [filteredGames, setFilteredGames] = useState<Game[]>([]);
+  const [originalPollGames, setOriginalPollGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasExistingVotes, setHasExistingVotes] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationAction, setConfirmationAction] = useState<'save' | 'addGames'>('save');
+  const [showCreatePollModal, setShowCreatePollModal] = useState(false);
+  const [dynamicPollTitle, setDynamicPollTitle] = useState(pollTitle);
 
-  // Filter states - changed to arrays for multi-select
-  const [playerCount, setPlayerCount] = useState<any[]>([]);
-  const [playTime, setPlayTime] = useState<any[]>([]);
-  const [minAge, setMinAge] = useState<any[]>([]);
-  const [gameType, setGameType] = useState<any[]>([]);
-  const [complexity, setComplexity] = useState<any[]>([]);
 
-  // Filter options
-  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
-    .map(_ => ({ value: parseInt(_), label: _ }));
-  const timeOptions = [
-    { value: 1, min: 1, max: 30, label: '30 min or less' },
-    { value: 31, min: 31, max: 60, label: '31-60 min' },
-    { value: 61, min: 61, max: 90, label: '61-90 min' },
-    { value: 91, min: 91, max: 120, label: '91-120 min' },
-    { value: 121, min: 121, max: 999999999, label: 'More than 120 min' },
-  ];
-  const ageOptions = [
-    { value: 1, min: 1, max: 5, label: '5 and under' },
-    { value: 6, min: 6, max: 7, label: '6-7' },
-    { value: 8, min: 8, max: 9, label: '8-9' },
-    { value: 10, min: 10, max: 11, label: '10-11' },
-    { value: 12, min: 12, max: 13, label: '12-13' },
-    { value: 14, min: 14, max: 15, label: '14-15' },
-    { value: 16, min: 16, max: 999, label: '16 and up' },
-  ];
-  const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
-    .map(_ => ({ value: _, label: _ }));
-  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy']
-    .map((_, i) => ({ value: i + 1, label: _ }));
 
   useEffect(() => {
     if (isVisible) {
@@ -70,9 +45,31 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     }
   }, [isVisible, pollId]);
 
+  // Function to generate updated poll title based on game count
+  const generateUpdatedTitle = (gameCount: number) => {
+    if (gameCount === 0) {
+      return 'No games in poll';
+    } else if (gameCount === 1) {
+      return 'Vote on 1 game';
+    } else {
+      return `Vote on ${gameCount} games`;
+    }
+  };
+
+  // Check if the current title is in the default format
+  const isDefaultTitle = (title: string) => {
+    return title === 'No games in poll' ||
+      title === 'Vote on 1 game' ||
+      title.match(/^Vote on \d+ games$/);
+  };
+
+  // Update title when selected games change, but only if it's a default title
   useEffect(() => {
-    filterGames();
-  }, [availableGames, playerCount, playTime, minAge, gameType, complexity]);
+    if (isDefaultTitle(dynamicPollTitle)) {
+      const newTitle = generateUpdatedTitle(selectedGames.length);
+      setDynamicPollTitle(newTitle);
+    }
+  }, [selectedGames.length]);
 
   const checkExistingVotes = async () => {
     try {
@@ -126,7 +123,6 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
       }));
 
       setAvailableGames(collectionGames);
-      setFilteredGames(collectionGames);
 
       // Load current poll games
       const { data: pollGames, error: pollGamesError } = await supabase
@@ -139,6 +135,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
       if (pollGames && pollGames.length > 0) {
         const gameIds = pollGames.map(pg => pg.game_id);
         const currentGames = collectionGames.filter(game => gameIds.includes(game.id));
+        setOriginalPollGames(currentGames);
         setSelectedGames(currentGames);
       }
     } catch (err) {
@@ -147,66 +144,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     }
   };
 
-  const filterGames = () => {
-    let filtered = [...availableGames];
 
-    if (playerCount.length) {
-      filtered = filtered.filter(game =>
-        playerCount.some(p => (
-          (game.min_players <= p.value || p.value === 15)
-          && p.value <= game.max_players
-        ))
-      );
-    }
-
-    if (playTime.length) {
-      filtered = filtered.filter(game =>
-        playTime.some(t => {
-          const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
-          return (
-            t.min <= game.playing_time
-            && game.playing_time <= t.max
-          );
-        })
-      );
-    }
-
-    if (minAge.length) {
-      filtered = filtered.filter(game =>
-        minAge.some(a => (
-          a.min <= game.minAge
-          && game.minAge <= a.max
-        ))
-      );
-    }
-
-    if (gameType.length) {
-      filtered = filtered.filter(game =>
-        gameType.some(t => {
-          switch (t.value) {
-            case 'Competitive':
-              return !game.is_cooperative;
-            case 'Cooperative':
-              return game.is_cooperative;
-            case 'Team-based':
-              return game.is_teambased;
-            default:
-              return true;
-          }
-        })
-      );
-    }
-
-    if (complexity.length) {
-      filtered = filtered.filter(game =>
-        complexity.some(c => (
-          game.complexity_tier === c.value
-        ))
-      );
-    }
-
-    setFilteredGames(filtered);
-  };
 
   const handleSaveChanges = async () => {
     if (selectedGames.length === 0) {
@@ -216,6 +154,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 
     // Show warning if there are existing votes
     if (hasExistingVotes) {
+      setConfirmationAction('save');
       setShowConfirmation(true);
     } else {
       performSave();
@@ -263,6 +202,18 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         }
       }
 
+      // Update the poll title if it has changed
+      if (dynamicPollTitle !== pollTitle) {
+        const { error: titleError } = await supabase
+          .from('polls')
+          .update({ title: dynamicPollTitle })
+          .eq('id', pollId);
+
+        if (titleError) {
+          throw titleError;
+        }
+      }
+
       // Add new games (existing games are preserved)
       if (gamesToAdd.length > 0) {
         const newPollGames = gamesToAdd.map(gameId => ({
@@ -307,50 +258,11 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     });
   };
 
-  const handlePlayerCountChange = (newValue: any) => {
-    setPlayerCount(newValue || []);
-  };
 
-  const handlePlayTimeChange = (newValue: any) => {
-    setPlayTime(newValue || []);
-  };
-
-  const handleMinAgeChange = (newValue: any) => {
-    setMinAge(newValue || []);
-  };
-
-  const handleGameTypeChange = (newValue: any) => {
-    setGameType(newValue || []);
-  };
-
-  const handleComplexityChange = (newValue: any) => {
-    setComplexity(newValue || []);
-  };
 
   if (!isVisible) return null;
 
-  const selectStyles = {
-    control: (provided: any) => ({
-      ...provided,
-      backgroundColor: '#ffffff',
-      borderColor: '#e5e7eb',
-      borderRadius: 8,
-      minHeight: 40,
-    }),
-    option: (provided: any, state: any) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? '#1d4ed8' : state.isFocused ? '#f3f4f6' : '#ffffff',
-      color: state.isSelected ? '#ffffff' : '#1f2937',
-    }),
-    multiValue: (provided: any) => ({
-      ...provided,
-      backgroundColor: '#e0e7ff',
-    }),
-    multiValueLabel: (provided: any) => ({
-      ...provided,
-      color: '#1d4ed8',
-    }),
-  };
+
 
   return (
     <View style={styles.overlay}>
@@ -364,10 +276,10 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 
         {/* Warning about existing votes */}
         {hasExistingVotes && (
-          <View style={styles.warningContainer}>
+          <View style={styles.warningHeader}>
             <AlertTriangle size={20} color="#f59e0b" />
-            <Text style={styles.warningText}>
-              This poll has {voteCount} vote(s). Votes for games that remain in the poll will be preserved. Only votes for removed games will be deleted.
+            <Text style={styles.warningHeaderText}>
+              This poll already has votes
             </Text>
           </View>
         )}
@@ -378,7 +290,10 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
             <View style={styles.confirmationDialog}>
               <Text style={styles.confirmationTitle}>Warning: Existing Votes</Text>
               <Text style={styles.confirmationMessage}>
-                This poll already has {voteCount} vote(s). Votes for games that remain in the poll will be preserved. Only votes for removed games will be deleted. Are you sure you want to continue?
+                {confirmationAction === 'save'
+                  ? 'This poll already has votes. Are you sure you want to continue?'
+                  : 'This poll already has votes. Adding more games may affect existing votes. Continue to add games?'
+                }
               </Text>
               <View style={styles.confirmationButtons}>
                 <TouchableOpacity
@@ -393,10 +308,16 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                   style={styles.confirmationButtonContinue}
                   onPress={() => {
                     setShowConfirmation(false);
-                    performSave();
+                    if (confirmationAction === 'save') {
+                      performSave();
+                    } else {
+                      setShowCreatePollModal(true);
+                    }
                   }}
                 >
-                  <Text style={styles.confirmationButtonTextContinue}>Continue</Text>
+                  <Text style={styles.confirmationButtonTextContinue}>
+                    {confirmationAction === 'save' ? 'Continue' : 'Add Games'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -405,119 +326,24 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 
         <ScrollView style={styles.content}>
           <View style={styles.pollInfo}>
-            <Text style={styles.pollTitle}>{pollTitle}</Text>
+            <Text style={styles.pollTitle}>{dynamicPollTitle}</Text>
+            {(selectedGames.length !== originalPollGames.length && isDefaultTitle(dynamicPollTitle)) && (
+              <Text style={styles.pollTitleNote}>
+                Title updated automatically
+              </Text>
+            )}
             {pollDescription && (
               <Text style={styles.pollDescription}>{pollDescription}</Text>
             )}
           </View>
 
-          <View style={styles.filtersSection}>
-            <Text style={styles.sectionTitle}>Filter Games</Text>
-            <View style={styles.filtersGrid}>
-              <Select
-                placeholder="Player count"
-                value={playerCount}
-                onChange={handlePlayerCountChange}
-                defaultValue={[]}
-                options={playerOptions}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-
-              <Select
-                placeholder="Play time"
-                value={playTime}
-                onChange={handlePlayTimeChange}
-                defaultValue={[]}
-                options={timeOptions}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-
-              <Select
-                placeholder="Minimum age"
-                value={minAge}
-                onChange={handleMinAgeChange}
-                defaultValue={[]}
-                options={ageOptions}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-
-              <Select
-                placeholder="Co-op / competitive"
-                value={gameType}
-                onChange={handleGameTypeChange}
-                defaultValue={[]}
-                options={typeOptions}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-
-              <Select
-                placeholder="Game complexity"
-                value={complexity}
-                onChange={handleComplexityChange}
-                defaultValue={[]}
-                options={complexityOptions}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-            </View>
-          </View>
-
-          <View style={styles.gamesSection}>
-            <View style={styles.gamesHeader}>
-              <View style={styles.gamesHeaderLeft}>
-                <Text style={styles.label}>Select Games ({selectedGames.length} selected)</Text>
-                <Text style={styles.sublabel}>
-                  {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
-                    ? `Games that match your filters`
-                    : 'Choose games from your collection to include in the poll'}
-                </Text>
-              </View>
-              <View style={styles.gamesHeaderRight}>
-                <TouchableOpacity
-                  style={styles.selectAllButton}
-                  onPress={() => setSelectedGames([...filteredGames])}
-                >
-                  <Text style={styles.selectAllButtonText}>Select All</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.clearAllButton}
-                  onPress={() => setSelectedGames([])}
-                >
-                  <Text style={styles.clearAllButtonText}>Clear All</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {filteredGames.length === 0 ? (
-              <Text style={styles.noGamesText}>
-                No games found matching your filters
+          {originalPollGames.length > 0 && (
+            <View style={styles.currentGamesSection}>
+              <Text style={styles.sublabel}>
+                Uncheck games to remove them from the poll
               </Text>
-            ) : (
-              filteredGames.map(game => {
+
+              {originalPollGames.map(game => {
                 const isSelected = selectedGames.some(g => g.id === game.id);
                 return (
                   <TouchableOpacity
@@ -531,7 +357,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                     <View style={styles.gameInfo}>
                       <Text style={styles.gameName}>{game.name}</Text>
                       <Text style={styles.playerCount}>
-                        {game.min_players}-{game.max_players} players • {game.playing_time} min
+                        {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
                       </Text>
                     </View>
                     <View style={[
@@ -544,9 +370,28 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                     </View>
                   </TouchableOpacity>
                 );
-              })
-            )}
-          </View>
+              })}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.addGamesButton}
+            onPress={() => {
+              if (hasExistingVotes) {
+                setConfirmationAction('addGames');
+                setShowConfirmation(true);
+              } else {
+                setShowCreatePollModal(true);
+              }
+            }}
+          >
+            <Plus size={20} color="#1d4ed8" />
+            <Text style={styles.addGamesButtonText}>
+              {originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
+            </Text>
+          </TouchableOpacity>
+
+
         </ScrollView>
 
         <View style={styles.footer}>
@@ -562,6 +407,26 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* CreatePollModal for adding more games */}
+      <CreatePollModal
+        isVisible={showCreatePollModal}
+        onClose={() => setShowCreatePollModal(false)}
+        onSuccess={(pollType, addedGames) => {
+          setShowCreatePollModal(false);
+          if (pollType === 'add-games' && addedGames) {
+            // Add the new games to the current selection
+            setSelectedGames(current => [...current, ...addedGames]);
+            // Also add them to originalPollGames so they show up in the list
+            setOriginalPollGames(current => [...current, ...addedGames]);
+          } else {
+            // Refresh the games list for other cases
+            loadGames();
+          }
+        }}
+        preselectedGames={originalPollGames}
+        isAddingToExistingPoll={true}
+      />
     </View>
   );
 };
@@ -589,12 +454,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
@@ -606,38 +472,49 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
-  warningContainer: {
+  warningHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fef3c7',
-    borderColor: '#f59e0b',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    margin: 20,
-    marginTop: 0,
-    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f59e0b',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f59e0b',
+    padding: 16,
+    margin: 0,
+    gap: 12,
   },
-  warningText: {
+  warningHeaderText: {
     flex: 1,
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
     color: '#92400e',
   },
   content: {
     flex: 1,
     padding: 20,
+    paddingTop: 10,
   },
   pollInfo: {
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: '#f8fafc',
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingHorizontal: 10,
+    paddingLeft: 0,
+    // backgroundColor: '#f8fafc',
     borderRadius: 8,
   },
   pollTitle: {
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#1a2b5f',
+    marginTop: 0,
+    marginBottom: 4,
+  },
+  pollTitleNote: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+    color: '#666666',
+    fontStyle: 'italic',
     marginBottom: 4,
   },
   pollDescription: {
@@ -645,8 +522,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     color: '#666666',
   },
-  filtersSection: {
+  currentGamesSection: {
     marginBottom: 20,
+    marginTop: 0,
+  },
+  sublabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#666666',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 16,
@@ -654,64 +538,26 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginBottom: 12,
   },
-  filtersGrid: {
-    gap: 12,
-  },
-  gamesSection: {
-    marginBottom: 20,
-  },
-  gamesHeader: {
+
+
+
+  addGamesButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  gamesHeaderLeft: {
-    flex: 1,
-  },
-  gamesHeaderRight: {
-    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#1d4ed8',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 16,
     gap: 8,
   },
-  label: {
+  addGamesButtonText: {
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
-    marginBottom: 4,
-  },
-  sublabel: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-  },
-  selectAllButton: {
-    backgroundColor: '#1d4ed8',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  selectAllButtonText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
-  },
-  clearAllButton: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  clearAllButtonText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#6b7280',
-  },
-  noGamesText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-    textAlign: 'center',
-    padding: 20,
+    color: '#1d4ed8',
   },
   gameItem: {
     flexDirection: 'row',

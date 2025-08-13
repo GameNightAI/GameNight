@@ -9,6 +9,8 @@ import { AddImageModal } from './AddImageModal';
 import { AddResultsModal } from './AddResultsModal';
 import { useAddGameModalFlow } from '@/hooks/useAddGameModalFlow';
 
+const sampleImage1 = require('@/assets/images/sample-game-1.png');
+
 interface Game {
   id: string;
   name: string;
@@ -34,11 +36,23 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [error, setError] = useState('');
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
+  const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
+  const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
 
   const {
     modalState,
     modalActions,
   } = useAddGameModalFlow();
+
+  const showFullSizeImage = (imageSource: any) => {
+    setFullSizeImageSource(imageSource);
+    setFullSizeImageVisible(true);
+  };
+
+  const hideFullSizeImage = () => {
+    setFullSizeImageVisible(false);
+    setFullSizeImageSource(null);
+  };
 
   const fetchSearchResults = useCallback(async (term: string) => {
     try {
@@ -188,19 +202,27 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       </Text>
 
       <View style={styles.analyzeContainer}>
+        <View style={styles.sampleImageContainer}>
+          <TouchableOpacity
+            style={styles.sampleImageTouchable}
+            onPress={() => showFullSizeImage(sampleImage1)}
+          >
+            <Image source={sampleImage1} style={styles.sampleImage} />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
           style={styles.analyzeButton}
           onPress={() => modalActions.next()}
         >
           <Camera size={20} color="#ff9654" />
-          <Text style={styles.analyzeButtonText}>Analyze Image</Text>
+          <Text style={styles.analyzeButtonText}>Add Games With A Photo</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Search for games..."
+          placeholder="or Add Games by Search..."
           value={searchQuery}
           onChangeText={handleSearch}
           autoCapitalize="none"
@@ -243,6 +265,40 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     </View>
   );
 
+  // Full-size image modal
+  const fullSizeImageModal = (
+    <Modal
+      visible={fullSizeImageVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={hideFullSizeImage}
+    >
+      <TouchableOpacity
+        style={styles.fullSizeOverlay}
+        activeOpacity={1}
+        onPress={hideFullSizeImage}
+      >
+        <TouchableOpacity
+          style={styles.fullSizeImageContainer}
+          activeOpacity={1}
+          onPress={hideFullSizeImage}
+        >
+          <Image
+            source={fullSizeImageSource}
+            style={styles.fullSizeImage}
+            resizeMode="contain"
+          />
+          <TouchableOpacity
+            style={styles.fullSizeCloseButton}
+            onPress={hideFullSizeImage}
+          >
+            <X size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   const content = (() => {
     switch (modalState.step) {
       case 'select':
@@ -274,23 +330,29 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   if (Platform.OS === 'web') {
     if (!isVisible) return null;
     return (
-      <View style={styles.webOverlay}>
-        {content}
-      </View>
+      <>
+        <View style={styles.webOverlay}>
+          {content}
+        </View>
+        {fullSizeImageModal}
+      </>
     );
   }
 
   return (
-    <Modal
-      visible={isVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={handleCloseModal}
-    >
-      <View style={styles.overlay}>
-        {content}
-      </View>
-    </Modal>
+    <>
+      <Modal
+        visible={isVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.overlay}>
+          {content}
+        </View>
+      </Modal>
+      {fullSizeImageModal}
+    </>
   );
 };
 
@@ -454,5 +516,50 @@ const styles = StyleSheet.create({
     marginLeft: 0,
     marginRight: 6,
     backgroundColor: '#f0f0f0',
+  },
+  sampleImageContainer: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sampleImageTouchable: {
+    width: 120,
+    height: 120,
+    overflow: 'hidden',
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: '#e0e0e0',
+    marginBottom: 8,
+  },
+  sampleImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  fullSizeOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullSizeImageContainer: {
+    position: 'relative',
+    width: '90%',
+    height: '80%',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  fullSizeImage: {
+    width: '100%',
+    height: '100%',
+  },
+  fullSizeCloseButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    padding: 8,
   },
 });
