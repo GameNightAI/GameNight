@@ -27,6 +27,8 @@ interface Game {
   min_players: number;
   max_players: number;
   playing_time: number;
+  minPlaytime: number;
+  maxPlaytime: number;
   complexity?: number;
   complexity_desc?: string;
   bgg_id?: number;
@@ -101,7 +103,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
             <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
               <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
               <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
-                {game.min_players}-{game.max_players} players • {game.playing_time} min
+                {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
               </Text>
             </View>
             <View style={styles.chevronContainer}>
