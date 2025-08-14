@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions, Linking } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react-native';
+import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, ChevronRight, Link as LinkIcon } from 'lucide-react-native';
 
 import { VOTING_OPTIONS, ICON_MAP, VoteType, getIconColor } from './votingOptions';
 
@@ -89,19 +89,6 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         <View style={[styles.mainContent, isMobile && styles.mainContentMobile]}>
           {/* Game info and thumbnail row */}
           <View style={[styles.gameInfoRow, isMobile && styles.gameInfoRowMobile]}>
-            <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
-              <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
-              <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
-                {game.min_players}-{game.max_players} players • {game.playing_time} min
-              </Text>
-            </View>
-            <View style={styles.chevronContainer}>
-              {isExpanded ? (
-                <ChevronUp size={isSmallScreen ? 20 : 24} color="#ff9654" />
-              ) : (
-                <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
-              )}
-            </View>
             <Image
               source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
               style={[
@@ -111,6 +98,20 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               ]}
               resizeMode="cover"
             />
+            <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
+              <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
+              <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
+                {game.min_players}-{game.max_players} players • {game.playing_time} min
+              </Text>
+            </View>
+            <View style={styles.chevronContainer}>
+              <Text style={[styles.infoText, isSmallScreen && styles.infoTextSmall]}>Info</Text>
+              {isExpanded ? (
+                <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
+              ) : (
+                <ChevronRight size={isSmallScreen ? 20 : 24} color="#ff9654" />
+              )}
+            </View>
           </View>
 
           {/* Voting buttons row - moved below game info for mobile */}
@@ -213,6 +214,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     gap: 12,
+    justifyContent: 'flex-start',
   },
   gameInfoRowMobile: {
     flexDirection: 'row',
@@ -222,7 +224,6 @@ const styles = StyleSheet.create({
   },
   gameInfo: {
     flex: 1,
-    marginRight: 8,
   },
   gameInfoMobile: {
     flex: 1,
@@ -233,18 +234,32 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     backgroundColor: '#f0f0f0',
+    marginRight: 12,
   },
   thumbnailMobile: {
     width: 60,
     height: 60,
+    marginRight: 8,
   },
   thumbnailSmall: {
     width: 48,
     height: 48,
+    marginRight: 6,
   },
   chevronContainer: {
     marginLeft: 'auto',
     marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  infoText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+    color: '#666666',
+  },
+  infoTextSmall: {
+    fontSize: 10,
   },
   name: {
     fontSize: 16,
