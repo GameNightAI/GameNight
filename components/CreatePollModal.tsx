@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import * as Clipboard from 'expo-clipboard';
@@ -8,6 +8,8 @@ import Toast from 'react-native-toast-message';
 import Select from 'react-select';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isSafari } from '@/utils/safari-polyfill';
+import { CreatePollTitleModal } from './CreatePollTitleModal';
+import { CreatePollDescrModal } from './CreatePollDescrModal';
 
 interface CreatePollModalProps {
   isVisible: boolean;
@@ -41,6 +43,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [pollTitle, setPollTitle] = useState('');
   const [defaultTitle, setDefaultTitle] = useState('');
   const [pollDescription, setPollDescription] = useState('');
+  // Modal states
+  const [isTitleModalVisible, setIsTitleModalVisible] = useState(false);
+  const [isDescriptionModalVisible, setIsDescriptionModalVisible] = useState(false);
 
   // Filter states - changed to arrays for multi-select
   const [playerCount, setPlayerCount] = useState<any[]>([]);
@@ -52,6 +57,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   // Responsive state
   const [isMobile, setIsMobile] = useState(false);
   const [isSmallMobile, setIsSmallMobile] = useState(false);
+  const [isReady, setIsReady] = useState(false); // Loading state for screen size detection
 
   useEffect(() => {
     const updateScreenSize = () => {
@@ -61,6 +67,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     };
 
     updateScreenSize();
+    setIsReady(true); // Mark as ready after initial screen size detection
 
     const handleResize = () => {
       updateScreenSize();
@@ -368,6 +375,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setComplexity(newValue || []);
   };
 
+  // Modal handlers
+  const handleTitleSave = (title: string) => {
+    setPollTitle(title);
+  };
+
+  const handleDescriptionSave = (description: string) => {
+    setPollDescription(description);
+  };
+
   // Responsive styles based on screen size
   const getResponsiveStyles = () => {
     const baseScale = isSmallMobile ? 0.85 : 1;
@@ -377,20 +393,23 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         ...styles.dialog,
         maxWidth: isMobile ? '95%' as any : 800,
         maxHeight: isMobile ? '90%' as any : 600,
-        paddingHorizontal: isMobile ? 16 : 20,
+        paddingHorizontal: isMobile ? 12 : 20,
         borderRadius: isMobile ? 8 : 12,
       },
       title: {
         ...styles.title,
-        fontSize: isMobile ? 18 : 20,
+        fontSize: isMobile ? 16 : 20,
+        marginTop: isMobile ? 8 : 16,
       },
       label: {
         ...styles.label,
-        fontSize: isMobile ? 15 : 16,
+        fontSize: isMobile ? 14 : 16,
+        marginBottom: isMobile ? 4 : 8,
       },
       sublabel: {
         ...styles.sublabel,
-        fontSize: isMobile ? 13 : 14,
+        fontSize: isMobile ? 12 : 14,
+        marginBottom: isMobile ? 6 : 12,
       },
       titleInput: {
         ...styles.titleInput,
@@ -460,6 +479,65 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         right: isMobile ? 16 : 20,
         padding: isMobile ? 4 : 6,
       },
+      // Mobile-optimized button styles
+      titleButton: {
+        ...styles.titleButton,
+        padding: isMobile ? 10 : 16,
+        marginTop: isMobile ? 4 : 8,
+      },
+      descriptionButton: {
+        ...styles.descriptionButton,
+        padding: isMobile ? 10 : 16,
+        marginTop: isMobile ? 4 : 8,
+      },
+      titleButtonLabel: {
+        ...styles.titleButtonLabel,
+        fontSize: isMobile ? 14 : 16,
+        marginBottom: isMobile ? 2 : 4,
+      },
+      titleButtonValue: {
+        ...styles.titleButtonValue,
+        fontSize: isMobile ? 12 : 13,
+      },
+      descriptionButtonLabel: {
+        ...styles.descriptionButtonLabel,
+        fontSize: isMobile ? 14 : 16,
+        marginBottom: isMobile ? 2 : 4,
+      },
+      descriptionButtonValue: {
+        ...styles.descriptionButtonValue,
+        fontSize: isMobile ? 12 : 13,
+      },
+      // Mobile-optimized section spacing
+      titleSection: {
+        ...styles.titleSection,
+        marginBottom: isMobile ? 10 : 20,
+        paddingTop: isMobile ? 4 : 8,
+      },
+      descriptionSection: {
+        ...styles.descriptionSection,
+        marginBottom: isMobile ? 10 : 20,
+      },
+      filterSection: {
+        ...styles.filterSection,
+        marginBottom: isMobile ? 10 : 20,
+        marginTop: isMobile ? 5 : 10,
+      },
+      gamesSection: {
+        ...styles.gamesSection,
+        marginTop: isMobile ? 4 : 8,
+      },
+      gamesHeader: {
+        ...styles.gamesHeader,
+        marginBottom: isMobile ? 6 : 12,
+      },
+      // Mobile-optimized header
+      header: {
+        ...styles.header,
+        padding: isMobile ? 12 : 20,
+        minHeight: isMobile ? 24 : 40,
+        paddingBottom: isMobile ? 8 : 16,
+      },
     };
   };
 
@@ -470,10 +548,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         return {
           ...baseStyles,
           fontFamily: 'Poppins-Regular',
-          fontSize: isMobile ? 15 : 16,
+          fontSize: isMobile ? 14 : 16,
           borderColor: '#e1e5ea',
           borderRadius: isMobile ? 8 : 12,
-          minHeight: isMobile ? 44 : 48,
+          minHeight: isMobile ? 40 : 48,
           boxShadow: 'none',
           '&:hover': {
             borderColor: '#ff9654',
@@ -487,7 +565,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       },
       container: (baseStyles: any, state: any) => ({
         ...baseStyles,
-        marginBottom: isMobile ? 10 : 12,
+        marginBottom: isMobile ? 6 : 12,
       }),
       menu: (baseStyles: any, state: any) => ({
         ...baseStyles,
@@ -511,7 +589,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       }),
       menuList: (baseStyles: any, state: any) => ({
         ...baseStyles,
-        maxHeight: isMobile ? 180 : 200,
+        maxHeight: isMobile ? 160 : 200,
         overflow: 'auto',
         // Safari-specific scrollbar styling
         ...(isSafari() && {
@@ -528,20 +606,45 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           },
         }),
       }),
+      clearIndicator: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        color: '#666666',
+        fontSize: isMobile ? 11 : 13,
+        fontFamily: 'Poppins-SemiBold',
+        padding: isMobile ? '2px 6px' : '4px 8px',
+        cursor: 'pointer',
+        '&:hover': {
+          color: '#ff9654',
+        },
+        // Hide the default SVG icon
+        '& svg': {
+          display: 'none',
+        },
+        // Show only our custom CLR text
+        '&::after': {
+          content: '"CLR"',
+          display: 'block',
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          whiteSpace: 'nowrap',
+        },
+      }),
       multiValueLabel: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 13 : 14,
+        fontSize: isMobile ? 12 : 14,
       }),
       noOptionsMessage: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 14 : 16,
+        fontSize: isMobile ? 13 : 16,
       }),
       option: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 15 : 16,
+        fontSize: isMobile ? 14 : 16,
         color: state.isSelected ? '#ff9654' : '#333333',
         backgroundColor: state.isSelected ? '#fff5ef' : 'transparent',
         '&:hover': {
@@ -551,7 +654,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       placeholder: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 15 : 16,
+        fontSize: isMobile ? 14 : 16,
         color: '#999999',
       }),
     };
@@ -559,29 +662,28 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     return baseSelectStyles;
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || !isReady) return null;
 
   const responsiveStyles = getResponsiveStyles();
   const selectStyles = getSelectStyles();
 
   return (
     <View style={styles.overlay}>
-      <div style={{
-        maxWidth: isMobile ? '95vw' : '90vw',
-        maxHeight: isMobile ? '90vh' : '80vh',
+      <View style={{
+        maxWidth: isMobile ? '95%' : 800, // Mobile: full width, Desktop: fixed width
+        maxHeight: isMobile ? '90%' : '80%', // Mobile: full height, Desktop: limited height
         width: '100%',
         height: '100%',
-        display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: isMobile ? 10 : 20,
+        padding: isMobile ? 8 : 20,
       }}>
         <View style={[responsiveStyles.dialog, {
-          height: '100%',
+          height: isMobile ? '100%' : 'auto', // Mobile: full height, Desktop: auto height
           display: 'flex',
           flexDirection: 'column',
-          flex: 1,
+          flex: isMobile ? 1 : undefined,
           maxWidth: isMobile ? '100%' : undefined,
           maxHeight: isMobile ? '100%' : undefined
         }]}>
@@ -609,7 +711,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           >
             <X size={isMobile ? 20 : 24} color="#666666" />
           </TouchableOpacity>
-          <View style={styles.header}>
+          <View style={responsiveStyles.header}>
             <Text style={responsiveStyles.title}>
               {isAddingToExistingPoll ? 'Add More Games' : 'Create Poll'}
             </Text>
@@ -621,42 +723,53 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           >
             {!isAddingToExistingPoll && (
               <>
-                <View style={styles.titleSection}>
-                  <Text style={responsiveStyles.label}>Poll Title (Optional)</Text>
-                  <Text style={responsiveStyles.sublabel}>
-                    Customize your poll title or keep the auto-generated name
-                  </Text>
-                  <TextInput
-                    style={responsiveStyles.titleInput}
-                    value={pollTitle}
-                    onChangeText={setPollTitle}
-                    placeholder="Enter a custom title or keep the default"
-                    placeholderTextColor="#999999"
-                    maxLength={100}
-                  />
+                <View style={responsiveStyles.titleSection}>
+                  <TouchableOpacity
+                    style={[responsiveStyles.titleButton, pollTitle && styles.titleButtonActive]}
+                    onPress={() => setIsTitleModalVisible(true)}
+                  >
+                    <View style={styles.titleButtonContent}>
+                      <View style={styles.titleButtonLeft}>
+                        <Text style={responsiveStyles.titleButtonLabel}>Poll Title (Optional)</Text>
+                        <Text style={responsiveStyles.titleButtonValue}>
+                          {pollTitle || 'Click to set title'}
+                        </Text>
+                      </View>
+                      <View style={styles.titleButtonRight}>
+                        <View style={[styles.titleButtonIndicator, { opacity: pollTitle ? 1 : 0 }]}>
+                          <Text style={styles.titleButtonIndicatorText}>✓</Text>
+                        </View>
+                        <SquarePen size={20} color="#666666" />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
                 </View>
 
-                <View style={styles.descriptionSection}>
-                  <Text style={responsiveStyles.label}>Description (Optional)</Text>
-                  <Text style={responsiveStyles.sublabel}>
-                    Add context, instructions, or any additional information for voters
-                  </Text>
-                  <TextInput
-                    style={responsiveStyles.descriptionInput}
-                    value={pollDescription}
-                    onChangeText={setPollDescription}
-                    placeholder="e.g., Vote for your top 3 games, or Let's decide what to play this weekend"
-                    placeholderTextColor="#999999"
-                    maxLength={500}
-                    multiline
-                    numberOfLines={3}
-                    textAlignVertical="top"
-                  />
+                <View style={responsiveStyles.descriptionSection}>
+                  <TouchableOpacity
+                    style={[responsiveStyles.descriptionButton, pollDescription && styles.descriptionButtonActive]}
+                    onPress={() => setIsDescriptionModalVisible(true)}
+                  >
+                    <View style={styles.descriptionButtonContent}>
+                      <View style={styles.descriptionButtonLeft}>
+                        <Text style={responsiveStyles.descriptionButtonLabel}>Description (Optional)</Text>
+                        <Text style={responsiveStyles.titleButtonValue}>
+                          {pollDescription || 'Click to add description'}
+                        </Text>
+                      </View>
+                      <View style={styles.descriptionButtonRight}>
+                        <View style={[styles.descriptionButtonIndicator, { opacity: pollDescription ? 1 : 0 }]}>
+                          <Text style={styles.descriptionButtonIndicatorText}>✓</Text>
+                        </View>
+                        <SquarePen size={20} color="#666666" />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
                 </View>
               </>
             )}
 
-            <View style={styles.filterSection}>
+            <View style={responsiveStyles.filterSection}>
               <Text style={responsiveStyles.label}>Filter Games</Text>
               <Text style={responsiveStyles.sublabel}>
                 {isAddingToExistingPoll
@@ -736,8 +849,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
               />
             </View>
 
-            <View style={styles.gamesSection}>
-              <View style={styles.gamesHeader}>
+            <View style={responsiveStyles.gamesSection}>
+              <View style={responsiveStyles.gamesHeader}>
                 <View style={styles.gamesHeaderLeft}>
                   <Text style={responsiveStyles.label}>Select Games</Text>
                   <Text style={responsiveStyles.sublabel}>
@@ -814,7 +927,22 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </div>
+      </View>
+      {/* Title Modal */}
+      <CreatePollTitleModal
+        isVisible={isTitleModalVisible}
+        onClose={() => setIsTitleModalVisible(false)}
+        onSave={handleTitleSave}
+        currentTitle={pollTitle}
+      />
+
+      {/* Description Modal */}
+      <CreatePollDescrModal
+        isVisible={isDescriptionModalVisible}
+        onClose={() => setIsDescriptionModalVisible(false)}
+        onSave={handleDescriptionSave}
+        currentDescription={pollDescription}
+      />
     </View>
   );
 };
@@ -828,8 +956,26 @@ type Styles = {
   content: ViewStyle;
   titleSection: ViewStyle;
   titleInput: TextStyle;
+  titleButton: ViewStyle;
+  titleButtonActive: ViewStyle;
+  titleButtonContent: ViewStyle;
+  titleButtonLeft: ViewStyle;
+  titleButtonRight: ViewStyle;
+  titleButtonLabel: TextStyle;
+  titleButtonValue: TextStyle;
+  titleButtonIndicator: ViewStyle;
+  titleButtonIndicatorText: TextStyle;
   descriptionSection: ViewStyle;
   descriptionInput: TextStyle;
+  descriptionButton: ViewStyle;
+  descriptionButtonActive: ViewStyle;
+  descriptionButtonContent: ViewStyle;
+  descriptionButtonLeft: ViewStyle;
+  descriptionButtonRight: ViewStyle;
+  descriptionButtonLabel: TextStyle;
+  descriptionButtonValue: TextStyle;
+  descriptionButtonIndicator: ViewStyle;
+  descriptionButtonIndicatorText: TextStyle;
   label: TextStyle;
   sublabel: TextStyle;
   filterSection: ViewStyle;
@@ -875,7 +1021,7 @@ type Styles = {
 
 const styles = StyleSheet.create<Styles>({
   overlay: {
-    position: 'fixed',
+    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
     top: 0,
     left: 0,
     right: 0,
@@ -911,7 +1057,8 @@ const styles = StyleSheet.create<Styles>({
     borderBottomColor: '#e1e5ea',
     minHeight: Platform.OS === 'web' ? 40 : 36,
     position: 'relative',
-    marginHorizontal: Platform.OS === 'web' ? -20 : -16,
+    marginHorizontal: Platform.OS === 'web' ? 0 : 0, // Remove negative margins that cause layout issues
+    paddingBottom: Platform.OS === 'web' ? 16 : 12, // Add bottom padding for better spacing
   },
   closeButton: {
     padding: Platform.OS === 'web' ? 4 : 2,
@@ -920,7 +1067,7 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-SemiBold',
     fontSize: Platform.OS === 'web' ? 20 : 18,
     color: '#1a2b5f',
-    marginTop: 10,
+    marginTop: Platform.OS === 'web' ? 16 : 12, // Increase top margin for better header separation
   },
   content: {
     paddingVertical: Platform.OS === 'web' ? 20 : 16,
@@ -946,6 +1093,59 @@ const styles = StyleSheet.create<Styles>({
     padding: Platform.OS === 'web' ? 12 : 10,
     marginTop: 8,
   },
+  titleButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: Platform.OS === 'web' ? 12 : 8,
+    padding: Platform.OS === 'web' ? 16 : 14,
+    marginTop: 8,
+  },
+  titleButtonActive: {
+    borderColor: '#ff9654',
+    backgroundColor: '#fff5ef',
+  },
+  titleButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  titleButtonLeft: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  titleButtonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  titleButtonLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: Platform.OS === 'web' ? 16 : 15,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  titleButtonValue: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#999999',
+    fontStyle: 'italic',
+  },
+  titleButtonIndicator: {
+    backgroundColor: '#4ade80',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  titleButtonIndicatorText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'Poppins-SemiBold',
+  },
   descriptionSection: {
     marginBottom: Platform.OS === 'web' ? 20 : 16,
     width: '100%',
@@ -962,6 +1162,59 @@ const styles = StyleSheet.create<Styles>({
     marginTop: 8,
     minHeight: Platform.OS === 'web' ? 80 : 70,
     textAlignVertical: 'top',
+  },
+  descriptionButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: Platform.OS === 'web' ? 12 : 8,
+    padding: Platform.OS === 'web' ? 16 : 14,
+    marginTop: 8,
+  },
+  descriptionButtonActive: {
+    borderColor: '#ff9654',
+    backgroundColor: '#fff5ef',
+  },
+  descriptionButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  descriptionButtonLeft: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  descriptionButtonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  descriptionButtonLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: Platform.OS === 'web' ? 16 : 15,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  descriptionButtonValue: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#999999',
+    fontStyle: 'italic',
+  },
+  descriptionButtonIndicator: {
+    backgroundColor: '#4ade80',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  descriptionButtonIndicatorText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'Poppins-SemiBold',
   },
   label: {
     fontFamily: 'Poppins-SemiBold',

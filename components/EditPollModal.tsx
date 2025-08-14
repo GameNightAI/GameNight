@@ -265,146 +265,148 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.modal}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Edit Poll</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <X size={24} color="#666666" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Warning about existing votes */}
-        {hasExistingVotes && (
-          <View style={styles.warningHeader}>
-            <AlertTriangle size={20} color="#f59e0b" />
-            <Text style={styles.warningHeaderText}>
-              This poll already has votes
-            </Text>
-          </View>
-        )}
-
-        {/* Custom confirmation dialog */}
-        {showConfirmation && (
-          <View style={styles.confirmationOverlay}>
-            <View style={styles.confirmationDialog}>
-              <Text style={styles.confirmationTitle}>Warning: Existing Votes</Text>
-              <Text style={styles.confirmationMessage}>
-                {confirmationAction === 'save'
-                  ? 'This poll already has votes. Are you sure you want to continue?'
-                  : 'This poll already has votes. Adding more games may affect existing votes. Continue to add games?'
-                }
-              </Text>
-              <View style={styles.confirmationButtons}>
-                <TouchableOpacity
-                  style={styles.confirmationButtonCancel}
-                  onPress={() => {
-                    setShowConfirmation(false);
-                  }}
-                >
-                  <Text style={styles.confirmationButtonTextCancel}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.confirmationButtonContinue}
-                  onPress={() => {
-                    setShowConfirmation(false);
-                    if (confirmationAction === 'save') {
-                      performSave();
-                    } else {
-                      setShowCreatePollModal(true);
-                    }
-                  }}
-                >
-                  <Text style={styles.confirmationButtonTextContinue}>
-                    {confirmationAction === 'save' ? 'Continue' : 'Add Games'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-
-        <ScrollView style={styles.content}>
-          <View style={styles.pollInfo}>
-            <Text style={styles.pollTitle}>{dynamicPollTitle}</Text>
-            {(selectedGames.length !== originalPollGames.length && isDefaultTitle(dynamicPollTitle)) && (
-              <Text style={styles.pollTitleNote}>
-                Title updated automatically
-              </Text>
-            )}
-            {pollDescription && (
-              <Text style={styles.pollDescription}>{pollDescription}</Text>
-            )}
+    <>
+      <View style={styles.overlay}>
+        <View style={styles.modal}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Edit Poll</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <X size={24} color="#666666" />
+            </TouchableOpacity>
           </View>
 
-          {originalPollGames.length > 0 && (
-            <View style={styles.currentGamesSection}>
-              <Text style={styles.sublabel}>
-                Uncheck games to remove them from the poll
+          {/* Warning about existing votes */}
+          {hasExistingVotes && (
+            <View style={styles.warningHeader}>
+              <AlertTriangle size={20} color="#f59e0b" />
+              <Text style={styles.warningHeaderText}>
+                This poll already has votes
               </Text>
-
-              {originalPollGames.map(game => {
-                const isSelected = selectedGames.some(g => g.id === game.id);
-                return (
-                  <TouchableOpacity
-                    key={game.id}
-                    style={[
-                      styles.gameItem,
-                      isSelected && styles.gameItemSelected
-                    ]}
-                    onPress={() => toggleGameSelection(game)}
-                  >
-                    <View style={styles.gameInfo}>
-                      <Text style={styles.gameName}>{game.name}</Text>
-                      <Text style={styles.playerCount}>
-                        {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
-                      </Text>
-                    </View>
-                    <View style={[
-                      styles.checkbox,
-                      isSelected && styles.checkboxSelected
-                    ]}>
-                      {isSelected && (
-                        <Check size={16} color="#ffffff" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
             </View>
           )}
 
-          <TouchableOpacity
-            style={styles.addGamesButton}
-            onPress={() => {
-              if (hasExistingVotes) {
-                setConfirmationAction('addGames');
-                setShowConfirmation(true);
-              } else {
-                setShowCreatePollModal(true);
-              }
-            }}
-          >
-            <Plus size={20} color="#1d4ed8" />
-            <Text style={styles.addGamesButtonText}>
-              {originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
-            </Text>
-          </TouchableOpacity>
+          {/* Custom confirmation dialog */}
+          {showConfirmation && (
+            <View style={styles.confirmationOverlay}>
+              <View style={styles.confirmationDialog}>
+                <Text style={styles.confirmationTitle}>Warning: Existing Votes</Text>
+                <Text style={styles.confirmationMessage}>
+                  {confirmationAction === 'save'
+                    ? 'This poll already has votes. Are you sure you want to continue?'
+                    : 'This poll already has votes. Adding more games may affect existing votes. Continue to add games?'
+                  }
+                </Text>
+                <View style={styles.confirmationButtons}>
+                  <TouchableOpacity
+                    style={styles.confirmationButtonCancel}
+                    onPress={() => {
+                      setShowConfirmation(false);
+                    }}
+                  >
+                    <Text style={styles.confirmationButtonTextCancel}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.confirmationButtonContinue}
+                    onPress={() => {
+                      setShowConfirmation(false);
+                      if (confirmationAction === 'save') {
+                        performSave();
+                      } else {
+                        setShowCreatePollModal(true);
+                      }
+                    }}
+                  >
+                    <Text style={styles.confirmationButtonTextContinue}>
+                      {confirmationAction === 'save' ? 'Continue' : 'Add Games'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
+          <ScrollView style={styles.content}>
+            <View style={styles.pollInfo}>
+              <Text style={styles.pollTitle}>{dynamicPollTitle}</Text>
+              {(selectedGames.length !== originalPollGames.length && isDefaultTitle(dynamicPollTitle)) && (
+                <Text style={styles.pollTitleNote}>
+                  Title updated automatically
+                </Text>
+              )}
+              {pollDescription && (
+                <Text style={styles.pollDescription}>{pollDescription}</Text>
+              )}
+            </View>
+
+            {originalPollGames.length > 0 && (
+              <View style={styles.currentGamesSection}>
+                <Text style={styles.sublabel}>
+                  Uncheck games to remove them from the poll
+                </Text>
+
+                {originalPollGames.map(game => {
+                  const isSelected = selectedGames.some(g => g.id === game.id);
+                  return (
+                    <TouchableOpacity
+                      key={game.id}
+                      style={[
+                        styles.gameItem,
+                        isSelected && styles.gameItemSelected
+                      ]}
+                      onPress={() => toggleGameSelection(game)}
+                    >
+                      <View style={styles.gameInfo}>
+                        <Text style={styles.gameName}>{game.name}</Text>
+                        <Text style={styles.playerCount}>
+                          {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                        </Text>
+                      </View>
+                      <View style={[
+                        styles.checkbox,
+                        isSelected && styles.checkboxSelected
+                      ]}>
+                        {isSelected && (
+                          <Check size={16} color="#ffffff" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={styles.addGamesButton}
+              onPress={() => {
+                if (hasExistingVotes) {
+                  setConfirmationAction('addGames');
+                  setShowConfirmation(true);
+                } else {
+                  setShowCreatePollModal(true);
+                }
+              }}
+            >
+              <Plus size={20} color="#1d4ed8" />
+              <Text style={styles.addGamesButtonText}>
+                {originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
+              </Text>
+            </TouchableOpacity>
 
 
-        </ScrollView>
+          </ScrollView>
 
-        <View style={styles.footer}>
-          {error && <Text style={styles.errorText}>{error}</Text>}
-          <TouchableOpacity
-            style={[styles.saveButton, loading || selectedGames.length === 0 ? styles.saveButtonDisabled : undefined]}
-            onPress={handleSaveChanges}
-            disabled={loading || selectedGames.length === 0}
-          >
-            <Text style={styles.saveButtonText}>
-              {loading ? 'Saving...' : 'Save Changes'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.footer}>
+            {error && <Text style={styles.errorText}>{error}</Text>}
+            <TouchableOpacity
+              style={[styles.saveButton, loading || selectedGames.length === 0 ? styles.saveButtonDisabled : undefined]}
+              onPress={handleSaveChanges}
+              disabled={loading || selectedGames.length === 0}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -427,7 +429,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         preselectedGames={originalPollGames}
         isAddingToExistingPoll={true}
       />
-    </View>
+    </>
   );
 };
 
