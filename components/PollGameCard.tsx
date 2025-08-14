@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions, Linking } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react-native';
+import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, ChevronRight, Link as LinkIcon } from 'lucide-react-native';
 
 import { VOTING_OPTIONS, ICON_MAP, VoteType, getIconColor } from './votingOptions';
 
@@ -15,7 +15,7 @@ const getScoreByVoteType = (voteType: string): number => {
 // Utility to get background color by score
 const getVoteBgColor = (score: number, isSelected: boolean): string => {
   if (!isSelected) return '#f5f5f5';
-  if (score > 1) return '#bbf7d0'; // green-200
+  if (score > 2) return '#bbf7d0'; // green-200
   if (score < 0) return '#fecaca'; // red-200
   return '#fef9c3'; // yellow-100
 };
@@ -89,19 +89,6 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         <View style={[styles.mainContent, isMobile && styles.mainContentMobile]}>
           {/* Game info and thumbnail row */}
           <View style={[styles.gameInfoRow, isMobile && styles.gameInfoRowMobile]}>
-            <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
-              <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
-              <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
-                {game.min_players}-{game.max_players} players • {game.playing_time} min
-              </Text>
-            </View>
-            <View style={styles.chevronContainer}>
-              {isExpanded ? (
-                <ChevronUp size={isSmallScreen ? 20 : 24} color="#ff9654" />
-              ) : (
-                <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
-              )}
-            </View>
             <Image
               source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
               style={[
@@ -111,6 +98,20 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               ]}
               resizeMode="cover"
             />
+            <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
+              <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
+              <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
+                {game.min_players}-{game.max_players} players • {game.playing_time} min
+              </Text>
+            </View>
+            <View style={styles.chevronContainer}>
+              <Text style={[styles.infoText, isSmallScreen && styles.infoTextSmall]}>Info</Text>
+              {isExpanded ? (
+                <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
+              ) : (
+                <ChevronRight size={isSmallScreen ? 20 : 24} color="#ff9654" />
+              )}
+            </View>
           </View>
 
           {/* Voting buttons row - moved below game info for mobile */}
@@ -118,14 +119,16 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
             {VOTING_OPTIONS.map(option => {
               const IconComponent = ICON_MAP[option.icon];
               return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={getButtonStyle(option.value)}
-                  onPress={() => onVote(game.id, option.value)}
-                  disabled={disabled}
-                >
-                  <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value, selectedVote === option.value)} />
-                </TouchableOpacity>
+                <View key={option.value} style={styles.voteButtonWrapper}>
+                  <TouchableOpacity
+                    style={getButtonStyle(option.value)}
+                    onPress={() => onVote(game.id, option.value)}
+                    disabled={disabled}
+                  >
+                    <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value, selectedVote === option.value)} />
+                  </TouchableOpacity>
+                  <Text style={styles.voteButtonLabel}>{option.label}</Text>
+                </View>
               );
             })}
           </View>
@@ -211,6 +214,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     gap: 12,
+    justifyContent: 'flex-start',
   },
   gameInfoRowMobile: {
     flexDirection: 'row',
@@ -220,7 +224,6 @@ const styles = StyleSheet.create({
   },
   gameInfo: {
     flex: 1,
-    marginRight: 8,
   },
   gameInfoMobile: {
     flex: 1,
@@ -231,18 +234,32 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     backgroundColor: '#f0f0f0',
+    marginRight: 12,
   },
   thumbnailMobile: {
     width: 60,
     height: 60,
+    marginRight: 8,
   },
   thumbnailSmall: {
     width: 48,
     height: 48,
+    marginRight: 6,
   },
   chevronContainer: {
     marginLeft: 'auto',
     marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  infoText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+    color: '#666666',
+  },
+  infoTextSmall: {
+    fontSize: 10,
   },
   name: {
     fontSize: 16,
@@ -268,6 +285,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  voteButtonWrapper: {
+    alignItems: 'center',
+    gap: 4,
+  },
   voteButtonsContainerMobile: {
     justifyContent: 'space-around',
     paddingHorizontal: 8,
@@ -281,6 +302,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  voteButtonLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 10,
+    color: '#666666',
+    marginTop: 2,
+    textAlign: 'center',
   },
   voteButtonSmall: {
     width: 28,

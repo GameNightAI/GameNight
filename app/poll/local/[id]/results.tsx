@@ -165,7 +165,6 @@ export default function LocalPollResultsScreen() {
               <View key={result.game.id} style={styles.resultItem}>
                 <View style={styles.rankingContainer}>
                   <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(result.ranking) }]}>
-                    {getRankingIcon(result.ranking)}
                     <Text style={styles.rankingNumber}>{result.ranking}</Text>
                   </View>
                   <View style={styles.rankingInfo}>
@@ -173,7 +172,7 @@ export default function LocalPollResultsScreen() {
                       {`${result.ranking}${getOrdinalSuffix(result.ranking)} Place`}
                     </Text>
                     <Text style={styles.scoreText}>
-                      Score: {result.totalScore} ({result.totalVotes} votes)
+                      {result.totalVotes} votes
                     </Text>
                   </View>
                 </View>

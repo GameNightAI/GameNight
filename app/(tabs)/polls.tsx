@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable } from 'react-native';
+import { useDebouncedWindowDimensions } from '@/hooks/useDebouncedWindowDimensions';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users } from 'lucide-react-native';
+import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users, Edit } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ import { Poll } from '@/types/poll';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { CreatePollModal } from '@/components/CreatePollModal';
+import { EditPollModal } from '@/components/EditPollModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { PollsEmptyState } from '@/components/PollsEmptyState';
 import { Calendar, Shield } from 'lucide-react-native';
@@ -40,12 +42,14 @@ export default function PollsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [pollToEdit, setPollToEdit] = useState<Poll | null>(null);
   const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
   const [showShareLink, setShowShareLink] = useState<string | null>(null);
   const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const { width, height } = useWindowDimensions();
+  const { width, height } = useDebouncedWindowDimensions();
   const isMobile = width < 768;
   const isSmallMobile = width < 380 || height < 700;
   const [openResultsPollId, setOpenResultsPollId] = useState<string | null>(null);
@@ -53,45 +57,8 @@ export default function PollsScreen() {
   const subscriptionRef = useRef<any>(null);
   const [preselectedGames, setPreselectedGames] = useState<Game[] | null>(null);
 
-  useEffect(() => {
-    loadPolls();
-  }, []);
-
-  // Handle refresh parameter from URL
-  useEffect(() => {
-    if (params.refresh === 'true') {
-      loadPolls();
-      // Clear the refresh parameter from URL
-      router.setParams({ refresh: undefined });
-    }
-  }, [params.refresh]);
-
-  // --- Real-time vote listening subscription ---
-  useEffect(() => {
-    // Subscribe to new votes for any poll
-    const channel = supabase
-      .channel('votes-listener')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'votes',
-        },
-        (payload) => {
-          setNewVotes(true);
-        }
-      )
-      .subscribe();
-    subscriptionRef.current = channel;
-    return () => {
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-      }
-    };
-  }, []);
-
-  const loadPolls = async () => {
+  // Memoize the loadPolls function to prevent unnecessary re-creations
+  const loadPolls = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -192,9 +159,73 @@ export default function PollsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
-  const handleShare = async (pollId: string) => {
+  useEffect(() => {
+    loadPolls();
+  }, [loadPolls]);
+
+  // Handle refresh parameter from URL
+  useEffect(() => {
+    if (params.refresh === 'true') {
+      loadPolls();
+      // Clear the refresh parameter from URL
+      router.setParams({ refresh: undefined });
+    }
+  }, [params.refresh, loadPolls, router]);
+
+  // --- Real-time vote listening subscription ---
+  useEffect(() => {
+    // Subscribe to new votes for any poll
+    const channel = supabase
+      .channel('votes-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+        },
+        (payload) => {
+          setNewVotes(true);
+        }
+      )
+      .subscribe();
+    subscriptionRef.current = channel;
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
+  }, []);
+
+  // Memoize the scaled style function to prevent recalculation on every render
+  const getScaledStyle = useCallback((baseStyle: any, scale: number = 1) => {
+    if (!isSmallMobile) return baseStyle;
+    return {
+      ...baseStyle,
+      fontSize: baseStyle.fontSize ? baseStyle.fontSize * scale : undefined,
+      paddingHorizontal: baseStyle.paddingHorizontal ? baseStyle.paddingHorizontal * scale : undefined,
+      paddingVertical: baseStyle.paddingVertical ? baseStyle.paddingVertical * scale : undefined,
+      padding: baseStyle.padding ? baseStyle.padding * scale : undefined,
+      marginBottom: baseStyle.marginBottom ? baseStyle.marginBottom * scale : undefined,
+      marginTop: baseStyle.marginTop ? baseStyle.marginTop * scale : undefined,
+      marginLeft: baseStyle.marginLeft ? baseStyle.marginLeft * scale : undefined,
+      marginRight: baseStyle.marginRight ? baseStyle.marginRight * scale : undefined,
+      gap: baseStyle.gap ? baseStyle.gap * scale : undefined,
+      borderRadius: baseStyle.borderRadius ? baseStyle.borderRadius * scale : undefined,
+      minWidth: baseStyle.minWidth ? baseStyle.minWidth * scale : undefined,
+      width: baseStyle.width ? baseStyle.width * scale : undefined,
+      height: baseStyle.height ? baseStyle.height * scale : undefined,
+    };
+  }, [isSmallMobile]);
+
+  // Memoize current polls to prevent unnecessary re-renders
+  const currentPolls = useMemo(() => {
+    return activeTab === 'all' ? allPolls : activeTab === 'created' ? polls : otherUsersPolls;
+  }, [activeTab, allPolls, polls, otherUsersPolls]);
+
+  const handleShare = useCallback(async (pollId: string) => {
     // Use a proper base URL for React Native
     const baseUrl = Platform.select({
       web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
@@ -244,9 +275,9 @@ export default function PollsScreen() {
         alert(`Share this link: ${shareUrl}`);
       }
     }
-  };
+  }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!pollToDelete) return;
 
     try {
@@ -263,41 +294,15 @@ export default function PollsScreen() {
       console.error('Error deleting poll:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete poll');
     }
-  };
+  }, [pollToDelete, loadPolls]);
 
-  const handleDuplicatePoll = async (pollId: string) => {
-    try {
-      // Get poll games
-      const { data: pollGames, error: pollGamesError } = await supabase
-        .from('poll_games')
-        .select('game_id')
-        .eq('poll_id', pollId);
-      if (pollGamesError) throw pollGamesError;
-      if (!pollGames || pollGames.length === 0) {
-        setError('No games found in poll.');
-        return;
-      }
-      const gameIds = pollGames.map(pg => pg.game_id);
-      // Get game details
-      const { data: gamesData, error: gamesError } = await supabase
-        .from('games')
-        .select('*')
-        .in('id', gameIds);
-      if (gamesError) throw gamesError;
-      if (!gamesData || gamesData.length === 0) {
-        setError('No game details found.');
-        return;
-      }
-      setPreselectedGames(gamesData);
-      setCreateModalVisible(true);
-    } catch (err) {
-      console.error('Error duplicating poll:', err);
-      setError(err instanceof Error ? err.message : 'Failed to duplicate poll');
-    }
-  };
+  const handleEditPoll = useCallback((poll: Poll) => {
+    setPollToEdit(poll);
+    setEditModalVisible(true);
+  }, []);
 
-  // Helper to render poll results dropdown
-  function PollResultsDropdown({ pollId }: { pollId: string }) {
+  // Helper to render poll results dropdown - memoized to prevent unnecessary re-renders
+  const PollResultsDropdown = useCallback(({ pollId }: { pollId: string }) => {
     const { results, loading, error } = usePollResults(pollId);
     if (loading) return <LoadingState />;
     if (error) return <ErrorState message={error} onRetry={() => { }} />;
@@ -323,7 +328,7 @@ export default function PollsScreen() {
         onViewDetails={() => router.push({ pathname: '/poll/[id]/results', params: { id: pollId } })}
       />
     );
-  }
+  }, [router]);
 
   if (loading) {
     return <LoadingState />;
@@ -333,30 +338,8 @@ export default function PollsScreen() {
     return <ErrorState message={error} onRetry={loadPolls} />;
   }
 
-  const currentPolls = activeTab === 'all' ? allPolls : activeTab === 'created' ? polls : otherUsersPolls;
   const isCreator = activeTab === 'created';
   // userId is managed by useState and set in useEffect
-
-  // Dynamic styles for small mobile screens
-  const getScaledStyle = (baseStyle: any, scale: number = 1) => {
-    if (!isSmallMobile) return baseStyle;
-    return {
-      ...baseStyle,
-      fontSize: baseStyle.fontSize ? baseStyle.fontSize * scale : undefined,
-      paddingHorizontal: baseStyle.paddingHorizontal ? baseStyle.paddingHorizontal * scale : undefined,
-      paddingVertical: baseStyle.paddingVertical ? baseStyle.paddingVertical * scale : undefined,
-      padding: baseStyle.padding ? baseStyle.padding * scale : undefined,
-      marginBottom: baseStyle.marginBottom ? baseStyle.marginBottom * scale : undefined,
-      marginTop: baseStyle.marginTop ? baseStyle.marginTop * scale : undefined,
-      marginLeft: baseStyle.marginLeft ? baseStyle.marginLeft * scale : undefined,
-      marginRight: baseStyle.marginRight ? baseStyle.marginRight * scale : undefined,
-      gap: baseStyle.gap ? baseStyle.gap * scale : undefined,
-      borderRadius: baseStyle.borderRadius ? baseStyle.borderRadius * scale : undefined,
-      minWidth: baseStyle.minWidth ? baseStyle.minWidth * scale : undefined,
-      width: baseStyle.width ? baseStyle.width * scale : undefined,
-      height: baseStyle.height ? baseStyle.height * scale : undefined,
-    };
-  };
 
   return (
     <View style={styles.container}>
@@ -454,7 +437,8 @@ export default function PollsScreen() {
               style={getScaledStyle(styles.copyButton, 0.75)}
               onPress={async () => {
                 try {
-                  await Clipboard.setStringAsync(showShareLink);
+                  // Copy only the link value, not the text input content
+                  await Clipboard.setStringAsync(showShareLink || '');
                   setShowCopiedConfirmation(true);
                   setTimeout(() => {
                     setShowCopiedConfirmation(false);
@@ -532,10 +516,16 @@ export default function PollsScreen() {
                       <Users size={isSmallMobile ? 13.5 : 18} color="#10b981" />
                       <Text style={getScaledStyle(styles.localVoteButtonTextMobile, 0.75)}>In-Person</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={getScaledStyle(styles.duplicateButtonMobile, 0.75)} onPress={() => handleDuplicatePoll(item.id)}>
+                    {item.user_id === currentUserId && (
+                      <TouchableOpacity style={getScaledStyle(styles.editButtonMobile, 0.75)} onPress={() => handleEditPoll(item)}>
+                        <Edit size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
+                        <Text style={getScaledStyle(styles.editButtonTextMobile, 0.75)}>Edit</Text>
+                      </TouchableOpacity>
+                    )}
+                    {/* <TouchableOpacity style={getScaledStyle(styles.duplicateButtonMobile, 0.75)} onPress={() => handleDuplicatePoll(item.id)}>
                       <Copy size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
                       <Text style={getScaledStyle(styles.duplicateButtonTextMobile, 0.75)}>Duplicate</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                   </View>
                   <TouchableOpacity
                     style={[
@@ -589,13 +579,22 @@ export default function PollsScreen() {
                       Results ({item.voteCount})
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
+                  {item.user_id === currentUserId && (
+                    <TouchableOpacity
+                      style={getScaledStyle(styles.editButtonDesktop, 0.75)}
+                      onPress={() => handleEditPoll(item)}
+                    >
+                      <Edit size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
+                      <Text style={getScaledStyle(styles.editButtonTextDesktop, 0.75)}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
+                  {/*<TouchableOpacity
                     style={getScaledStyle(styles.duplicateButtonDesktop, 0.75)}
                     onPress={() => handleDuplicatePoll(item.id)}
                   >
                     <Copy size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
                     <Text style={getScaledStyle(styles.duplicateButtonTextDesktop, 0.75)}>Duplicate</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
               )}
               {/* Dropdown for desktop, below poll card */}
@@ -629,6 +628,22 @@ export default function PollsScreen() {
           loadPolls();
         }}
         preselectedGames={preselectedGames || undefined}
+      />
+
+      <EditPollModal
+        isVisible={editModalVisible}
+        onClose={() => {
+          setEditModalVisible(false);
+          setPollToEdit(null);
+        }}
+        onSuccess={() => {
+          setEditModalVisible(false);
+          setPollToEdit(null);
+          loadPolls();
+        }}
+        pollId={pollToEdit?.id || ''}
+        pollTitle={pollToEdit?.title || ''}
+        pollDescription={pollToEdit?.description}
       />
 
       <ConfirmationDialog
@@ -996,6 +1011,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#1a2b5f',
+  },
+  editButtonDesktop: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  editButtonTextDesktop: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#4b5563',
+  },
+  editButtonMobile: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  editButtonTextMobile: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#4b5563',
   },
   duplicateButtonDesktop: {
     flex: 1,
