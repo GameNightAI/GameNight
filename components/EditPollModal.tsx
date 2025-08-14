@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Alert, Image } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, AlertTriangle } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
@@ -375,10 +375,15 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                       ]}
                       onPress={() => toggleGameSelection(game)}
                     >
+                      <Image
+                        source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
+                        style={styles.gameThumbnail}
+                        resizeMode="cover"
+                      />
                       <View style={styles.gameInfo}>
                         <Text style={styles.gameName}>{game.name}</Text>
                         <Text style={styles.playerCount}>
-                          {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                          {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
                         </Text>
                       </View>
                       <View style={[
@@ -602,12 +607,20 @@ const styles = StyleSheet.create({
   gameItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-start',
     padding: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
     marginBottom: 8,
     backgroundColor: '#ffffff',
+  },
+  gameThumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    marginRight: 12,
   },
   gameItemSelected: {
     borderColor: '#1d4ed8',
