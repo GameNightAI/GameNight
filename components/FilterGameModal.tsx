@@ -246,7 +246,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
       <ScrollView
         style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={{ paddingBottom: 8, paddingTop: 4 }} // Reduced padding to move button up
+        contentContainerStyle={{ paddingBottom: 4, paddingTop: 2 }} // Further reduced padding for mobile
         showsVerticalScrollIndicator={!isMobile}
       >
         <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(0) }]}>
@@ -355,14 +355,14 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       <View style={styles.overlay}>
         <div style={{
           maxWidth: isMobile ? '95vw' : '500px', // Mobile: full width, Desktop: fixed width
-          maxHeight: isMobile ? '90vh' : '80vh', // Mobile: full height, Desktop: limited height
+          maxHeight: isMobile ? '85vh' : '80vh', // Mobile: reduced height to prevent overlap
           width: '100%',
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          padding: isMobile ? 10 : 20,
+          padding: isMobile ? 8 : 20,
         }}>
           <View style={[styles.dialog, {
             height: isMobile ? '100%' : 'auto', // Mobile: full height, Desktop: auto height
@@ -370,7 +370,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             flexDirection: 'column',
             flex: isMobile ? 1 : undefined,
             maxWidth: isMobile ? '100%' : undefined,
-            maxHeight: isMobile ? '100%' : undefined
+            maxHeight: isMobile ? '100%' : undefined,
+            paddingHorizontal: isMobile ? 12 : 20, // Mobile: reduced horizontal padding
           }]}>
             {content}
           </View>
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e1e5ea',
     paddingBottom: 8,
-    paddingTop: Platform.OS === 'web' ? 24 : 20, // Increased top padding for title spacing
+    paddingTop: Platform.OS === 'web' ? 16 : 20, // Reduced top padding for better mobile fit
   },
   closeButton: {
     padding: 4,
@@ -508,8 +509,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#666666',
-    marginBottom: 16,
-    paddingTop: 8, // Added top padding to create gap below header
+    marginBottom: 12, // Reduced margin for mobile
+    paddingTop: 4, // Reduced top padding for mobile
   },
   filterScrollView: {
     flex: 1,
@@ -527,7 +528,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8, // Reduced from auto to 8 to move button up
-    marginBottom: 16, // Reduced from 20 to 16
+    marginBottom: 12, // Further reduced for mobile
   },
   searchButtonText: {
     fontFamily: 'Poppins-SemiBold',

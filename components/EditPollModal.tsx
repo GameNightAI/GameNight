@@ -35,6 +35,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const [confirmationAction, setConfirmationAction] = useState<'save' | 'addGames'>('save');
   const [showCreatePollModal, setShowCreatePollModal] = useState(false);
   const [dynamicPollTitle, setDynamicPollTitle] = useState(pollTitle);
+  const [isTitleManuallyChanged, setIsTitleManuallyChanged] = useState(false);
 
 
 
@@ -42,8 +43,11 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     if (isVisible) {
       loadGames();
       checkExistingVotes();
+      // Reset the title change flag when opening a new poll
+      setIsTitleManuallyChanged(false);
+      setDynamicPollTitle(pollTitle);
     }
-  }, [isVisible, pollId]);
+  }, [isVisible, pollId, pollTitle]);
 
   // Function to generate updated poll title based on game count
   const generateUpdatedTitle = (gameCount: number) => {
@@ -65,11 +69,16 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 
   // Update title when selected games change, but only if it's a default title
   useEffect(() => {
-    if (isDefaultTitle(dynamicPollTitle)) {
+    if (isDefaultTitle(dynamicPollTitle) && !isTitleManuallyChanged) {
       const newTitle = generateUpdatedTitle(selectedGames.length);
       setDynamicPollTitle(newTitle);
     }
   }, [selectedGames.length]);
+
+  // Update dynamicPollTitle when pollTitle prop changes
+  useEffect(() => {
+    setDynamicPollTitle(pollTitle);
+  }, [pollTitle]);
 
   const checkExistingVotes = async () => {
     try {
@@ -202,8 +211,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         }
       }
 
-      // Update the poll title if it has changed
-      if (dynamicPollTitle !== pollTitle) {
+      // Update the poll title only if it was manually changed by the user
+      if (isTitleManuallyChanged && dynamicPollTitle !== pollTitle) {
         const { error: titleError } = await supabase
           .from('polls')
           .update({ title: dynamicPollTitle })
@@ -333,6 +342,17 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                   Title updated automatically
                 </Text>
               )}
+              <Text style={styles.editTitleLabel}>Edit Title (Optional):</Text>
+              <TextInput
+                style={styles.titleInput}
+                value={dynamicPollTitle}
+                onChangeText={(text) => {
+                  setDynamicPollTitle(text);
+                  setIsTitleManuallyChanged(true);
+                }}
+                placeholder="Enter custom poll title"
+                placeholderTextColor="#999999"
+              />
               {pollDescription && (
                 <Text style={styles.pollDescription}>{pollDescription}</Text>
               )}
@@ -518,6 +538,24 @@ const styles = StyleSheet.create({
     color: '#666666',
     fontStyle: 'italic',
     marginBottom: 4,
+  },
+  editTitleLabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  titleInput: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333333',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
   },
   pollDescription: {
     fontSize: 14,

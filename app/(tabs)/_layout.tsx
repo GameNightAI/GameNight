@@ -56,7 +56,6 @@ export default function TabLayout() {
         tabPress: (e) => {
           // Get the tab name from the event target
           const routeName = e.target;
-          console.log('Tab pressed, full routeName:', routeName);
 
           // Try to extract tab name from the route
           let tabName = 'index'; // default
@@ -78,7 +77,6 @@ export default function TabLayout() {
             }
           }
 
-          console.log('Extracted tabName:', tabName);
           handleTabPress(tabName);
         },
       }}>
