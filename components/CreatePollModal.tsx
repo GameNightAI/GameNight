@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform, Image } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
@@ -461,6 +461,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         ...styles.gameItem,
         padding: isMobile ? 12 : 16,
         marginBottom: isMobile ? 6 : 8,
+        justifyContent: 'flex-start' as const,
+      },
+      gameThumbnail: {
+        width: isMobile ? 48 : 60,
+        height: isMobile ? 48 : 60,
+        borderRadius: isMobile ? 6 : 8,
+        backgroundColor: '#f0f0f0',
+        marginRight: isMobile ? 8 : 12,
       },
       checkbox: {
         ...styles.checkbox,
@@ -851,16 +859,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
             <View style={responsiveStyles.gamesSection}>
               <View style={responsiveStyles.gamesHeader}>
-                <View style={styles.gamesHeaderLeft}>
-                  <Text style={responsiveStyles.label}>Select Games</Text>
-                  <Text style={responsiveStyles.sublabel}>
-                    {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
-                      ? `Games that match your filters`
-                      : isAddingToExistingPoll
-                        ? 'Choose additional games from your collection to add to the poll'
-                        : 'Choose games from your collection to include in the poll'}
-                  </Text>
-                </View>
+                <Text style={responsiveStyles.label}>Select Games</Text>
                 <View style={styles.gamesHeaderRight}>
                   <TouchableOpacity
                     style={responsiveStyles.selectAllButton}
@@ -876,6 +875,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <Text style={[responsiveStyles.sublabel, { marginBottom: 16 }]}>
+                {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
+                  ? `Games that match your filters`
+                  : isAddingToExistingPoll
+                    ? 'Choose additional games from your collection to add to the poll'
+                    : 'Choose games from your collection to include in the poll'}
+              </Text>
 
               {filteredGames.length === 0 ? (
                 <Text style={styles.noGamesText}>
@@ -893,6 +900,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                       ]}
                       onPress={() => toggleGameSelection(game)}
                     >
+                      <Image
+                        source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
+                        style={responsiveStyles.gameThumbnail}
+                        resizeMode="cover"
+                      />
                       <View style={styles.gameInfo}>
                         <Text style={responsiveStyles.gameName}>{game.name}</Text>
                         <Text style={responsiveStyles.playerCount}>
@@ -1003,6 +1015,7 @@ type Styles = {
   clearAllButtonText: TextStyle;
   gameItem: ViewStyle;
   gameItemSelected: ViewStyle;
+  gameThumbnail: ViewStyle;
   gameInfo: ViewStyle;
   gameName: TextStyle;
   playerCount: TextStyle;
@@ -1357,7 +1370,7 @@ const styles = StyleSheet.create<Styles>({
   },
   gameItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     padding: Platform.OS === 'web' ? 16 : 12,
     backgroundColor: '#ffffff',
@@ -1365,6 +1378,13 @@ const styles = StyleSheet.create<Styles>({
     marginBottom: Platform.OS === 'web' ? 8 : 6,
     borderWidth: 1,
     borderColor: '#e1e5ea',
+  },
+  gameThumbnail: {
+    width: Platform.OS === 'web' ? 60 : 48,
+    height: Platform.OS === 'web' ? 60 : 48,
+    borderRadius: Platform.OS === 'web' ? 8 : 6,
+    backgroundColor: '#f0f0f0',
+    marginRight: Platform.OS === 'web' ? 12 : 8,
   },
   gameItemSelected: {
     backgroundColor: '#fff5ef',
