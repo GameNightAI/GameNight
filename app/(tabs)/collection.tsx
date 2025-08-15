@@ -273,7 +273,6 @@ export default function CollectionScreen() {
             style={styles.clearButton}
             onPress={() => setFilterModalVisible(true)}
           >
-            <X size={16} color="#666666" />
             <Text style={styles.clearButtonText}>Edit Filters</Text>
           </TouchableOpacity>
         </View>
