@@ -384,171 +384,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setPollDescription(description);
   };
 
-  // Responsive styles based on screen size
-  const getResponsiveStyles = () => {
-    const baseScale = isSmallMobile ? 0.85 : 1;
-
-    return {
-      dialog: {
-        ...styles.dialog,
-        maxWidth: isMobile ? '95%' as any : 800,
-        maxHeight: isMobile ? '90%' as any : 600,
-        paddingHorizontal: isMobile ? 12 : 20,
-        borderRadius: isMobile ? 8 : 12,
-      },
-      title: {
-        ...styles.title,
-        fontSize: isMobile ? 16 : 20,
-        marginTop: isMobile ? 8 : 16,
-      },
-      label: {
-        ...styles.label,
-        fontSize: isMobile ? 14 : 16,
-        marginBottom: isMobile ? 4 : 8,
-      },
-      sublabel: {
-        ...styles.sublabel,
-        fontSize: isMobile ? 12 : 14,
-        marginBottom: isMobile ? 6 : 12,
-      },
-      titleInput: {
-        ...styles.titleInput,
-        fontSize: isMobile ? 15 : 16,
-        padding: isMobile ? 10 : 12,
-      },
-      descriptionInput: {
-        ...styles.descriptionInput,
-        fontSize: isMobile ? 15 : 16,
-        padding: isMobile ? 10 : 12,
-        minHeight: isMobile ? 70 : 80,
-      },
-      gameName: {
-        ...styles.gameName,
-        fontSize: isMobile ? 15 : 16,
-      },
-      playerCount: {
-        ...styles.playerCount,
-        fontSize: isMobile ? 13 : 14,
-      },
-      createButton: {
-        ...styles.createButton,
-        padding: isMobile ? 12 : 13,
-        margin: isMobile ? 12 : 16,
-      },
-      createButtonText: {
-        ...styles.createButtonText,
-        fontSize: isMobile ? 12 : 13,
-      },
-      selectAllButton: {
-        ...styles.selectAllButton,
-        paddingHorizontal: isMobile ? 10 : 12,
-        paddingVertical: isMobile ? 5 : 6,
-      },
-      selectAllButtonText: {
-        ...styles.selectAllButtonText,
-        fontSize: isMobile ? 11 : 12,
-      },
-      clearAllButton: {
-        ...styles.clearAllButton,
-        paddingHorizontal: isMobile ? 10 : 12,
-        paddingVertical: isMobile ? 5 : 6,
-      },
-      clearAllButtonText: {
-        ...styles.clearAllButtonText,
-        fontSize: isMobile ? 11 : 12,
-      },
-      gameItem: {
-        ...styles.gameItem,
-        padding: isMobile ? 12 : 16,
-        marginBottom: isMobile ? 6 : 8,
-        justifyContent: 'flex-start' as const,
-      },
-      gameThumbnail: {
-        width: isMobile ? 48 : 60,
-        height: isMobile ? 48 : 60,
-        borderRadius: isMobile ? 6 : 8,
-        backgroundColor: '#f0f0f0',
-        marginRight: isMobile ? 8 : 12,
-      },
-      checkbox: {
-        ...styles.checkbox,
-        width: isMobile ? 20 : 24,
-        height: isMobile ? 20 : 24,
-      },
-      absoluteBackButton: {
-        ...styles.absoluteBackButton,
-        top: isMobile ? 20 : 26,
-        left: isMobile ? 16 : 20,
-        padding: isMobile ? 4 : 6,
-      },
-      absoluteCloseButton: {
-        ...styles.absoluteCloseButton,
-        top: isMobile ? 20 : 26,
-        right: isMobile ? 16 : 20,
-        padding: isMobile ? 4 : 6,
-      },
-      // Mobile-optimized button styles
-      titleButton: {
-        ...styles.titleButton,
-        padding: isMobile ? 10 : 16,
-        marginTop: isMobile ? 4 : 8,
-      },
-      descriptionButton: {
-        ...styles.descriptionButton,
-        padding: isMobile ? 10 : 16,
-        marginTop: isMobile ? 4 : 8,
-      },
-      titleButtonLabel: {
-        ...styles.titleButtonLabel,
-        fontSize: isMobile ? 14 : 16,
-        marginBottom: isMobile ? 2 : 4,
-      },
-      titleButtonValue: {
-        ...styles.titleButtonValue,
-        fontSize: isMobile ? 12 : 13,
-      },
-      descriptionButtonLabel: {
-        ...styles.descriptionButtonLabel,
-        fontSize: isMobile ? 14 : 16,
-        marginBottom: isMobile ? 2 : 4,
-      },
-      descriptionButtonValue: {
-        ...styles.descriptionButtonValue,
-        fontSize: isMobile ? 12 : 13,
-      },
-      // Mobile-optimized section spacing
-      titleSection: {
-        ...styles.titleSection,
-        marginBottom: isMobile ? 10 : 20,
-        paddingTop: isMobile ? 4 : 8,
-      },
-      descriptionSection: {
-        ...styles.descriptionSection,
-        marginBottom: isMobile ? 10 : 20,
-      },
-      filterSection: {
-        ...styles.filterSection,
-        marginBottom: isMobile ? 10 : 20,
-        marginTop: isMobile ? 5 : 10,
-      },
-      gamesSection: {
-        ...styles.gamesSection,
-        marginTop: isMobile ? 4 : 8,
-      },
-      gamesHeader: {
-        ...styles.gamesHeader,
-        marginBottom: isMobile ? 6 : 12,
-      },
-      // Mobile-optimized header
-      header: {
-        ...styles.header,
-        padding: isMobile ? 12 : 20,
-        minHeight: isMobile ? 24 : 40,
-        paddingBottom: isMobile ? 8 : 16,
-      },
-    };
-  };
-
   // Safari-compatible select styles
   const getSelectStyles = () => {
     const baseSelectStyles = {
@@ -556,29 +391,24 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         return {
           ...baseStyles,
           fontFamily: 'Poppins-Regular',
-          fontSize: isMobile ? 14 : 16,
+          fontSize: 14,
           borderColor: '#e1e5ea',
-          borderRadius: isMobile ? 8 : 12,
-          minHeight: isMobile ? 40 : 48,
+          borderRadius: 8,
+          minHeight: 40,
           boxShadow: 'none',
           '&:hover': {
             borderColor: '#ff9654',
           },
-          // Safari-specific fixes
-          ...(isSafari() && {
-            WebkitAppearance: 'none',
-            WebkitBorderRadius: isMobile ? 8 : 12,
-          }),
         }
       },
       container: (baseStyles: any, state: any) => ({
         ...baseStyles,
-        marginBottom: isMobile ? 6 : 12,
+        marginBottom: 6,
       }),
       menu: (baseStyles: any, state: any) => ({
         ...baseStyles,
         backgroundColor: '#ffffff',
-        borderRadius: isMobile ? 8 : 12,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e1e5ea',
         shadowColor: '#000',
@@ -590,36 +420,18 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         position: 'absolute',
         maxHeight: 'none',
         overflow: 'hidden',
-        // Safari-specific fixes
-        ...(isSafari() && {
-          WebkitBorderRadius: isMobile ? 8 : 12,
-        }),
       }),
       menuList: (baseStyles: any, state: any) => ({
         ...baseStyles,
-        maxHeight: isMobile ? 160 : 200,
+        maxHeight: 160,
         overflow: 'auto',
-        // Safari-specific scrollbar styling
-        ...(isSafari() && {
-          '&::-webkit-scrollbar': {
-            width: '8px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: '#f1f1f1',
-            borderRadius: '4px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: '#c1c1c1',
-            borderRadius: '4px',
-          },
-        }),
       }),
       clearIndicator: (baseStyles: any, state: any) => ({
         ...baseStyles,
         color: '#666666',
-        fontSize: isMobile ? 11 : 13,
+        fontSize: 11,
         fontFamily: 'Poppins-SemiBold',
-        padding: isMobile ? '2px 6px' : '4px 8px',
+        padding: '2px 6px',
         cursor: 'pointer',
         '&:hover': {
           color: '#ff9654',
@@ -642,17 +454,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       multiValueLabel: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 12 : 14,
+        fontSize: 12,
       }),
       noOptionsMessage: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 13 : 16,
+        fontSize: 13,
       }),
       option: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 14 : 16,
+        fontSize: 14,
         color: state.isSelected ? '#ff9654' : '#333333',
         backgroundColor: state.isSelected ? '#fff5ef' : 'transparent',
         '&:hover': {
@@ -662,7 +474,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       placeholder: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 14 : 16,
+        fontSize: 14,
         color: '#999999',
       }),
     };
@@ -672,272 +484,283 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   if (!isVisible || !isReady) return null;
 
-  const responsiveStyles = getResponsiveStyles();
   const selectStyles = getSelectStyles();
+
+  const content = (
+    <>
+      {isAddingToExistingPoll && (
+        <TouchableOpacity
+          style={styles.absoluteBackButton}
+          onPress={() => {
+            onClose();
+            resetForm();
+          }}
+          accessibilityLabel="Back to Edit Poll"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <ArrowLeft size={isMobile ? 20 : 24} color="#666666" />
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity
+        style={styles.absoluteCloseButton}
+        onPress={() => {
+          onClose();
+          resetForm();
+        }}
+        accessibilityLabel="Close"
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <X size={isMobile ? 20 : 24} color="#666666" />
+      </TouchableOpacity>
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          {isAddingToExistingPoll ? 'Add More Games' : 'Create Poll'}
+        </Text>
+      </View>
+      <ScrollView
+        style={{ flex: 1, minHeight: 0 }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={!isMobile}
+      >
+        {!isAddingToExistingPoll && (
+          <>
+            <View style={styles.titleSection}>
+              <TouchableOpacity
+                style={[styles.titleButton, pollTitle && styles.titleButtonActive]}
+                onPress={() => setIsTitleModalVisible(true)}
+              >
+                <View style={styles.titleButtonContent}>
+                  <View style={styles.titleButtonLeft}>
+                    <Text style={styles.titleButtonLabel}>Poll Title (Optional)</Text>
+                    <Text style={styles.titleButtonValue}>
+                      {pollTitle || 'Click to set title'}
+                    </Text>
+                  </View>
+                  <View style={styles.titleButtonRight}>
+                    <View style={[styles.titleButtonIndicator, { opacity: pollTitle ? 1 : 0 }]}>
+                      <Text style={styles.titleButtonIndicatorText}>✓</Text>
+                    </View>
+                    <SquarePen size={20} color="#666666" />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.descriptionSection}>
+              <TouchableOpacity
+                style={[styles.descriptionButton, pollDescription && styles.descriptionButtonActive]}
+                onPress={() => setIsDescriptionModalVisible(true)}
+              >
+                <View style={styles.descriptionButtonContent}>
+                  <View style={styles.descriptionButtonLeft}>
+                    <Text style={styles.descriptionButtonLabel}>Description (Optional)</Text>
+                    <Text style={styles.titleButtonValue}>
+                      {pollDescription || 'Click to add description'}
+                    </Text>
+                  </View>
+                  <View style={styles.descriptionButtonRight}>
+                    <View style={[styles.descriptionButtonIndicator, { opacity: pollDescription ? 1 : 0 }]}>
+                      <Text style={styles.descriptionButtonIndicatorText}>✓</Text>
+                    </View>
+                    <SquarePen size={20} color="#666666" />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        <View style={styles.filterSection}>
+          <Text style={styles.label}>Filter Games</Text>
+          <Text style={styles.sublabel}>
+            {isAddingToExistingPoll
+              ? 'Filter your collection to find additional games to add to the poll. All filters are optional.'
+              : 'Filter your collection to find the perfect games for your poll. All filters are optional.'
+            }
+          </Text>
+
+          <Select
+            placeholder="Player count"
+            value={playerCount}
+            onChange={handlePlayerCountChange}
+            options={playerOptions}
+            defaultValue={[]}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={selectStyles}
+          />
+
+          <Select
+            placeholder="Play time"
+            value={playTime}
+            onChange={handlePlayTimeChange}
+            options={timeOptions}
+            defaultValue={[]}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={selectStyles}
+          />
+
+          <Select
+            placeholder="Age range"
+            value={minAge}
+            onChange={handleMinAgeChange}
+            defaultValue={[]}
+            options={ageOptions}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={selectStyles}
+          />
+
+          <Select
+            placeholder="Co-op / competitive"
+            value={gameType}
+            onChange={handleGameTypeChange}
+            defaultValue={[]}
+            options={typeOptions}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={selectStyles}
+          />
+
+          <Select
+            placeholder="Game complexity"
+            value={complexity}
+            onChange={handleComplexityChange}
+            defaultValue={[]}
+            options={complexityOptions}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={selectStyles}
+          />
+        </View>
+
+        <View style={styles.gamesSection}>
+          <View style={styles.gamesHeader}>
+            <Text style={styles.label}>Select Games</Text>
+            <View style={styles.gamesHeaderRight}>
+              <TouchableOpacity
+                style={styles.selectAllButton}
+                onPress={() => setSelectedGames([...filteredGames])}
+              >
+                <Text style={styles.selectAllButtonText}>Select All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.clearAllButton}
+                onPress={() => setSelectedGames([])}
+              >
+                <Text style={styles.clearAllButtonText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={[styles.sublabel, { marginBottom: 16 }]}>
+            {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
+              ? `Games that match your filters`
+              : isAddingToExistingPoll
+                ? 'Choose additional games from your collection to add to the poll'
+                : 'Choose games from your collection to include in the poll'}
+          </Text>
+
+          {filteredGames.length === 0 ? (
+            <Text style={styles.noGamesText}>
+              No games found matching your filters
+            </Text>
+          ) : (
+            filteredGames.map(game => {
+              const isSelected = selectedGames.some(g => g.id === game.id);
+              return (
+                <TouchableOpacity
+                  key={game.id}
+                  style={[
+                    styles.gameItem,
+                    isSelected && styles.gameItemSelected
+                  ]}
+                  onPress={() => toggleGameSelection(game)}
+                >
+                  <Image
+                    source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 6,
+                      backgroundColor: '#f0f0f0',
+                      marginRight: 8,
+                    }}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.gameInfo}>
+                    <Text style={styles.gameName}>{game.name}</Text>
+                    <Text style={styles.playerCount}>
+                      {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                    </Text>
+                  </View>
+                  <View style={[
+                    styles.checkbox,
+                    isSelected && styles.checkboxSelected
+                  ]}>
+                    {isSelected && (
+                      <Check size={isMobile ? 14 : 16} color="#ffffff" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+      </ScrollView>
+      <View style={styles.footer}>
+        {error && <Text style={styles.errorText}>{error}</Text>}
+        <TouchableOpacity
+          style={[styles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
+          onPress={isAddingToExistingPoll ? handleAddGames : handleCreatePoll}
+          disabled={loading || selectedGames.length === 0}
+        >
+          <Plus size={isMobile ? 18 : 20} color="#fff" />
+          <Text style={styles.createButtonText}>
+            {loading ? (isAddingToExistingPoll ? 'Adding...' : 'Creating...') : (isAddingToExistingPoll ? 'Add Games' : 'Create Poll')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
 
   return (
     <View style={styles.overlay}>
       <View style={{
-        maxWidth: isMobile ? '95%' : 800, // Mobile: full width, Desktop: fixed width
-        maxHeight: isMobile ? '90%' : '80%', // Mobile: full height, Desktop: limited height
+        maxWidth: isMobile ? '95%' : 800,
+        maxHeight: '85%',
         width: '100%',
-        height: '100%',
+        height: 'auto',
+        display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
         padding: isMobile ? 8 : 20,
       }}>
-        <View style={[responsiveStyles.dialog, {
-          height: isMobile ? '100%' : 'auto', // Mobile: full height, Desktop: auto height
+        <View style={[styles.dialog, {
+          height: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          flex: isMobile ? 1 : undefined,
           maxWidth: isMobile ? '100%' : undefined,
           maxHeight: isMobile ? '100%' : undefined
         }]}>
-          {isAddingToExistingPoll && (
-            <TouchableOpacity
-              style={responsiveStyles.absoluteBackButton}
-              onPress={() => {
-                onClose();
-                resetForm();
-              }}
-              accessibilityLabel="Back to Edit Poll"
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <ArrowLeft size={isMobile ? 20 : 24} color="#666666" />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={responsiveStyles.absoluteCloseButton}
-            onPress={() => {
-              onClose();
-              resetForm();
-            }}
-            accessibilityLabel="Close"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <X size={isMobile ? 20 : 24} color="#666666" />
-          </TouchableOpacity>
-          <View style={responsiveStyles.header}>
-            <Text style={responsiveStyles.title}>
-              {isAddingToExistingPoll ? 'Add More Games' : 'Create Poll'}
-            </Text>
-          </View>
-          <ScrollView
-            style={{ flex: 1, minHeight: 0 }}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={!isMobile}
-          >
-            {!isAddingToExistingPoll && (
-              <>
-                <View style={responsiveStyles.titleSection}>
-                  <TouchableOpacity
-                    style={[responsiveStyles.titleButton, pollTitle && styles.titleButtonActive]}
-                    onPress={() => setIsTitleModalVisible(true)}
-                  >
-                    <View style={styles.titleButtonContent}>
-                      <View style={styles.titleButtonLeft}>
-                        <Text style={responsiveStyles.titleButtonLabel}>Poll Title (Optional)</Text>
-                        <Text style={responsiveStyles.titleButtonValue}>
-                          {pollTitle || 'Click to set title'}
-                        </Text>
-                      </View>
-                      <View style={styles.titleButtonRight}>
-                        <View style={[styles.titleButtonIndicator, { opacity: pollTitle ? 1 : 0 }]}>
-                          <Text style={styles.titleButtonIndicatorText}>✓</Text>
-                        </View>
-                        <SquarePen size={20} color="#666666" />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={responsiveStyles.descriptionSection}>
-                  <TouchableOpacity
-                    style={[responsiveStyles.descriptionButton, pollDescription && styles.descriptionButtonActive]}
-                    onPress={() => setIsDescriptionModalVisible(true)}
-                  >
-                    <View style={styles.descriptionButtonContent}>
-                      <View style={styles.descriptionButtonLeft}>
-                        <Text style={responsiveStyles.descriptionButtonLabel}>Description (Optional)</Text>
-                        <Text style={responsiveStyles.titleButtonValue}>
-                          {pollDescription || 'Click to add description'}
-                        </Text>
-                      </View>
-                      <View style={styles.descriptionButtonRight}>
-                        <View style={[styles.descriptionButtonIndicator, { opacity: pollDescription ? 1 : 0 }]}>
-                          <Text style={styles.descriptionButtonIndicatorText}>✓</Text>
-                        </View>
-                        <SquarePen size={20} color="#666666" />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-
-            <View style={responsiveStyles.filterSection}>
-              <Text style={responsiveStyles.label}>Filter Games</Text>
-              <Text style={responsiveStyles.sublabel}>
-                {isAddingToExistingPoll
-                  ? 'Filter your collection to find additional games to add to the poll. All filters are optional.'
-                  : 'Filter your collection to find the perfect games for your poll. All filters are optional.'
-                }
-              </Text>
-
-              <Select
-                placeholder="Player count"
-                value={playerCount}
-                onChange={handlePlayerCountChange}
-                options={playerOptions}
-                defaultValue={[]}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-
-              <Select
-                placeholder="Play time"
-                value={playTime}
-                onChange={handlePlayTimeChange}
-                options={timeOptions}
-                defaultValue={[]}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-
-              <Select
-                placeholder="Age range"
-                value={minAge}
-                onChange={handleMinAgeChange}
-                defaultValue={[]}
-                options={ageOptions}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-
-              <Select
-                placeholder="Co-op / competitive"
-                value={gameType}
-                onChange={handleGameTypeChange}
-                defaultValue={[]}
-                options={typeOptions}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-
-              <Select
-                placeholder="Game complexity"
-                value={complexity}
-                onChange={handleComplexityChange}
-                defaultValue={[]}
-                options={complexityOptions}
-                isMulti
-                isClearable
-                isSearchable={false}
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                styles={selectStyles}
-              />
-            </View>
-
-            <View style={responsiveStyles.gamesSection}>
-              <View style={responsiveStyles.gamesHeader}>
-                <Text style={responsiveStyles.label}>Select Games</Text>
-                <View style={styles.gamesHeaderRight}>
-                  <TouchableOpacity
-                    style={responsiveStyles.selectAllButton}
-                    onPress={() => setSelectedGames([...filteredGames])}
-                  >
-                    <Text style={responsiveStyles.selectAllButtonText}>Select All</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={responsiveStyles.clearAllButton}
-                    onPress={() => setSelectedGames([])}
-                  >
-                    <Text style={responsiveStyles.clearAllButtonText}>Clear All</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <Text style={[responsiveStyles.sublabel, { marginBottom: 16 }]}>
-                {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
-                  ? `Games that match your filters`
-                  : isAddingToExistingPoll
-                    ? 'Choose additional games from your collection to add to the poll'
-                    : 'Choose games from your collection to include in the poll'}
-              </Text>
-
-              {filteredGames.length === 0 ? (
-                <Text style={styles.noGamesText}>
-                  No games found matching your filters
-                </Text>
-              ) : (
-                filteredGames.map(game => {
-                  const isSelected = selectedGames.some(g => g.id === game.id);
-                  return (
-                    <TouchableOpacity
-                      key={game.id}
-                      style={[
-                        responsiveStyles.gameItem,
-                        isSelected && styles.gameItemSelected
-                      ]}
-                      onPress={() => toggleGameSelection(game)}
-                    >
-                      <Image
-                        source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
-                        style={responsiveStyles.gameThumbnail}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.gameInfo}>
-                        <Text style={responsiveStyles.gameName}>{game.name}</Text>
-                        <Text style={responsiveStyles.playerCount}>
-                          {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
-                        </Text>
-                      </View>
-                      <View style={[
-                        responsiveStyles.checkbox,
-                        isSelected && styles.checkboxSelected
-                      ]}>
-                        {isSelected && (
-                          <Check size={isMobile ? 14 : 16} color="#ffffff" />
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </View>
-          </ScrollView>
-          <View style={styles.footer}>
-            {error && <Text style={styles.errorText}>{error}</Text>}
-            <TouchableOpacity
-              style={[responsiveStyles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
-              onPress={isAddingToExistingPoll ? handleAddGames : handleCreatePoll}
-              disabled={loading || selectedGames.length === 0}
-            >
-              <Plus size={isMobile ? 18 : 20} color="#fff" />
-              <Text style={responsiveStyles.createButtonText}>
-                {loading ? (isAddingToExistingPoll ? 'Adding...' : 'Creating...') : (isAddingToExistingPoll ? 'Add Games' : 'Create Poll')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {content}
         </View>
       </View>
       {/* Title Modal */}
@@ -1047,7 +870,7 @@ const styles = StyleSheet.create<Styles>({
   },
   dialog: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 8,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1056,31 +879,31 @@ const styles = StyleSheet.create<Styles>({
     elevation: 5,
     position: 'relative',
     overflow: 'hidden',
-    flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
+    maxHeight: '85%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Platform.OS === 'web' ? 20 : 16,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e1e5ea',
-    minHeight: Platform.OS === 'web' ? 40 : 36,
+    minHeight: 24,
     position: 'relative',
-    marginHorizontal: Platform.OS === 'web' ? 0 : 0, // Remove negative margins that cause layout issues
-    paddingBottom: Platform.OS === 'web' ? 16 : 12, // Add bottom padding for better spacing
+    marginHorizontal: 0,
+    paddingBottom: 8,
   },
   closeButton: {
-    padding: Platform.OS === 'web' ? 4 : 2,
+    padding: 4,
   },
   title: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: Platform.OS === 'web' ? 20 : 18,
+    fontSize: 16,
     color: '#1a2b5f',
-    marginTop: Platform.OS === 'web' ? 16 : 12, // Increase top margin for better header separation
+    marginTop: 8,
   },
   content: {
     paddingVertical: Platform.OS === 'web' ? 20 : 16,
@@ -1091,27 +914,27 @@ const styles = StyleSheet.create<Styles>({
     paddingHorizontal: 0,
   },
   titleSection: {
-    marginBottom: Platform.OS === 'web' ? 20 : 16,
+    marginBottom: 10,
     width: '100%',
-    paddingTop: Platform.OS === 'web' ? 8 : 6,
+    paddingTop: 4,
   },
   titleInput: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 16 : 15,
+    fontSize: 15,
     color: '#333333',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
-    borderRadius: Platform.OS === 'web' ? 12 : 8,
-    padding: Platform.OS === 'web' ? 12 : 10,
+    borderRadius: 8,
+    padding: 10,
     marginTop: 8,
   },
   titleButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
-    borderRadius: Platform.OS === 'web' ? 12 : 8,
-    padding: Platform.OS === 'web' ? 16 : 14,
+    borderRadius: 8,
+    padding: 10,
     marginTop: 8,
   },
   titleButtonActive: {
@@ -1135,13 +958,13 @@ const styles = StyleSheet.create<Styles>({
   },
   titleButtonLabel: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: Platform.OS === 'web' ? 16 : 15,
+    fontSize: 14,
     color: '#1a2b5f',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   titleButtonValue: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontSize: 12,
     color: '#999999',
     fontStyle: 'italic',
   },
@@ -1160,28 +983,28 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-SemiBold',
   },
   descriptionSection: {
-    marginBottom: Platform.OS === 'web' ? 20 : 16,
+    marginBottom: 10,
     width: '100%',
   },
   descriptionInput: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 16 : 15,
+    fontSize: 15,
     color: '#333333',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
-    borderRadius: Platform.OS === 'web' ? 12 : 8,
-    padding: Platform.OS === 'web' ? 12 : 10,
+    borderRadius: 8,
+    padding: 10,
     marginTop: 8,
-    minHeight: Platform.OS === 'web' ? 80 : 70,
+    minHeight: 70,
     textAlignVertical: 'top',
   },
   descriptionButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
-    borderRadius: Platform.OS === 'web' ? 12 : 8,
-    padding: Platform.OS === 'web' ? 16 : 14,
+    borderRadius: 8,
+    padding: 10,
     marginTop: 8,
   },
   descriptionButtonActive: {
@@ -1205,13 +1028,13 @@ const styles = StyleSheet.create<Styles>({
   },
   descriptionButtonLabel: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: Platform.OS === 'web' ? 16 : 15,
+    fontSize: 14,
     color: '#1a2b5f',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   descriptionButtonValue: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontSize: 12,
     color: '#999999',
     fontStyle: 'italic',
   },
@@ -1231,19 +1054,19 @@ const styles = StyleSheet.create<Styles>({
   },
   label: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: Platform.OS === 'web' ? 16 : 15,
+    fontSize: 14,
     color: '#1a2b5f',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   sublabel: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontSize: 12,
     color: '#666666',
-    marginBottom: 12,
+    marginBottom: 6,
   },
   filterSection: {
-    marginBottom: Platform.OS === 'web' ? 20 : 16,
-    marginTop: Platform.OS === 'web' ? 10 : 8,
+    marginBottom: 10,
+    marginTop: 5,
     width: '100%',
     position: 'relative',
     zIndex: 1000,
@@ -1326,7 +1149,7 @@ const styles = StyleSheet.create<Styles>({
     fontSize: Platform.OS === 'web' ? 16 : 15,
   },
   gamesSection: {
-    marginTop: Platform.OS === 'web' ? 8 : 6,
+    marginTop: 4,
     width: '100%',
     marginBottom: 0,
     paddingBottom: 0,
@@ -1335,56 +1158,56 @@ const styles = StyleSheet.create<Styles>({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Platform.OS === 'web' ? 12 : 10,
+    marginBottom: 6,
   },
   gamesHeaderLeft: {
     flex: 1,
   },
   gamesHeaderRight: {
     flexDirection: 'row',
-    gap: Platform.OS === 'web' ? 8 : 6,
+    gap: 6,
   },
   selectAllButton: {
     backgroundColor: '#ff9654',
-    paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
-    paddingVertical: Platform.OS === 'web' ? 6 : 5,
-    borderRadius: Platform.OS === 'web' ? 6 : 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
   },
   selectAllButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: Platform.OS === 'web' ? 12 : 11,
+    fontSize: 11,
     color: '#ffffff',
   },
   clearAllButton: {
     backgroundColor: '#f8f9fa',
-    paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
-    paddingVertical: Platform.OS === 'web' ? 6 : 5,
-    borderRadius: Platform.OS === 'web' ? 6 : 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: '#e1e5ea',
   },
   clearAllButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: Platform.OS === 'web' ? 12 : 11,
+    fontSize: 11,
     color: '#666666',
   },
   gameItem: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: Platform.OS === 'web' ? 16 : 12,
+    padding: 12,
     backgroundColor: '#ffffff',
-    borderRadius: Platform.OS === 'web' ? 12 : 8,
-    marginBottom: Platform.OS === 'web' ? 8 : 6,
+    borderRadius: 8,
+    marginBottom: 6,
     borderWidth: 1,
     borderColor: '#e1e5ea',
   },
   gameThumbnail: {
-    width: Platform.OS === 'web' ? 60 : 48,
-    height: Platform.OS === 'web' ? 60 : 48,
-    borderRadius: Platform.OS === 'web' ? 8 : 6,
+    width: 48,
+    height: 48,
+    borderRadius: 6,
     backgroundColor: '#f0f0f0',
-    marginRight: Platform.OS === 'web' ? 12 : 8,
+    marginRight: 8,
   },
   gameItemSelected: {
     backgroundColor: '#fff5ef',
@@ -1395,19 +1218,19 @@ const styles = StyleSheet.create<Styles>({
   },
   gameName: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 16 : 15,
+    fontSize: 15,
     color: '#333333',
     marginBottom: 4,
   },
   playerCount: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontSize: 13,
     color: '#666666',
   },
   checkbox: {
-    width: Platform.OS === 'web' ? 24 : 20,
-    height: Platform.OS === 'web' ? 24 : 20,
-    borderRadius: Platform.OS === 'web' ? 6 : 4,
+    width: 20,
+    height: 20,
+    borderRadius: 4,
     borderWidth: 2,
     borderColor: '#e1e5ea',
     backgroundColor: '#ffffff',
@@ -1420,7 +1243,7 @@ const styles = StyleSheet.create<Styles>({
   },
   noGamesText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontSize: 13,
     color: '#666666',
     textAlign: 'center',
     marginTop: 20,
@@ -1428,21 +1251,21 @@ const styles = StyleSheet.create<Styles>({
   },
   errorText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontSize: 13,
     color: '#e74c3c',
     textAlign: 'center',
     marginTop: 8,
-    paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
+    paddingHorizontal: 16,
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ff9654',
-    padding: Platform.OS === 'web' ? 13 : 12,
-    paddingRight: Platform.OS === 'web' ? 16 : 14,
-    margin: Platform.OS === 'web' ? 16 : 12,
-    borderRadius: Platform.OS === 'web' ? 10 : 8,
+    padding: 12,
+    paddingRight: 14,
+    margin: 12,
+    borderRadius: 8,
     gap: 3,
   },
   createButtonDisabled: {
@@ -1450,39 +1273,39 @@ const styles = StyleSheet.create<Styles>({
   },
   createButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: Platform.OS === 'web' ? 13 : 12,
+    fontSize: 12,
     color: '#ffffff',
   },
   absoluteBackButton: {
     position: 'absolute',
-    top: Platform.OS === 'web' ? 26 : 20,
-    left: Platform.OS === 'web' ? 20 : 16,
+    top: 20,
+    left: 16,
     zIndex: 100,
     backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: Platform.OS === 'web' ? 16 : 12,
-    padding: Platform.OS === 'web' ? 6 : 4,
+    borderRadius: 12,
+    padding: 4,
     elevation: 2,
     borderWidth: 1,
     borderColor: '#1d4ed8',
   },
   absoluteCloseButton: {
     position: 'absolute',
-    top: Platform.OS === 'web' ? 26 : 20,
-    right: Platform.OS === 'web' ? 20 : 16,
+    top: 20,
+    right: 16,
     zIndex: 100,
     backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: Platform.OS === 'web' ? 16 : 12,
-    padding: Platform.OS === 'web' ? 6 : 4,
+    borderRadius: 12,
+    padding: 4,
     elevation: 2,
     borderWidth: 1,
     borderColor: '#e74c3c',
   },
   footer: {
-    paddingTop: 0,
+    paddingTop: 14,
     paddingBottom: 0,
-    paddingLeft: Platform.OS === 'web' ? 14 : 12,
-    paddingRight: Platform.OS === 'web' ? 14 : 12,
-    minHeight: Platform.OS === 'web' ? 30 : 28,
+    paddingLeft: 12,
+    paddingRight: 12,
+    minHeight: 28,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e1e5ea',
@@ -1522,8 +1345,6 @@ const selectStyles = {
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    zIndex: 9999,
-    position: 'absolute',
     maxHeight: 'none',
     overflow: 'hidden',
   }),
