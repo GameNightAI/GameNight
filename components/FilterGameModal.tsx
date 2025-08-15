@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
 import { Search, X, ChevronDown, Clock } from 'lucide-react-native';
 import Select from 'react-select';
 import { Game } from '@/types/game';
@@ -45,32 +45,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   setComplexity,
 }) => {
   const deviceType = useDeviceType();
-  const [isMobile, setIsMobile] = useState(false);
-  const [isSmallMobile, setIsSmallMobile] = useState(false);
-  const [isReady, setIsReady] = useState(false); // Loading state for screen size detection
 
   // Dynamic z-index management for dropdowns
   const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
-
-  React.useEffect(() => {
-    const updateScreenSize = () => {
-      const { width, height } = Dimensions.get('window');
-      setIsMobile(width < 768);
-      setIsSmallMobile(width < 380 || height < 700);
-    };
-
-    updateScreenSize();
-    setIsReady(true); // Mark as ready after initial screen size detection
-
-    const handleResize = () => {
-      updateScreenSize();
-    };
-
-    if (Platform.OS === 'web') {
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-  }, []);
 
   // Function to get dynamic z-index for each filter section
   const getFilterSectionZIndex = (index: number) => {
@@ -120,10 +97,10 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         return {
           ...baseStyles,
           fontFamily: 'Poppins-Regular',
-          fontSize: isMobile ? 15 : 16,
+          fontSize: 14,
           borderColor: '#e1e5ea',
-          borderRadius: isMobile ? 8 : 12,
-          minHeight: isMobile ? 44 : 48,
+          borderRadius: 8,
+          minHeight: 40,
           boxShadow: 'none',
           '&:hover': {
             borderColor: '#ff9654',
@@ -131,20 +108,20 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           // Safari-specific fixes
           ...(isSafari() && {
             WebkitAppearance: 'none',
-            WebkitBorderRadius: isMobile ? 8 : 12,
+            WebkitBorderRadius: 8,
           }),
         }
       },
       container: (baseStyles: any, state: any) => ({
         ...baseStyles,
-        marginBottom: 8, // Fixed spacing for mobile optimization
+        marginBottom: 6,
         position: 'relative',
         zIndex: getFilterSectionZIndex(index),
       }),
       menu: (baseStyles: any, state: any) => ({
         ...baseStyles,
         backgroundColor: '#ffffff',
-        borderRadius: isMobile ? 8 : 12,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e1e5ea',
         shadowColor: '#000',
@@ -158,12 +135,12 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         overflow: 'hidden',
         // Safari-specific fixes
         ...(isSafari() && {
-          WebkitBorderRadius: isMobile ? 8 : 12,
+          WebkitBorderRadius: 8,
         }),
       }),
       menuList: (baseStyles: any, state: any) => ({
         ...baseStyles,
-        maxHeight: isMobile ? 180 : 200,
+        maxHeight: 160,
         overflow: 'auto',
         // Safari-specific scrollbar styling
         ...(isSafari() && {
@@ -183,9 +160,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       clearIndicator: (baseStyles: any, state: any) => ({
         ...baseStyles,
         color: '#666666',
-        fontSize: isMobile ? 12 : 13,
+        fontSize: 11,
         fontFamily: 'Poppins-SemiBold',
-        padding: '4px 8px',
+        padding: '2px 6px',
         cursor: 'pointer',
         '&:hover': {
           color: '#ff9654',
@@ -202,17 +179,17 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       multiValueLabel: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 13 : 14,
+        fontSize: 12,
       }),
       noOptionsMessage: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 14 : 16,
+        fontSize: 13,
       }),
       option: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 15 : 16,
+        fontSize: 14,
         color: state.isSelected ? '#ff9654' : '#333333',
         backgroundColor: state.isSelected ? '#fff5ef' : 'transparent',
         '&:hover': {
@@ -222,7 +199,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       placeholder: (baseStyles: any, state: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
-        fontSize: isMobile ? 15 : 16,
+        fontSize: 14,
         color: '#999999',
       }),
     };
@@ -230,12 +207,14 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     return baseSelectStyles;
   };
 
+  if (!isVisible) return null;
+
   const content = (
     <>
       <View style={styles.header}>
         <Text style={styles.title}>Filter Games</Text>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={20} color="#666666" />
+          <X size={18} color="#666666" />
         </TouchableOpacity>
       </View>
 
@@ -246,10 +225,10 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
       <ScrollView
         style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={{ paddingBottom: 4, paddingTop: 2 }} // Further reduced padding for mobile
-        showsVerticalScrollIndicator={!isMobile}
+        contentContainerStyle={{ paddingBottom: 4, paddingTop: 2 }}
+        showsVerticalScrollIndicator={true}
       >
-        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(0) }]}>
+        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(0) }]}>
           <Select
             placeholder="Player count"
             value={playerCount}
@@ -267,7 +246,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           />
         </View>
 
-        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(1) }]}>
+        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(1) }]}>
           <Select
             placeholder="Play time"
             value={playTime}
@@ -285,7 +264,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           />
         </View>
 
-        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(2) }]}>
+        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(2) }]}>
           <Select
             placeholder="Age range"
             value={age}
@@ -302,7 +281,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           />
         </View>
 
-        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(3) }]}>
+        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(3) }]}>
           <Select
             placeholder="Co-op / competitive"
             value={gameType}
@@ -320,7 +299,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           />
         </View>
 
-        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(4) }]}>
+        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(4) }]}>
           <Select
             placeholder="Game complexity"
             value={complexity}
@@ -343,39 +322,29 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         style={styles.searchButton}
         onPress={handleFilter}
       >
-        <Search color="#fff" size={20} />
+        <Search color="#fff" size={18} />
         <Text style={styles.searchButtonText}>Filter Games</Text>
       </TouchableOpacity>
     </>
   );
 
   if (Platform.OS === 'web') {
-    if (!isVisible || !isReady) return null; // Don't render until ready
     return (
       <View style={styles.overlay}>
-        <div style={{
-          maxWidth: isMobile ? '95vw' : '500px', // Mobile: full width, Desktop: fixed width
-          maxHeight: isMobile ? '85vh' : '80vh', // Mobile: reduced height to prevent overlap
+        <View style={{
+          maxWidth: '95%',
+          maxHeight: '100%',
           width: '100%',
-          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          padding: isMobile ? 8 : 20,
+          padding: 20,
         }}>
-          <View style={[styles.dialog, {
-            height: isMobile ? '100%' : 'auto', // Mobile: full height, Desktop: auto height
-            display: 'flex',
-            flexDirection: 'column',
-            flex: isMobile ? 1 : undefined,
-            maxWidth: isMobile ? '100%' : undefined,
-            maxHeight: isMobile ? '100%' : undefined,
-            paddingHorizontal: isMobile ? 12 : 20, // Mobile: reduced horizontal padding
-          }]}>
+          <View style={styles.dialog}>
             {content}
           </View>
-        </div>
+        </View>
       </View>
     );
   }
@@ -455,8 +424,6 @@ export const filterGames = (
   });
 };
 
-const screenHeight = Dimensions.get('window').height;
-
 const styles = StyleSheet.create({
   overlay: {
     position: 'fixed',
@@ -472,7 +439,7 @@ const styles = StyleSheet.create({
   },
   dialog: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 8,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -481,11 +448,12 @@ const styles = StyleSheet.create({
     elevation: 5,
     position: 'relative',
     overflow: 'hidden',
-    flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     zIndex: 999999,
+    height: 'auto',
+    maxWidth: '100%',
   },
   header: {
     flexDirection: 'row',
@@ -494,45 +462,45 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e1e5ea',
-    paddingBottom: 8,
-    paddingTop: Platform.OS === 'web' ? 16 : 20, // Reduced top padding for better mobile fit
+    paddingBottom: 6,
+    paddingTop: 12,
   },
   closeButton: {
     padding: 4,
   },
   title: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
+    fontSize: 16,
     color: '#1a2b5f',
   },
   description: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: 13,
     color: '#666666',
-    marginBottom: 12, // Reduced margin for mobile
-    paddingTop: 4, // Reduced top padding for mobile
+    marginBottom: 8,
+    paddingTop: 2,
   },
   filterScrollView: {
     flex: 1,
     minHeight: 0,
   },
   filterSection: {
-    marginBottom: 4, // Reduced spacing for mobile optimization
+    marginBottom: 6,
     position: 'relative',
   },
   searchButton: {
     backgroundColor: '#ff9654',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8, // Reduced from auto to 8 to move button up
-    marginBottom: 12, // Further reduced for mobile
+    marginTop: 16,
+    marginBottom: 8,
   },
   searchButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
+    fontSize: 14,
     color: '#ffffff',
     marginLeft: 8,
   },
