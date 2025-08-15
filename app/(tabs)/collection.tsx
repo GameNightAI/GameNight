@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
 import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
-import { AddGameModal } from '@/components/AddGameModal'; 
+import { AddGameModal } from '@/components/AddGameModal';
 import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
@@ -44,6 +44,9 @@ export default function CollectionScreen() {
     complexity,
   ]).some(_ => _.length);
 
+  // const getCollection = useEffect(() => {
+  // }, []);
+
   const loadGames = useCallback(async () => {
     try {
       setError(null);
@@ -58,6 +61,7 @@ export default function CollectionScreen() {
         .from('collections_games')
         .select('*')
         .eq('user_id', user.id)
+        .eq('is_expansion', false)  // Eventually, we'll have expansions listed as children of their base games. For now, we exclude them completely.
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -95,6 +99,8 @@ export default function CollectionScreen() {
       setRefreshing(false);
     }
   }, [playerCount, playTime, age, gameType, complexity]);
+
+  // const filteredGames = filterGames(games, playerCount, playTime, age, gameType, complexity);
 
   const handleDelete = useCallback(async () => {
     if (!gameToDelete) return;
@@ -258,9 +264,6 @@ export default function CollectionScreen() {
             <RefreshCw size={20} color="#ff9654" />
             <Text style={styles.syncButtonText}>Sync with BGG</Text>
           </TouchableOpacity>
-
-
-
         </ScrollView>
       </View>
 
@@ -268,17 +271,17 @@ export default function CollectionScreen() {
         <View style={styles.filterBanner}>
           <TouchableOpacity
             style={styles.clearButton}
-            onPress={clearFilters}
+            onPress={() => setFilterModalVisible(true)}
           >
             <X size={16} color="#666666" />
-            <Text style={styles.clearButtonText}>Clear Filters</Text>
+            <Text style={styles.clearButtonText}>Edit Filters</Text>
           </TouchableOpacity>
         </View>
       )}
 
       <FlatList
         data={games}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={item => item.id.toString()}
         renderItem={({ item, index }) => (
           <Animated.View>
             <GameItem
@@ -317,7 +320,6 @@ export default function CollectionScreen() {
       <FilterGameModal
         isVisible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
-        onSearch={handleFilter}
         playerCount={playerCount}
         playTime={playTime}
         age={age}

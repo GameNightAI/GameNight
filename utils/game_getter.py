@@ -106,7 +106,9 @@ def get_game_cols():
       .execute()
   )
 
-  return response.data[0].keys()
+  data = response.data[0]
+  del data['created_at'] # To avoid problems when importing to supabase
+  return data.keys()
 
 def main():
   
@@ -118,7 +120,12 @@ def main():
   writer = csv.DictWriter(open(OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=game_cols, extrasaction='ignore')
   writer.writeheader()
   
-  expansion_writer = csv.DictWriter(open(EXPANSION_OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=['base_id', 'base_name', 'expansion_id', 'expansion_name'])
+  expansion_writer = csv.DictWriter(open(EXPANSION_OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=[
+    'base_id',
+    # 'base_name',
+    'expansion_id',
+    # 'expansion_name',
+  ])
   expansion_writer.writeheader()
   
   # Make API calls in batches of 20 games at a time
@@ -160,9 +167,9 @@ def main():
       for e in game['expansions']:
         expansion_writer.writerow({
           'base_id': game['id'],
-          'base_name': game['name'],
+          # 'base_name': game['name'],
           'expansion_id': e['id'],
-          'expansion_name': e['name']
+          # 'expansion_name': e['name']
         })
       
       
