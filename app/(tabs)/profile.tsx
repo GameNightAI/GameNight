@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { LogOut, CreditCard as Edit2, ExternalLink, Mail } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string | null>(null);
+
+  // Use fallback values for web platform
+  const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -54,7 +59,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[styles.contentContainer, { paddingBottom: 80 + safeAreaBottom }]}
       showsVerticalScrollIndicator={false}
     >
       <Animated.View
@@ -130,7 +135,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 80, // Base padding for tab bar
   },
   profileHeader: {
     alignItems: 'center',

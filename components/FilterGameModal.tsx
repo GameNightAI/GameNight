@@ -3,21 +3,30 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView, 
 import { Search, X, ChevronDown, Clock } from 'lucide-react-native';
 import Select from 'react-select';
 import { Game } from '@/types/game';
+import { useDeviceType } from '@/hooks/useDeviceType';
+import { isSafari } from '@/utils/safari-polyfill';
+
+interface FilterOption {
+  value: any;
+  label: string;
+  min?: number;
+  max?: number;
+}
 
 interface FilterGameModalProps {
   isVisible: boolean;
   onClose: () => void;
   onApplyFilter: () => void;
-  playerCount: any;
-  playTime: any;
-  age: any;
-  gameType: any;
-  complexity: any;
-  setPlayerCount: any;
-  setPlayTime: any;
-  setAge: any;
-  setGameType: any;
-  setComplexity: any;
+  playerCount: FilterOption[];
+  playTime: FilterOption[];
+  age: FilterOption[];
+  gameType: FilterOption[];
+  complexity: FilterOption[];
+  setPlayerCount: (value: FilterOption[]) => void;
+  setPlayTime: (value: FilterOption[]) => void;
+  setAge: (value: FilterOption[]) => void;
+  setGameType: (value: FilterOption[]) => void;
+  setComplexity: (value: FilterOption[]) => void;
 }
 
 export const FilterGameModal: React.FC<FilterGameModalProps> = ({
@@ -35,29 +44,68 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   setGameType,
   setComplexity,
 }) => {
-  
+  const deviceType = useDeviceType();
+  const [isMobile, setIsMobile] = useState(false);
+  const [isSmallMobile, setIsSmallMobile] = useState(false);
+  const [isReady, setIsReady] = useState(false); // Loading state for screen size detection
+
+  // Dynamic z-index management for dropdowns
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
+
+  React.useEffect(() => {
+    const updateScreenSize = () => {
+      const { width, height } = Dimensions.get('window');
+      setIsMobile(width < 768);
+      setIsSmallMobile(width < 380 || height < 700);
+    };
+
+    updateScreenSize();
+    setIsReady(true); // Mark as ready after initial screen size detection
+
+    const handleResize = () => {
+      updateScreenSize();
+    };
+
+    if (Platform.OS === 'web') {
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
+  // Function to get dynamic z-index for each filter section
+  const getFilterSectionZIndex = (index: number) => {
+    if (openDropdownIndex === null) return 1000;
+    if (openDropdownIndex === index) return 99999;
+    return 1000;
+  };
+
+  // Function to handle dropdown open/close events
+  const handleDropdownChange = (index: number, isOpen: boolean) => {
+    setOpenDropdownIndex(isOpen ? index : null);
+  };
+
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
-    .map(_ => ({value: parseInt(_), label: _}));
+    .map(_ => ({ value: parseInt(_), label: _ }));
   const timeOptions = [
-    {value: 1, min: 1, max: 30, label: '30 min or less'},
-    {value: 31, min: 31, max: 60, label: '31-60 min'},
-    {value: 61, min: 61, max: 90, label: '61-90 min'},
-    {value: 91, min: 91, max: 120, label: '91-120 min'},
-    {value: 121, min: 121, max: 999999999, label: 'More than 120 min'},
+    { value: 1, min: 1, max: 30, label: '30 min or less' },
+    { value: 31, min: 31, max: 60, label: '31-60 min' },
+    { value: 61, min: 61, max: 90, label: '61-90 min' },
+    { value: 91, min: 91, max: 120, label: '91-120 min' },
+    { value: 121, min: 121, max: 999999999, label: 'More than 120 min' },
   ];
   const ageOptions = [
-    {value: 1, min: 1, max: 5, label: '5 and under'},
-    {value: 6, min: 6, max: 7, label: '6-7'},
-    {value: 8, min: 8, max: 9, label: '8-9'},
-    {value: 10, min: 10, max: 11, label: '10-11'},
-    {value: 12, min: 12, max: 13, label: '12-13'},
-    {value: 14, min: 14, max: 15, label: '14-15'},
-    {value: 16, min: 16, max: 999, label: '16 and up'},
+    { value: 1, min: 1, max: 5, label: '5 and under' },
+    { value: 6, min: 6, max: 7, label: '6-7' },
+    { value: 8, min: 8, max: 9, label: '8-9' },
+    { value: 10, min: 10, max: 11, label: '10-11' },
+    { value: 12, min: 12, max: 13, label: '12-13' },
+    { value: 14, min: 14, max: 15, label: '14-15' },
+    { value: 16, min: 16, max: 999, label: '16 and up' },
   ];
   const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
-    .map(_ => ({value: _, label: _}));
+    .map(_ => ({ value: _, label: _ }));
   const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy']
-    .map((_, i) => ({value: i+1, label: _}));
+    .map((_, i) => ({ value: i + 1, label: _ }));
 
   const handleFilter = () => {
     //onApplyFilter()
@@ -65,8 +113,125 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     onClose();
   };
 
+  // Safari-compatible select styles with dynamic z-index
+  const getSelectStyles = (index: number) => {
+    const baseSelectStyles = {
+      control: (baseStyles: any, state: any) => {
+        return {
+          ...baseStyles,
+          fontFamily: 'Poppins-Regular',
+          fontSize: isMobile ? 15 : 16,
+          borderColor: '#e1e5ea',
+          borderRadius: isMobile ? 8 : 12,
+          minHeight: isMobile ? 44 : 48,
+          boxShadow: 'none',
+          '&:hover': {
+            borderColor: '#ff9654',
+          },
+          // Safari-specific fixes
+          ...(isSafari() && {
+            WebkitAppearance: 'none',
+            WebkitBorderRadius: isMobile ? 8 : 12,
+          }),
+        }
+      },
+      container: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        marginBottom: 8, // Fixed spacing for mobile optimization
+        position: 'relative',
+        zIndex: getFilterSectionZIndex(index),
+      }),
+      menu: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        backgroundColor: '#ffffff',
+        borderRadius: isMobile ? 8 : 12,
+        borderWidth: 1,
+        borderColor: '#e1e5ea',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+        zIndex: getFilterSectionZIndex(index),
+        position: 'absolute',
+        maxHeight: 'none',
+        overflow: 'hidden',
+        // Safari-specific fixes
+        ...(isSafari() && {
+          WebkitBorderRadius: isMobile ? 8 : 12,
+        }),
+      }),
+      menuList: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        maxHeight: isMobile ? 180 : 200,
+        overflow: 'auto',
+        // Safari-specific scrollbar styling
+        ...(isSafari() && {
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#c1c1c1',
+            borderRadius: '4px',
+          },
+        }),
+      }),
+      clearIndicator: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        color: '#666666',
+        fontSize: isMobile ? 12 : 13,
+        fontFamily: 'Poppins-SemiBold',
+        padding: '4px 8px',
+        cursor: 'pointer',
+        '&:hover': {
+          color: '#ff9654',
+        },
+        // Hide the default SVG icon
+        '& svg': {
+          display: 'none',
+        },
+        '&::after': {
+          content: '"CLR"',
+          display: 'block',
+        },
+      }),
+      multiValueLabel: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: isMobile ? 13 : 14,
+      }),
+      noOptionsMessage: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: isMobile ? 14 : 16,
+      }),
+      option: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: isMobile ? 15 : 16,
+        color: state.isSelected ? '#ff9654' : '#333333',
+        backgroundColor: state.isSelected ? '#fff5ef' : 'transparent',
+        '&:hover': {
+          backgroundColor: '#fff5ef',
+        },
+      }),
+      placeholder: (baseStyles: any, state: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: isMobile ? 15 : 16,
+        color: '#999999',
+      }),
+    };
+
+    return baseSelectStyles;
+  };
+
   const content = (
-    <View style={styles.dialog}>
+    <>
       <View style={styles.header}>
         <Text style={styles.title}>Filter Games</Text>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -79,70 +244,100 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         All filters are optional.
       </Text>
 
-      <Select
-        placeholder="Player count"
-        value={playerCount}
-        onChange={setPlayerCount}
-        options={playerOptions}
-        defaultValue={[]}
-        isMulti
-        isClearable
-        isSearchable={false}
-        closeMenuOnSelect={false}
-        styles={selectStyles}
-      />
+      <ScrollView
+        style={{ flex: 1, minHeight: 0 }}
+        contentContainerStyle={{ paddingBottom: 4, paddingTop: 2 }} // Further reduced padding for mobile
+        showsVerticalScrollIndicator={!isMobile}
+      >
+        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(0) }]}>
+          <Select
+            placeholder="Player count"
+            value={playerCount}
+            onChange={(value) => setPlayerCount(Array.from(value || []))}
+            options={playerOptions}
+            defaultValue={[]}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={getSelectStyles(0)}
+            onMenuOpen={() => handleDropdownChange(0, true)}
+            onMenuClose={() => handleDropdownChange(0, false)}
+          />
+        </View>
 
-      <Select
-        placeholder="Play time"
-        value={playTime}
-        onChange={setPlayTime}
-        options={timeOptions}
-        defaultValue={[]}
-        isMulti
-        isClearable
-        isSearchable={false}
-        closeMenuOnSelect={false}
-        styles={selectStyles}
-      />
+        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(1) }]}>
+          <Select
+            placeholder="Play time"
+            value={playTime}
+            onChange={(value) => setPlayTime(Array.from(value || []))}
+            options={timeOptions}
+            defaultValue={[]}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={getSelectStyles(1)}
+            onMenuOpen={() => handleDropdownChange(1, true)}
+            onMenuClose={() => handleDropdownChange(1, false)}
+          />
+        </View>
 
-      <Select
-        placeholder="Age range"
-        value={age}
-        onChange={setAge}
-        defaultValue={[]}
-        options={ageOptions}
-        isMulti
-        isClearable
-        isSearchable={false}
-        closeMenuOnSelect={false}
-        styles={selectStyles}
-      />
+        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(2) }]}>
+          <Select
+            placeholder="Age range"
+            value={age}
+            onChange={(value) => setAge(Array.from(value || []))}
+            options={ageOptions}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={getSelectStyles(2)}
+            onMenuOpen={() => handleDropdownChange(2, true)}
+            onMenuClose={() => handleDropdownChange(2, false)}
+          />
+        </View>
 
-      <Select
-        placeholder="Co-op / competitive"
-        value={gameType}
-        onChange={setGameType}
-        defaultValue={[]}
-        options={typeOptions}
-        isMulti
-        isClearable
-        isSearchable={false}
-        closeMenuOnSelect={false}
-        styles={selectStyles}
-      />
+        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(3) }]}>
+          <Select
+            placeholder="Co-op / competitive"
+            value={gameType}
+            onChange={(value) => setGameType(Array.from(value || []))}
+            defaultValue={[]}
+            options={typeOptions}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={getSelectStyles(3)}
+            onMenuOpen={() => handleDropdownChange(3, true)}
+            onMenuClose={() => handleDropdownChange(3, false)}
+          />
+        </View>
 
-      <Select
-        placeholder="Game complexity"
-        value={complexity}
-        onChange={setComplexity}
-        defaultValue={[]}
-        options={complexityOptions}
-        isMulti
-        isClearable
-        isSearchable={false}
-        closeMenuOnSelect={false}
-        styles={selectStyles}
-      />
+        <View style={[styles.filterSection, { marginBottom: 4, zIndex: getFilterSectionZIndex(4) }]}>
+          <Select
+            placeholder="Game complexity"
+            value={complexity}
+            onChange={(value) => setComplexity(Array.from(value || []))}
+            defaultValue={[]}
+            options={complexityOptions}
+            isMulti
+            isClearable
+            isSearchable={false}
+            closeMenuOnSelect={false}
+            blurInputOnSelect={false}
+            styles={getSelectStyles(4)}
+            onMenuOpen={() => handleDropdownChange(4, true)}
+            onMenuClose={() => handleDropdownChange(4, false)}
+          />
+        </View>
+      </ScrollView>
 
       <TouchableOpacity
         style={styles.searchButton}
@@ -151,14 +346,36 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         <Search color="#fff" size={20} />
         <Text style={styles.searchButtonText}>Filter Games</Text>
       </TouchableOpacity>
-    </View>
+    </>
   );
 
   if (Platform.OS === 'web') {
-    if (!isVisible) return null;
+    if (!isVisible || !isReady) return null; // Don't render until ready
     return (
-      <View style={styles.webOverlay}>
-        {content}
+      <View style={styles.overlay}>
+        <div style={{
+          maxWidth: isMobile ? '95vw' : '500px', // Mobile: full width, Desktop: fixed width
+          maxHeight: isMobile ? '85vh' : '80vh', // Mobile: reduced height to prevent overlap
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: isMobile ? 8 : 20,
+        }}>
+          <View style={[styles.dialog, {
+            height: isMobile ? '100%' : 'auto', // Mobile: full height, Desktop: auto height
+            display: 'flex',
+            flexDirection: 'column',
+            flex: isMobile ? 1 : undefined,
+            maxWidth: isMobile ? '100%' : undefined,
+            maxHeight: isMobile ? '100%' : undefined,
+            paddingHorizontal: isMobile ? 12 : 20, // Mobile: reduced horizontal padding
+          }]}>
+            {content}
+          </View>
+        </div>
       </View>
     );
   }
@@ -177,39 +394,46 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   );
 };
 
-export const filterGames = (games, playerCount, playTime, age, gameType, complexity) => {
+export const filterGames = (
+  games: Game[],
+  playerCount: FilterOption[],
+  playTime: FilterOption[],
+  age: FilterOption[],
+  gameType: FilterOption[],
+  complexity: FilterOption[]
+) => {
   return games.filter(game => {
     let is_match = true;
-    
+
     if (playerCount.length) {
-      is_match &&= playerCount.some(p => (
+      is_match &&= playerCount.some((p: FilterOption) => (
         // Ignore game.min_players when 15+ is selected,
         // since the number of actual players could be arbitrarily large.
         (game.min_players <= p.value || p.value === 15)
-        && p.value <= game.max_players    
+        && p.value <= game.max_players
       ));
     }
-    
+
     if (playTime.length) {
-      is_match &&= playTime.some(t => {
+      is_match &&= playTime.some((t: FilterOption) => {
         const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
         // Perhaps this should incorporate game.minplaytime and game.maxplaytime more sensibly
         return (
-          t.min <= game.playing_time
-          && game.playing_time <= t.max
+          t.min! <= game.playing_time
+          && game.playing_time <= t.max!
         );
       });
     }
-    
+
     if (age.length) {
-      is_match &&= age.some(a => (
-        a.min <= game.minAge
-        && game.minAge <= a.max
+      is_match &&= age.some((a: FilterOption) => (
+        a.min! <= game.minAge
+        && game.minAge <= a.max!
       ));
     }
-    
+
     if (gameType.length) {
-      is_match &&= gameType.some(t => {
+      is_match &&= gameType.some((t: FilterOption) => {
         switch (t.value) {
           case 'Competitive':
             return !game.is_cooperative
@@ -220,13 +444,13 @@ export const filterGames = (games, playerCount, playTime, age, gameType, complex
         }
       });
     }
-    
+
     if (complexity.length) {
-      is_match &&= complexity.some(c => (
+      is_match &&= complexity.some((c: FilterOption) => (
         game.complexity_tier === c.value
       ));
     }
-    
+
     return is_match;
   });
 };
@@ -235,13 +459,6 @@ const screenHeight = Dimensions.get('window').height;
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  webOverlay: {
     position: 'fixed',
     top: 0,
     left: 0,
@@ -250,27 +467,35 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
-    padding: 20,
+    zIndex: 999999,
+    padding: Platform.OS === 'web' ? 20 : 10,
   },
   dialog: {
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 24,
     width: '100%',
-    maxWidth: 400,
-    maxHeight: screenHeight * 0.9,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    position: 'relative',
+    overflow: 'hidden',
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    paddingHorizontal: 20,
+    zIndex: 999999,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e5ea',
+    paddingBottom: 8,
+    paddingTop: Platform.OS === 'web' ? 16 : 20, // Reduced top padding for better mobile fit
   },
   closeButton: {
     padding: 4,
@@ -284,88 +509,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#666666',
-    marginBottom: 20,
+    marginBottom: 12, // Reduced margin for mobile
+    paddingTop: 4, // Reduced top padding for mobile
   },
-  inputSection: {
-    marginBottom: 24,
+  filterScrollView: {
+    flex: 1,
+    minHeight: 0,
+  },
+  filterSection: {
+    marginBottom: 4, // Reduced spacing for mobile optimization
     position: 'relative',
-  },
-  label: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
-    marginBottom: 4,
-  },
-  sublabel: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 12,
-  },
-  dropdownContainer: {
-    position: 'relative',
-  },
-  dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 2,
-  },
-  dropdownButtonText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-  },
-  dropdown: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
-  dropdownAbsolute: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    ...(Platform.OS === 'web' ? { zIndex: 999 } : {}),
-  },
-  dropdownScroll: {
-    maxHeight: 200,
-  },
-  dropdownItem: {
-    paddingTop: 2,
-    paddingBottom: 2,
-    paddingLeft: 8,
-    paddingRight: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  dropdownItemSelected: {
-    backgroundColor: '#fff5ef',
-  },
-  dropdownItemText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-  },
-  dropdownItemTextSelected: {
-    color: '#ff9654',
-    fontFamily: 'Poppins-SemiBold',
   },
   searchButton: {
     backgroundColor: '#ff9654',
@@ -374,54 +527,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  searchButtonDisabled: {
-    opacity: 0.7,
+    marginTop: 8, // Reduced from auto to 8 to move button up
+    marginBottom: 12, // Further reduced for mobile
   },
   searchButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#ffffff',
     marginLeft: 8,
-  },  
+  },
 });
-
-const selectStyles = {
-  control: (baseStyles, state) => {
-  // console.log(state);
-  return {
-    ...baseStyles,
-    ...styles.dropDownContainer,
-  }},
-  container: (baseStyles, state) => ({
-    ...baseStyles,
-    ...styles.dropDownContainer,
-    marginBottom: 8,
-  }),
-  menu: (baseStyles, state) => ({
-    ...baseStyles,
-    ...styles.dropDown,
-  }),
-  menuList: (baseStyles, state) => ({
-    ...baseStyles,
-    ...styles.dropDown,
-  }),
-  multiValueLabel: (baseStyles, state) => ({
-    ...baseStyles,
-    fontFamily: 'Poppins-Regular',
-  }),
-  noOptionsMessage: (baseStyles, state) => ({
-    ...baseStyles,
-    fontFamily: 'Poppins-Regular',
-  }),
-  option: (baseStyles, state) => ({
-    ...baseStyles,
-    ...styles.dropdownItem,
-    ...styles.dropdownItemText,
-  }),
-  placeholder: (baseStyles, state) => ({
-    ...baseStyles,
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-  }),
-};

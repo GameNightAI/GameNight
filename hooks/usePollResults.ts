@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
@@ -31,11 +31,17 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
   const [hasVoted, setHasVoted] = useState(false);
   const [voteUpdated, setVoteUpdated] = useState(false);
 
-  useEffect(() => {
-    if (pollId) loadResults(pollId.toString());
-  }, [pollId]);
+  // Track the last pollId to prevent unnecessary re-fetches
+  const lastPollIdRef = useRef<string | null>(null);
 
-  const loadResults = async (id: string) => {
+  const loadResults = useCallback(async (id: string) => {
+    // Prevent duplicate requests for the same pollId
+    if (lastPollIdRef.current === id) {
+      return;
+    }
+
+    lastPollIdRef.current = id;
+
     try {
       setLoading(true);
       setError(null);
@@ -220,7 +226,20 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (pollId && typeof pollId === 'string') {
+      loadResults(pollId);
+    }
+  }, [pollId, loadResults]);
+
+  const reload = useCallback(() => {
+    if (pollId && typeof pollId === 'string') {
+      lastPollIdRef.current = null; // Reset the ref to allow re-fetch
+      loadResults(pollId);
+    }
+  }, [pollId, loadResults]);
 
   return {
     poll,
@@ -230,6 +249,6 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
     voteUpdated,
     loading,
     error,
-    reload: () => pollId && loadResults(pollId.toString()),
+    reload,
   };
 };

@@ -106,5 +106,9 @@ export const getLastVisitedTab = async (): Promise<string | null> => {
   return await storage.getItem(LAST_TAB_KEY);
 };
 
+export const removeLastVisitedTab = async (): Promise<void> => {
+  await storage.removeItem(LAST_TAB_KEY);
+};
+
 // Export the storage instance for direct access if needed
 export { storage };

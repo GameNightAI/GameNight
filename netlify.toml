@@ -3,6 +3,13 @@
   functions = "netlify/functions"
   publish = "dist" # Expo exports to "dist" directory, not "build"
 
+[dev]
+  framework = "#custom"
+  command = "npx expo start --web --port 19006"
+  port = 8082
+  targetPort = 19006
+  publish = "dist"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

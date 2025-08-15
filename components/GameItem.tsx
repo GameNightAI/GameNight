@@ -73,13 +73,12 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             <View style={styles.infoItem}>
               <Clock size={16} color="#666666" />
               <Text style={styles.infoText}>
-                {game.maxPlaytime === 0 ? 'N/A'
-                  : game.minPlaytime + (game.minPlaytime === game.maxPlaytime ? '' : '-' + game.maxPlaytime) + ' min'}
+                {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'N/A'}
               </Text>
             </View>
           </View>
         </View>
-        
+
         {isExpanded ? (
           <ChevronUp size={24} color="#ff9654" />
         ) : (
@@ -99,7 +98,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 <Calendar size={16} color="#ff9654" />
                 <Text style={styles.detailLabel}>Publication Year</Text>
                 <Text style={styles.detailValue}>
-                  {(game.yearPublished >= 0 ? game.yearPublished : -game.yearPublished + ' BCE') || 'Unknown'}
+                  {game.yearPublished ? (game.yearPublished >= 0 ? game.yearPublished : -game.yearPublished + ' BCE') : 'Unknown'}
                 </Text>
               </View>
 
@@ -107,8 +106,8 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 <Brain size={16} color="#8b5cf6" />
                 <Text style={styles.detailLabel}>Weight</Text>
                 <Text style={styles.detailValue}>
-                  {game.complexity ? 
-                    `${game.complexity.toFixed(1)}${game.complexity_desc ? ` (${game.complexity_desc})` : ''}` 
+                  {game.complexity ?
+                    `${game.complexity.toFixed(1)}${game.complexity_desc ? ` (${game.complexity_desc})` : ''}`
                     : 'Unknown'}
                 </Text>
               </View>
@@ -131,7 +130,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 </Text>
               </View>
             </View>
-            
+
             <View style={styles.detailRow}>
               <TouchableOpacity onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}/`)}>
                 <Text style={styles.infoText}>
@@ -139,7 +138,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 </Text>
               </TouchableOpacity>
             </View>
-            
+
           </View>
         </Animated.View>
       )}

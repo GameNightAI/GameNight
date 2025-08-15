@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { RefreshCw, X, ListFilter, Plus, Camera } from 'lucide-react-native';
+import { RefreshCw, X, ListFilter, Plus, Camera, Vote } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
 import { fetchGames } from '@/services/bggApi';
@@ -15,10 +16,15 @@ import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
 import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
 import { AddGameModal } from '@/components/AddGameModal';
+import { CreatePollModal } from '@/components/CreatePollModal';
 import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
+  const insets = useSafeAreaInsets();
   const [games, setGames] = useState<Game[]>([]);
+
+  // Use fallback values for web platform
+  const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
   // const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,9 +33,10 @@ export default function CollectionScreen() {
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
+  const [createPollModalVisible, setCreatePollModalVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
-  
+
   const [playerCount, setPlayerCount] = useState([]);
   const [playTime, setPlayTime] = useState([]);
   const [age, setAge] = useState([]);
@@ -90,7 +97,7 @@ export default function CollectionScreen() {
 
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
-      
+
     } catch (err) {
       console.error('Error in loadGames:', err);
       setError(err instanceof Error ? err.message : 'Failed to load games');
@@ -200,11 +207,23 @@ export default function CollectionScreen() {
   }, [loadGames]);
 
   const clearFilters = () => {
-    setPlayerCount('');
+    setPlayerCount([]);
     setPlayTime([]);
     setAge([]);
     setGameType([]);
     setComplexity([]);
+  };
+
+  // Convert collection filters to CreatePollModal format
+  const convertFiltersForPoll = () => {
+    const convertedFilters = {
+      playerCount: playerCount,
+      playTime: playTime,
+      minAge: age,
+      gameType: gameType,
+      complexity: complexity,
+    };
+    return convertedFilters;
   };
 
   useEffect(() => {
@@ -269,12 +288,21 @@ export default function CollectionScreen() {
 
       {isFiltered && (
         <View style={styles.filterBanner}>
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={() => setFilterModalVisible(true)}
-          >
-            <Text style={styles.clearButtonText}>Edit Filters</Text>
-          </TouchableOpacity>
+          <View style={styles.filterBannerContent}>
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => setFilterModalVisible(true)}
+            >
+              <Text style={styles.clearButtonText}>Edit Filters</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.createPollButton}
+              onPress={() => setCreatePollModalVisible(true)}
+            >
+              <Vote size={16} color="#ffffff" />
+              <Text style={styles.createPollButtonText}>Create Poll</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -289,7 +317,7 @@ export default function CollectionScreen() {
             />
           </Animated.View>
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 80 + safeAreaBottom }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -335,6 +363,18 @@ export default function CollectionScreen() {
         isVisible={addGameModalVisible}
         onClose={() => setAddGameModalVisible(false)}
         onGameAdded={loadGames}
+      />
+
+      <CreatePollModal
+        isVisible={createPollModalVisible}
+        onClose={() => setCreatePollModalVisible(false)}
+        onSuccess={(pollType) => {
+          setCreatePollModalVisible(false);
+          // Navigate to polls tab with refresh parameter
+          router.push('/(tabs)/polls?refresh=true');
+          Toast.show({ type: 'success', text1: 'Poll created successfully!' });
+        }}
+        initialFilters={convertFiltersForPoll()}
       />
     </View>
   );
@@ -401,10 +441,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 8,
   },
+  filterBannerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   clearButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     backgroundColor: '#ffffff',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -416,9 +460,22 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginLeft: 4,
   },
+  createPollButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ff9654',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  createPollButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ffffff',
+    marginLeft: 4,
+  },
   listContent: {
     padding: 16,
-    paddingBottom: 40,
   },
 
 });

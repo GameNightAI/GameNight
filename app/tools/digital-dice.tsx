@@ -114,11 +114,11 @@ export default function DigitalDiceScreen() {
                 <X size={20} color="#666666" />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.modalDescription}>
               Enter the number of sides (2-1000):
             </Text>
-            
+
             <TextInput
               style={styles.customInput}
               value={customSides}
@@ -127,7 +127,7 @@ export default function DigitalDiceScreen() {
               keyboardType="numeric"
               autoFocus
             />
-            
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
@@ -135,7 +135,7 @@ export default function DigitalDiceScreen() {
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.modalConfirmButton,
@@ -175,8 +175,8 @@ export default function DigitalDiceScreen() {
             style={styles.resultsCard}
           >
             <Text style={styles.resultsTitle}>Results</Text>
-            
-            <ScrollView 
+
+            <ScrollView
               style={styles.resultsScroll}
               contentContainerStyle={styles.resultsContainer}
               showsVerticalScrollIndicator={false}
@@ -208,7 +208,7 @@ export default function DigitalDiceScreen() {
                 <RotateCcw size={20} color="#ffffff" />
                 <Text style={styles.rollAgainText}>Roll Again</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.closeResultsButton}
                 onPress={resetDice}
@@ -221,7 +221,7 @@ export default function DigitalDiceScreen() {
       )}
 
       {/* Scrollable Content */}
-      <ScrollView 
+      <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -256,7 +256,7 @@ export default function DigitalDiceScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
-              
+
               <TouchableOpacity
                 style={[
                   styles.sideOption,
@@ -286,12 +286,12 @@ export default function DigitalDiceScreen() {
               >
                 <Minus size={20} color={numberOfDice <= 1 ? "#cccccc" : "#10b981"} />
               </TouchableOpacity>
-              
+
               <View style={styles.valueContainer}>
                 <Text style={styles.valueText}>{numberOfDice}</Text>
                 <Text style={styles.valueSubtext}>{numberOfDice === 1 ? 'die' : 'dice'}</Text>
               </View>
-              
+
               <TouchableOpacity
                 style={[styles.adjustButton, numberOfDice >= 10 && styles.adjustButtonDisabled]}
                 onPress={() => adjustNumberOfDice(true)}
@@ -363,7 +363,7 @@ function RollingDice() {
       -1,
       false
     );
-    
+
     // Slower scale animation - increased duration from 125ms to 400ms per cycle
     scale.value = withRepeat(
       withSequence(
