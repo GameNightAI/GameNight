@@ -375,11 +375,11 @@ export const filterGames = (
     let is_match = true;
 
     if (playerCount.length) {
-      is_match &&= playerCount.some(({value}) => (
+      is_match &&= playerCount.some(({value}) => (        
         // Ignore game.min_players when 15+ is selected,
         // since the number of actual players could be arbitrarily large.
-        (Math.min(game.min_players, game.min_exp_players) <= value || value === 15)
-        && value <= (Math.min(game.max_players, game.max_exp_players))
+        (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
+        && value <= (Math.max(game.max_players, game.max_exp_players))
       ));
     }
 
