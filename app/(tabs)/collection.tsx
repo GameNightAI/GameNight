@@ -65,7 +65,7 @@ export default function CollectionScreen() {
       }
 
       const { data, error } = await supabase
-        .from('collections_games')
+        .from('expansions_players_view')
         .select('*')
         .eq('user_id', user.id)
         .eq('is_expansion', false)  // Eventually, we'll have expansions listed as children of their base games. For now, we exclude them completely.
@@ -93,6 +93,8 @@ export default function CollectionScreen() {
         complexity_desc: game.complexity_desc || '',
         average: game.average,
         bayesaverage: game.bayesaverage,
+        min_exp_players: game.min_exp_players,
+        max_exp_players: game.max_exp_players,
       }));
 
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
