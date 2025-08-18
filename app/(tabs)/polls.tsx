@@ -174,6 +174,13 @@ export default function PollsScreen() {
     }
   }, [params.refresh, loadPolls, router]);
 
+  // Auto-switch to 'all' tab if 'other' tab has no polls
+  useEffect(() => {
+    if (activeTab === 'other' && otherUsersPolls.length === 0) {
+      setActiveTab('all');
+    }
+  }, [activeTab, otherUsersPolls.length]);
+
   // --- Real-time vote listening subscription ---
   useEffect(() => {
     // Subscribe to new votes for any poll
@@ -371,10 +378,19 @@ export default function PollsScreen() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[getScaledStyle(styles.tab, 0.75), activeTab === 'other' && getScaledStyle(styles.activeTab, 0.75)]}
-                onPress={() => setActiveTab('other')}
+                style={[
+                  getScaledStyle(styles.tab, 0.75),
+                  activeTab === 'other' && getScaledStyle(styles.activeTab, 0.75),
+                  otherUsersPolls.length === 0 && styles.disabledTab
+                ]}
+                onPress={() => otherUsersPolls.length > 0 && setActiveTab('other')}
+                disabled={otherUsersPolls.length === 0}
               >
-                <Text style={[getScaledStyle(styles.tabText, 0.75), activeTab === 'other' && getScaledStyle(styles.activeTabText, 0.75)]}>
+                <Text style={[
+                  getScaledStyle(styles.tabText, 0.75),
+                  activeTab === 'other' && getScaledStyle(styles.activeTabText, 0.75),
+                  otherUsersPolls.length === 0 && styles.disabledTabText
+                ]}>
                   Voted In ({otherUsersPolls.length})
                 </Text>
               </TouchableOpacity>
@@ -1071,5 +1087,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 15,
     color: '#4b5563',
+  },
+  disabledTab: {
+    opacity: 0.5,
+    pointerEvents: 'none',
+  },
+  disabledTabText: {
+    color: '#9ca3af',
   },
 });

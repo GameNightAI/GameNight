@@ -18,6 +18,7 @@ interface AddResultsModalProps {
     result: string;
     boardGames: any[];
   } | null;
+  onGamesAdded?: () => void; // Add this callback prop
 }
 
 export const AddResultsModal: React.FC<AddResultsModalProps> = ({
@@ -26,6 +27,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   onBack,
   imageData,
   analysisResults,
+  onGamesAdded,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -183,6 +185,11 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
         message += ` (${duplicateCount} game${duplicateCount !== 1 ? 's' : ''} were already in your collection)`;
       }
       setSuccessMessage(message);
+
+      // Call the callback to refresh the collection
+      if (onGamesAdded) {
+        onGamesAdded();
+      }
 
       // Show success message for 3 seconds before closing
       setTimeout(() => {

@@ -109,7 +109,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
         {/* Subtitle */}
         <Text style={styles.subtitle}>
-          Unlock these benefits:
+          Enable these benefits:
         </Text>
 
         {/* Benefits list */}
