@@ -271,13 +271,6 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
               {/* <Text style={styles.description}>
                 Take a photo or upload an image to automatically detect and add them to your collection:
               </Text> */}
-              <View style={styles.bulletPoints}>
-                <Text style={styles.bulletPoint}>• Take a clear photo with good lighting</Text>
-                <Text style={styles.bulletPoint}>• Ensure boxes are oriented so game names are visible</Text>
-                <Text style={styles.bulletPoint}>• Remove any obstructions</Text>
-                <Text style={[styles.bulletPoint, { textAlign: 'center' }]}>OR</Text>
-                <Text style={styles.bulletPoint}>• Choose a photo from your library</Text>
-              </View>
               <View style={styles.sampleButtons}>
                 <View style={styles.sampleButton}>
                   <TouchableOpacity
@@ -288,11 +281,18 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <View style={styles.bulletPoints}>
+                <Text style={styles.bulletPoint}>• Take a clear photo with good lighting</Text>
+                <Text style={styles.bulletPoint}>• Ensure boxes are oriented so game names are visible</Text>
+                <Text style={styles.bulletPoint}>• Remove any obstructions</Text>
+                <Text style={[styles.bulletPoint, { textAlign: 'center' }]}>OR</Text>
+                <Text style={styles.bulletPoint}>• Choose a photo from your library</Text>
+              </View>
+
             </View>
 
             <View style={styles.uploadSection}>
-              <Text style={styles.sectionTitle}>Upload Image</Text>
-
               <View style={styles.uploadButtons}>
                 {isMobile && (
                   <TouchableOpacity
@@ -314,7 +314,9 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                   }}
                 >
                   <Upload size={24} color="#ff9654" />
-                  <Text style={styles.uploadButtonText}>Choose from Library</Text>
+                  <Text style={styles.uploadButtonText}>
+                    {isMobile ? 'Choose from Library' : 'Upload Image'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -625,8 +627,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent'
   },
   sampleImageContainer: {
-    width: 120,
-    height: 120,
+    width: 160,
+    height: 160,
     overflow: 'hidden',
     borderRadius: 0,
     borderWidth: 0,
@@ -638,7 +640,8 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   bulletPoints: {
-    marginBottom: 10,
+    marginTop: 20,
+    marginBottom: 0,
   },
   bulletPoint: {
     fontFamily: 'Poppins-Regular',
