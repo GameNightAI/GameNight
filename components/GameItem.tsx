@@ -25,8 +25,6 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
 
   const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
   const useMaxExpPlayers = game.max_exp_players > game.max_players;
-  console.log('max_exp_players:', game.max_exp_players);
-  console.log('max_players:', game.max_players);
   const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
   const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
   const minText = `${useMinExpPlayers ? '<strong>' : ''}${minPlayers}${useMinExpPlayers ? '</strong>' : ''}`;
@@ -34,7 +32,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
     : `-${useMaxExpPlayers ? '<strong>': ''}${maxPlayers}${useMaxExpPlayers ? '</strong>' : ''}`;
   const minAndMaxText = `${minPlayers}${minPlayers === maxPlayers ? '' : '-' + maxPlayers}`;
   const playerCountText = maxPlayers ?
-    `${minAndMaxText} player'${(maxPlayers === 1 ? '' : 's'}`
+    `${minAndMaxText} player'${maxPlayers === 1 ? '' : 's'}`
     : 'N/A';
 
   return (
