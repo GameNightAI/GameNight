@@ -23,6 +23,18 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
     setIsExpanded(!isExpanded);
   };
 
+  const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
+  const useMaxExpPlayers = game.max_exp_players > game.max_players;
+  const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
+  const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
+  const minText = `${useMinExpPlayers ? '<strong>' : ''}${minPlayers}${useMinExpPlayers ? '</strong>' : ''}`;
+  const maxText = minPlayers === maxPlayers ? ''
+    : `-${useMaxExpPlayers ? '<strong>': ''}${maxPlayers}${useMaxExpPlayers ? '</strong>' : ''}`;
+  const minAndMaxText = `${minPlayers}${minPlayers === maxPlayers ? '' : '-' + maxPlayers}`;
+  const playerCountText = maxPlayers ?
+    `${minAndMaxText} player'${(maxPlayers === 1 ? '' : 's'}`
+    : 'N/A';
+
   return (
     <Animated.View
       style={styles.container}
@@ -64,9 +76,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             <View style={styles.infoItem}>
               <Users size={16} color="#666666" />
               <Text style={styles.infoText}>
-                {game.max_players ?
-                  game.min_players + (game.min_players === game.max_players ? '' : '-' + game.max_players) + ' player' + (game.max_players === 1 ? '' : 's')
-                  : 'N/A'}
+                {playerCountText}
               </Text>
             </View>
 
