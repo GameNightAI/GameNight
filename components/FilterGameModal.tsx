@@ -375,11 +375,11 @@ export const filterGames = (
     let is_match = true;
 
     if (playerCount.length) {
-      is_match &&= playerCount.some((p: FilterOption) => (
+      is_match &&= playerCount.some(({value}) => (
         // Ignore game.min_players when 15+ is selected,
         // since the number of actual players could be arbitrarily large.
-        (game.min_players <= p.value || p.value === 15)
-        && p.value <= game.max_players
+        (Math.min(game.min_players, game.min_exp_players) <= value || value === 15)
+        && value <= (Math.min(game.max_players, game.max_exp_players))
       ));
     }
 
@@ -388,8 +388,8 @@ export const filterGames = (
         const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
         // Perhaps this should incorporate game.minplaytime and game.maxplaytime more sensibly
         return (
-          t.min! <= game.playing_time
-          && game.playing_time <= t.max!
+          t.min! <= time
+          && time <= t.max!
         );
       });
     }
