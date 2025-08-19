@@ -63,6 +63,7 @@ def parse_xml(text):
       # NULL out 0 for filtering purposes (0 means no value)
       minplaytime = int(game.find('minplaytime').attrib['value']) or '',
       maxplaytime = int(game.find('maxplaytime').attrib['value']) or '',
+      playing_time = int(game.find('playingtime').attrib['value']) or '',
       min_players = int(game.find('minplayers').attrib['value']) or '',
       max_players = int(game.find('maxplayers').attrib['value']) or '',
       best_players = best_players,
