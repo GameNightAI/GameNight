@@ -23,6 +23,45 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
     setIsExpanded(!isExpanded);
   };
 
+  const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
+  const useMaxExpPlayers = game.max_exp_players > game.max_players;
+  const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
+  const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
+  const playerCountText = (
+    maxPlayers > 0
+      ? (
+        <>
+          <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+            {minPlayers}
+          </Text>
+          {minPlayers !== maxPlayers && (
+            <>
+              <Text>-</Text>
+              <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+                {maxPlayers}
+              </Text>
+            </>
+          )}
+          <Text>
+            {` player${maxPlayers === 1 ? '': 's'}`}
+          </Text>
+        </>
+      ) : (
+        'N/A'
+      )
+  );
+
+/*   const maxPlayersText = (
+    minPlayers !== maxPlayers && (
+      <>
+        <Text>-</Text>
+        <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+          {maxPlayers}
+        </Text>
+      </>
+    )
+  ); */
+
   return (
     <Animated.View
       style={styles.container}
@@ -64,9 +103,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             <View style={styles.infoItem}>
               <Users size={16} color="#666666" />
               <Text style={styles.infoText}>
-                {game.max_players ?
-                  game.min_players + (game.min_players === game.max_players ? '' : '-' + game.max_players) + ' player' + (game.max_players === 1 ? '' : 's')
-                  : 'N/A'}
+                {playerCountText}
               </Text>
             </View>
 
@@ -219,6 +256,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666666',
     marginLeft: 4,
+  },
+  infoTextEmphasis: {
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
   },
   expandedContent: {
     marginTop: 12,
