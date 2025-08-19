@@ -54,6 +54,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [gameType, setGameType] = useState<any[]>([]);
   const [complexity, setComplexity] = useState<any[]>([]);
 
+  // Dropdown z-index management similar to FilterGameModal
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
+  const getFilterSectionZIndex = (index: number) => {
+    if (openDropdownIndex === null) return 1000;
+    if (openDropdownIndex === index) return 99999;
+    return 1000;
+  };
+  const handleDropdownChange = (index: number, isOpen: boolean) => {
+    setOpenDropdownIndex(isOpen ? index : null);
+  };
+
   // Responsive state
   const [isMobile, setIsMobile] = useState(false);
   const [isSmallMobile, setIsSmallMobile] = useState(false);
@@ -385,7 +396,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   // Safari-compatible select styles
-  const getSelectStyles = () => {
+  const getSelectStyles = (index: number) => {
     const baseSelectStyles = {
       control: (baseStyles: any, state: any) => {
         return {
@@ -404,6 +415,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       container: (baseStyles: any, state: any) => ({
         ...baseStyles,
         marginBottom: 6,
+        position: 'relative',
+        zIndex: getFilterSectionZIndex(index),
       }),
       menu: (baseStyles: any, state: any) => ({
         ...baseStyles,
@@ -416,10 +429,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 4,
-        zIndex: 9999,
+        zIndex: getFilterSectionZIndex(index),
         position: 'absolute',
         maxHeight: 'none',
         overflow: 'hidden',
+      }),
+      menuPortal: (baseStyles: any) => ({
+        ...baseStyles,
+        zIndex: 999999,
       }),
       menuList: (baseStyles: any, state: any) => ({
         ...baseStyles,
@@ -440,15 +457,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         '& svg': {
           display: 'none',
         },
-        // Show only our custom CLR text
+        // Show only our custom CLR text (no absolute centering)
         '&::after': {
           content: '"CLR"',
           display: 'block',
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          whiteSpace: 'nowrap',
         },
       }),
       multiValueLabel: (baseStyles: any, state: any) => ({
@@ -484,7 +496,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   if (!isVisible || !isReady) return null;
 
-  const selectStyles = getSelectStyles();
+  const selectStyles0 = getSelectStyles(0);
+  const selectStyles1 = getSelectStyles(1);
+  const selectStyles2 = getSelectStyles(2);
+  const selectStyles3 = getSelectStyles(3);
+  const selectStyles4 = getSelectStyles(4);
 
   const content = (
     <>
@@ -590,7 +606,24 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             isSearchable={false}
             closeMenuOnSelect={false}
             blurInputOnSelect={false}
-            styles={selectStyles}
+            styles={selectStyles0}
+            onMenuOpen={() => handleDropdownChange(0, true)}
+            onMenuClose={() => handleDropdownChange(0, false)}
+            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+            menuPosition="fixed"
+            formatOptionLabel={(option: any) => {
+              const isSelected = playerCount.some(p => p.value === option.value);
+              return (
+                <View style={styles.optionRow}>
+                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                    {isSelected && <Check size={12} color="#ffffff" />}
+                  </View>
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {option.label}
+                  </Text>
+                </View>
+              );
+            }}
           />
 
           <Select
@@ -604,7 +637,24 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             isSearchable={false}
             closeMenuOnSelect={false}
             blurInputOnSelect={false}
-            styles={selectStyles}
+            styles={selectStyles1}
+            onMenuOpen={() => handleDropdownChange(1, true)}
+            onMenuClose={() => handleDropdownChange(1, false)}
+            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+            menuPosition="fixed"
+            formatOptionLabel={(option: any) => {
+              const isSelected = playTime.some(t => t.value === option.value);
+              return (
+                <View style={styles.optionRow}>
+                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                    {isSelected && <Check size={12} color="#ffffff" />}
+                  </View>
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {option.label}
+                  </Text>
+                </View>
+              );
+            }}
           />
 
           <Select
@@ -618,7 +668,24 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             isSearchable={false}
             closeMenuOnSelect={false}
             blurInputOnSelect={false}
-            styles={selectStyles}
+            styles={selectStyles2}
+            onMenuOpen={() => handleDropdownChange(2, true)}
+            onMenuClose={() => handleDropdownChange(2, false)}
+            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+            menuPosition="fixed"
+            formatOptionLabel={(option: any) => {
+              const isSelected = minAge.some(a => a.value === option.value);
+              return (
+                <View style={styles.optionRow}>
+                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                    {isSelected && <Check size={12} color="#ffffff" />}
+                  </View>
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {option.label}
+                  </Text>
+                </View>
+              );
+            }}
           />
 
           <Select
@@ -632,7 +699,24 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             isSearchable={false}
             closeMenuOnSelect={false}
             blurInputOnSelect={false}
-            styles={selectStyles}
+            styles={selectStyles3}
+            onMenuOpen={() => handleDropdownChange(3, true)}
+            onMenuClose={() => handleDropdownChange(3, false)}
+            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+            menuPosition="fixed"
+            formatOptionLabel={(option: any) => {
+              const isSelected = gameType.some(t => t.value === option.value);
+              return (
+                <View style={styles.optionRow}>
+                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                    {isSelected && <Check size={12} color="#ffffff" />}
+                  </View>
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {option.label}
+                  </Text>
+                </View>
+              );
+            }}
           />
 
           <Select
@@ -646,7 +730,24 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             isSearchable={false}
             closeMenuOnSelect={false}
             blurInputOnSelect={false}
-            styles={selectStyles}
+            styles={selectStyles4}
+            onMenuOpen={() => handleDropdownChange(4, true)}
+            onMenuClose={() => handleDropdownChange(4, false)}
+            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+            menuPosition="fixed"
+            formatOptionLabel={(option: any) => {
+              const isSelected = complexity.some(c => c.value === option.value);
+              return (
+                <View style={styles.optionRow}>
+                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                    {isSelected && <Check size={12} color="#ffffff" />}
+                  </View>
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {option.label}
+                  </Text>
+                </View>
+              );
+            }}
           />
         </View>
 
@@ -853,6 +954,9 @@ type Styles = {
   footer: ViewStyle;
   absoluteBackButton: ViewStyle;
   absoluteCloseButton: ViewStyle;
+  optionRow: ViewStyle;
+  optionText: TextStyle;
+  optionTextSelected: TextStyle;
 };
 
 const styles = StyleSheet.create<Styles>({
@@ -1312,6 +1416,21 @@ const styles = StyleSheet.create<Styles>({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  optionText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#333333',
+  },
+  optionTextSelected: {
+    color: '#ff9654',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
   },
 });
 
