@@ -37,7 +37,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
           <Text>-</Text>
           <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
             {maxPlayers}
-          <Text>
+          </Text>
         }
         <Text>
           {` player${maxPlayers === 1 ? '': 's'}`}
@@ -54,7 +54,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
         <Text>-</Text>
         <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
           {maxPlayers}
-        <Text>
+        </Text>
       </>
     )
   );
