@@ -27,13 +27,26 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   const useMaxExpPlayers = game.max_exp_players > game.max_players;
   const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
   const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
-  const minText = `${useMinExpPlayers ? '<strong>' : ''}${minPlayers}${useMinExpPlayers ? '</strong>' : ''}`;
-  const maxText = minPlayers === maxPlayers ? ''
-    : `-${useMaxExpPlayers ? '<Text style="color: red">': ''}${maxPlayers}${useMaxExpPlayers ? '</Text>' : ''}`;
-  const minAndMaxText = `${minPlayers}${minPlayers === maxPlayers ? '' : '-' + maxPlayers}`;
-  const playerCountText = maxPlayers ?
-    `${minAndMaxText} player${maxPlayers === 1 ? '' : 's'}`
-    : 'N/A';
+  const playerCountText = (
+    {maxPlayers === 1
+      ? (
+        <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+          {minPlayers}
+        </Text>
+        {minPlayers !== maxPlayers &&
+          <Text>-</Text>
+          <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+            {maxPlayers}
+          <Text>
+        }
+        <Text>
+          player{maxPlayers === 1 ? '': 's'}
+        </Text>
+      ) : (
+        'N/A'
+      )
+    }
+  );
 
   return (
     <Animated.View
@@ -229,6 +242,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666666',
     marginLeft: 4,
+  },
+  infoTextEmphasis: {
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
   },
   expandedContent: {
     marginTop: 12,
