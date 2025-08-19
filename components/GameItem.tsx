@@ -27,26 +27,28 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   const useMaxExpPlayers = game.max_exp_players > game.max_players;
   const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
   const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
-/*   const playerCountText = (
+  const playerCountText = (
     {maxPlayers === 1
       ? (
-        <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
-          {minPlayers}
-        </Text>
-        {minPlayers !== maxPlayers &&
-          <Text>-</Text>
-          <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
-            {maxPlayers}
+        <>
+          <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+            {minPlayers}
           </Text>
-        }
-        <Text>
-          {` player${maxPlayers === 1 ? '': 's'}`}
-        </Text>
+          {minPlayers !== maxPlayers && (
+            <Text>-</Text>
+            <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+              {maxPlayers}
+            </Text>
+          )}
+          <Text>
+            {` player${maxPlayers === 1 ? '': 's'}`}
+          </Text>
+        </>
       ) : (
         'N/A'
       )
     }
-  ); */
+  );
 
   const maxPlayersText = (
     minPlayers !== maxPlayers && (
@@ -100,19 +102,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             <View style={styles.infoItem}>
               <Users size={16} color="#666666" />
               <Text style={styles.infoText}>
-                {maxPlayers === 1
-                  ? (
-                    <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
-                      {minPlayers}
-                    </Text>
-                    {maxPlayersText}
-                    <Text>
-                      {` player${maxPlayers === 1 ? '': 's'}`}
-                    </Text>
-                  ) : (
-                    'N/A'
-                  )
-                }
+                {playerCountText}
               </Text>
             </View>
 
