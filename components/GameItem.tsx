@@ -27,7 +27,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   const useMaxExpPlayers = game.max_exp_players > game.max_players;
   const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
   const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
-  const playerCountText = (
+/*   const playerCountText = (
     {maxPlayers === 1
       ? (
         <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
@@ -46,7 +46,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
         'N/A'
       )
     }
-  );
+  ); */
 
   return (
     <Animated.View
