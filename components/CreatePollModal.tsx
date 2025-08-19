@@ -10,6 +10,7 @@ import { useDeviceType } from '@/hooks/useDeviceType';
 import { isSafari } from '@/utils/safari-polyfill';
 import { CreatePollTitleModal } from './CreatePollTitleModal';
 import { CreatePollDescrModal } from './CreatePollDescrModal';
+import { useCallback } from 'react';
 
 interface CreatePollModalProps {
   isVisible: boolean;
@@ -131,67 +132,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     }
   }, [isVisible, initialFilters]);
 
-  useEffect(() => {
-    filterGames();
-  }, [availableGames, playerCount, playTime, minAge, gameType, complexity]);
-
-  // Update default title when selected games change
-  useEffect(() => {
-    let newDefaultTitle = '';
-    if (selectedGames.length === 1) {
-      newDefaultTitle = 'Vote on 1 game';
-    } else if (selectedGames.length > 1) {
-      newDefaultTitle = `Vote on ${selectedGames.length} games`;
-    }
-    setDefaultTitle(newDefaultTitle);
-    if ((!pollTitle || pollTitle.startsWith('Vote on')) && newDefaultTitle) {
-      setPollTitle(newDefaultTitle);
-    }
-  }, [selectedGames]);
-
-  const loadGames = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('collections_games')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-
-      const games = data.map(game => ({
-        id: game.bgg_game_id,
-        name: game.name,
-        thumbnail: game.thumbnail,
-        min_players: game.min_players,
-        max_players: game.max_players,
-        playing_time: game.playing_time,
-        yearPublished: game.year_published,
-        description: game.description,
-        image: game.image_url,
-        minAge: game.min_age,
-        is_cooperative: game.is_cooperative,
-        is_teambased: game.is_teambased,
-        complexity: game.complexity,
-        minPlaytime: game.minplaytime,
-        maxPlaytime: game.maxplaytime,
-        complexity_tier: game.complexity_tier,
-        complexity_desc: game.complexity_desc,
-        bayesaverage: game.bayesaverage ?? null,
-      }));
-
-      setAvailableGames(games);
-      setFilteredGames(games);
-    } catch (err) {
-      console.error('Error loading games:', err);
-      setError('Failed to load games');
-    }
-  };
-
-  const filterGames = () => {
+  const filterGames = useCallback(() => {
     let filtered = [...availableGames];
 
     if (playerCount.length) {
@@ -251,6 +192,68 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setFilteredGames(filtered);
     // Don't automatically remove selected games when filters change
     // This prevents scroll jumping when selecting filter options
+  }, [availableGames, playerCount, playTime, minAge, gameType, complexity]);
+
+  useEffect(() => {
+    filterGames();
+  }, [filterGames]);
+
+  // Update default title when selected games change
+  useEffect(() => {
+    let newDefaultTitle = '';
+    if (selectedGames.length === 1) {
+      newDefaultTitle = 'Vote on 1 game';
+    } else if (selectedGames.length > 1) {
+      newDefaultTitle = `Vote on ${selectedGames.length} games`;
+    }
+    setDefaultTitle(newDefaultTitle);
+    if ((!pollTitle || pollTitle.startsWith('Vote on')) && newDefaultTitle) {
+      setPollTitle(newDefaultTitle);
+    }
+  }, [selectedGames]);
+
+  const loadGames = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('collections_games')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      const games = data.map(game => ({
+        id: game.bgg_game_id,
+        name: game.name,
+        thumbnail: game.thumbnail,
+        min_players: game.min_players,
+        max_players: game.max_players,
+        playing_time: game.playing_time,
+        yearPublished: game.year_published,
+        description: game.description,
+        image: game.image_url,
+        minAge: game.min_age,
+        is_cooperative: game.is_cooperative,
+        is_teambased: game.is_teambased,
+        complexity: game.complexity,
+        minPlaytime: game.minplaytime,
+        maxPlaytime: game.maxplaytime,
+        complexity_tier: game.complexity_tier,
+        complexity_desc: game.complexity_desc,
+        bayesaverage: game.bayesaverage ?? null,
+        min_exp_players: game.min_players || 0,
+        max_exp_players: game.max_players || 0,
+      }));
+
+      setAvailableGames(games);
+      setFilteredGames(games);
+    } catch (err) {
+      console.error('Error loading games:', err);
+      setError('Failed to load games');
+    }
   };
 
   const handleAddGames = async () => {
