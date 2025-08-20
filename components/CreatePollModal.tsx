@@ -985,7 +985,7 @@ const styles = StyleSheet.create<Styles>({
     marginBottom: 2,
   },
   titleButtonIndicator: {
-    backgroundColor: '#4ade80',
+    backgroundColor: '#16a34a',
     borderRadius: 10,
     width: 20,
     height: 20,
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create<Styles>({
     marginBottom: 2,
   },
   descriptionButtonIndicator: {
-    backgroundColor: '#4ade80',
+    backgroundColor: '#16a34a',
     borderRadius: 10,
     width: 20,
     height: 20,
