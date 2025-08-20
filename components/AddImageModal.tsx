@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
+    fontSize: 16,
     color: '#1a2b5f',
   },
   description: {

@@ -116,6 +116,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         thumbnail: game.thumbnail,
         min_players: game.min_players,
         max_players: game.max_players,
+        min_exp_players: game.min_players || 0,
+        max_exp_players: game.max_players || 0,
         playing_time: game.playing_time,
         yearPublished: game.year_published,
         description: game.description,
