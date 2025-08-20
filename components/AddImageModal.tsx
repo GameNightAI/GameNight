@@ -253,7 +253,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <ArrowLeft size={20} color="#666666" />
         </TouchableOpacity>
-        <Text style={styles.title}>Analyze Image</Text>
+        <Text style={styles.title}>Add Games With A Photo</Text>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <X size={20} color="#666666" />
         </TouchableOpacity>

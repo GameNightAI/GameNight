@@ -191,7 +191,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const renderSelectStep = () => (
     <View style={styles.dialog}>
       <View style={styles.header}>
-        <Text style={styles.title}>Add Game</Text>
+        <Text style={styles.title}>Add Game(s)</Text>
         <TouchableOpacity style={styles.closeButton} onPress={handleCloseModal}>
           <X size={20} color="#666666" />
         </TouchableOpacity>
