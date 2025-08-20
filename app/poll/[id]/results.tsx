@@ -6,9 +6,54 @@ import { ErrorState } from '@/components/ErrorState';
 import { usePollResults } from '@/hooks/usePollResults';
 import { GameResultCard } from '@/components/PollGameResultCard';
 import { supabase } from '@/services/supabase';
-import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
+import { Trophy, Medal, Award, Vote, ChevronDown, ChevronUp, Calendar, Clock } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useRef } from 'react';
+
+// Dummy night vote data structure
+interface NightVote {
+  id: string;
+  date: string;
+  time: string;
+  idealVotes: number;
+  okVotes: number;
+  noVotes: number;
+}
+
+const dummyNightVotes: NightVote[] = [
+  {
+    id: '1',
+    date: '2025-01-25',
+    time: '19:00',
+    idealVotes: 8,
+    okVotes: 3,
+    noVotes: 1,
+  },
+  {
+    id: '2',
+    date: '2025-01-26',
+    time: '18:30',
+    idealVotes: 5,
+    okVotes: 6,
+    noVotes: 2,
+  },
+  {
+    id: '3',
+    date: '2025-01-27',
+    time: '20:00',
+    idealVotes: 3,
+    okVotes: 4,
+    noVotes: 5,
+  },
+  {
+    id: '4',
+    date: '2025-01-28',
+    time: '19:30',
+    idealVotes: 6,
+    okVotes: 2,
+    noVotes: 3,
+  },
+];
 
 export default function PollResultsScreen() {
   const router = useRouter();
@@ -18,8 +63,24 @@ export default function PollResultsScreen() {
   // --- Real-time vote listening ---
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
+  const [showDetailedGameResults, setShowDetailedGameResults] = useState(false);
+  const [showDetailedNightResults, setShowDetailedNightResults] = useState(false);
 
   const { poll, games, results, hasVoted, voteUpdated, loading, error, reload } = usePollResults(id);
+
+  // Calculate winning night based on weighted score
+  const getWinningNight = () => {
+    const nightsWithScores = dummyNightVotes.map(night => ({
+      ...night,
+      score: night.idealVotes * 3 + night.okVotes * 1 + night.noVotes * (-3),
+      totalVotes: night.idealVotes + night.okVotes + night.noVotes,
+    }));
+    
+    return nightsWithScores.sort((a, b) => b.score - a.score)[0];
+  };
+
+  const winningNight = getWinningNight();
+  const winningGame = results && results.length > 0 ? results[0] : null;
 
   useEffect(() => {
     if (!id) return;
@@ -174,31 +235,169 @@ export default function PollResultsScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.resultsHeader}>
-              <Text style={styles.resultsTitle}>Ranking Results</Text>
-              <Text style={styles.resultsSubtitle}>
-                {results.length} game{results.length !== 1 ? 's' : ''} ranked by votes
-              </Text>
-            </View>
-
-            {results.map((result, index) => (
-              <View key={result.game.id} style={styles.resultItem}>
-                <View style={styles.rankingContainer}>
-                  <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(result.ranking) }]}>
-                    <Text style={styles.rankingNumber}>{result.ranking}</Text>
+            {/* Winning Game Section */}
+            {winningGame && (
+              <View style={styles.winnerSection}>
+                <Text style={styles.winnerSectionTitle}>🏆 Winning Game</Text>
+                <TouchableOpacity
+                  style={styles.winnerCard}
+                  onPress={() => setShowDetailedGameResults(!showDetailedGameResults)}
+                >
+                  <View style={styles.winnerHeader}>
+                    <View style={styles.winnerInfo}>
+                      <Text style={styles.winnerName}>{winningGame.game.name}</Text>
+                      <Text style={styles.winnerScore}>
+                        {winningGame.totalVotes} votes • Score: {winningGame.totalScore}
+                      </Text>
+                    </View>
+                    <View style={styles.expandButton}>
+                      {showDetailedGameResults ? (
+                        <ChevronUp size={20} color="#ff9654" />
+                      ) : (
+                        <ChevronDown size={20} color="#ff9654" />
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.rankingInfo}>
-                    <Text style={styles.rankingLabel}>
-                      {`${result.ranking}${getOrdinalSuffix(result.ranking)} Place`}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Detailed Game Results */}
+            {showDetailedGameResults && (
+              <View style={styles.detailedSection}>
+                <View style={styles.resultsHeader}>
+                  <Text style={styles.resultsTitle}>All Game Rankings</Text>
+                  <Text style={styles.resultsSubtitle}>
+                    {results.length} game{results.length !== 1 ? 's' : ''} ranked by votes
+                  </Text>
+                </View>
+
+                {results.map((result, index) => (
+                  <View key={result.game.id} style={styles.resultItem}>
+                    <View style={styles.rankingContainer}>
+                      <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(result.ranking) }]}>
+                        <Text style={styles.rankingNumber}>{result.ranking}</Text>
+                      </View>
+                      <View style={styles.rankingInfo}>
+                        <Text style={styles.rankingLabel}>
+                          {`${result.ranking}${getOrdinalSuffix(result.ranking)} Place`}
+                        </Text>
+                        <Text style={styles.scoreText}>
+                          {result.totalVotes} votes
+                        </Text>
+                      </View>
+                    </View>
+                    <GameResultCard game={result.game} />
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Winning Night Section */}
+            <View style={styles.winnerSection}>
+              <Text style={styles.winnerSectionTitle}>📅 Winning Night</Text>
+              <TouchableOpacity
+                style={styles.winnerCard}
+                onPress={() => setShowDetailedNightResults(!showDetailedNightResults)}
+              >
+                <View style={styles.winnerHeader}>
+                  <View style={styles.winnerInfo}>
+                    <Text style={styles.winnerName}>
+                      {new Date(winningNight.date).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
                     </Text>
-                    <Text style={styles.scoreText}>
-                      {result.totalVotes} votes
+                    <Text style={styles.winnerScore}>
+                      {winningNight.time} • {winningNight.totalVotes} votes • Score: {winningNight.score}
                     </Text>
+                    <View style={styles.nightVoteSummary}>
+                      <Text style={styles.nightVoteItem}>
+                        <Text style={styles.idealVote}>Ideal: {winningNight.idealVotes}</Text>
+                      </Text>
+                      <Text style={styles.nightVoteItem}>
+                        <Text style={styles.okVote}>Ok: {winningNight.okVotes}</Text>
+                      </Text>
+                      <Text style={styles.nightVoteItem}>
+                        <Text style={styles.noVote}>No: {winningNight.noVotes}</Text>
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.expandButton}>
+                    {showDetailedNightResults ? (
+                      <ChevronUp size={20} color="#ff9654" />
+                    ) : (
+                      <ChevronDown size={20} color="#ff9654" />
+                    )}
                   </View>
                 </View>
-                <GameResultCard game={result.game} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Detailed Night Results */}
+            {showDetailedNightResults && (
+              <View style={styles.detailedSection}>
+                <View style={styles.resultsHeader}>
+                  <Text style={styles.resultsTitle}>All Night Options</Text>
+                  <Text style={styles.resultsSubtitle}>
+                    {dummyNightVotes.length} time option{dummyNightVotes.length !== 1 ? 's' : ''} ranked by votes
+                  </Text>
+                </View>
+
+                {dummyNightVotes
+                  .map(night => ({
+                    ...night,
+                    score: night.idealVotes * 3 + night.okVotes * 1 + night.noVotes * (-3),
+                    totalVotes: night.idealVotes + night.okVotes + night.noVotes,
+                  }))
+                  .sort((a, b) => b.score - a.score)
+                  .map((night, index) => (
+                    <View key={night.id} style={styles.nightResultItem}>
+                      <View style={styles.rankingContainer}>
+                        <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(index + 1) }]}>
+                          <Text style={styles.rankingNumber}>{index + 1}</Text>
+                        </View>
+                        <View style={styles.rankingInfo}>
+                          <Text style={styles.rankingLabel}>
+                            {new Date(night.date).toLocaleDateString('en-US', { 
+                              weekday: 'long', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </Text>
+                          <Text style={styles.scoreText}>
+                            {night.time} • {night.totalVotes} votes • Score: {night.score}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.nightVoteDetails}>
+                        <View style={styles.nightVoteRow}>
+                          <View style={styles.nightVoteTypeContainer}>
+                            <View style={[styles.nightVoteBadge, styles.idealBadge]}>
+                              <Text style={styles.nightVoteCount}>{night.idealVotes}</Text>
+                            </View>
+                            <Text style={styles.nightVoteLabel}>Ideal</Text>
+                          </View>
+                          <View style={styles.nightVoteTypeContainer}>
+                            <View style={[styles.nightVoteBadge, styles.okBadge]}>
+                              <Text style={styles.nightVoteCount}>{night.okVotes}</Text>
+                            </View>
+                            <Text style={styles.nightVoteLabel}>Ok</Text>
+                          </View>
+                          <View style={styles.nightVoteTypeContainer}>
+                            <View style={[styles.nightVoteBadge, styles.noBadge]}>
+                              <Text style={styles.nightVoteCount}>{night.noVotes}</Text>
+                            </View>
+                            <Text style={styles.nightVoteLabel}>No</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
               </View>
-            ))}
+            )}
+
             {/* Comments Section at the bottom of the scrollview */}
             {comments && comments.length > 0 && (
               <View style={styles.commentsContainer}>
@@ -412,5 +611,127 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textDecorationLine: 'underline',
     alignSelf: 'flex-start',
+  },
+  winnerSection: {
+    marginBottom: 20,
+  },
+  winnerSectionTitle: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 18,
+    color: '#1a2b5f',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  winnerCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 2,
+    borderColor: '#ff9654',
+  },
+  winnerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  winnerInfo: {
+    flex: 1,
+  },
+  winnerName: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 18,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  winnerScore: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 8,
+  },
+  expandButton: {
+    padding: 8,
+  },
+  detailedSection: {
+    marginBottom: 20,
+  },
+  nightVoteSummary: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  nightVoteItem: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+  },
+  idealVote: {
+    color: '#10b981',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  okVote: {
+    color: '#f59e0b',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  noVote: {
+    color: '#ef4444',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  nightResultItem: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  nightVoteDetails: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  nightVoteRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  nightVoteTypeContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  nightVoteBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  idealBadge: {
+    backgroundColor: '#bbf7d0',
+  },
+  okBadge: {
+    backgroundColor: '#fef3c7',
+  },
+  noBadge: {
+    backgroundColor: '#fecaca',
+  },
+  nightVoteCount: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 16,
+    color: '#1a2b5f',
+  },
+  nightVoteLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#666666',
+    textAlign: 'center',
   },
 });
