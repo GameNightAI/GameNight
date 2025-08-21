@@ -14,7 +14,9 @@ import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
-import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
+import { FilterModal } from '@/components/FilterModal';
+import { filterGames } from '@/components/FilterGameModal';
+import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 import { AddGameModal } from '@/components/AddGameModal';
 import { CreatePollModal } from '@/components/CreatePollModal';
 import { Game } from '@/types/game';
@@ -37,11 +39,11 @@ export default function CollectionScreen() {
   const [syncing, setSyncing] = useState(false);
   const router = useRouter();
 
-  const [playerCount, setPlayerCount] = useState([]);
-  const [playTime, setPlayTime] = useState([]);
-  const [age, setAge] = useState([]);
-  const [gameType, setGameType] = useState([]);
-  const [complexity, setComplexity] = useState([]);
+  const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
+  const [playTime, setPlayTime] = useState<FilterOption[]>([]);
+  const [age, setAge] = useState<FilterOption[]>([]);
+  const [gameType, setGameType] = useState<FilterOption[]>([]);
+  const [complexity, setComplexity] = useState<FilterOption[]>([]);
 
   const isFiltered = ([
     playerCount,
@@ -346,19 +348,55 @@ export default function CollectionScreen() {
         loading={syncing}
       />
 
-      <FilterGameModal
+      <FilterModal
         isVisible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
-        playerCount={playerCount}
-        playTime={playTime}
-        age={age}
-        gameType={gameType}
-        complexity={complexity}
-        setPlayerCount={setPlayerCount}
-        setPlayTime={setPlayTime}
-        setAge={setAge}
-        setGameType={setGameType}
-        setComplexity={setComplexity}
+        onApplyFilters={() => setFilterModalVisible(false)}
+        title="Filter Your Collection"
+        description="All filters (optional)"
+        applyButtonText="Filter Games"
+        filterConfigs={[
+          {
+            key: 'playerCount',
+            label: 'Player Count',
+            placeholder: 'Player count',
+            options: playerOptions,
+            value: playerCount,
+            onChange: setPlayerCount,
+          },
+          {
+            key: 'playTime',
+            label: 'Play Time',
+            placeholder: 'Play time',
+            options: timeOptions,
+            value: playTime,
+            onChange: setPlayTime,
+          },
+          {
+            key: 'age',
+            label: 'Age Range',
+            placeholder: 'Age range',
+            options: ageOptions,
+            value: age,
+            onChange: setAge,
+          },
+          {
+            key: 'gameType',
+            label: 'Game Type',
+            placeholder: 'Co-op / competitive',
+            options: typeOptions,
+            value: gameType,
+            onChange: setGameType,
+          },
+          {
+            key: 'complexity',
+            label: 'Complexity',
+            placeholder: 'Game complexity',
+            options: complexityOptions,
+            value: complexity,
+            onChange: setComplexity,
+          },
+        ]}
       />
 
       <AddGameModal

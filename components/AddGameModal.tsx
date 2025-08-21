@@ -191,7 +191,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const renderSelectStep = () => (
     <View style={styles.dialog}>
       <View style={styles.header}>
-        <Text style={styles.title}>Add Game</Text>
+        <Text style={styles.title}>Add Game(s)</Text>
         <TouchableOpacity style={styles.closeButton} onPress={handleCloseModal}>
           <X size={20} color="#666666" />
         </TouchableOpacity>
@@ -258,7 +258,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         )}
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {searching ? 'Searching...' : 'No games found'}
+            {searching ? 'Searching...' : searchQuery ? 'No games found' : 'Enter a search term to find games'}
           </Text>
         }
       />
@@ -320,6 +320,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             onBack={handleBackToSelect}
             imageData={modalState.imageData || null}
             analysisResults={modalState.analysisResults || null}
+            onGamesAdded={onGameAdded}
           />
         );
       default:
@@ -430,12 +431,9 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   searchContainer: {
-    flexDirection: 'row',
-    gap: 12,
     marginBottom: 16,
   },
   input: {
-    flex: 1,
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: '#333333',
@@ -445,6 +443,8 @@ const styles = StyleSheet.create({
     borderColor: '#e1e5ea',
     borderRadius: 12,
     backgroundColor: '#ffffff',
+    textAlign: 'center',
+    width: '100%',
   },
   searchButton: {
     backgroundColor: '#ff9654',
@@ -522,8 +522,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sampleImageTouchable: {
-    width: 120,
-    height: 120,
+    width: 175,
+    height: 175,
     overflow: 'hidden',
     borderRadius: 0,
     borderWidth: 0,
