@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, Image } from 'react-native';
-import { X, Camera, RefreshCw } from 'lucide-react-native';
+import { X, Camera, RefreshCw, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { AddImageModal } from './AddImageModal';
@@ -127,12 +127,6 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
       // Refresh the games list and show success message
       onGameAdded();
 
-      // OPTION 2: Append new games to existing collection instead of full reload
-      // onGameAdded(); // Comment out this line
-
-      // Instead, pass the newly added games back to parent
-      // const newlyAddedGames = uniqueGamesList; // You'd need to track which were actually new
-
       Toast.show({ type: 'success', text1: 'Collection imported!' });
       setSyncModalVisible(false);
     } catch (err) {
@@ -170,7 +164,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             style={styles.analyzeButton}
             onPress={() => modalActions.next()}
           >
-            <Camera size={20} color="#ff9654" />
+            <Camera size={20} color="#fff" />
             <Text style={styles.analyzeButtonText}>Add Games With A Photo</Text>
           </TouchableOpacity>
         </View>
@@ -179,6 +173,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           style={styles.searchButton}
           onPress={() => setSearchModalVisible(true)}
         >
+          <Search size={16} color="#fff" />
           <Text style={styles.searchButtonText}>Search for Games</Text>
         </TouchableOpacity>
 
@@ -186,7 +181,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           style={styles.syncButton}
           onPress={() => setSyncModalVisible(true)}
         >
-          <RefreshCw size={20} color="#ff9654" />
+          <RefreshCw size={16} color="#fff" />
           <Text style={styles.syncButtonText}>Sync with BGG</Text>
         </TouchableOpacity>
       </View>
@@ -300,8 +295,8 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         onClose={() => setSearchModalVisible(false)}
         mode="collection"
         onGameAdded={handleGameAdded}
-        title="Search Games"
-        searchPlaceholder="Search for games to add to your collection..."
+        title="Add to Collection"
+        searchPlaceholder="Search for games..."
       />
       <SyncModal
         isVisible={syncModalVisible}
@@ -373,7 +368,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#ff9654',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
@@ -383,27 +378,29 @@ const styles = StyleSheet.create({
   analyzeButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
-    color: '#ff9654',
+    color: '#fff',
     marginLeft: 8,
   },
   searchButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
+    backgroundColor: '#6c757d',
+    // borderWidth: 1,
     borderColor: '#ff9654',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
   searchButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
+    fontSize: 12,
+    color: '#fff',
+    marginLeft: 8,
   },
   syncButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
+    backgroundColor: '#6c757d',
+    //borderWidth: 1,
     borderColor: '#ff9654',
     flexDirection: 'row',
     alignItems: 'center',
@@ -414,8 +411,8 @@ const styles = StyleSheet.create({
   },
   syncButtonText: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
+    fontSize: 12,
+    color: '#fff',
     marginLeft: 8,
   },
 
@@ -424,8 +421,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sampleImageTouchable: {
-    width: 175,
-    height: 175,
+    width: 200,
+    height: 200,
     overflow: 'hidden',
     borderRadius: 0,
     borderWidth: 0,

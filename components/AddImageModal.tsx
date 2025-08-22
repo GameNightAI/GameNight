@@ -44,6 +44,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   const [pickerVisible, setPickerVisible] = useState(true);
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
+  const [instructionsModalVisible, setInstructionsModalVisible] = useState(false);
 
   // Reset picker visibility when modal becomes visible
   useEffect(() => {
@@ -282,13 +283,12 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                 </View>
               </View>
 
-              <View style={styles.bulletPoints}>
-                <Text style={styles.bulletPoint}>• Take a clear photo with good lighting</Text>
-                <Text style={styles.bulletPoint}>• Ensure boxes are oriented so game names are visible</Text>
-                <Text style={styles.bulletPoint}>• Remove any obstructions</Text>
-                <Text style={[styles.bulletPoint, { textAlign: 'center' }]}>OR</Text>
-                <Text style={styles.bulletPoint}>• Choose a photo from your library</Text>
-              </View>
+              <TouchableOpacity
+                style={styles.instructionsButton}
+                onPress={() => setInstructionsModalVisible(true)}
+              >
+                <Text style={styles.instructionsButtonText}>📋 View Instructions</Text>
+              </TouchableOpacity>
 
             </View>
 
@@ -302,7 +302,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                       pickImage(true);
                     }}
                   >
-                    <Camera size={24} color="#ff9654" />
+                    <Camera size={24} color="#fff" />
                     <Text style={styles.uploadButtonText}>Take Photo</Text>
                   </TouchableOpacity>
                 )}
@@ -313,9 +313,9 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                     pickImage(false);
                   }}
                 >
-                  <Upload size={24} color="#ff9654" />
+                  <Upload size={24} color="#fff" />
                   <Text style={styles.uploadButtonText}>
-                    {isMobile ? 'Choose from Library' : 'Upload Image'}
+                    {isMobile ? 'Upload Image' : 'Choose from Library'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -404,6 +404,47 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
     </Modal>
   );
 
+  // Instructions modal
+  const instructionsModal = (
+    <Modal
+      visible={instructionsModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setInstructionsModalVisible(false)}
+    >
+      <TouchableOpacity
+        style={styles.instructionsOverlay}
+        activeOpacity={1}
+        onPress={() => setInstructionsModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.instructionsDialog}
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.instructionsHeader}>
+            <Text style={styles.instructionsTitle}>Instructions</Text>
+            <TouchableOpacity
+              style={styles.instructionsCloseButton}
+              onPress={() => setInstructionsModalVisible(false)}
+            >
+              <X size={20} color="#666666" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.instructionsContent}>
+            <Text style={styles.instructionsBulletPoint}>• Take a clear photo with good lighting</Text>
+            <Text style={styles.instructionsBulletPoint}>• Ensure boxes are oriented so game names are visible</Text>
+            <Text style={styles.instructionsBulletPoint}>• Remove any obstructions</Text>
+            <View style={styles.orContainer}>
+              <Text style={styles.orText}>OR</Text>
+            </View>
+            <Text style={styles.instructionsBulletPoint}>• Choose a photo from your library</Text>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   if (Platform.OS === 'web') {
     if (!isVisible) return null;
     return (
@@ -412,6 +453,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
           {content}
         </View>
         {fullSizeImageModal}
+        {instructionsModal}
       </>
     );
   }
@@ -429,6 +471,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         </View>
       </Modal>
       {fullSizeImageModal}
+      {instructionsModal}
     </>
   );
 };
@@ -532,7 +575,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   uploadSection: {
-    marginBottom: 20,
+    marginBottom: 0,
   },
   uploadButtons: {
     gap: 12,
@@ -541,7 +584,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#ff9654',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
@@ -552,7 +595,7 @@ const styles = StyleSheet.create({
   uploadButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
-    color: '#ff9654',
+    color: '#fff',
   },
   errorText: {
     fontFamily: 'Poppins-Regular',
@@ -610,7 +653,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   sampleSection: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   sampleButtons: {
     flexDirection: 'row',
@@ -627,8 +670,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent'
   },
   sampleImageContainer: {
-    width: 160,
-    height: 160,
+    width: 260,
+    height: 260,
     overflow: 'hidden',
     borderRadius: 0,
     borderWidth: 0,
@@ -675,5 +718,77 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 20,
     padding: 8,
+  },
+  // Instructions button styles
+  instructionsButton: {
+    backgroundColor: '#f1f3f4',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#6c757d',
+  },
+  instructionsButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#495057',
+  },
+  // Instructions modal styles
+  instructionsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Platform.OS === 'ios' ? 20 : 10,
+  },
+  instructionsDialog: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  instructionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  instructionsTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 20,
+    color: '#1a2b5f',
+  },
+  instructionsCloseButton: {
+    padding: 4,
+  },
+  instructionsContent: {
+    alignItems: 'flex-start',
+  },
+  instructionsBulletPoint: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  orContainer: {
+    alignItems: 'center',
+    marginVertical: 15,
+    width: '100%',
+  },
+  orText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
   },
 });

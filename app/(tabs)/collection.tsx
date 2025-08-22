@@ -314,15 +314,6 @@ export default function CollectionScreen() {
         isVisible={addGameModalVisible}
         onClose={() => setAddGameModalVisible(false)}
         onGameAdded={loadGames}
-      // OPTION 2: Replace with this:
-      // onGameAdded={(newGames) => {
-      //   // Append new games to existing collection
-      //   setGames(prevGames => {
-      //     const existingIds = new Set(prevGames.map(g => g.id));
-      //     const trulyNewGames = newGames.filter(g => !existingIds.has(g.id));
-      //     return [...prevGames, ...trulyNewGames];
-      //   });
-      // }}
       />
 
       <CreatePollModal
