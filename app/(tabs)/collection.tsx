@@ -2,18 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { RefreshCw, X, ListFilter, Plus, Camera, Vote } from 'lucide-react-native';
-import Toast from 'react-native-toast-message';
+import { X, ListFilter, Plus, Camera, Vote } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
-import { fetchGames } from '@/services/bggApi';
 import { GameItem } from '@/components/GameItem';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
-import { SyncModal } from '@/components/SyncModal';
 import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 import { AddGameModal } from '@/components/AddGameModal';
@@ -31,11 +28,9 @@ export default function CollectionScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
-  const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [createPollModalVisible, setCreatePollModalVisible] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const router = useRouter();
 
   const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
@@ -135,80 +130,6 @@ export default function CollectionScreen() {
     }
   }, [gameToDelete]);
 
-  const handleSync = async (username?: string) => {
-    try {
-      setSyncing(true);
-      setError(null);
-
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.replace('/auth/login');
-        return;
-      }
-
-      if (!username || !username.trim()) {
-        setError('Please enter a valid BoardGameGeek username');
-        return;  // Exit early since username is invalid
-      }
-
-      username = username.replace('@', ''); // Requested in GAM-134 ("Ignore @ when people enter BGG ID")
-      const bggGames = await fetchGames(username);
-
-      if (!bggGames || bggGames.length === 0) {
-        setError('No games found in collection. Make sure your collection is public and contains board games.');
-        return;
-      }
-
-      // Create a Map to store unique games, using bgg_game_id as the key
-      const uniqueGames = new Map();
-
-      // Only keep the last occurrence of each game ID
-      bggGames.forEach(game => {
-        uniqueGames.set(game.id, {
-          user_id: user.id,
-          bgg_game_id: game.id,
-          name: game.name,
-          thumbnail: game.thumbnail,
-          min_players: game.min_players,
-          max_players: game.max_players,
-          playing_time: game.playing_time,
-          minplaytime: game.minPlaytime,
-          maxplaytime: game.maxPlaytime,
-          year_published: game.yearPublished,
-          description: game.description,
-        });
-      });
-
-      // Convert the Map values back to an array
-      const uniqueGamesList = Array.from(uniqueGames.values());
-
-      const { error: insertError } = await supabase
-        .from('collections')
-        .upsert(uniqueGamesList, { onConflict: 'user_id,bgg_game_id' });
-
-      if (insertError) throw insertError;
-
-      await loadGames();
-      Toast.show({ type: 'success', text1: 'Collection imported!' });
-      setSyncModalVisible(false);
-    } catch (err) {
-      console.error('Error in handleSync:', err);
-      setError(err instanceof Error ? err.message : 'Failed to sync games');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleFilter = useCallback(() => {
-    loadGames();
-  }, [loadGames]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadGames();
-  }, [loadGames]);
-
   const clearFilters = () => {
     setPlayerCount([]);
     setPlayTime([]);
@@ -216,6 +137,11 @@ export default function CollectionScreen() {
     setGameType([]);
     setComplexity([]);
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadGames();
+  }, [loadGames]);
 
   // Convert collection filters to CreatePollModal format
   const convertFiltersForPoll = () => {
@@ -245,7 +171,7 @@ export default function CollectionScreen() {
     return (
       <EmptyState
         username={null}
-        onRefresh={handleSync}
+        onRefresh={loadGames}
         loadGames={loadGames}
         message={isFiltered ? 'No games found' : undefined}
         buttonText={isFiltered ? "Clear Filters" : undefined}
@@ -278,13 +204,6 @@ export default function CollectionScreen() {
             onPress={() => setAddGameModalVisible(true)}
           >
             <Plus size={20} color="#ff9654" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.syncButton}
-            onPress={() => setSyncModalVisible(true)}
-          >
-            <RefreshCw size={20} color="#ff9654" />
-            <Text style={styles.syncButtonText}>Sync with BGG</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -338,13 +257,6 @@ export default function CollectionScreen() {
         message={`Are you sure you want to remove ${gameToDelete?.name} from your GameNyte collection?\n\n(This will not affect your BGG collection.)`}
         onConfirm={handleDelete}
         onCancel={() => setGameToDelete(null)}
-      />
-
-      <SyncModal
-        isVisible={syncModalVisible}
-        onClose={() => setSyncModalVisible(false)}
-        onSync={handleSync}
-        loading={syncing}
       />
 
       <FilterGameModal
@@ -411,7 +323,6 @@ export default function CollectionScreen() {
           setCreatePollModalVisible(false);
           // Navigate to polls tab with refresh parameter
           router.push('/(tabs)/polls?refresh=true');
-          Toast.show({ type: 'success', text1: 'Poll created successfully!' });
         }}
         initialFilters={convertFiltersForPoll()}
       />
@@ -457,22 +368,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ff9654',
-  },
-  syncButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ff9654',
-  },
-  syncButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
-    marginLeft: 8,
   },
   filterBanner: {
     backgroundColor: '#f0f0f0',

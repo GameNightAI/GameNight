@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Linking } from 'react-native';
-import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain } from 'lucide-react-native';
+import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight } from 'lucide-react-native';
 import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 
 import { Game } from '@/types/game';
@@ -75,17 +75,6 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       )
   );
 
-  /*   const maxPlayersText = (
-      minPlayers !== maxPlayers && (
-        <>
-          <Text>-</Text>
-          <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
-            {maxPlayers}
-          </Text>
-        </>
-      )
-    ); */
-
   return (
     <Animated.View
       style={styles.container}
@@ -101,7 +90,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       <TouchableOpacity
         style={styles.mainContent}
         onPress={toggleExpanded}
-        activeOpacity={0.7}
+        activeOpacity={0.85}
       >
         <Image
           source={{ uri: game.thumbnail }}
@@ -114,13 +103,6 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             <Text style={styles.title} numberOfLines={2}>
               {decodeHTML(game.name)}
             </Text>
-            <View style={styles.expandIcon}>
-              {isExpanded ? (
-                <ChevronUp size={20} color="#666666" />
-              ) : (
-                <ChevronDown size={20} color="#666666" />
-              )}
-            </View>
           </View>
 
           <View style={styles.infoRow}>
@@ -130,7 +112,9 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 {playerCountText}
               </Text>
             </View>
+          </View>
 
+          <View style={[styles.infoRow, { marginTop: 4 }]}>
             <View style={styles.infoItem}>
               <Clock size={16} color="#666666" />
               <Text style={styles.infoText}>
@@ -140,11 +124,14 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
           </View>
         </View>
 
-        {isExpanded ? (
-          <ChevronUp size={24} color="#ff9654" />
-        ) : (
-          <ChevronDown size={24} color="#ff9654" />
-        )}
+        <View style={styles.chevronContainer}>
+          <Text style={styles.infoText}>Info</Text>
+          {isExpanded ? (
+            <ChevronDown size={24} color="#ff9654" />
+          ) : (
+            <ChevronRight size={24} color="#ff9654" />
+          )}
+        </View>
       </TouchableOpacity>
 
       {isExpanded && (
@@ -231,6 +218,9 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   thumbnail: {
     width: 80,
@@ -246,15 +236,24 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    justifyContent: 'flex-start',
+    marginBottom: 4,
+    marginTop: -8,
   },
   title: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#1a2b5f',
-    paddingRight: 24,
     flex: 1,
+    lineHeight: 20,
+  },
+  chevronContainer: {
+    marginLeft: 'auto',
+    marginRight: -5,
+    marginTop: 55,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 0,
   },
   expandIcon: {
     marginLeft: 8,
@@ -269,7 +268,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-start',
     gap: 16,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   infoItem: {
     flexDirection: 'row',
@@ -277,7 +276,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 13,
+    fontSize: 12,
     color: '#666666',
     marginLeft: 4,
   },
