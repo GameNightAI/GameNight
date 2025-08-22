@@ -14,8 +14,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { SyncModal } from '@/components/SyncModal';
-import { FilterModal } from '@/components/FilterModal';
-import { filterGames } from '@/components/FilterGameModal';
+import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 import { AddGameModal } from '@/components/AddGameModal';
 import { CreatePollModal } from '@/components/CreatePollModal';
@@ -348,7 +347,7 @@ export default function CollectionScreen() {
         loading={syncing}
       />
 
-      <FilterModal
+      <FilterGameModal
         isVisible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         onApplyFilters={() => setFilterModalVisible(false)}
@@ -359,7 +358,7 @@ export default function CollectionScreen() {
           {
             key: 'playerCount',
             label: 'Player Count',
-            placeholder: 'Player count',
+            placeholder: 'Player Count',
             options: playerOptions,
             value: playerCount,
             onChange: setPlayerCount,
@@ -367,7 +366,7 @@ export default function CollectionScreen() {
           {
             key: 'playTime',
             label: 'Play Time',
-            placeholder: 'Play time',
+            placeholder: 'Play Time',
             options: timeOptions,
             value: playTime,
             onChange: setPlayTime,
@@ -375,7 +374,7 @@ export default function CollectionScreen() {
           {
             key: 'age',
             label: 'Age Range',
-            placeholder: 'Age range',
+            placeholder: 'Age Range',
             options: ageOptions,
             value: age,
             onChange: setAge,
@@ -383,7 +382,7 @@ export default function CollectionScreen() {
           {
             key: 'gameType',
             label: 'Game Type',
-            placeholder: 'Co-op / competitive',
+            placeholder: 'Play Style',
             options: typeOptions,
             value: gameType,
             onChange: setGameType,
@@ -391,7 +390,7 @@ export default function CollectionScreen() {
           {
             key: 'complexity',
             label: 'Complexity',
-            placeholder: 'Game complexity',
+            placeholder: 'Complexity',
             options: complexityOptions,
             value: complexity,
             onChange: setComplexity,

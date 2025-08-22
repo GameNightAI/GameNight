@@ -71,13 +71,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           </>
         )}
       </TouchableOpacity>
-
-      <View style={styles.infoContainer}>
-        <Info size={16} color="#666666" />
-        <Text style={styles.infoText}>
-          Your BoardGameGeek collection must be set to public for the import to work
-        </Text>
-      </View>
     </View>
   );
 
