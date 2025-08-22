@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform, Image } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen, ListFilter } from 'lucide-react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform, Image, ImageStyle } from 'react-native';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen, ListFilter, Search } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import * as Clipboard from 'expo-clipboard';
@@ -10,7 +10,8 @@ import { useDeviceType } from '@/hooks/useDeviceType';
 import { isSafari } from '@/utils/safari-polyfill';
 import { CreatePollTitleModal } from './CreatePollTitleModal';
 import { CreatePollDescrModal } from './CreatePollDescrModal';
-import { FilterModal } from './FilterModal';
+import { FilterGameModal } from './FilterGameModal';
+import { GameSearchModal } from './GameSearchModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 import { useCallback } from 'react';
 
@@ -41,6 +42,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
+  const [searchAddedGames, setSearchAddedGames] = useState<Game[]>([]);
+  const [selectedGamesForPoll, setSelectedGamesForPoll] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pollTitle, setPollTitle] = useState('');
@@ -50,6 +53,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [isTitleModalVisible, setIsTitleModalVisible] = useState(false);
   const [isDescriptionModalVisible, setIsDescriptionModalVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [isGameSearchModalVisible, setIsGameSearchModalVisible] = useState(false);
 
   // Filter states - changed to arrays for multi-select
   const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
@@ -189,17 +193,20 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   // Update default title when selected games change
   useEffect(() => {
+    // Count games that are selected for the poll via checkboxes
+    const totalSelectedGames = selectedGamesForPoll.length;
+
     let newDefaultTitle = '';
-    if (selectedGames.length === 1) {
+    if (totalSelectedGames === 1) {
       newDefaultTitle = 'Vote on 1 game';
-    } else if (selectedGames.length > 1) {
-      newDefaultTitle = `Vote on ${selectedGames.length} games`;
+    } else if (totalSelectedGames > 1) {
+      newDefaultTitle = `Vote on ${totalSelectedGames} games`;
     }
     setDefaultTitle(newDefaultTitle);
     if ((!pollTitle || pollTitle.startsWith('Vote on')) && newDefaultTitle) {
       setPollTitle(newDefaultTitle);
     }
-  }, [selectedGames]);
+  }, [selectedGamesForPoll]);
 
   const loadGames = async () => {
     try {
@@ -250,14 +257,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       setLoading(true);
       setError(null);
 
-      if (selectedGames.length === 0) {
+      // Use selectedGamesForPoll which contains the combined checked games
+      const allSelectedGames = [...selectedGamesForPoll];
+
+      if (allSelectedGames.length === 0) {
         setError('Please select at least one game to add.');
         setLoading(false);
         return;
       }
 
       // Filter out games that are already in the poll (preselectedGames)
-      const newGames = selectedGames.filter(game =>
+      const newGames = allSelectedGames.filter(game =>
         !preselectedGames?.some(preselected => preselected.id === game.id)
       );
 
@@ -283,7 +293,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       setLoading(true);
       setError(null);
 
-      if (selectedGames.length === 0) {
+      // Use selectedGamesForPoll which contains the combined checked games
+      const allSelectedGames = [...selectedGamesForPoll];
+
+      if (allSelectedGames.length === 0) {
         setError('Please select at least one game to create a poll.');
         setLoading(false);
         return;
@@ -308,7 +321,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
       if (pollError) throw pollError;
 
-      const pollGames = selectedGames.map(game => ({
+      const pollGames = allSelectedGames.map(game => ({
         poll_id: poll.id,
         game_id: game.id,
       }));
@@ -337,6 +350,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   const resetForm = () => {
     setSelectedGames([]);
+    setSearchAddedGames([]);
+    setSelectedGamesForPoll([]);
     setError(null);
     setPollTitle('');
     setPollDescription('');
@@ -348,7 +363,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   const toggleGameSelection = (game: Game) => {
-    setSelectedGames(current => {
+    setSelectedGamesForPoll(current => {
       const isSelected = current.some(g => g.id === game.id);
       if (isSelected) {
         return current.filter(g => g.id !== game.id);
@@ -609,75 +624,185 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   complexity.length ? `Complexity` : null,
                 ].filter(Boolean).join(', ')}
               </Text>
+              <TouchableOpacity
+                style={styles.clearFiltersButton}
+                onPress={() => {
+                  setPlayerCount([]);
+                  setPlayTime([]);
+                  setMinAge([]);
+                  setGameType([]);
+                  setComplexity([]);
+                }}
+              >
+                <X size={16} color="#666666" />
+              </TouchableOpacity>
             </View>
           )}
 
-
         </View>
 
+        <View style={styles.searchSection}>
+          {/* <Text style={styles.sublabel}>
+            {isAddingToExistingPoll
+              ? 'Add games not in your collection'
+              : 'Add games not in your collection to the poll'
+            }
+          </Text> */}
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={() => setIsGameSearchModalVisible(true)}
+          >
+            <Search size={20} color="#666666" />
+            <Text style={styles.searchButtonText}>Search for Games</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Collection Games Section */}
         <View style={styles.gamesSection}>
           <View style={styles.gamesHeader}>
-            <Text style={styles.label}>Select Games</Text>
+            <Text style={styles.label}>Games Selection</Text>
             <View style={styles.gamesHeaderRight}>
               <TouchableOpacity
                 style={styles.selectAllButton}
-                onPress={() => setSelectedGames([...filteredGames])}
+                onPress={() => setSelectedGamesForPoll([...filteredGames, ...searchAddedGames])}
               >
                 <Text style={styles.selectAllButtonText}>Select All</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.clearAllButton}
-                onPress={() => setSelectedGames([])}
+                onPress={() => setSelectedGamesForPoll([])}
               >
                 <Text style={styles.clearAllButtonText}>Clear All</Text>
               </TouchableOpacity>
             </View>
           </View>
+        </View>
 
-          <Text style={[styles.sublabel, { marginBottom: 16 }]}>
-            {(playerCount.length || playTime.length || minAge.length || gameType.length || complexity.length)
-              ? `Games that match your filters`
-              : isAddingToExistingPoll
-                ? 'Choose additional games from your collection to add to the poll'
-                : 'Choose games from your collection to include in the poll'}
-          </Text>
+        {/* Games Added via Search Section */}
+        {searchAddedGames.length > 0 && (
+          <View style={styles.searchAddedSection}>
+            {searchAddedGames.map(game => {
+              const isAlreadyInPoll = preselectedGames?.some(pg => pg.id === game.id);
+              return (
+                <TouchableOpacity
+                  key={`search-${game.id}`}
+                  style={[
+                    styles.searchAddedGameItem,
+                    isAlreadyInPoll && styles.gameItemDisabled
+                  ]}
+                  onPress={() => !isAlreadyInPoll && toggleGameSelection(game)}
+                  disabled={isAlreadyInPoll}
+                >
+                  <Image
+                    source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
+                    style={[
+                      {
+                        width: 48,
+                        height: 48,
+                        borderRadius: 6,
+                        backgroundColor: '#f0f0f0',
+                        marginRight: 8,
+                      },
+                      isAlreadyInPoll && styles.gameThumbnailDisabled
+                    ]}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.gameInfo}>
+                    <Text style={[
+                      styles.gameName,
+                      isAlreadyInPoll && styles.gameNameDisabled
+                    ]}>{game.name}</Text>
+                    <Text style={[
+                      styles.playerCount,
+                      isAlreadyInPoll && styles.playerCountDisabled
+                    ]}>
+                      {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                    </Text>
+                    {isAlreadyInPoll && (
+                      <Text style={styles.alreadyInPollText}>Already in poll</Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeSearchGameButton}
+                    onPress={() => {
+                      // Remove from searchAddedGames
+                      setSearchAddedGames(prev => prev.filter(g => g.id !== game.id));
+                      // Also remove from selectedGamesForPoll if it was selected
+                      setSelectedGamesForPoll(prev => prev.filter(g => g.id !== game.id));
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <X size={16} color="#666666" />
+                  </TouchableOpacity>
+                  <View style={[
+                    styles.checkbox,
+                    selectedGamesForPoll.some(g => g.id === game.id) && styles.checkboxSelected,
+                    isAlreadyInPoll && styles.checkboxDisabled
+                  ]}>
+                    {selectedGamesForPoll.some(g => g.id === game.id) && (
+                      <Check size={isMobile ? 14 : 16} color="#ffffff" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
+        {/* Games List Section */}
+        <View style={styles.gamesListSection}>
           {filteredGames.length === 0 ? (
             <Text style={styles.noGamesText}>
               No games found matching your filters
             </Text>
           ) : (
             filteredGames.map(game => {
-              const isSelected = selectedGames.some(g => g.id === game.id);
+              const isSelected = selectedGamesForPoll.some(g => g.id === game.id);
+              const isAlreadyInPoll = preselectedGames?.some(pg => pg.id === game.id);
               return (
                 <TouchableOpacity
                   key={game.id}
                   style={[
                     styles.gameItem,
-                    isSelected && styles.gameItemSelected
+                    isSelected && styles.gameItemSelected,
+                    isAlreadyInPoll && styles.gameItemDisabled
                   ]}
-                  onPress={() => toggleGameSelection(game)}
+                  onPress={() => !isAlreadyInPoll && toggleGameSelection(game)}
+                  disabled={isAlreadyInPoll}
                 >
                   <Image
                     source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 6,
-                      backgroundColor: '#f0f0f0',
-                      marginRight: 8,
-                    }}
+                    style={[
+                      {
+                        width: 48,
+                        height: 48,
+                        borderRadius: 6,
+                        backgroundColor: '#f0f0f0',
+                        marginRight: 8,
+                      },
+                      isAlreadyInPoll && styles.gameThumbnailDisabled
+                    ]}
                     resizeMode="cover"
                   />
                   <View style={styles.gameInfo}>
-                    <Text style={styles.gameName}>{game.name}</Text>
-                    <Text style={styles.playerCount}>
-                      {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                    <Text style={[
+                      styles.gameName,
+                      isAlreadyInPoll && styles.gameNameDisabled
+                    ]}>{game.name}</Text>
+                    <Text style={[
+                      styles.playerCount,
+                      isAlreadyInPoll && styles.playerCountDisabled
+                    ]}>
+                      {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
                     </Text>
+                    {isAlreadyInPoll && (
+                      <Text style={styles.alreadyInPollText}>Already in poll</Text>
+                    )}
                   </View>
                   <View style={[
                     styles.checkbox,
-                    isSelected && styles.checkboxSelected
+                    isSelected && styles.checkboxSelected,
+                    isAlreadyInPoll && styles.checkboxDisabled
                   ]}>
                     {isSelected && (
                       <Check size={isMobile ? 14 : 16} color="#ffffff" />
@@ -692,9 +817,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       <View style={styles.footer}>
         {error && <Text style={styles.errorText}>{error}</Text>}
         <TouchableOpacity
-          style={[styles.createButton, loading || selectedGames.length === 0 ? styles.createButtonDisabled : undefined]}
+          style={[styles.createButton, loading || selectedGamesForPoll.length === 0 ? styles.createButtonDisabled : undefined]}
           onPress={isAddingToExistingPoll ? handleAddGames : handleCreatePoll}
-          disabled={loading || selectedGames.length === 0}
+          disabled={loading || selectedGamesForPoll.length === 0}
         >
           <Plus size={isMobile ? 18 : 20} color="#fff" />
           <Text style={styles.createButtonText}>
@@ -745,7 +870,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       />
 
       {/* Filter Modal */}
-      <FilterModal
+      <FilterGameModal
         isVisible={isFilterModalVisible}
         onClose={() => setIsFilterModalVisible(false)}
         onApplyFilters={() => setIsFilterModalVisible(false)}
@@ -756,7 +881,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {
             key: 'playerCount',
             label: 'Player Count',
-            placeholder: 'Player count',
+            placeholder: 'Player Count',
             options: playerOptions,
             value: playerCount,
             onChange: setPlayerCount,
@@ -764,7 +889,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {
             key: 'playTime',
             label: 'Play Time',
-            placeholder: 'Play time',
+            placeholder: 'Play Time',
             options: timeOptions,
             value: playTime,
             onChange: setPlayTime,
@@ -772,7 +897,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {
             key: 'age',
             label: 'Age Range',
-            placeholder: 'Age range',
+            placeholder: 'Age Range',
             options: ageOptions,
             value: minAge,
             onChange: setMinAge,
@@ -780,7 +905,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {
             key: 'gameType',
             label: 'Game Type',
-            placeholder: 'Co-op / competitive',
+            placeholder: 'Play Style',
             options: typeOptions,
             value: gameType,
             onChange: setGameType,
@@ -788,12 +913,28 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {
             key: 'complexity',
             label: 'Complexity',
-            placeholder: 'Game complexity',
+            placeholder: 'Complexity',
             options: complexityOptions,
             value: complexity,
             onChange: setComplexity,
           },
         ]}
+      />
+
+      {/* Game Search Modal */}
+      <GameSearchModal
+        isVisible={isGameSearchModalVisible}
+        onClose={() => setIsGameSearchModalVisible(false)}
+        mode="poll"
+        onGameSelected={(game) => {
+          // Add to searchAddedGames but don't automatically select for poll
+          setSearchAddedGames(prev => [...prev, game]);
+          setIsGameSearchModalVisible(false);
+        }}
+        existingGameIds={selectedGames.map(g => g.id.toString())}
+        userCollectionIds={availableGames.map(g => g.id.toString())}
+        title="Search for Games"
+        searchPlaceholder="Enter search..."
       />
     </View>
   );
@@ -840,6 +981,10 @@ type Styles = {
   filterButtonIndicatorText: TextStyle;
   activeFilters: ViewStyle;
   activeFiltersText: TextStyle;
+  clearFiltersButton: ViewStyle;
+  searchSection: ViewStyle;
+  searchButton: ViewStyle;
+  searchButtonText: TextStyle;
   clearButton: ViewStyle;
   dropdown: ViewStyle;
   dropdownScroll: ViewStyle;
@@ -847,7 +992,17 @@ type Styles = {
   dropdownItemSelected: ViewStyle;
   dropdownItemText: TextStyle;
   dropdownItemTextSelected: TextStyle;
+  searchAddedSection: ViewStyle;
+  sectionHeader: ViewStyle;
+  sectionLabel: TextStyle;
+  clearSearchButton: ViewStyle;
+  clearSearchButtonText: TextStyle;
+  searchAddedGameItem: ViewStyle;
+  searchAddedIndicator: ViewStyle;
+  searchAddedIndicatorText: TextStyle;
+  removeSearchGameButton: ViewStyle;
   gamesSection: ViewStyle;
+  gamesListSection: ViewStyle;
   gamesHeader: ViewStyle;
   gamesHeaderLeft: ViewStyle;
   gamesHeaderRight: ViewStyle;
@@ -875,6 +1030,12 @@ type Styles = {
   optionRow: ViewStyle;
   optionText: TextStyle;
   optionTextSelected: TextStyle;
+  gameItemDisabled: ViewStyle;
+  gameThumbnailDisabled: ImageStyle;
+  gameNameDisabled: TextStyle;
+  playerCountDisabled: TextStyle;
+  alreadyInPollText: TextStyle;
+  checkboxDisabled: ViewStyle;
 };
 
 const styles = StyleSheet.create<Styles>({
@@ -999,7 +1160,7 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-SemiBold',
   },
   descriptionSection: {
-    marginBottom: 10,
+    marginBottom: 3,
     width: '100%',
   },
   descriptionInput: {
@@ -1068,7 +1229,8 @@ const styles = StyleSheet.create<Styles>({
     fontSize: 14,
     color: '#1a2b5f',
     paddingLeft: 2,
-    marginBottom: 4,
+    marginBottom: 0,
+    lineHeight: 20,
   },
   sublabel: {
     fontFamily: 'Poppins-Regular',
@@ -1138,17 +1300,113 @@ const styles = StyleSheet.create<Styles>({
   },
   activeFilters: {
     marginTop: 8,
+    marginBottom: 0,
     padding: 8,
     backgroundColor: '#f8f9fa',
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#e1e5ea',
+    position: 'relative',
   },
   activeFiltersText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 12,
     color: '#666666',
     fontStyle: 'italic',
+  },
+  clearFiltersButton: {
+    position: 'absolute',
+    right: 8,
+    top: 4,
+    bottom: 4,
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: '#f0f0f0',
+  },
+
+  searchSection: {
+    marginBottom: 8,
+    marginTop: 0,
+  },
+  searchButton: {
+    backgroundColor: '#fff5ef',
+    borderWidth: 1,
+    borderColor: '#ff9654',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    marginLeft: 8,
+  },
+  searchAddedSection: {
+    marginBottom: 0,
+    marginTop: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    paddingLeft: 2,
+  },
+  clearSearchButton: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+  },
+  clearSearchButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 11,
+    color: '#666666',
+  },
+  searchAddedGameItem: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fff5ef',
+    borderRadius: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+  },
+  searchAddedIndicator: {
+    backgroundColor: '#ff9654',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  searchAddedIndicatorText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 10,
+    color: '#ffffff',
+  },
+  removeSearchGameButton: {
+    width: 20,
+    height: 20,
+    marginLeft: 8,
+    marginRight: 12,
+    borderRadius: 4,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   clearButton: {
@@ -1194,11 +1452,17 @@ const styles = StyleSheet.create<Styles>({
     marginBottom: 0,
     paddingBottom: 0,
   },
+  gamesListSection: {
+    width: '100%',
+    marginBottom: 0,
+    paddingBottom: 0,
+  },
   gamesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 6,
+    minHeight: 32,
   },
   gamesHeaderLeft: {
     flex: 1,
@@ -1253,8 +1517,18 @@ const styles = StyleSheet.create<Styles>({
     backgroundColor: '#fff5ef',
     borderColor: '#ff9654',
   },
+  gameItemDisabled: {
+    opacity: 0.7,
+    backgroundColor: '#f0f0f0',
+    borderColor: '#e1e5ea',
+  },
+  gameThumbnailDisabled: {
+    opacity: 0.7,
+    backgroundColor: '#f0f0f0',
+  },
   gameInfo: {
     flex: 1,
+    marginRight: 8,
   },
   gameName: {
     fontFamily: 'Poppins-Regular',
@@ -1262,10 +1536,16 @@ const styles = StyleSheet.create<Styles>({
     color: '#333333',
     marginBottom: 4,
   },
+  gameNameDisabled: {
+    color: '#999999',
+  },
   playerCount: {
     fontFamily: 'Poppins-Regular',
     fontSize: 13,
     color: '#666666',
+  },
+  playerCountDisabled: {
+    color: '#999999',
   },
   checkbox: {
     width: 20,
@@ -1280,6 +1560,10 @@ const styles = StyleSheet.create<Styles>({
   checkboxSelected: {
     backgroundColor: '#ff9654',
     borderColor: '#ff9654',
+  },
+  checkboxDisabled: {
+    backgroundColor: '#e1e5ea',
+    borderColor: '#e1e5ea',
   },
   noGamesText: {
     fontFamily: 'Poppins-Regular',
@@ -1318,7 +1602,7 @@ const styles = StyleSheet.create<Styles>({
   },
   absoluteBackButton: {
     position: 'absolute',
-    top: 20,
+    top: 16,
     left: 16,
     zIndex: 100,
     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -1330,7 +1614,7 @@ const styles = StyleSheet.create<Styles>({
   },
   absoluteCloseButton: {
     position: 'absolute',
-    top: 20,
+    top: 16,
     right: 16,
     zIndex: 100,
     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -1367,6 +1651,12 @@ const styles = StyleSheet.create<Styles>({
     color: '#ff9654',
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
+  },
+  alreadyInPollText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 10,
+    color: '#999999',
+    marginTop: 4,
   },
 });
 

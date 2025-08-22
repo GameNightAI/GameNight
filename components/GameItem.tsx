@@ -5,6 +5,30 @@ import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native
 
 import { Game } from '@/types/game';
 
+// Helper function to get play time display with proper priority
+function getPlayTimeDisplay(game: Game): string {
+  // Priority 1: Show min-max range if both exist
+  if (game.minPlaytime && game.maxPlaytime) {
+    if (game.minPlaytime === game.maxPlaytime) {
+      return `${game.minPlaytime} min`;
+    }
+    return `${game.minPlaytime}-${game.maxPlaytime} min`;
+  }
+
+  // Priority 2: Show individual min or max if only one exists
+  if (game.minPlaytime || game.maxPlaytime) {
+    return `${game.minPlaytime || game.maxPlaytime} min`;
+  }
+
+  // Priority 3: Fall back to playing_time if no min/max available
+  if (game.playing_time) {
+    return `${game.playing_time} min`;
+  }
+
+  // Default: No time information available
+  return 'N/A';
+}
+
 interface GameItemProps {
   game: Game;
   onDelete: (id: number) => void;
@@ -43,7 +67,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             </>
           )}
           <Text>
-            {` player${maxPlayers === 1 ? '': 's'}`}
+            {` player${maxPlayers === 1 ? '' : 's'}`}
           </Text>
         </>
       ) : (
@@ -51,16 +75,16 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       )
   );
 
-/*   const maxPlayersText = (
-    minPlayers !== maxPlayers && (
-      <>
-        <Text>-</Text>
-        <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
-          {maxPlayers}
-        </Text>
-      </>
-    )
-  ); */
+  /*   const maxPlayersText = (
+      minPlayers !== maxPlayers && (
+        <>
+          <Text>-</Text>
+          <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+            {maxPlayers}
+          </Text>
+        </>
+      )
+    ); */
 
   return (
     <Animated.View
@@ -110,7 +134,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             <View style={styles.infoItem}>
               <Clock size={16} color="#666666" />
               <Text style={styles.infoText}>
-                {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'N/A'}
+                {getPlayTimeDisplay(game)}
               </Text>
             </View>
           </View>
