@@ -1,12 +1,16 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, Image } from 'react-native';
-import { X, Camera } from 'lucide-react-native';
+import { X, Camera, RefreshCw } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { AddImageModal } from './AddImageModal';
 import { AddResultsModal } from './AddResultsModal';
 import { useAddGameModalFlow } from '@/hooks/useAddGameModalFlow';
 import { GameSearchModal } from './GameSearchModal';
+import { SyncModal } from './SyncModal';
 import { Game } from '@/types/game';
+import { supabase } from '@/services/supabase';
+import { fetchGames } from '@/services/bggApi';
 
 const sampleImage1 = require('@/assets/images/sample-game-1.png');
 
@@ -23,8 +27,11 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 }) => {
   const router = useRouter();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const {
     modalState,
@@ -63,6 +70,79 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     setSearchModalVisible(false);
   };
 
+  const handleSync = async (username: string) => {
+    try {
+      setSyncing(true);
+      setSyncError(null);
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace('/auth/login');
+        return;
+      }
+
+      if (!username || !username.trim()) {
+        setSyncError('Please enter a valid BoardGameGeek username');
+        return;
+      }
+
+      username = username.replace('@', ''); // Requested in GAM-134 ("Ignore @ when people enter BGG ID")
+      const bggGames = await fetchGames(username);
+
+      if (!bggGames || bggGames.length === 0) {
+        setSyncError('No games found in collection. Make sure your collection is public and contains board games.');
+        return;
+      }
+
+      // Create a Map to store unique games, using bgg_game_id as the key
+      const uniqueGames = new Map();
+
+      // Only keep the last occurrence of each game ID
+      bggGames.forEach(game => {
+        uniqueGames.set(game.id, {
+          user_id: user.id,
+          bgg_game_id: game.id,
+          name: game.name,
+          thumbnail: game.thumbnail,
+          min_players: game.min_players,
+          max_players: game.max_players,
+          playing_time: game.playing_time,
+          minplaytime: game.minPlaytime,
+          maxplaytime: game.maxPlaytime,
+          year_published: game.yearPublished,
+          description: game.description,
+        });
+      });
+
+      // Convert the Map values back to an array
+      const uniqueGamesList = Array.from(uniqueGames.values());
+
+      const { error: insertError } = await supabase
+        .from('collections')
+        .upsert(uniqueGamesList, { onConflict: 'user_id,bgg_game_id' });
+
+      if (insertError) throw insertError;
+
+      // Refresh the games list and show success message
+      onGameAdded();
+
+      // OPTION 2: Append new games to existing collection instead of full reload
+      // onGameAdded(); // Comment out this line
+
+      // Instead, pass the newly added games back to parent
+      // const newlyAddedGames = uniqueGamesList; // You'd need to track which were actually new
+
+      Toast.show({ type: 'success', text1: 'Collection imported!' });
+      setSyncModalVisible(false);
+    } catch (err) {
+      console.error('Error in handleSync:', err);
+      setSyncError(err instanceof Error ? err.message : 'Failed to sync games');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const renderSelectStep = () => (
     <View style={styles.dialog}>
       <View style={styles.header}>
@@ -76,30 +156,40 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         Search for games to add to your collection
       </Text>
 
-      <View style={styles.analyzeContainer}>
-        <View style={styles.sampleImageContainer}>
+      <View style={styles.buttonsContainer}>
+        <View style={styles.analyzeContainer}>
+          <View style={styles.sampleImageContainer}>
+            <TouchableOpacity
+              style={styles.sampleImageTouchable}
+              onPress={() => showFullSizeImage(sampleImage1)}
+            >
+              <Image source={sampleImage1} style={styles.sampleImage} />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
-            style={styles.sampleImageTouchable}
-            onPress={() => showFullSizeImage(sampleImage1)}
+            style={styles.analyzeButton}
+            onPress={() => modalActions.next()}
           >
-            <Image source={sampleImage1} style={styles.sampleImage} />
+            <Camera size={20} color="#ff9654" />
+            <Text style={styles.analyzeButtonText}>Add Games With A Photo</Text>
           </TouchableOpacity>
         </View>
+
         <TouchableOpacity
-          style={styles.analyzeButton}
-          onPress={() => modalActions.next()}
+          style={styles.searchButton}
+          onPress={() => setSearchModalVisible(true)}
         >
-          <Camera size={20} color="#ff9654" />
-          <Text style={styles.analyzeButtonText}>Add Games With A Photo</Text>
+          <Text style={styles.searchButtonText}>Search for Games</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.syncButton}
+          onPress={() => setSyncModalVisible(true)}
+        >
+          <RefreshCw size={20} color="#ff9654" />
+          <Text style={styles.syncButtonText}>Sync with BGG</Text>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity
-        style={styles.searchButton}
-        onPress={() => setSearchModalVisible(true)}
-      >
-        <Text style={styles.searchButtonText}>Search for Games</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -182,6 +272,12 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           title="Add to Collection"
           searchPlaceholder="Search for games..."
         />
+        <SyncModal
+          isVisible={syncModalVisible}
+          onClose={() => setSyncModalVisible(false)}
+          onSync={handleSync}
+          loading={syncing}
+        />
       </>
     );
   }
@@ -206,6 +302,12 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         onGameAdded={handleGameAdded}
         title="Search Games"
         searchPlaceholder="Search for games to add to your collection..."
+      />
+      <SyncModal
+        isVisible={syncModalVisible}
+        onClose={() => setSyncModalVisible(false)}
+        onSync={handleSync}
+        loading={syncing}
       />
     </>
   );
@@ -265,7 +367,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   analyzeContainer: {
-    marginBottom: 20,
+    marginBottom: 0,
   },
   analyzeButton: {
     flexDirection: 'row',
@@ -285,18 +387,36 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   searchButton: {
-    backgroundColor: '#ff9654',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ff9654',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
   },
   searchButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
-    color: '#ffffff',
+    color: '#ff9654',
+  },
+  syncButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ff9654',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  syncButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    marginLeft: 8,
   },
 
   sampleImageContainer: {
@@ -343,5 +463,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 20,
     padding: 8,
+  },
+  buttonsContainer: {
+    flexDirection: 'column',
+    gap: 16,
   },
 });
