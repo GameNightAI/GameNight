@@ -4,7 +4,7 @@ create or replace view collections_games_expansions with (security_invoker = on)
     expansions.expansion_id,
     games.name as expansion_name,
     games.min_players as expansion_min_players,
-    games.max_players as expanison_max_players,
+    games.max_players as expansion_max_players,
     coalesce(exp.is_expansion, false) as is_expansion_owned
   from
     collections_games as base
