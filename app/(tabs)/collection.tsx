@@ -78,6 +78,7 @@ export default function CollectionScreen() {
       if (error) throw error;
 
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
+      console.log(groups)
       const mappedGames = Array.prototype.map.call(groups, ({ value }) => {
         let game = value[0];
         console.log(game)
