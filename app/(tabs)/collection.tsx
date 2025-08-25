@@ -80,10 +80,10 @@ export default function CollectionScreen() {
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
       console.log(groups)
       console.log(groups.values().toArray())
-      const mappedGames = groups.values().toArray().map(({ value }) => {
-        let game = value[0];
+      const mappedGames = groups.values().map((group) => {
+        let game = group[0];
         console.log(game)
-        let expansions = value.filter(row => row.is_expansion_owned)
+        let expansions = group.filter(row => row.is_expansion_owned)
           .map(row => ({
             id: row.expansion_id,
             name: row.expansion_name,
@@ -114,7 +114,7 @@ export default function CollectionScreen() {
           bayesaverage: game.bayesaverage,
           expansions: expansions,
         }
-      });
+      }).toArray();
       console.log(mappedGames);
 
       /* const mappedGames = data.map(game => ({
