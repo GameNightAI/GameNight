@@ -78,16 +78,16 @@ export default function CollectionScreen() {
       if (error) throw error;
 
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
-        .map({ value } => {
+        .map(({ value }) => {
           const game = value[0];
           const expansions = value.filter(row => row.is_expansion_owned)
-          .map(row => ({
-            id: row.expansion_id,
-            name: row.expansion_name,
-            min_players: row.expansion_min_players,
-            max_players: row.expansion_max_players,
-            is_owned: row.is_expansion_owned,
-          }));
+            .map(row => ({
+              id: row.expansion_id,
+              name: row.expansion_name,
+              min_players: row.expansion_min_players,
+              max_players: row.expansion_max_players,
+              is_owned: row.is_expansion_owned,
+            }));
           return {
             id: game.bgg_game_id,
             name: game.name,
