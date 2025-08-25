@@ -78,10 +78,10 @@ export default function CollectionScreen() {
       if (error) throw error;
 
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
-      const mappedGames = Array.prototype.map(({ value }) => {
-        const game = value[0];
+      const mappedGames = Array.prototype.map.call(groups, ({ value }) => {
+        let game = value[0];
         console.log(game)
-        const expansions = value.filter(row => row.is_expansion_owned)
+        let expansions = value.filter(row => row.is_expansion_owned)
           .map(row => ({
             id: row.expansion_id,
             name: row.expansion_name,
