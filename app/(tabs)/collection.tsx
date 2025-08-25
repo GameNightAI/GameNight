@@ -79,7 +79,7 @@ export default function CollectionScreen() {
 
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
       console.log(groups)
-      const mappedGames = Array.prototype.map.call(groups, ({ value }) => {
+      const mappedGames = Array.prototype.map.call(groups.values(), ({ value }) => {
         let game = value[0];
         console.log(game)
         let expansions = value.filter(row => row.is_expansion_owned)
