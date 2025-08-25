@@ -113,7 +113,7 @@ export default function CollectionScreen() {
           expansions: expansions
         }
       })
-      console.log(results)
+      console.log(mappedGames)
 
       /* const mappedGames = data.map(game => ({
         id: game.bgg_game_id,
