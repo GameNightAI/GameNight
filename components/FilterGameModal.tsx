@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
-import { Search, X, ChevronDown, Clock } from 'lucide-react-native';
-import Select from 'react-select';
-import { Game } from '@/types/game';
-import { useDeviceType } from '@/hooks/useDeviceType';
+import { X, Check } from 'lucide-react-native';
+import Select, { components as selectComponents } from 'react-select';
 import { isSafari } from '@/utils/safari-polyfill';
+import { Game } from '@/types/game';
 
 interface FilterOption {
   value: any;
@@ -13,194 +12,165 @@ interface FilterOption {
   max?: number;
 }
 
+interface FilterConfig {
+  key: string;
+  label: string;
+  placeholder: string;
+  options: FilterOption[];
+  value: FilterOption[];
+  onChange: (value: FilterOption[]) => void;
+}
+
 interface FilterGameModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onApplyFilter: () => void;
-  playerCount: FilterOption[];
-  playTime: FilterOption[];
-  age: FilterOption[];
-  gameType: FilterOption[];
-  complexity: FilterOption[];
-  setPlayerCount: (value: FilterOption[]) => void;
-  setPlayTime: (value: FilterOption[]) => void;
-  setAge: (value: FilterOption[]) => void;
-  setGameType: (value: FilterOption[]) => void;
-  setComplexity: (value: FilterOption[]) => void;
+  onApplyFilters: () => void;
+  title?: string;
+  description?: string;
+  applyButtonText?: string;
+  filterConfigs: FilterConfig[];
 }
 
 export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   isVisible,
   onClose,
-  onApplyFilter,
-  playerCount,
-  playTime,
-  age,
-  gameType,
-  complexity,
-  setPlayerCount,
-  setPlayTime,
-  setAge,
-  setGameType,
-  setComplexity,
+  onApplyFilters,
+  title = "Filter Your Collection",
+  description = "All filters (optional)",
+  applyButtonText = "Apply Filters",
+  filterConfigs,
 }) => {
-  const deviceType = useDeviceType();
+  const CustomValueContainer = (props: any) => {
+    const {
+      selectProps,
+      getValue,
+      children,
+    } = props;
 
-  // Dynamic z-index management for dropdowns
+    const selectedValues = getValue();
+
+    let displayText = selectProps.placeholder;
+    if (selectedValues.length > 0) {
+      displayText = `${selectProps.placeholder} (${selectedValues.length} selected)`;
+    }
+
+    return (
+      <selectComponents.ValueContainer {...props}>
+        <Text style={{
+          fontFamily: 'Poppins-Regular',
+          fontSize: 14,
+          color: '#333',
+          position: 'absolute', // Position it absolutely
+          top: '50%', // Center vertically
+          left: 10, // Align to left
+          transform: 'translateY(-50%)', // Perfect vertical centering
+          zIndex: 1, // Ensure it's above other elements
+        }}>
+          {displayText}
+        </Text>
+
+        {children}
+      </selectComponents.ValueContainer>
+    );
+  };
   const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
 
-  // Function to get dynamic z-index for each filter section
   const getFilterSectionZIndex = (index: number) => {
     if (openDropdownIndex === null) return 1000;
     if (openDropdownIndex === index) return 99999;
     return 1000;
   };
 
-  // Function to handle dropdown open/close events
   const handleDropdownChange = (index: number, isOpen: boolean) => {
     setOpenDropdownIndex(isOpen ? index : null);
   };
 
-  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
-    .map(_ => ({ value: parseInt(_), label: _ }));
-  const timeOptions = [
-    { value: 1, min: 1, max: 30, label: '30 min or less' },
-    { value: 31, min: 31, max: 60, label: '31-60 min' },
-    { value: 61, min: 61, max: 90, label: '61-90 min' },
-    { value: 91, min: 91, max: 120, label: '91-120 min' },
-    { value: 121, min: 121, max: 999999999, label: 'More than 120 min' },
-  ];
-  const ageOptions = [
-    { value: 1, min: 1, max: 5, label: '5 and under' },
-    { value: 6, min: 6, max: 7, label: '6-7' },
-    { value: 8, min: 8, max: 9, label: '8-9' },
-    { value: 10, min: 10, max: 11, label: '10-11' },
-    { value: 12, min: 12, max: 13, label: '12-13' },
-    { value: 14, min: 14, max: 15, label: '14-15' },
-    { value: 16, min: 16, max: 999, label: '16 and up' },
-  ];
-  const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
-    .map(_ => ({ value: _, label: _ }));
-  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy']
-    .map((_, i) => ({ value: i + 1, label: _ }));
-
-  const handleFilter = () => {
-    //onApplyFilter()
-    //onSearch(players, time, playTime === '120+');
-    onClose();
+  const clearAllFilters = () => {
+    filterConfigs.forEach(config => {
+      config.onChange([]);
+    });
   };
 
-  // Safari-compatible select styles with dynamic z-index
+  const handleApplyFilters = () => {
+    onApplyFilters();
+  };
+
+  // Select styles with Safari-friendly tweaks and dynamic z-index support
   const getSelectStyles = (index: number) => {
     const baseSelectStyles = {
-      control: (baseStyles: any, state: any) => {
-        return {
-          ...baseStyles,
-          fontFamily: 'Poppins-Regular',
-          fontSize: 14,
-          borderColor: '#e1e5ea',
-          borderRadius: 8,
-          minHeight: 40,
-          boxShadow: 'none',
-          '&:hover': {
-            borderColor: '#ff9654',
-          },
-          // Safari-specific fixes
-          ...(isSafari() && {
-            WebkitAppearance: 'none',
-            WebkitBorderRadius: 8,
-          }),
-        }
-      },
-      container: (baseStyles: any, state: any) => ({
+      control: (baseStyles: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: 14,
+        borderColor: '#e1e5ea',
+        borderRadius: 8,
+        minHeight: 40,
+        boxShadow: 'none',
+        '&:hover': {
+          borderColor: '#ff9654',
+        },
+        ...(isSafari?.() && {
+          WebkitAppearance: 'none',
+          WebkitBorderRadius: 8,
+        }),
+      }),
+      container: (baseStyles: any) => ({
         ...baseStyles,
         marginBottom: 6,
         position: 'relative',
         zIndex: getFilterSectionZIndex(index),
       }),
-      menu: (baseStyles: any, state: any) => ({
+      menu: (baseStyles: any) => ({
         ...baseStyles,
         backgroundColor: '#ffffff',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e1e5ea',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         zIndex: getFilterSectionZIndex(index),
         position: 'absolute',
         maxHeight: 'none',
         overflow: 'hidden',
-        // Safari-specific fixes
-        ...(isSafari() && {
+        ...(isSafari?.() && {
           WebkitBorderRadius: 8,
         }),
       }),
-      menuList: (baseStyles: any, state: any) => ({
+      menuList: (baseStyles: any) => ({
         ...baseStyles,
         maxHeight: 160,
         overflow: 'auto',
-        // Safari-specific scrollbar styling
-        ...(isSafari() && {
-          '&::-webkit-scrollbar': {
-            width: '8px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: '#f1f1f1',
-            borderRadius: '4px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: '#c1c1c1',
-            borderRadius: '4px',
-          },
-        }),
-      }),
-      clearIndicator: (baseStyles: any, state: any) => ({
-        ...baseStyles,
-        color: '#666666',
-        fontSize: 11,
-        fontFamily: 'Poppins-SemiBold',
-        padding: '2px 6px',
-        cursor: 'pointer',
-        '&:hover': {
-          color: '#ff9654',
-        },
-        // Hide the default SVG icon
-        '& svg': {
-          display: 'none',
-        },
-        '&::after': {
-          content: '"CLR"',
-          display: 'block',
-        },
-      }),
-      multiValueLabel: (baseStyles: any, state: any) => ({
-        ...baseStyles,
-        fontFamily: 'Poppins-Regular',
-        fontSize: 12,
-      }),
-      noOptionsMessage: (baseStyles: any, state: any) => ({
-        ...baseStyles,
-        fontFamily: 'Poppins-Regular',
-        fontSize: 13,
       }),
       option: (baseStyles: any, state: any) => ({
         ...baseStyles,
-        fontFamily: 'Poppins-Regular',
-        fontSize: 14,
-        color: state.isSelected ? '#ff9654' : '#333333',
-        backgroundColor: state.isSelected ? '#fff5ef' : 'transparent',
-        '&:hover': {
-          backgroundColor: '#fff5ef',
-        },
+        backgroundColor: state.isFocused ? '#fff5ef' : 'transparent',
+        color: '#333333',
       }),
-      placeholder: (baseStyles: any, state: any) => ({
+      placeholder: (baseStyles: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
         fontSize: 14,
         color: '#999999',
+      }),
+      // clearIndicator: (baseStyles: any) => ({
+      //   ...baseStyles,
+      //   color: '#666666',
+      //   fontSize: 11,
+      //   fontFamily: 'Poppins-SemiBold',
+      //   padding: '2px 6px',
+      //   cursor: 'pointer',
+      //   '&:hover': { color: '#ff9654' },
+      //   '& svg': { display: 'none' },
+      //   '&::after': { content: '"CLR"', display: 'block' },
+      // }),
+      multiValueLabel: (baseStyles: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: 12,
+      }),
+      noOptionsMessage: (baseStyles: any) => ({
+        ...baseStyles,
+        fontFamily: 'Poppins-Regular',
+        fontSize: 13,
       }),
     };
 
@@ -212,15 +182,14 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const content = (
     <>
       <View style={styles.header}>
-        <Text style={styles.title}>Filter Games</Text>
+        <Text style={styles.title}>{title}</Text>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <X size={18} color="#666666" />
         </TouchableOpacity>
       </View>
 
       <Text style={styles.description}>
-        Filter your collection to find the perfect game for your group.{'\n'}
-        All filters are optional.
+        {description}
       </Text>
 
       <ScrollView
@@ -228,102 +197,57 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         contentContainerStyle={{ paddingBottom: 4, paddingTop: 2 }}
         showsVerticalScrollIndicator={true}
       >
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(0) }]}>
-          <Select
-            placeholder="Player count"
-            value={playerCount}
-            onChange={(value) => setPlayerCount(Array.from(value || []))}
-            options={playerOptions}
-            defaultValue={[]}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(0)}
-            onMenuOpen={() => handleDropdownChange(0, true)}
-            onMenuClose={() => handleDropdownChange(0, false)}
-          />
-        </View>
+        {filterConfigs.map((config, index) => (
+          <View key={config.key} style={[styles.filterSection, { zIndex: getFilterSectionZIndex(index) }]}>
+            <Select
+              placeholder={config.placeholder}
+              value={config.value}
+              onChange={(value) => config.onChange(Array.from(value || []))}
+              options={config.options}
+              defaultValue={[]}
+              isMulti
+              isClearable
+              isSearchable={false}
+              closeMenuOnSelect={false}
+              blurInputOnSelect={false}
+              hideSelectedOptions={false}
+              styles={getSelectStyles(index)}
+              onMenuOpen={() => handleDropdownChange(index, true)}
+              onMenuClose={() => handleDropdownChange(index, false)}
+              formatOptionLabel={(option: any) => {
+                const isSelected = config.value.some(v => v.value === option.value);
+                return (
+                  <View style={styles.optionRow}>
+                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                      {isSelected && <Check size={12} color="#ffffff" />}
+                    </View>
+                    <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                      {option.label}
+                    </Text>
+                  </View>
+                );
+              }}
+              components={{
+                ...selectComponents,
+                ValueContainer: CustomValueContainer,
+                MultiValue: () => null, // Hides default multi-value pills
+                Placeholder: () => null,
+              }}
+            />
+          </View>
+        ))}
 
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(1) }]}>
-          <Select
-            placeholder="Play time"
-            value={playTime}
-            onChange={(value) => setPlayTime(Array.from(value || []))}
-            options={timeOptions}
-            defaultValue={[]}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(1)}
-            onMenuOpen={() => handleDropdownChange(1, true)}
-            onMenuClose={() => handleDropdownChange(1, false)}
-          />
-        </View>
-
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(2) }]}>
-          <Select
-            placeholder="Age range"
-            value={age}
-            onChange={(value) => setAge(Array.from(value || []))}
-            options={ageOptions}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(2)}
-            onMenuOpen={() => handleDropdownChange(2, true)}
-            onMenuClose={() => handleDropdownChange(2, false)}
-          />
-        </View>
-
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(3) }]}>
-          <Select
-            placeholder="Co-op / competitive"
-            value={gameType}
-            onChange={(value) => setGameType(Array.from(value || []))}
-            defaultValue={[]}
-            options={typeOptions}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(3)}
-            onMenuOpen={() => handleDropdownChange(3, true)}
-            onMenuClose={() => handleDropdownChange(3, false)}
-          />
-        </View>
-
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(4) }]}>
-          <Select
-            placeholder="Game complexity"
-            value={complexity}
-            onChange={(value) => setComplexity(Array.from(value || []))}
-            defaultValue={[]}
-            options={complexityOptions}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(4)}
-            onMenuOpen={() => handleDropdownChange(4, true)}
-            onMenuClose={() => handleDropdownChange(4, false)}
-          />
-        </View>
+        {/* Clear All Button */}
+        <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+          <Text style={styles.clearAllButtonText}>Clear All Filters</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.searchButton}
-        onPress={handleFilter}
+        style={styles.applyButton}
+        onPress={handleApplyFilters}
       >
-        <Search color="#fff" size={18} />
-        <Text style={styles.searchButtonText}>Filter Games</Text>
+        <Text style={styles.applyButtonText}>{applyButtonText}</Text>
       </TouchableOpacity>
     </>
   );
@@ -332,7 +256,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     return (
       <View style={styles.overlay}>
         <View style={{
-          maxWidth: '95%',
+          maxWidth: '100%',
           maxHeight: '100%',
           width: '100%',
           display: 'flex',
@@ -375,11 +299,11 @@ export const filterGames = (
     let is_match = true;
 
     if (playerCount.length) {
-      is_match &&= playerCount.some((p: FilterOption) => (
+      is_match &&= playerCount.some(({ value }) => (
         // Ignore game.min_players when 15+ is selected,
         // since the number of actual players could be arbitrarily large.
-        (game.min_players <= p.value || p.value === 15)
-        && p.value <= game.max_players
+        (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
+        && value <= (Math.max(game.max_players, game.max_exp_players))
       ));
     }
 
@@ -388,8 +312,8 @@ export const filterGames = (
         const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
         // Perhaps this should incorporate game.minplaytime and game.maxplaytime more sensibly
         return (
-          t.min! <= game.playing_time
-          && game.playing_time <= t.max!
+          t.min! <= time
+          && time <= t.max!
         );
       });
     }
@@ -480,28 +404,63 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingTop: 2,
   },
-  filterScrollView: {
-    flex: 1,
-    minHeight: 0,
-  },
   filterSection: {
     marginBottom: 6,
     position: 'relative',
   },
-  searchButton: {
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#666666',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    backgroundColor: '#ffffff',
+  },
+  checkboxSelected: {
+    backgroundColor: '#ff9654',
+    borderColor: '#ff9654',
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  optionText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#333333',
+  },
+  optionTextSelected: {
+    color: '#ff9654',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  applyButton: {
     backgroundColor: '#ff9654',
     borderRadius: 12,
     padding: 12,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     marginTop: 16,
     marginBottom: 8,
   },
-  searchButtonText: {
+  applyButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#ffffff',
-    marginLeft: 8,
+  },
+  clearAllButton: {
+    backgroundColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  clearAllButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#333333',
   },
 });

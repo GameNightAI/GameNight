@@ -92,9 +92,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <Text style={styles.modalImportButtonText}>Import Collection</Text>
       </TouchableOpacity>
 
-      <Text style={styles.modalHelpText}>
-        Your BoardGameGeek collection must be public to sync games.
-      </Text>
     </View>
   );
 
@@ -109,7 +106,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
         {/* Subtitle */}
         <Text style={styles.subtitle}>
-          Unlock these benefits:
+          Enable these benefits:
         </Text>
 
         {/* Benefits list */}
@@ -152,11 +149,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           <Search size={20} color="#ffffff" />
           <Text style={styles.importButtonText}>Import BGG Collection</Text>
         </TouchableOpacity>
-
-        {/* Help text */}
-        <Text style={styles.helpText}>
-          Your BoardGameGeek collection must be public to sync games.
-        </Text>
 
         {/* Import Modal */}
         {Platform.OS === 'web' ? (
@@ -210,7 +202,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </TouchableOpacity>
 
       <Text style={styles.helpText}>
-        Make sure your BoardGameGeek collection is public and contains board games.
+        Make sure your BoardGameGeek collection contains board games.
       </Text>
     </Animated.View>
   );

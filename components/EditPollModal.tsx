@@ -69,10 +69,11 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 
   // Update title when selected games change, but only if it's a default title
   useEffect(() => {
-    if (isDefaultTitle(dynamicPollTitle) && !isTitleManuallyChanged) {
+    if (isDefaultTitle(dynamicPollTitle)) {
       const newTitle = generateUpdatedTitle(selectedGames.length);
       setDynamicPollTitle(newTitle);
     }
+    // Don't auto-update if user has a custom title!
   }, [selectedGames.length]);
 
   // Update dynamicPollTitle when pollTitle prop changes
@@ -101,7 +102,62 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load user's collection games
+      // Load current poll games from poll_games table
+      const { data: pollGames, error: pollGamesError } = await supabase
+        .from('poll_games')
+        .select('game_id')
+        .eq('poll_id', pollId);
+
+      if (pollGamesError) throw pollGamesError;
+
+      if (pollGames && pollGames.length > 0) {
+        const gameIds = pollGames.map(pg => pg.game_id);
+
+        // Get the actual game details from games table (same as usePollData.ts)
+        const { data: gamesData, error: gameDetailsError } = await supabase
+          .from('games')
+          .select('*')
+          .in('id', gameIds);
+
+        if (gameDetailsError) throw gameDetailsError;
+
+        if (gamesData && gamesData.length > 0) {
+          // Map games data to the expected format (same as usePollData.ts)
+          const currentGames = gamesData.map(game => ({
+            id: game.id,
+            name: game.name || 'Unknown Game',
+            thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
+            image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+            min_players: game.min_players || 1,
+            max_players: game.max_players || 1,
+            min_exp_players: game.min_players || 1,
+            max_exp_players: game.max_players || 1,
+            playing_time: game.playing_time || 0,
+            yearPublished: game.year_published || null,
+            description: game.description || '',
+            minAge: game.min_age || 0,
+            is_cooperative: game.is_cooperative || false,
+            is_teambased: game.is_teambased || false,
+            complexity: game.complexity || 1,
+            minPlaytime: game.minplaytime || 0,
+            maxPlaytime: game.maxplaytime || 0,
+            complexity_tier: game.complexity_tier || 1,
+            complexity_desc: game.complexity_desc || '',
+            bayesaverage: game.bayesaverage ?? null,
+          }));
+
+          setOriginalPollGames(currentGames);
+          setSelectedGames(currentGames);
+        } else {
+          setOriginalPollGames([]);
+          setSelectedGames([]);
+        }
+      } else {
+        setOriginalPollGames([]);
+        setSelectedGames([]);
+      }
+
+      // Load user's collection games for the "Add More Games" functionality
       const { data: collectionData, error: collectionError } = await supabase
         .from('collections_games')
         .select('*')
@@ -116,6 +172,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         thumbnail: game.thumbnail,
         min_players: game.min_players,
         max_players: game.max_players,
+        min_exp_players: game.min_players || 0,
+        max_exp_players: game.max_players || 0,
         playing_time: game.playing_time,
         yearPublished: game.year_published,
         description: game.description,
@@ -132,21 +190,6 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
       }));
 
       setAvailableGames(collectionGames);
-
-      // Load current poll games
-      const { data: pollGames, error: pollGamesError } = await supabase
-        .from('poll_games')
-        .select('game_id')
-        .eq('poll_id', pollId);
-
-      if (pollGamesError) throw pollGamesError;
-
-      if (pollGames && pollGames.length > 0) {
-        const gameIds = pollGames.map(pg => pg.game_id);
-        const currentGames = collectionGames.filter(game => gameIds.includes(game.id));
-        setOriginalPollGames(currentGames);
-        setSelectedGames(currentGames);
-      }
     } catch (err) {
       console.error('Error loading games:', err);
       setError('Failed to load games');
@@ -211,8 +254,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         }
       }
 
-      // Update the poll title only if it was manually changed by the user
-      if (isTitleManuallyChanged && dynamicPollTitle !== pollTitle) {
+      // Update the poll title if it has changed
+      if (dynamicPollTitle !== pollTitle) {
         const { error: titleError } = await supabase
           .from('polls')
           .update({ title: dynamicPollTitle })
@@ -267,11 +310,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     });
   };
 
-
-
   if (!isVisible) return null;
-
-
 
   return (
     <>
@@ -336,12 +375,6 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 
           <ScrollView style={styles.content}>
             <View style={styles.pollInfo}>
-              <Text style={styles.pollTitle}>{dynamicPollTitle}</Text>
-              {(selectedGames.length !== originalPollGames.length && isDefaultTitle(dynamicPollTitle)) && (
-                <Text style={styles.pollTitleNote}>
-                  Title updated automatically
-                </Text>
-              )}
               <Text style={styles.editTitleLabel}>Edit Title (Optional):</Text>
               <TextInput
                 style={styles.titleInput}
@@ -361,7 +394,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
             {originalPollGames.length > 0 && (
               <View style={styles.currentGamesSection}>
                 <Text style={styles.sublabel}>
-                  Uncheck games to remove them from the poll
+                  Uncheck to remove from poll
                 </Text>
 
                 {originalPollGames.map(game => {
@@ -416,8 +449,6 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                 {originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
               </Text>
             </TouchableOpacity>
-
-
           </ScrollView>
 
           <View style={styles.footer}>
@@ -523,7 +554,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   pollInfo: {
-    paddingTop: 8,
+    paddingTop: 0,
     paddingBottom: 8,
     paddingHorizontal: 10,
     paddingLeft: 0,
@@ -537,18 +568,11 @@ const styles = StyleSheet.create({
     marginTop: 0,
     marginBottom: 4,
   },
-  pollTitleNote: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-    fontStyle: 'italic',
-    marginBottom: 4,
-  },
   editTitleLabel: {
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
     color: '#1a2b5f',
-    marginTop: 12,
+    marginTop: 4,
     marginBottom: 8,
   },
   titleInput: {
@@ -560,7 +584,7 @@ const styles = StyleSheet.create({
     borderColor: '#e1e5ea',
     borderRadius: 8,
     padding: 12,
-    marginBottom: 12,
+    marginBottom: 0,
   },
   pollDescription: {
     fontSize: 14,
@@ -568,14 +592,14 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   currentGamesSection: {
-    marginBottom: 20,
+    marginBottom: 0,
     marginTop: 0,
   },
   sublabel: {
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
     color: '#666666',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 16,
@@ -583,9 +607,6 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginBottom: 12,
   },
-
-
-
   addGamesButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -596,7 +617,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderRadius: 8,
     padding: 16,
-    marginTop: 16,
+    marginTop: 8,
     gap: 8,
   },
   addGamesButtonText: {
