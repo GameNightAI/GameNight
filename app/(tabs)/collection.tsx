@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { X, ListFilter, Plus, Camera, Vote } from 'lucide-react-native';
+import { X, ListFilter, Plus, Camera } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
@@ -225,6 +225,13 @@ export default function CollectionScreen() {
           >
             <Plus size={20} color="#ff9654" />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.createPollButton}
+            onPress={() => setCreatePollModalVisible(true)}
+          >
+            <Plus size={20} color="#ffffff" />
+            <Text style={styles.createPollButtonText}>Create Poll</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -236,13 +243,6 @@ export default function CollectionScreen() {
               onPress={() => setFilterModalVisible(true)}
             >
               <Text style={styles.clearButtonText}>Edit Filters</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.createPollButton}
-              onPress={() => setCreatePollModalVisible(true)}
-            >
-              <Vote size={16} color="#ffffff" />
-              <Text style={styles.createPollButtonText}>Create Poll</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -400,6 +400,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+
   clearButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -418,16 +419,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ff9654',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
+    gap: 8,
+    marginRight: 8,
   },
   createPollButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#ffffff',
-    marginLeft: 4,
   },
+
   listContent: {
     padding: 16,
   },
