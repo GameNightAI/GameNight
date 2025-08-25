@@ -78,42 +78,44 @@ export default function CollectionScreen() {
       if (error) throw error;
 
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
-      const results = Array.prototype.map(({ value }) => {
-          const game = value[0];
-          const expansions = value.filter(row => row.is_expansion_owned)
-            .map(row => ({
-              id: row.expansion_id,
-              name: row.expansion_name,
-              min_players: row.expansion_min_players,
-              max_players: row.expansion_max_players,
-              is_owned: row.is_expansion_owned,
-            }));
-          return {
-            id: game.bgg_game_id,
-            name: game.name,
-            yearPublished: game.year_published,
-            thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
-            image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
-            min_players: game.min_players,
-            max_players: game.max_players,
-            playing_time: game.playing_time,
-            minPlaytime: game.minplaytime,
-            maxPlaytime: game.maxplaytime,
-            description: game.description || '',
-            minAge: game.min_age,
-            is_cooperative: game.is_cooperative || false,
-            is_teambased: game.is_teambased || false,
-            complexity: game.complexity,
-            complexity_tier: game.complexity_tier,
-            complexity_desc: game.complexity_desc || '',
-            average: game.average,
-            bayesaverage: game.bayesaverage,
-            expansions: expansions
-          }
-        })
+      const mappedGames = Array.prototype.map(({ value }) => {
+        const game = value[0];
+        console.log(game)
+        const expansions = value.filter(row => row.is_expansion_owned)
+          .map(row => ({
+            id: row.expansion_id,
+            name: row.expansion_name,
+            min_players: row.expansion_min_players,
+            max_players: row.expansion_max_players,
+            is_owned: row.is_expansion_owned,
+          }));
+        console.log(expansions)
+        return {
+          id: game.bgg_game_id,
+          name: game.name,
+          yearPublished: game.year_published,
+          thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
+          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+          min_players: game.min_players,
+          max_players: game.max_players,
+          playing_time: game.playing_time,
+          minPlaytime: game.minplaytime,
+          maxPlaytime: game.maxplaytime,
+          description: game.description || '',
+          minAge: game.min_age,
+          is_cooperative: game.is_cooperative || false,
+          is_teambased: game.is_teambased || false,
+          complexity: game.complexity,
+          complexity_tier: game.complexity_tier,
+          complexity_desc: game.complexity_desc || '',
+          average: game.average,
+          bayesaverage: game.bayesaverage,
+          expansions: expansions
+        }
+      })
       console.log(results)
 
-      const mappedGames = data.map(game => ({
+      /* const mappedGames = data.map(game => ({
         id: game.bgg_game_id,
         name: game.name,
         yearPublished: game.year_published,
@@ -138,7 +140,7 @@ export default function CollectionScreen() {
         // expansion_min_players: game.expansion_min_players,
         // expansion_max_players: game.expansion_max_players,
         // is_expansion_owned: game.is_expansion_owned,
-      }));
+      })); */
 
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
