@@ -67,13 +67,18 @@ export default function CollectionScreen() {
       }
 
       const { data, error } = await supabase
-        .from('expansions_players_view')
+        .from('collections_games_expansions')
         .select('*')
         .eq('user_id', user.id)
-        .eq('is_expansion', false)  // Eventually, we'll have expansions listed as children of their base games. For now, we exclude them completely.
+        // .eq('is_expansion', false)  // Eventually, we'll have expansions listed as children of their base games. For now, we exclude them completely.
+        .order('expansion_name', { ascending: true})
+        .order('bgg_game_id', { ascending: true})
         .order('name', { ascending: true });
 
       if (error) throw error;
+
+      const groups = Map.groupBy(data, (game => game.bgg_game_id));
+      console.log(groups)
 
       const mappedGames = data.map(game => ({
         id: game.bgg_game_id,
@@ -95,8 +100,11 @@ export default function CollectionScreen() {
         complexity_desc: game.complexity_desc || '',
         average: game.average,
         bayesaverage: game.bayesaverage,
-        min_exp_players: game.min_exp_players,
-        max_exp_players: game.max_exp_players,
+        expansion_id: game.expansion_id,
+        expansion_name: game.expansion_name,
+        expansion_min_players: game.expansion_min_players,
+        expansion_max_players: game.expansion_max_players,
+        is_expansion_owned: game.is_expansion_owned,
       }));
 
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
