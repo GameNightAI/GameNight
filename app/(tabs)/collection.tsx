@@ -71,13 +71,45 @@ export default function CollectionScreen() {
         .select('*')
         .eq('user_id', user.id)
         // .eq('is_expansion', false)  // Eventually, we'll have expansions listed as children of their base games. For now, we exclude them completely.
-        .order('expansion_name', { ascending: true})
+        .order('name', { ascending: true })
         .order('bgg_game_id', { ascending: true})
-        .order('name', { ascending: true });
+        .order('expansion_name', { ascending: true})
 
       if (error) throw error;
 
-      const groups = Map.groupBy(data, (game => game.bgg_game_id));
+      const groups = Map.groupBy(data, (game => game.bgg_game_id))
+        .map({ value } => {
+          const game = value[0];
+          const expansions = value.filter(row => row.is_expansion_owned)
+          .map(row => ({
+            id: row.expansion_id,
+            name: row.expansion_name,
+            min_players: row.expansion_min_players,
+            max_players: row.expansion_max_players,
+            is_owned: row.is_expansion_owned,
+          }));
+          return {
+            id: game.bgg_game_id,
+            name: game.name,
+            yearPublished: game.year_published,
+            thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
+            image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+            min_players: game.min_players,
+            max_players: game.max_players,
+            playing_time: game.playing_time,
+            minPlaytime: game.minplaytime,
+            maxPlaytime: game.maxplaytime,
+            description: game.description || '',
+            minAge: game.min_age,
+            is_cooperative: game.is_cooperative || false,
+            is_teambased: game.is_teambased || false,
+            complexity: game.complexity,
+            complexity_tier: game.complexity_tier,
+            complexity_desc: game.complexity_desc || '',
+            average: game.average,
+            bayesaverage: game.bayesaverage,
+            expansions: expansions
+          })
       console.log(groups)
 
       const mappedGames = data.map(game => ({
@@ -100,11 +132,11 @@ export default function CollectionScreen() {
         complexity_desc: game.complexity_desc || '',
         average: game.average,
         bayesaverage: game.bayesaverage,
-        expansion_id: game.expansion_id,
-        expansion_name: game.expansion_name,
-        expansion_min_players: game.expansion_min_players,
-        expansion_max_players: game.expansion_max_players,
-        is_expansion_owned: game.is_expansion_owned,
+        // expansion_id: game.expansion_id,
+        // expansion_name: game.expansion_name,
+        // expansion_min_players: game.expansion_min_players,
+        // expansion_max_players: game.expansion_max_players,
+        // is_expansion_owned: game.is_expansion_owned,
       }));
 
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
