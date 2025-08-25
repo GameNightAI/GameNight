@@ -109,7 +109,8 @@ export default function CollectionScreen() {
             average: game.average,
             bayesaverage: game.bayesaverage,
             expansions: expansions
-          })
+          }
+        })
       console.log(groups)
 
       const mappedGames = data.map(game => ({
