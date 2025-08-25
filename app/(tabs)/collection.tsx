@@ -79,7 +79,7 @@ export default function CollectionScreen() {
 
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
       console.log(groups)
-      const mappedGames = groups.values().map(({ value }) => {
+      const mappedGames = groups.values().toArray().map(({ value }) => {
         let game = value[0];
         console.log(game)
         let expansions = value.filter(row => row.is_expansion_owned)
@@ -111,10 +111,10 @@ export default function CollectionScreen() {
           complexity_desc: game.complexity_desc || '',
           average: game.average,
           bayesaverage: game.bayesaverage,
-          expansions: expansions
+          expansions: expansions,
         }
-      })
-      console.log(mappedGames)
+      });
+      console.log(mappedGames);
 
       /* const mappedGames = data.map(game => ({
         id: game.bgg_game_id,
