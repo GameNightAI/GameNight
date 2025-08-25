@@ -78,7 +78,7 @@ export default function CollectionScreen() {
       if (error) throw error;
 
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
-        .map(({ value }) => {
+      results = Array.prototype.map(({ value }) => {
           const game = value[0];
           const expansions = value.filter(row => row.is_expansion_owned)
             .map(row => ({
