@@ -78,7 +78,7 @@ export default function CollectionScreen() {
       if (error) throw error;
 
       const groups = Map.groupBy(data, (game => game.bgg_game_id))
-      results = Array.prototype.map(({ value }) => {
+      const results = Array.prototype.map(({ value }) => {
           const game = value[0];
           const expansions = value.filter(row => row.is_expansion_owned)
             .map(row => ({
@@ -111,7 +111,7 @@ export default function CollectionScreen() {
             expansions: expansions
           }
         })
-      console.log(groups)
+      console.log(results)
 
       const mappedGames = data.map(game => ({
         id: game.bgg_game_id,
