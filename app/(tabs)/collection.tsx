@@ -19,6 +19,7 @@ import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
   const insets = useSafeAreaInsets();
+  const [allGames, setAllGames] = useState<Game[]>([]);
   const [games, setGames] = useState<Game[]>([]);
 
   // Use fallback values for web platform
@@ -31,6 +32,7 @@ export default function CollectionScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [createPollModalVisible, setCreatePollModalVisible] = useState(false);
+
   const router = useRouter();
 
   const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
@@ -93,6 +95,7 @@ export default function CollectionScreen() {
         max_exp_players: game.max_exp_players,
       }));
 
+      setAllGames(mappedGames);
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
 
@@ -102,8 +105,9 @@ export default function CollectionScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+
     }
-  }, [playerCount, playTime, age, gameType, complexity]);
+  }, []);
 
   // const filteredGames = filterGames(games, playerCount, playTime, age, gameType, complexity);
 
@@ -122,6 +126,7 @@ export default function CollectionScreen() {
 
       if (error) throw error;
 
+      setAllGames(prevGames => prevGames.filter(game => game.id !== gameToDelete.id));
       setGames(prevGames => prevGames.filter(game => game.id !== gameToDelete.id));
     } catch (err) {
       console.error('Error deleting game:', err);
@@ -130,12 +135,21 @@ export default function CollectionScreen() {
     }
   }, [gameToDelete]);
 
+  const applyFilters = useCallback(() => {
+    const filteredGames = filterGames(allGames, playerCount, playTime, age, gameType, complexity);
+    setGames(filteredGames);
+  }, [allGames, playerCount, playTime, age, gameType, complexity]);
+
   const clearFilters = () => {
     setPlayerCount([]);
     setPlayTime([]);
     setAge([]);
     setGameType([]);
     setComplexity([]);
+    // Immediately show all games when filters are cleared
+    if (allGames.length > 0) {
+      setGames(allGames);
+    }
   };
 
   const onRefresh = useCallback(() => {
@@ -158,6 +172,12 @@ export default function CollectionScreen() {
   useEffect(() => {
     loadGames();
   }, [loadGames]);
+
+  useEffect(() => {
+    if (allGames.length > 0) {
+      applyFilters();
+    }
+  }, [applyFilters]);
 
   if (loading) {
     return <LoadingState />;
