@@ -290,7 +290,7 @@ export default function CollectionScreen() {
           {
             key: 'playerCount',
             label: 'Player Count',
-            placeholder: 'Player Count',
+            placeholder: '# Players',
             options: playerOptions,
             value: playerCount,
             onChange: setPlayerCount,

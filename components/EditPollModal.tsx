@@ -341,7 +341,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                 <Text style={styles.confirmationMessage}>
                   {confirmationAction === 'save'
                     ? 'This poll already has votes. Are you sure you want to continue?'
-                    : 'This poll already has votes. Adding more games may affect existing votes. Continue to add games?'
+                    : 'This poll already has votes. Continue to add games?'
                   }
                 </Text>
                 <View style={styles.confirmationButtons}>

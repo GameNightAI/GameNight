@@ -903,7 +903,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {
             key: 'playerCount',
             label: 'Player Count',
-            placeholder: 'Player Count',
+            placeholder: '# Players',
             options: playerOptions,
             value: playerCount,
             onChange: setPlayerCount,
