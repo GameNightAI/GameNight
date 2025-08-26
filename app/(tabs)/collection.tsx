@@ -77,21 +77,33 @@ export default function CollectionScreen() {
 
       if (error) throw error;
 
-      const groups = Map.groupBy(data, (game => game.bgg_game_id))
+      const gameGroups = Map.groupBy(data, (game => game.bgg_game_id))
       // console.log(groups)
       // console.log(groups.values().toArray())
-      const mappedGames = groups.values().map((group) => {
-        let game = group[0];
+      const mappedGames = gameGroups.values().map((gameGroup) => {
+        let game = gameGroup[0];
         // console.log(game)
-        let expansions = group.filter(row => row.expansion_id)
+        let expansions = gameGroup
+          .filter(row => row.expansion_id)
           .map(row => ({
             id: row.expansion_id,
             name: row.expansion_name,
             min_players: row.expansion_min_players,
             max_players: row.expansion_max_players,
             is_owned: row.is_expansion_owned,
+            thumbnail: row.expansion_thumbnail,
           }));
         // console.log(expansions)
+        
+        let min_exp_players = gameGroup
+          .map(row => row.expansion_min_players)
+          .toSorted()[0];
+        
+        let max_exp_players = gameGroup
+          .map(row => row.expansion_max_players)
+          .toSorted()
+          .toReversed()[0];
+        
         return {
           id: game.bgg_game_id,
           name: game.name,
@@ -113,6 +125,8 @@ export default function CollectionScreen() {
           average: game.average,
           bayesaverage: game.bayesaverage,
           expansions: expansions,
+          min_exp_players: min_exp_players,
+          max_exp_players: max_exp_players,
         }
       }).toArray();
       console.log(mappedGames);
