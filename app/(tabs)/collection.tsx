@@ -334,6 +334,7 @@ export default function CollectionScreen() {
         isVisible={addGameModalVisible}
         onClose={() => setAddGameModalVisible(false)}
         onGameAdded={loadGames}
+        userCollectionIds={allGames.map(g => g.id.toString())}
       />
 
       <CreatePollModal

@@ -18,12 +18,14 @@ interface AddGameModalProps {
   isVisible: boolean;
   onClose: () => void;
   onGameAdded: () => void;
+  userCollectionIds?: string[];
 }
 
 export const AddGameModal: React.FC<AddGameModalProps> = ({
   isVisible,
   onClose,
   onGameAdded,
+  userCollectionIds = [],
 }) => {
   const router = useRouter();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -264,6 +266,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           onClose={() => setSearchModalVisible(false)}
           mode="collection"
           onGameAdded={handleGameAdded}
+          userCollectionIds={userCollectionIds}
           title="Add to Collection"
           searchPlaceholder="Search for games..."
         />
@@ -295,6 +298,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         onClose={() => setSearchModalVisible(false)}
         mode="collection"
         onGameAdded={handleGameAdded}
+        userCollectionIds={userCollectionIds}
         title="Add to Collection"
         searchPlaceholder="Search for games..."
       />
