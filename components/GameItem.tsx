@@ -56,7 +56,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
     .map(exp =>
       <li key={exp.id}>{exp.name}</li>
     );
-  const expansionList = game.expansions && game.expansions.length && ( 
+  const expansionList = expansionItems.length && ( 
     <View>
       <ul>
         {expansionItems}
