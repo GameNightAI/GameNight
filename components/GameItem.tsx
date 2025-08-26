@@ -57,9 +57,11 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       <li>{exp.name}</li>
     );
   const expansionList = game.expansions && game.expansions.length && ( 
-    <ul>
-      {expansionItems}
-    </ul>
+    <View>
+      <ul>
+        {expansionItems}
+      </ul>
+    </View>
   );
 
   return (
@@ -176,9 +178,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
               </TouchableOpacity>
             </View>
 
-            <View>
-              {expansionList}
-            </View>
+            {expansionList}
 
           </View>
         </Animated.View>
