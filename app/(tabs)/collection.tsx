@@ -95,14 +95,21 @@ export default function CollectionScreen() {
           }));
         // console.log(expansions)
         
-        let min_exp_players = gameGroup
+        let mins = gameGroup
+          .filter(row => row.is_expansion_owned)
           .map(row => row.expansion_min_players)
-          .toSorted()[0];
+          .toSorted();
+        console.log(mins);
+        let min_exp_players = mins.length ? mins[0] : null;
+        console.log(min_exp_players)
         
-        let max_exp_players = gameGroup
+        let maxs = gameGroup
+          .filter(row => row.is_expansion_owned)
           .map(row => row.expansion_max_players)
           .toSorted()
-          .toReversed()[0];
+          .toReversed();
+        console.log(maxs)
+        let max_exp_players = maxs.length ? maxs[0] : null;
         
         return {
           id: game.bgg_game_id,
