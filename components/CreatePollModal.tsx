@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform, Image, ImageStyle } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen, ListFilter, Search } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import * as Clipboard from 'expo-clipboard';
@@ -12,6 +13,7 @@ import { CreatePollTitleModal } from './CreatePollTitleModal';
 import { CreatePollDescrModal } from './CreatePollDescrModal';
 import { FilterGameModal } from './FilterGameModal';
 import { GameSearchModal } from './GameSearchModal';
+import { PollSuccessModal } from './PollSuccessModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 import { useCallback } from 'react';
 
@@ -38,6 +40,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   initialFilters,
   isAddingToExistingPoll = false,
 }) => {
+  const router = useRouter();
   const deviceType = useDeviceType();
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
@@ -54,6 +57,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [isDescriptionModalVisible, setIsDescriptionModalVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isGameSearchModalVisible, setIsGameSearchModalVisible] = useState(false);
+  const [isPollCreatedModalVisible, setIsPollCreatedModalVisible] = useState(false);
+  const [createdPollUrl, setCreatedPollUrl] = useState('');
 
   // Filter states - changed to arrays for multi-select
   const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
@@ -128,6 +133,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const filterGames = useCallback(() => {
     let filtered = [...availableGames];
 
+    // Filter out games that are already added via search to prevent duplicates
+    filtered = filtered.filter(game =>
+      !searchAddedGames.some(searchGame => searchGame.id === game.id)
+    );
+
     if (playerCount.length) {
       filtered = filtered.filter(game =>
         playerCount.some(p => (
@@ -185,7 +195,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setFilteredGames(filtered);
     // Don't automatically remove selected games when filters change
     // This prevents scroll jumping when selecting filter options
-  }, [availableGames, playerCount, playTime, minAge, gameType, complexity]);
+  }, [availableGames, searchAddedGames, playerCount, playTime, minAge, gameType, complexity]);
 
   useEffect(() => {
     filterGames();
@@ -332,14 +342,18 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
       if (gamesError) throw gamesError;
 
-      // Copy poll link to clipboard
-      const pollUrl = `${window.location.origin}/poll/${poll.id}/`;
-      await Clipboard.setStringAsync(pollUrl);
-      Toast.show({ type: 'success', text1: 'Poll link copied to clipboard!' });
+      // Show success modal for new polls, call onSuccess immediately for adding games
+      if (!isAddingToExistingPoll) {
+        const pollUrl = `${window.location.origin}/poll/${poll.id}/`;
+        setCreatedPollUrl(pollUrl);
+        setIsPollCreatedModalVisible(true);
 
-      // Pass pollType to onSuccess for downstream handling
-      onSuccess('single-user');
-      resetForm();
+        // Don't call onSuccess yet - wait for user to close the success modal
+      } else {
+        // For adding games to existing poll, call onSuccess immediately
+        onSuccess('add-games', allSelectedGames);
+        resetForm();
+      }
     } catch (err) {
       console.error('Error creating poll:', err);
       setError(err instanceof Error ? err.message : 'Failed to create poll');
@@ -391,6 +405,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   const handleComplexityChange = (newValue: any) => {
     setComplexity(newValue || []);
+  };
+
+  const handlePollCreatedModalClose = () => {
+    setIsPollCreatedModalVisible(false);
+    // SIMPLIFIED: Just close the success modal, keep main modal open
+  };
+
+  // Add a wrapper for onClose to debug when it's called
+  const handleMainModalClose = () => {
+    onClose();
+    resetForm();
   };
 
   // Modal handlers
@@ -526,10 +551,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       )}
       <TouchableOpacity
         style={styles.absoluteCloseButton}
-        onPress={() => {
-          onClose();
-          resetForm();
-        }}
+        onPress={handleMainModalClose}
         accessibilityLabel="Close"
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
@@ -652,7 +674,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             style={styles.searchButton}
             onPress={() => setIsGameSearchModalVisible(true)}
           >
-            <Search size={20} color="#666666" />
+            <Search size={20} color="#fff" />
             <Text style={styles.searchButtonText}>Search for Games</Text>
           </TouchableOpacity>
         </View>
@@ -722,7 +744,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                       <Text style={styles.alreadyInPollText}>Already in poll</Text>
                     )}
                   </View>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={styles.removeSearchGameButton}
                     onPress={() => {
                       // Remove from searchAddedGames
@@ -733,7 +755,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <X size={16} color="#666666" />
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                   <View style={[
                     styles.checkbox,
                     selectedGamesForPoll.some(g => g.id === game.id) && styles.checkboxSelected,
@@ -927,14 +949,36 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         onClose={() => setIsGameSearchModalVisible(false)}
         mode="poll"
         onGameSelected={(game) => {
-          // Add to searchAddedGames but don't automatically select for poll
+          // Add to searchAddedGames and automatically select for poll
           setSearchAddedGames(prev => [...prev, game]);
+          setSelectedGamesForPoll(prev => [...prev, game]);
           setIsGameSearchModalVisible(false);
         }}
         existingGameIds={selectedGames.map(g => g.id.toString())}
-        userCollectionIds={availableGames.map(g => g.id.toString())}
+        userCollectionIds={[]}
         title="Search for Games"
         searchPlaceholder="Enter search..."
+      />
+
+      {/* Poll Success Modal */}
+      <PollSuccessModal
+        isVisible={isPollCreatedModalVisible}
+        onClose={handlePollCreatedModalClose}
+        onDone={() => {
+          // Close both modals and call onSuccess
+          setIsPollCreatedModalVisible(false);
+          onSuccess('single-user');
+          resetForm();
+        }}
+        pollUrl={createdPollUrl}
+        onStartInPersonVoting={() => {
+          // Extract poll ID from URL and navigate to the local poll voting page
+          const pollId = createdPollUrl.split('/poll/')[1]?.split('/')[0];
+          if (pollId) {
+            // Use router.push for proper navigation to local voting
+            router.push(`/poll/local/${pollId}/`);
+          }
+        }}
       />
     </View>
   );
@@ -1329,9 +1373,7 @@ const styles = StyleSheet.create<Styles>({
     marginTop: 0,
   },
   searchButton: {
-    backgroundColor: '#fff5ef',
-    borderWidth: 1,
-    borderColor: '#ff9654',
+    backgroundColor: '#6c757d',
     borderRadius: 8,
     padding: 10,
     marginTop: 0,
@@ -1342,7 +1384,7 @@ const styles = StyleSheet.create<Styles>({
   searchButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
-    color: '#1a2b5f',
+    color: '#fff',
     marginLeft: 8,
   },
   searchAddedSection: {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { X, ListFilter, Plus, Camera, Vote } from 'lucide-react-native';
+import { X, ListFilter, Plus, Camera } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
@@ -19,6 +19,7 @@ import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
   const insets = useSafeAreaInsets();
+  const [allGames, setAllGames] = useState<Game[]>([]);
   const [games, setGames] = useState<Game[]>([]);
 
   // Use fallback values for web platform
@@ -31,6 +32,7 @@ export default function CollectionScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [createPollModalVisible, setCreatePollModalVisible] = useState(false);
+
   const router = useRouter();
 
   const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
@@ -93,6 +95,7 @@ export default function CollectionScreen() {
         max_exp_players: game.max_exp_players,
       }));
 
+      setAllGames(mappedGames);
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
 
@@ -102,8 +105,9 @@ export default function CollectionScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+
     }
-  }, [playerCount, playTime, age, gameType, complexity]);
+  }, []);
 
   // const filteredGames = filterGames(games, playerCount, playTime, age, gameType, complexity);
 
@@ -122,6 +126,7 @@ export default function CollectionScreen() {
 
       if (error) throw error;
 
+      setAllGames(prevGames => prevGames.filter(game => game.id !== gameToDelete.id));
       setGames(prevGames => prevGames.filter(game => game.id !== gameToDelete.id));
     } catch (err) {
       console.error('Error deleting game:', err);
@@ -130,12 +135,21 @@ export default function CollectionScreen() {
     }
   }, [gameToDelete]);
 
+  const applyFilters = useCallback(() => {
+    const filteredGames = filterGames(allGames, playerCount, playTime, age, gameType, complexity);
+    setGames(filteredGames);
+  }, [allGames, playerCount, playTime, age, gameType, complexity]);
+
   const clearFilters = () => {
     setPlayerCount([]);
     setPlayTime([]);
     setAge([]);
     setGameType([]);
     setComplexity([]);
+    // Immediately show all games when filters are cleared
+    if (allGames.length > 0) {
+      setGames(allGames);
+    }
   };
 
   const onRefresh = useCallback(() => {
@@ -158,6 +172,12 @@ export default function CollectionScreen() {
   useEffect(() => {
     loadGames();
   }, [loadGames]);
+
+  useEffect(() => {
+    if (allGames.length > 0) {
+      applyFilters();
+    }
+  }, [applyFilters]);
 
   if (loading) {
     return <LoadingState />;
@@ -205,6 +225,13 @@ export default function CollectionScreen() {
           >
             <Plus size={20} color="#ff9654" />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.createPollButton}
+            onPress={() => setCreatePollModalVisible(true)}
+          >
+            <Plus size={20} color="#ffffff" />
+            <Text style={styles.createPollButtonText}>Create Poll</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -216,13 +243,6 @@ export default function CollectionScreen() {
               onPress={() => setFilterModalVisible(true)}
             >
               <Text style={styles.clearButtonText}>Edit Filters</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.createPollButton}
-              onPress={() => setCreatePollModalVisible(true)}
-            >
-              <Vote size={16} color="#ffffff" />
-              <Text style={styles.createPollButtonText}>Create Poll</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -314,6 +334,7 @@ export default function CollectionScreen() {
         isVisible={addGameModalVisible}
         onClose={() => setAddGameModalVisible(false)}
         onGameAdded={loadGames}
+        userCollectionIds={allGames.map(g => g.id.toString())}
       />
 
       <CreatePollModal
@@ -380,6 +401,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+
   clearButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -398,16 +420,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ff9654',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
+    gap: 8,
+    marginRight: 8,
   },
   createPollButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#ffffff',
-    marginLeft: 4,
   },
+
   listContent: {
     padding: 16,
   },
