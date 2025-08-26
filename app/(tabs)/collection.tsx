@@ -99,16 +99,16 @@ export default function CollectionScreen() {
           .filter(row => row.is_expansion_owned)
           .map(row => row.expansion_min_players)
           .toSorted();
-        console.log(mins);
+        // console.log(mins);
         let min_exp_players = mins.length ? mins[0] : null;
-        console.log(min_exp_players)
+        // console.log(min_exp_players)
         
         let maxs = gameGroup
           .filter(row => row.is_expansion_owned)
           .map(row => row.expansion_max_players)
           .toSorted()
           .toReversed();
-        console.log(maxs)
+        // console.log(maxs)
         let max_exp_players = maxs.length ? maxs[0] : null;
         
         return {

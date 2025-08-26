@@ -61,7 +61,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     { value: 31, min: 31, max: 60, label: '31-60 min' },
     { value: 61, min: 61, max: 90, label: '61-90 min' },
     { value: 91, min: 91, max: 120, label: '91-120 min' },
-    { value: 121, min: 121, max: 999999999, label: 'More than 120 min' },
+    { value: 121, min: 121, max: Infinity, label: 'More than 120 min' },
   ];
   const ageOptions = [
     { value: 1, min: 1, max: 5, label: '5 and under' },
@@ -70,7 +70,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     { value: 10, min: 10, max: 11, label: '10-11' },
     { value: 12, min: 12, max: 13, label: '12-13' },
     { value: 14, min: 14, max: 15, label: '14-15' },
-    { value: 16, min: 16, max: 999, label: '16 and up' },
+    { value: 16, min: 16, max: Infinity, label: '16 and up' },
   ];
   const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
     .map(_ => ({ value: _, label: _ }));
@@ -429,7 +429,7 @@ export const filterGames = (
     let is_match = true;
 
     if (playerCount.length) {
-      is_match &&= playerCount.some(({value}) => (        
+      is_match &&= playerCount.some(({value}) => (
         // Ignore game.min_players when 15+ is selected,
         // since the number of actual players could be arbitrarily large.
         (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)

@@ -51,16 +51,16 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       )
   );
 
-/*   const maxPlayersText = (
-    minPlayers !== maxPlayers && (
-      <>
-        <Text>-</Text>
-        <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
-          {maxPlayers}
-        </Text>
-      </>
-    )
-  ); */
+  const expansionItems = game.expansions && game.expansions
+    .filter(exp => exp.is_owned)
+    .map(exp =>
+      <li>{exp.name}</li>
+    );
+  const expansionList = game.expansions && game.expansions.length && ( 
+    <ul>
+      {expansionItems}
+    </ul>
+  );
 
   return (
     <Animated.View
@@ -174,6 +174,10 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                   View on BGG
                 </Text>
               </TouchableOpacity>
+            </View>
+
+            <View>
+              {expansionList}
             </View>
 
           </View>
