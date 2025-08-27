@@ -18,7 +18,7 @@ function decodeHTML(html: string): string {
 
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showUnownedExpansions, setShowUnownedExpansions = useState(false);
+  const [showUnownedExpansions, setShowUnownedExpansions] = useState(false);
 
   const toggleExpanded = () => {
     setIsExpanded(currentIsExpanded => !currentIsExpanded); // Callback function since it depends on the current state
