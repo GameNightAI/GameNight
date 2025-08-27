@@ -18,9 +18,10 @@ function decodeHTML(html: string): string {
 
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showUnownedExpansions, setShowUnownedExpansions = useState(false);
 
   const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
+    setIsExpanded(currentIsExpanded => !currentIsExpanded); // Callback function since it depends on the current state
   };
 
   const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
@@ -52,9 +53,17 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   );
 
   const expansionItems = game.expansions && game.expansions
-    .filter(exp => exp.is_owned)
+    .filter(exp => showUnownedExpansions ? true : exp.is_owned)
     .map(exp =>
-      <li key={exp.id}>{exp.name}</li>
+      <li
+        key={exp.id}
+        style={exp.is_owned ?
+          [styles.infoText, styles.infoTextEmphasis]
+          : [styles.infoText]
+        }
+      >
+        {exp.name}
+      </li>
     );
   const expansionList = expansionItems.length > 0 && ( 
     <View>

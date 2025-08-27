@@ -51,12 +51,15 @@ def parse_xml(text):
             best_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+')).replace(DASH, '-')
           elif result.attrib['name'] == 'recommmendedwith':
             rec_players = ''.join(char for char in result.attrib['value'] if char in (string.digits + DASH + ',+')).replace(DASH, '-')
-    # Don't get expansions of expansions, just of base games
+    
     expansions = []
-    if game.attrib['type'] == 'boardgame':
+    if game.attrib['type'] == 'boardgame': # Don't get expansions of expansions, just of base games
       for link in game.findall('link'):
         if link.attrib['type'] == 'boardgameexpansion':
-          expansions.append({'id': link.attrib['id'], 'name': link.attrib['value']})
+          expansions.append({
+            'id': link.attrib['id'],
+            'name': link.attrib['value']
+          })
             
     row = dict(
       id = game.attrib['id'],
@@ -79,7 +82,7 @@ def parse_xml(text):
       # is_childrens = has_taxonomy(game, 'boardgamecategory', "Children's Game"),
       min_age = int(game.find('minage').attrib['value']) or '',
       suggested_playerage = suggested_playerage,
-      expansions = expansions
+      expansions = expansions,
     )
     
     if INCLUDE_BGG_TAXONOMY:
