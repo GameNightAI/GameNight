@@ -67,7 +67,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
     );
   const expansionList = expansionItems.length > 0 && ( 
     <View>
-      <ul style={{...styles.infoText, 'list-style-type': 'none'}}>
+      <ul style={{...styles.infoText, 'listStyleType': 'none'}}>
         {expansionItems}
       </ul>
     </View>
