@@ -9,8 +9,8 @@ import Toast from 'react-native-toast-message';
 import Select from 'react-select';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isSafari } from '@/utils/safari-polyfill';
-import { CreatePollTitleModal } from './CreatePollTitleModal';
-import { CreatePollDescrModal } from './CreatePollDescrModal';
+import { CreatePollDetails } from './CreatePollDetails';
+import { CreatePollAddOptions } from './CreatePollAddOptions';
 import { FilterGameModal } from './FilterGameModal';
 import { GameSearchModal } from './GameSearchModal';
 import { PollSuccessModal } from './PollSuccessModal';
@@ -53,8 +53,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [defaultTitle, setDefaultTitle] = useState('');
   const [pollDescription, setPollDescription] = useState('');
   // Modal states
-  const [isTitleModalVisible, setIsTitleModalVisible] = useState(false);
-  const [isDescriptionModalVisible, setIsDescriptionModalVisible] = useState(false);
+  const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
+  const [isAdditionalOptionsModalVisible, setIsAdditionalOptionsModalVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isGameSearchModalVisible, setIsGameSearchModalVisible] = useState(false);
   const [isPollCreatedModalVisible, setIsPollCreatedModalVisible] = useState(false);
@@ -419,11 +419,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   // Modal handlers
-  const handleTitleSave = (title: string) => {
+  const handleDetailsSave = (title: string, description: string) => {
     setPollTitle(title);
-  };
-
-  const handleDescriptionSave = (description: string) => {
     setPollDescription(description);
   };
 
@@ -572,11 +569,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <View style={styles.titleSection}>
               <TouchableOpacity
                 style={[styles.titleButton, pollTitle && styles.titleButtonActive]}
-                onPress={() => setIsTitleModalVisible(true)}
+                onPress={() => setIsDetailsModalVisible(true)}
               >
                 <View style={styles.titleButtonContent}>
                   <View style={styles.titleButtonLeft}>
-                    <Text style={styles.titleButtonLabel}>Poll Title (Optional)</Text>
+                    <Text style={styles.titleButtonLabel}>Poll Details</Text>
                   </View>
                   <View style={styles.titleButtonRight}>
                     <View style={[styles.titleButtonIndicator, { opacity: pollTitle ? 1 : 0 }]}>
@@ -591,11 +588,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <View style={styles.descriptionSection}>
               <TouchableOpacity
                 style={[styles.descriptionButton, pollDescription && styles.descriptionButtonActive]}
-                onPress={() => setIsDescriptionModalVisible(true)}
+                onPress={() => setIsAdditionalOptionsModalVisible(true)}
               >
                 <View style={styles.descriptionButtonContent}>
                   <View style={styles.descriptionButtonLeft}>
-                    <Text style={styles.descriptionButtonLabel}>Description (Optional)</Text>
+                    <Text style={styles.descriptionButtonLabel}>Additional Options</Text>
                   </View>
                   <View style={styles.descriptionButtonRight}>
                     <View style={[styles.descriptionButtonIndicator, { opacity: pollDescription ? 1 : 0 }]}>
@@ -875,20 +872,24 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {content}
         </View>
       </View>
-      {/* Title Modal */}
-      <CreatePollTitleModal
-        isVisible={isTitleModalVisible}
-        onClose={() => setIsTitleModalVisible(false)}
-        onSave={handleTitleSave}
+      {/* Details Modal */}
+      <CreatePollDetails
+        isVisible={isDetailsModalVisible}
+        onClose={() => setIsDetailsModalVisible(false)}
+        onSave={handleDetailsSave}
         currentTitle={pollTitle}
+        currentDescription={pollDescription}
       />
 
-      {/* Description Modal */}
-      <CreatePollDescrModal
-        isVisible={isDescriptionModalVisible}
-        onClose={() => setIsDescriptionModalVisible(false)}
-        onSave={handleDescriptionSave}
-        currentDescription={pollDescription}
+      {/* Additional Options Modal */}
+      <CreatePollAddOptions
+        isVisible={isAdditionalOptionsModalVisible}
+        onClose={() => setIsAdditionalOptionsModalVisible(false)}
+        onSave={(options) => {
+          // Handle additional options when implemented
+          console.log('Additional options:', options);
+          setIsAdditionalOptionsModalVisible(false);
+        }}
       />
 
       {/* Filter Modal */}
