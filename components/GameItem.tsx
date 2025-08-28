@@ -76,6 +76,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
         <button
           type="button"
           onClick={() => setShowUnownedExpansions(currentShow => !currentShow)}
+          style={{marginLeft: 12}}
         >
           {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
         </button>
