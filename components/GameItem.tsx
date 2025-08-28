@@ -58,8 +58,8 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       <li
         key={exp.id}
         style={exp.is_owned ?
-          null
-          : null
+          {}
+          : {}
         }
       >
         {exp.name}
