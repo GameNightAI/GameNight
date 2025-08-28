@@ -53,7 +53,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   );
 
   const expansionItems = game.expansions && game.expansions
-    .filter(exp => showUnownedExpansions ? true : exp.is_owned)
+    .filter(exp => showUnownedExpansions || exp.is_owned)
     .map(exp =>
       <li
         key={exp.id}
