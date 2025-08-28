@@ -429,7 +429,7 @@ export const filterGames = (
     let is_match = true;
 
     if (playerCount.length) {
-      is_match &&= playerCount.some(({value}) => (
+      is_match &&= playerCount.some(({ value }) => (
         // Ignore game.min_players when 15+ is selected,
         // since the number of actual players could be arbitrarily large.
         (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
@@ -438,39 +438,38 @@ export const filterGames = (
     }
 
     if (playTime.length) {
-      is_match &&= playTime.some((t: FilterOption) => {
-        const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
+      const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
+      is_match &&= playTime.some(({ min, max }) => (
         // Perhaps this should incorporate game.minplaytime and game.maxplaytime more sensibly
-        return (
-          t.min! <= time
-          && time <= t.max!
-        );
-      });
+        // Like setting up a range of playtimes
+        min! <= time
+        && time <= max!
+      ));
     }
 
     if (age.length) {
-      is_match &&= age.some((a: FilterOption) => (
-        a.min! <= game.minAge
-        && game.minAge <= a.max!
+      is_match &&= age.some(({ min, max }) => (
+        min! <= game.minAge
+        && game.minAge <= max!
       ));
     }
 
     if (gameType.length) {
-      is_match &&= gameType.some((t: FilterOption) => {
-        switch (t.value) {
+      is_match &&= gameType.some(({ value }) => (
+        switch (value) {
           case 'Competitive':
-            return !game.is_cooperative
+            !game.is_cooperative
           case 'Cooperative':
-            return game.is_cooperative
+            game.is_cooperative
           case 'Team-based':
-            return game.is_teambased
+            game.is_teambased
         }
-      });
+      );
     }
 
     if (complexity.length) {
-      is_match &&= complexity.some((c: FilterOption) => (
-        game.complexity_tier === c.value
+      is_match &&= complexity.some(({ value }) => (
+        game.complexity_tier === value
       ));
     }
 
