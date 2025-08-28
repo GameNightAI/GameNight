@@ -69,15 +69,17 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
     );
   const expansionList = expansionItems.length > 0 && ( 
     <View style={[styles.container, styles.infoText]}>
-      <Text style={styles.infoTextEmphasis}>
-        {ownedExpansionText}
-      </Text>
-      <button
-        type="button"
-        onClick={() => setShowUnownedExpansions(currentShow => !currentShow)}
-      >
-        {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
-      </button>
+      <span>
+        <Text style={styles.infoTextEmphasis}>
+          {ownedExpansionText}
+        </Text>
+        <button
+          type="button"
+          onClick={() => setShowUnownedExpansions(currentShow => !currentShow)}
+        >
+          {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
+        </button>
+      </span>
       <ul style={{
         //...styles.infoText,
          listStyleType: 'none'
