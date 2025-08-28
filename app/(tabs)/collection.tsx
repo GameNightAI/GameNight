@@ -70,13 +70,12 @@ export default function CollectionScreen() {
         .from('collections_games_expansions')
         .select('*')
         .eq('user_id', user.id)
-        // .eq('is_expansion', false)  // Eventually, we'll have expansions listed as children of their base games. For now, we exclude them completely.
         .order('name', { ascending: true })
         .order('bgg_game_id', { ascending: true })
         .order('is_expansion_owned', { ascending: false })
         .order('expansion_name', { ascending: true })
 
-      console.log(data.length, 'rows returned from collections_games_expansions');
+      console.log(`${data.length} rows returned from collections_games_expansions`);
 
       if (error) throw error;
 
