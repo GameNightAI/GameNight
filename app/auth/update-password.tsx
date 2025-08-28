@@ -43,9 +43,15 @@ export default function UpdatePasswordScreen() {
 
           if (Platform.OS === 'web') {
             // Web platform: check URL parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            access_token = urlParams.get('access_token');
-            refresh_token = urlParams.get('refresh_token');
+            try {
+              const urlParams = new URLSearchParams(
+                typeof window !== 'undefined' ? window.location.search : ''
+              );
+              access_token = urlParams.get('access_token');
+              refresh_token = urlParams.get('refresh_token');
+            } catch (error) {
+              console.warn('Could not parse URL parameters:', error);
+            }
           } else {
             // Mobile platform: check for deep link parameters
             const initialURL = await Linking.getInitialURL();

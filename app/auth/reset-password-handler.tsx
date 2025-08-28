@@ -16,10 +16,17 @@ export default function ResetPasswordHandler() {
 
         if (Platform.OS === 'web') {
           // Web platform: use URL search parameters
-          const urlParams = new URLSearchParams(window.location.search);
-          access_token = urlParams.get('access_token');
-          refresh_token = urlParams.get('refresh_token');
-          type = urlParams.get('type');
+          // Use a safer approach that doesn't rely on window.location directly
+          try {
+            const urlParams = new URLSearchParams(
+              typeof window !== 'undefined' ? window.location.search : ''
+            );
+            access_token = urlParams.get('access_token');
+            refresh_token = urlParams.get('refresh_token');
+            type = urlParams.get('type');
+          } catch (error) {
+            console.warn('Could not parse URL parameters:', error);
+          }
         } else {
           // Mobile platform: use expo-linking to get the initial URL
           const initialURL = await Linking.getInitialURL();
