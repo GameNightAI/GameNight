@@ -18,6 +18,26 @@ export default function ResetPasswordScreen() {
     'Poppins-SemiBold': Poppins_600SemiBold,
   });
 
+  // Cross-platform function to get the base URL
+  const getBaseUrl = () => {
+    // Check environment variables first
+    if (process.env.EXPO_PUBLIC_LOCAL_DEV_URL) {
+      return process.env.EXPO_PUBLIC_LOCAL_DEV_URL;
+    }
+
+    if (process.env.EXPO_PUBLIC_PRODUCTION_URL) {
+      return process.env.EXPO_PUBLIC_PRODUCTION_URL;
+    }
+
+    // Fallback based on environment
+    if (process.env.NODE_ENV === 'development') {
+      return 'http://localhost:8081';
+    }
+
+    // Default to production
+    return 'https://www.gamenyte.app';
+  };
+
   // Check for error parameters from redirects
   useEffect(() => {
     const errorParam = params.error as string;
@@ -52,7 +72,7 @@ export default function ResetPasswordScreen() {
       await supabase.auth.signOut();
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/auth/reset-password-handler',
+        redirectTo: getBaseUrl() + '/auth/reset-password-handler',
       });
       if (error) {
         setError(error.message);
