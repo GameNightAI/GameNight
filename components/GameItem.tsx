@@ -52,7 +52,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       )
   );
 
-  const ownedExpansionText = `${game.expansions.filter(exp => exp.is_owned).length} of ${game.expansions.length} expansions owned`
+  const ownedExpansionText = `${game.expansions.filter(exp => exp.is_owned).length} of ${game.expansions.length} expansion${game.expansions.length > 1 ? 's' : ''} owned`
 
   const expansionItems = game.expansions && game.expansions
     .filter(exp => exp.is_owned || showUnownedExpansions)
