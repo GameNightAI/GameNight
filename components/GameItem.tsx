@@ -72,6 +72,12 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       <Text style={styles.infoTextEmphasis}>
         {ownedExpansionText}
       </Text>
+      <button
+        type="button"
+        onclick={() => setShowUnownedExpansions(currentShow => !currentShow)}
+      >
+        {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
+      </button>
       <ul style={{
         //...styles.infoText,
          listStyleType: 'none'
