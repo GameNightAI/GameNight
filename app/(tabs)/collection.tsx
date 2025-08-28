@@ -72,17 +72,16 @@ export default function CollectionScreen() {
         .eq('user_id', user.id)
         // .eq('is_expansion', false)  // Eventually, we'll have expansions listed as children of their base games. For now, we exclude them completely.
         .order('name', { ascending: true })
-        .order('bgg_game_id', { ascending: true})
-        .order('expansion_name', { ascending: true})
+        .order('bgg_game_id', { ascending: true })
+        .order('is_expansion_owned', { ascending: false })
+        .order('expansion_name', { ascending: true })
 
       if (error) throw error;
 
       const gameGroups = Map.groupBy(data, (game => game.bgg_game_id))
-      // console.log(groups)
-      // console.log(groups.values().toArray())
       const mappedGames = gameGroups.values().map((gameGroup) => {
         let game = gameGroup[0];
-        // console.log(game)
+        
         let expansions = gameGroup
           .filter(row => row.expansion_id)
           .map(row => ({
@@ -93,22 +92,18 @@ export default function CollectionScreen() {
             is_owned: row.is_expansion_owned,
             thumbnail: row.expansion_thumbnail,
           }));
-        // console.log(expansions)
         
         let mins = gameGroup
           .filter(row => row.is_expansion_owned)
           .map(row => row.expansion_min_players)
           .toSorted();
-        // console.log(mins);
         let min_exp_players = mins.length ? mins[0] : null;
-        // console.log(min_exp_players)
         
         let maxs = gameGroup
           .filter(row => row.is_expansion_owned)
           .map(row => row.expansion_max_players)
           .toSorted()
           .toReversed();
-        // console.log(maxs)
         let max_exp_players = maxs.length ? maxs[0] : null;
         
         return {
@@ -138,33 +133,6 @@ export default function CollectionScreen() {
       }).toArray();
       console.log(mappedGames);
 
-      /* const mappedGames = data.map(game => ({
-        id: game.bgg_game_id,
-        name: game.name,
-        yearPublished: game.year_published,
-        thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
-        image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
-        min_players: game.min_players,
-        max_players: game.max_players,
-        playing_time: game.playing_time,
-        minPlaytime: game.minplaytime,
-        maxPlaytime: game.maxplaytime,
-        description: game.description || '',
-        minAge: game.min_age,
-        is_cooperative: game.is_cooperative || false,
-        is_teambased: game.is_teambased || false,
-        complexity: game.complexity,
-        complexity_tier: game.complexity_tier,
-        complexity_desc: game.complexity_desc || '',
-        average: game.average,
-        bayesaverage: game.bayesaverage,
-        // expansion_id: game.expansion_id,
-        // expansion_name: game.expansion_name,
-        // expansion_min_players: game.expansion_min_players,
-        // expansion_max_players: game.expansion_max_players,
-        // is_expansion_owned: game.is_expansion_owned,
-      })); */
-
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
 
@@ -176,8 +144,6 @@ export default function CollectionScreen() {
       setRefreshing(false);
     }
   }, [playerCount, playTime, age, gameType, complexity]);
-
-  // const filteredGames = filterGames(games, playerCount, playTime, age, gameType, complexity);
 
   const handleDelete = useCallback(async () => {
     if (!gameToDelete) return;

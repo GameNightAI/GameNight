@@ -53,13 +53,13 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   );
 
   const expansionItems = game.expansions && game.expansions
-    .filter(exp => showUnownedExpansions || exp.is_owned)
+    .filter(exp => exp.is_owned || showUnownedExpansions)
     .map(exp =>
       <li
         key={exp.id}
         style={exp.is_owned ?
-          {}
-          : {}
+          styles.infoTextEmphasis
+          : null
         }
       >
         {exp.name}
@@ -67,7 +67,10 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
     );
   const expansionList = expansionItems.length > 0 && ( 
     <View>
-      <ul style={{...styles.infoText, 'listStyleType': 'none'}}>
+      <ul style={{
+        ...styles.infoText,
+         listStyleType: 'none'
+      }}>
         {expansionItems}
       </ul>
     </View>
