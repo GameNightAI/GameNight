@@ -83,7 +83,8 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       </span>
       <ul style={{
         //...styles.infoText,
-         listStyleType: 'none'
+        //listStyleType: 'none',
+        paddingLeft: 0
       }}>
         {expansionItems}
       </ul>
