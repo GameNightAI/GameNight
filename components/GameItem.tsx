@@ -58,8 +58,8 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       <li
         key={exp.id}
         style={exp.is_owned ?
-          styles.infoText
-          : styles.infoText
+          null
+          : null
         }
       >
         {exp.name}
@@ -67,7 +67,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
     );
   const expansionList = expansionItems.length > 0 && ( 
     <View>
-      <ul>
+      <ul style={{...styles.infoText, list-style-type: 'none'}}>
         {expansionItems}
       </ul>
     </View>
