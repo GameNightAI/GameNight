@@ -76,6 +76,8 @@ export default function CollectionScreen() {
         .order('is_expansion_owned', { ascending: false })
         .order('expansion_name', { ascending: true })
 
+      console.log(data.length, 'rows returned from collections_games_expansions');
+
       if (error) throw error;
 
       const gameGroups = Map.groupBy(data, (game => game.bgg_game_id))
