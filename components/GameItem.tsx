@@ -52,7 +52,10 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       )
   );
 
-  const ownedExpansionText = `${game.expansions.filter(exp => exp.is_owned).length} of ${game.expansions.length} expansion${game.expansions.length > 1 ? 's' : ''} owned`
+  const ownedExpansionCount = game.expansions.filter(exp => exp.is_owned).length
+  const ownedExpansionText = game.expansions.length > 0 ?
+    `${ownedExpansionCount} of ${game.expansions.length} expansion${game.expansions.length > 1 ? 's' : ''} owned`
+    : 'No expansions available'
 
   const expansionItems = game.expansions && game.expansions
     .filter(exp => exp.is_owned || showUnownedExpansions)
@@ -67,7 +70,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
         {exp.name}
       </li>
     );
-  const expansionList = expansionItems.length > 0 && ( 
+  const expansionList = ( 
     <View style={[
       //styles.detailContainer,
       styles.infoText,
@@ -76,7 +79,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
         <Text style={styles.infoTextEmphasis}>
           {ownedExpansionText}
         </Text>
-        {game.expansions.length > 1 &&
+        {ownedExpansionCount !== game.expansions.length &&
           <button
             type="button"
             onClick={() => setShowUnownedExpansions(currentShow => !currentShow)}
@@ -86,13 +89,15 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
           </button>
         }
       </span>
-      <ul style={{
-        //...styles.infoText,
-        //listStyleType: 'none',
-        paddingLeft: 10
-      }}>
-        {expansionItems}
-      </ul>
+      {expansionItems.length > 0 &&
+        <ul style={{
+          //...styles.infoText,
+          //listStyleType: 'none',
+          paddingLeft: 10
+        }}>
+          {expansionItems}
+        </ul>
+      }
     </View>
   );
 
