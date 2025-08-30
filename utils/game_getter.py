@@ -7,6 +7,7 @@ import itertools
 import time
 import string
 from supabase import create_client
+import pprint
 # from bs4 import BeautifulSoup
 # from optparse import OptionParser
 
@@ -163,9 +164,8 @@ def main():
     for g in parse_xml(response.read()):
       game = games[g['id']]
       game.update(g)
-      # We want 0 to show up as NULL in the database for sorting/filtering purposes
       game['year_published'] = game['yearpublished']
-      print(game)
+      pprint.pp(game)
       writer.writerow(game)
       
       for e in game['expansions']:
