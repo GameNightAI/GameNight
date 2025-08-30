@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Animated, Platform, Modal } from 'react-native';
 import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { CreateEventDetails } from './CreateEventDetails';
-import { CreateEventAddOptions } from './CreateEventAddOptions';
+import { DateReviewModal } from './DateReviewModal';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -17,13 +17,13 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
   const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
-  const [showEventOptionsModal, setShowEventOptionsModal] = useState(false);
+  const [showDateReviewModal, setShowDateReviewModal] = useState(false);
   const [eventOptions, setEventOptions] = useState({
     location: '',
     startTime: null as Date | null,
     endTime: null as Date | null,
-    useSameLocation: false,
-    useSameTime: false,
+    useSameLocation: true,
+    useSameTime: true,
   });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -40,7 +40,6 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
       animation.setValue(0);
       // Reset internal modal states when main modal closes
       setShowEventDetailsModal(false);
-      setShowEventOptionsModal(false);
     }
   }, [visible]);
 
@@ -114,15 +113,7 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
     setEventDescription(description);
   };
 
-  const handleEventOptionsSave = (options: {
-    location: string;
-    startTime: Date | null;
-    endTime: Date | null;
-    useSameLocation: boolean;
-    useSameTime: boolean;
-  }) => {
-    setEventOptions(options);
-  };
+
 
   const handleCreate = () => {
     if (!eventName || !eventOptions.startTime || !eventOptions.endTime) {
@@ -216,28 +207,7 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setShowEventOptionsModal(true)}
-              style={styles.input}
-            >
-              <Text style={styles.placeholderText}>
-                Configure Event Options
-              </Text>
-              {(eventOptions.location || eventOptions.startTime || eventOptions.endTime) && (
-                <View style={styles.eventOptionsPreview}>
-                  {eventOptions.location && (
-                    <Text style={styles.eventLocationText} numberOfLines={1}>
-                      📍 {eventOptions.location}
-                    </Text>
-                  )}
-                  {(eventOptions.startTime && eventOptions.endTime) && (
-                    <Text style={styles.eventTimeText} numberOfLines={1}>
-                      🕐 {format(eventOptions.startTime, 'HH:mm')} - {format(eventOptions.endTime, 'HH:mm')}
-                    </Text>
-                  )}
-                </View>
-              )}
-            </TouchableOpacity>
+
 
             <Text style={styles.availabilityLabel}>Set Available Dates</Text>
             <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>
@@ -265,17 +235,18 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
                 </TouchableOpacity>
               </View>
 
-              {/* Day Headers */}
-              <View style={styles.dayHeaders}>
-                {days.map((day, index) => (
-                  <View key={index} style={styles.dayHeader}>
-                    <Text style={styles.dayHeaderText}>{day}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Calendar Grid */}
+              {/* Calendar Grid with Headers */}
               <View style={styles.calendarGrid}>
+                {/* Day Headers Row */}
+                <View style={styles.calendarRow}>
+                  {days.map((day, index) => (
+                    <View key={index} style={styles.dayHeader}>
+                      <Text style={styles.dayHeaderText}>{day}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Date Rows */}
                 {Array.from({ length: 5 }, (_, rowIndex) => (
                   <View key={rowIndex} style={styles.calendarRow}>
                     {Array.from({ length: 7 }, (_, colIndex) => {
@@ -312,8 +283,12 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
               </View>
             </View>
 
-            <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
-              <Text style={styles.createButtonText}>Create Event</Text>
+            <TouchableOpacity
+              style={[styles.createButton, selectedDates.length === 0 && styles.createButtonDisabled]}
+              onPress={() => selectedDates.length > 0 && setShowDateReviewModal(true)}
+              disabled={selectedDates.length === 0}
+            >
+              <Text style={styles.createButtonText}>Select Dates</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -331,12 +306,20 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
         currentDescription={eventDescription}
       />
 
-      {/* Event Options Modal */}
-      <CreateEventAddOptions
-        isVisible={showEventOptionsModal}
-        onClose={() => setShowEventOptionsModal(false)}
-        onSave={handleEventOptionsSave}
-        currentOptions={eventOptions}
+
+
+      {/* Date Review Modal */}
+      <DateReviewModal
+        visible={showDateReviewModal}
+        onClose={() => setShowDateReviewModal(false)}
+        onFinalize={(finalEventOptions) => {
+          // Update local state with the final options from DateReviewModal
+          setEventOptions(finalEventOptions);
+          // Call the original handleCreate function
+          handleCreate();
+        }}
+        selectedDates={selectedDates}
+        eventOptions={eventOptions}
       />
     </Modal>
   );
@@ -427,6 +410,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
     alignItems: 'center'
   },
+  createButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
   cancelButton: {
     marginTop: 12,
     alignItems: 'center'
@@ -447,23 +433,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
-  eventLocationText: {
-    fontSize: 12,
-    color: '#007bff',
-    fontWeight: 'bold',
-  },
   eventDescriptionText: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 2,
-  },
-  eventOptionsPreview: {
-    marginTop: 4,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  eventTimeText: {
     fontSize: 12,
     color: '#555',
     marginTop: 2,
@@ -527,11 +497,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   dayHeader: {
-    width: 40,
-    height: 30,
+    width: '14.28%', // 100% ÷ 7 columns = 14.28%
+    height: 50, // Match row height
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
     backgroundColor: '#e1e5ea',
   },
   dayHeaderText: {
@@ -541,12 +510,12 @@ const styles = StyleSheet.create({
   },
   calendarGrid: {
     width: 330, // Fixed width
-    height: 250, // Fixed height (330 * 5/7 ≈ 250)
+    height: 300, // Fixed height (330 * 6/7 ≈ 300)
   },
   calendarRow: {
     flexDirection: 'row',
     width: '100%',
-    height: 50, // Fixed height per row (250 ÷ 5 = 50)
+    height: 50, // Fixed height per row (300 ÷ 6 = 50)
   },
   calendarDay: {
     width: '14.28%', // 100% ÷ 7 columns = 14.28%
