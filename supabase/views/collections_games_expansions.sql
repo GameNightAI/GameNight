@@ -24,7 +24,7 @@ create or replace view collections_games_expansions with (security_invoker = on)
       exp.is_expansion = true /* is_expansion_owned */
       /* Show all unowned expansions, as long as they're not promos or fan expansions. */
       or not (
-        coalesce(games.boardgamefamily, '') like '%Promotional: Cards%'
+        coalesce(games.boardgamefamily, '') like '%Promotional:%'
         or coalesce(games.boardgamecategory, '') like '%Fan Expansion%'
       )
     )
