@@ -158,9 +158,9 @@ export default function EventScreen() {
         const dateId = vote.poll_event_id;
         if (counts[dateId]) {
           switch (vote.vote_type) {
-            case 1: counts[dateId].yes++; break;
-            case 0: counts[dateId].no++; break;
-            case 2: counts[dateId].maybe++; break;
+            case 2: counts[dateId].yes++; break;
+            case 1: counts[dateId].maybe++; break;
+            case -2: counts[dateId].no++; break;
           }
         }
 
@@ -206,9 +206,9 @@ export default function EventScreen() {
         const newCounts = { ...voteCounts };
         if (newCounts[eventId]) {
           switch (voteType) {
-            case 1: newCounts[eventId].yes--; break;
-            case 0: newCounts[eventId].no--; break;
-            case 2: newCounts[eventId].maybe--; break;
+            case 2: newCounts[eventId].yes--; break;
+            case 1: newCounts[eventId].maybe--; break;
+            case -2: newCounts[eventId].no--; break;
           }
         }
         setVoteCounts(newCounts);
@@ -249,16 +249,16 @@ export default function EventScreen() {
           // Remove old vote count
           if (existingVote !== undefined) {
             switch (existingVote) {
-              case 1: newCounts[eventId].yes--; break;
-              case 0: newCounts[eventId].no--; break;
-              case 2: newCounts[eventId].maybe--; break;
+              case 2: newCounts[eventId].yes--; break;
+              case 1: newCounts[eventId].maybe--; break;
+              case -2: newCounts[eventId].no--; break;
             }
           }
           // Add new vote count
           switch (voteType) {
-            case 1: newCounts[eventId].yes++; break;
-            case 0: newCounts[eventId].no++; break;
-            case 2: newCounts[eventId].maybe++; break;
+            case 2: newCounts[eventId].yes++; break;
+            case 1: newCounts[eventId].maybe++; break;
+            case -2: newCounts[eventId].no++; break;
           }
         }
         setVoteCounts(newCounts);

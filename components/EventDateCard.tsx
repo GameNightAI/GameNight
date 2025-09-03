@@ -116,9 +116,9 @@ export const EventDateCard = ({
                   <Text style={styles.voteButtonLabel}>{option.label}</Text>
                   {voteCounts && (
                     <Text style={styles.voteCount}>
-                      {option.value === 1 ? voteCounts.yes :
-                        option.value === 0 ? voteCounts.no :
-                          voteCounts.maybe}
+                      {option.value === 2 ? voteCounts.yes :
+                        option.value === 1 ? voteCounts.maybe :
+                          voteCounts.no}
                     </Text>
                   )}
                 </View>
