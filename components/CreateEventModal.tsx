@@ -4,29 +4,53 @@ import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, eachDa
 import { CreateEventDetails } from './CreateEventDetails';
 import { DateReviewModal } from './DateReviewModal';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { supabase } from '@/services/supabase';
+import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
+import { PollEvent } from '@/types/poll';
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 interface CreateEventModalProps {
   visible: boolean;
   onClose: () => void;
-  onCreate?: (payload: any) => void;
+  onSuccess?: () => void;
+  pollId?: string; // Optional poll ID if creating event from a poll
 }
 
-export default function CreateEventModal({ visible, onClose, onCreate }: CreateEventModalProps) {
-  const [eventName, setEventName] = useState('');
+// Interface for date-specific options that go into poll_events table
+interface DateSpecificOptions {
+  location: string;
+  startTime: Date | null;
+  endTime: Date | null;
+}
+
+// Interface for event creation options (UI state + poll_events data)
+interface EventOptions {
+  useSameLocation: boolean;
+  useSameTime: boolean;
+  location: string;
+  startTime: Date | null;
+  endTime: Date | null;
+  dateSpecificOptions?: Record<string, DateSpecificOptions>;
+}
+
+export default function CreateEventModal({ visible, onClose, onSuccess, pollId }: CreateEventModalProps) {
+  const router = useRouter();
+  const [eventName, setEventName] = useState('GameNyte');
   const [eventDescription, setEventDescription] = useState('');
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [showDateReviewModal, setShowDateReviewModal] = useState(false);
-  const [eventOptions, setEventOptions] = useState({
-    location: '',
-    startTime: null as Date | null,
-    endTime: null as Date | null,
+  const [eventOptions, setEventOptions] = useState<EventOptions>({
     useSameLocation: true,
     useSameTime: true,
+    location: '',
+    startTime: null,
+    endTime: null,
   });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [loading, setLoading] = useState(false);
   const animation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -40,6 +64,7 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
       animation.setValue(0);
       // Reset internal modal states when main modal closes
       setShowEventDetailsModal(false);
+      setShowDateReviewModal(false);
     }
   }, [visible]);
 
@@ -113,15 +138,9 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
     setEventDescription(description);
   };
 
-
-
-  const handleCreate = () => {
-    if (!eventName || !eventOptions.startTime || !eventOptions.endTime) {
-      Alert.alert('Please fill in all fields');
-      return;
-    }
-    if (!isAfter(eventOptions.endTime, eventOptions.startTime)) {
-      Alert.alert('End time must be after start time');
+  const handleCreate = async (finalEventOptions: EventOptions) => {
+    if (!eventName) {
+      Alert.alert('Please enter an event name');
       return;
     }
     if (selectedDates.length === 0) {
@@ -129,30 +148,93 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
       return;
     }
 
-    const formattedStart = format(eventOptions.startTime, 'HH:mm');
-    const formattedEnd = format(eventOptions.endTime, 'HH:mm');
-    const payload = {
-      name: eventName,
-      description: eventDescription,
-      location: eventOptions.location,
-      startTime: formattedStart,
-      endTime: formattedEnd,
-      availableDates: selectedDates.map(date => format(date, 'yyyy-MM-dd')),
-      useSameLocation: eventOptions.useSameLocation,
-      useSameTime: eventOptions.useSameTime,
-    };
-    onCreate?.(payload);
-    onClose();
-    setEventName('');
-    setEventDescription('');
-    setEventOptions({
-      location: '',
-      startTime: null,
-      endTime: null,
-      useSameLocation: false,
-      useSameTime: false,
-    });
-    setSelectedDates([]);
+    try {
+      setLoading(true);
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('You must be logged in to create an event');
+        return;
+      }
+
+      // Create the main poll record
+      const { data: poll, error: pollError } = await supabase
+        .from('polls')
+        .insert({
+          user_id: user.id,
+          title: eventName,
+          description: eventDescription.trim() || null,
+          max_votes: 1,
+        })
+        .select()
+        .single();
+
+      if (pollError) throw pollError;
+
+      // Create poll_events entries for each selected date
+      const eventPromises = selectedDates.map(async (date) => {
+        // Get date-specific options if they exist
+        const dateKey = date.toISOString().split('T')[0];
+        const dateSpecificOptions = finalEventOptions.dateSpecificOptions?.[dateKey];
+
+        // Determine location and time for this specific date
+        const location = finalEventOptions.useSameLocation
+          ? finalEventOptions.location
+          : (dateSpecificOptions?.location || '');
+
+        const startTime = finalEventOptions.useSameTime
+          ? finalEventOptions.startTime
+          : (dateSpecificOptions?.startTime || null);
+
+        const endTime = finalEventOptions.useSameTime
+          ? finalEventOptions.endTime
+          : (dateSpecificOptions?.endTime || null);
+
+        const eventData = {
+          poll_id: poll.id,
+          location: location || '',
+          event_date: format(date, 'yyyy-MM-dd'),
+          start_time: startTime ? format(startTime, 'HH:mm') : null,
+          end_time: endTime ? format(endTime, 'HH:mm') : null,
+        };
+
+        const { data: event, error: eventError } = await supabase
+          .from('poll_events')
+          .insert(eventData)
+          .select()
+          .single();
+
+        if (eventError) throw eventError;
+        return event;
+      });
+
+      const createdEvents = await Promise.all(eventPromises);
+
+      Toast.show({ type: 'success', text1: 'Event created successfully!' });
+
+      // Reset form
+      setEventName('GameNyte');
+      setEventDescription('');
+      setEventOptions({
+        useSameLocation: true,
+        useSameTime: true,
+        location: '',
+        startTime: null,
+        endTime: null,
+      });
+      setSelectedDates([]);
+
+      // Close modal and call success callback
+      onClose();
+      onSuccess?.();
+
+    } catch (error) {
+      console.error('Error creating event:', error);
+      Alert.alert('Error', 'Failed to create event. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!visible) return null;
@@ -179,7 +261,9 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
           ]}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Create Event</Text>
+            <Text style={styles.title}>
+              {pollId ? 'Create Event for Poll' : 'Create Event'}
+            </Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={onClose}
@@ -207,8 +291,6 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
               )}
             </TouchableOpacity>
 
-
-
             <Text style={styles.availabilityLabel}>Set Available Dates</Text>
             <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>
 
@@ -217,63 +299,70 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
               {/* Month Navigation */}
               <View style={styles.monthNavigation}>
                 <TouchableOpacity
-                  style={styles.navButton}
+                  style={styles.monthNavButton}
                   onPress={() => navigateMonth('prev')}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <ChevronLeft size={20} color="#1a2b5f" />
+                  <ChevronLeft size={20} color="#666666" />
                 </TouchableOpacity>
-                <Text style={styles.monthYearText}>
+                <Text style={styles.monthText}>
                   {format(currentMonth, 'MMMM yyyy')}
                 </Text>
                 <TouchableOpacity
-                  style={styles.navButton}
+                  style={styles.monthNavButton}
                   onPress={() => navigateMonth('next')}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <ChevronRight size={20} color="#1a2b5f" />
+                  <ChevronRight size={20} color="#666666" />
                 </TouchableOpacity>
               </View>
 
-              {/* Calendar Grid with Headers */}
-              <View style={styles.calendarGrid}>
-                {/* Day Headers Row */}
-                <View style={styles.calendarRow}>
-                  {days.map((day, index) => (
-                    <View key={index} style={styles.dayHeader}>
-                      <Text style={styles.dayHeaderText}>{day}</Text>
-                    </View>
-                  ))}
-                </View>
+              {/* Day Headers */}
+              <View style={styles.dayHeaders}>
+                {days.map(day => (
+                  <Text key={day} style={styles.dayHeader}>
+                    {day}
+                  </Text>
+                ))}
+              </View>
 
-                {/* Date Rows */}
+              {/* Calendar Grid */}
+              <View style={styles.calendarGrid}>
                 {Array.from({ length: 5 }, (_, rowIndex) => (
                   <View key={rowIndex} style={styles.calendarRow}>
                     {Array.from({ length: 7 }, (_, colIndex) => {
                       const dayIndex = rowIndex * 7 + colIndex;
-                      const dayInfo = calendarDays[dayIndex];
+                      const dayData = calendarDays[dayIndex];
+                      if (!dayData) return (
+                        <TouchableOpacity
+                          key={colIndex}
+                          style={styles.calendarDay}
+                          disabled={true}
+                        />
+                      );
 
-                      if (!dayInfo) return <View key={colIndex} style={styles.calendarDay} />;
+                      const { date, isCurrentMonth, isPast } = dayData;
+                      const isSelected = isDateSelected(date);
 
                       return (
                         <TouchableOpacity
                           key={colIndex}
                           style={[
                             styles.calendarDay,
-                            !dayInfo.isCurrentMonth && styles.otherMonthDay,
-                            dayInfo.isPast && styles.pastDay,
-                            isDateSelected(dayInfo.date) && styles.selectedDay,
+                            isSelected && styles.selectedDay,
+                            !isCurrentMonth && styles.otherMonthDay,
+                            isPast && styles.pastDay,
                           ]}
-                          onPress={() => !dayInfo.isPast && toggleDateSelection(dayInfo.date)}
-                          disabled={dayInfo.isPast}
+                          onPress={() => !isPast && toggleDateSelection(date)}
+                          disabled={isPast}
                         >
-                          <Text style={[
-                            styles.dayText,
-                            !dayInfo.isCurrentMonth && styles.otherMonthDayText,
-                            dayInfo.isPast && styles.pastDayText,
-                            isDateSelected(dayInfo.date) && styles.selectedDayText,
-                          ]}>
-                            {format(dayInfo.date, 'd')}
+                          <Text
+                            style={[
+                              styles.dayText,
+                              isSelected && styles.selectedDayText,
+                              !isCurrentMonth && styles.otherMonthDayText,
+                              isPast && styles.pastDayText,
+                            ]}
+                          >
+                            {date.getDate()}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -306,20 +395,14 @@ export default function CreateEventModal({ visible, onClose, onCreate }: CreateE
         currentDescription={eventDescription}
       />
 
-
-
       {/* Date Review Modal */}
       <DateReviewModal
         visible={showDateReviewModal}
         onClose={() => setShowDateReviewModal(false)}
-        onFinalize={(finalEventOptions) => {
-          // Update local state with the final options from DateReviewModal
-          setEventOptions(finalEventOptions);
-          // Call the original handleCreate function
-          handleCreate();
-        }}
+        onFinalize={handleCreate}
         selectedDates={selectedDates}
         eventOptions={eventOptions}
+        pollId={pollId}
       />
     </Modal>
   );
@@ -482,10 +565,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  navButton: {
+  monthNavButton: {
     padding: 5,
   },
-  monthYearText: {
+  monthText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1a2b5f',
@@ -499,9 +582,12 @@ const styles = StyleSheet.create({
   dayHeader: {
     width: '14.28%', // 100% ÷ 7 columns = 14.28%
     height: 50, // Match row height
-    justifyContent: 'center',
-    alignItems: 'center',
+    textAlign: 'center',
+    lineHeight: 50,
     backgroundColor: '#e1e5ea',
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1a2b5f',
   },
   dayHeaderText: {
     fontSize: 12,

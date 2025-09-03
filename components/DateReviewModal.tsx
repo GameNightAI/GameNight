@@ -4,11 +4,11 @@ import { format } from 'date-fns';
 import { ScrollableTimePicker } from './ScrollableTimePicker';
 
 interface EventOptions {
+  useSameLocation: boolean;
+  useSameTime: boolean;
   location: string;
   startTime: Date | null;
   endTime: Date | null;
-  useSameLocation: boolean;
-  useSameTime: boolean;
   dateSpecificOptions?: Record<string, DateSpecificOptions>;
 }
 
@@ -24,9 +24,8 @@ interface DateReviewModalProps {
   onFinalize: (eventOptions: EventOptions) => void;
   selectedDates: Date[];
   eventOptions: EventOptions;
+  pollId?: string; // Optional poll ID for creating events
 }
-
-
 
 export function DateReviewModal({
   visible,
@@ -317,7 +316,7 @@ export function DateReviewModal({
                 // Prepare the final event options with date-specific data
                 const finalOptions = {
                   ...localEventOptions,
-                  dateSpecificOptions: localEventOptions.useSameTime || localEventOptions.useSameLocation ? dateSpecificOptions : {}
+                  dateSpecificOptions: (!localEventOptions.useSameTime || !localEventOptions.useSameLocation) ? dateSpecificOptions : {}
                 };
                 onFinalize(finalOptions);
               }}

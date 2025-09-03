@@ -68,10 +68,16 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
         setVoteUpdated(false);
       }
 
-      // Get the poll details
+      // Get the poll details (only polls with poll_games - these are game polls)
       const { data: pollData, error: pollError } = await supabase
         .from('polls')
-        .select('*')
+        .select(`
+          *,
+          poll_games!inner(
+            id,
+            game_id
+          )
+        `)
         .eq('id', id)
         .maybeSingle();
 
@@ -166,12 +172,15 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
           image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
           min_players: game.min_players || 1,
           max_players: game.max_players || 1,
+          min_exp_players: game.min_exp_players || 1,
+          max_exp_players: game.max_exp_players || 1,
           playing_time: game.playing_time || 0,
           minPlaytime: game.minplaytime || 0,
           maxPlaytime: game.maxplaytime || 0,
           description: game.description || '',
           minAge: game.min_age || 0,
           is_cooperative: game.is_cooperative || false,
+          is_teambased: game.is_teambased || false,
           complexity: game.complexity || 1,
           complexity_tier: game.complexity_tier || 1,
           complexity_desc: game.complexity_desc || '',
