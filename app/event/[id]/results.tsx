@@ -40,18 +40,34 @@ interface Event extends Poll {
 
 
 
-// Helper function to get ranking icon
-const getRankingIcon = (rank: number) => {
+// Helper function to get ranking color
+const getRankingColor = (rank: number) => {
   switch (rank) {
     case 1:
-      return <Trophy size={24} color="#ffd700" />;
+      return '#ffd700'; // Gold
     case 2:
-      return <Medal size={24} color="#c0c0c0" />;
+      return '#c0c0c0'; // Silver
     case 3:
-      return <Award size={24} color="#cd7f32" />;
+      return '#cd7f32'; // Bronze
     default:
-      return null;
+      return '#6b7280'; // Gray
   }
+};
+
+// Helper function to get ordinal suffix
+const getOrdinalSuffix = (num: number) => {
+  const j = num % 10;
+  const k = num % 100;
+  if (j === 1 && k !== 11) {
+    return 'st';
+  }
+  if (j === 2 && k !== 12) {
+    return 'nd';
+  }
+  if (j === 3 && k !== 13) {
+    return 'rd';
+  }
+  return 'th';
 };
 
 
@@ -62,6 +78,8 @@ export default function EventResultsScreen() {
   const [user, setUser] = useState<any>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [eventDates, setEventDates] = useState<PollEvent[]>([]);
+  const [voteCounts, setVoteCounts] = useState<Record<string, { yes: number; no: number; maybe: number }>>({});
+  const [rankedDates, setRankedDates] = useState<Array<PollEvent & { ranking: number; totalScore: number; totalVotes: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +128,9 @@ export default function EventResultsScreen() {
           setUser(currentUser);
         }
 
+        // Load vote counts for ranking
+        await loadVoteCounts(datesData || []);
+
       } catch (err) {
         console.error('Error loading event data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load event data');
@@ -120,6 +141,78 @@ export default function EventResultsScreen() {
 
     loadEventData();
   }, [id]);
+
+  // Load vote counts and calculate rankings
+  const loadVoteCounts = async (dates: PollEvent[]) => {
+    if (!dates || dates.length === 0) return;
+
+    try {
+      // Load all votes for this event's dates
+      const { data: votesData, error: votesError } = await supabase
+        .from('votes_events')
+        .select('*')
+        .in('poll_event_id', dates.map(d => d.id));
+
+      if (votesError) {
+        console.error('Error loading votes:', votesError);
+        return;
+      }
+
+      // Calculate vote counts for each date
+      const counts: Record<string, { yes: number; no: number; maybe: number }> = {};
+
+      dates.forEach(date => {
+        counts[date.id] = { yes: 0, no: 0, maybe: 0 };
+      });
+
+      votesData?.forEach(vote => {
+        const dateId = vote.poll_event_id;
+        if (counts[dateId]) {
+          switch (vote.vote_type) {
+            case 2: counts[dateId].yes++; break;
+            case 1: counts[dateId].maybe++; break;
+            case -2: counts[dateId].no++; break;
+          }
+        }
+      });
+
+      setVoteCounts(counts);
+
+      // Calculate rankings
+      const dateResults = dates.map(date => {
+        const dateCounts = counts[date.id] || { yes: 0, no: 0, maybe: 0 };
+        // Calculate score: Ideal (2 points), Doable (1 point), No (-1 point)
+        const totalScore = (dateCounts.yes * 2) + (dateCounts.maybe * 1) + (dateCounts.no * -1);
+        const totalVotes = dateCounts.yes + dateCounts.maybe + dateCounts.no;
+
+        return {
+          ...date,
+          totalScore,
+          totalVotes,
+          ranking: 0, // Will be set after sorting
+        };
+      });
+
+      // Sort by total score (descending) and assign rankings
+      dateResults.sort((a, b) => b.totalScore - a.totalScore);
+
+      // Handle ties - assign same rank to items with same score
+      let currentRank = 1;
+      let lastScore: number | null = null;
+
+      dateResults.forEach((result, index) => {
+        if (lastScore !== null && result.totalScore !== lastScore) {
+          currentRank = index + 1;
+        }
+        result.ranking = currentRank;
+        lastScore = result.totalScore;
+      });
+
+      setRankedDates(dateResults);
+    } catch (err) {
+      console.error('Error loading vote counts:', err);
+    }
+  };
 
   useEffect(() => {
     const getUser = async () => {
@@ -187,21 +280,39 @@ export default function EventResultsScreen() {
 
       {/* Event Dates */}
       <View style={styles.dateResults}>
-        <Text style={styles.sectionTitle}>Event Dates</Text>
-        {eventDates.map((eventDate, index) => {
-          const date = new Date(eventDate.event_date);
-          const displayLocation = event.use_same_location && event.location
-            ? event.location
-            : eventDate.location || 'Location not set';
-          const displayTime = event.use_same_time && event.start_time && event.end_time
-            ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
-            : eventDate.start_time && eventDate.end_time
-              ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
-              : 'Time not set';
+        <Text style={styles.sectionTitle}>Event Date Rankings</Text>
+        {rankedDates.length === 0 ? (
+          <Text style={styles.emptyText}>No votes have been cast yet.</Text>
+        ) : (
+          rankedDates.map((eventDate) => {
+            const date = new Date(eventDate.event_date);
+            const displayLocation = event.use_same_location && event.location
+              ? event.location
+              : eventDate.location || 'Location not set';
+            const displayTime = event.use_same_time && event.start_time && event.end_time
+              ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
+              : eventDate.start_time && eventDate.end_time
+                ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
+                : 'Time not set';
+            const counts = voteCounts[eventDate.id] || { yes: 0, no: 0, maybe: 0 };
 
-          return (
-            <View key={eventDate.id} style={styles.dateResultCard}>
-              <View style={styles.dateResultHeader}>
+            return (
+              <View key={eventDate.id} style={styles.dateResultCard}>
+                <View style={styles.dateResultHeader}>
+                  <View style={styles.rankingContainer}>
+                    <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(eventDate.ranking) }]}>
+                      <Text style={styles.rankingNumber}>{eventDate.ranking}</Text>
+                    </View>
+                    <View style={styles.rankingInfo}>
+                      <Text style={styles.rankingLabel}>
+                        {`${eventDate.ranking}${getOrdinalSuffix(eventDate.ranking)} Place`}
+                      </Text>
+                      <Text style={styles.scoreText}>
+                        {eventDate.totalVotes} vote{eventDate.totalVotes !== 1 ? 's' : ''} • Score: {eventDate.totalScore}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
                 <View style={styles.dateInfo}>
                   <Text style={styles.dateText}>
                     {format(date, 'EEEE, MMMM d, yyyy')}
@@ -216,12 +327,16 @@ export default function EventResultsScreen() {
                       <Text style={styles.dateDetailText}>{displayTime}</Text>
                     </View>
                   </View>
+                  <View style={styles.voteBreakdown}>
+                    <Text style={styles.voteBreakdownText}>
+                      Ideal: {counts.yes} • Doable: {counts.maybe} • No: {counts.no}
+                    </Text>
+                  </View>
                 </View>
-                {index < 3 && getRankingIcon(index + 1)}
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </View>
 
 
@@ -338,10 +453,39 @@ const styles = StyleSheet.create({
     borderColor: '#e1e5ea',
   },
   dateResultHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 16,
+  },
+  rankingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  rankingBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rankingNumber: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: 'white',
+  },
+  rankingInfo: {
+    flex: 1,
+  },
+  rankingLabel: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 2,
+  },
+  scoreText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
   },
   dateInfo: {
     flex: 1,
@@ -364,6 +508,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     marginLeft: 6,
+  },
+  voteBreakdown: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f3f4',
+  },
+  voteBreakdownText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+  },
+  emptyText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    padding: 20,
   },
 
   shareButton: {

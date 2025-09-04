@@ -17,8 +17,26 @@ import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { PollsEmptyState } from '@/components/PollsEmptyState';
 import { PollScreenCard } from '@/components/PollScreenCard';
 import { usePollResults } from '@/hooks/usePollResults';
+import { useEventResults } from '@/hooks/useEventResults';
+import { format } from 'date-fns';
 
 const { width } = Dimensions.get('window');
+
+// Helper function to format time strings (HH:mm format) to readable format
+const formatTimeString = (timeString: string | null): string => {
+  if (!timeString) return '';
+
+  try {
+    // Parse time string (HH:mm format) and create a date object for today
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return format(date, 'h:mm a');
+  } catch (error) {
+    console.error('Error formatting time:', timeString, error);
+    return timeString; // Return original string if formatting fails
+  }
+};
 
 type TabType = 'all' | 'created' | 'invited';
 
@@ -256,30 +274,120 @@ export default function EventsScreen() {
 
   // Helper to render event results dropdown - memoized to prevent unnecessary re-renders
   const EventResultsDropdown = useCallback(({ eventId }: { eventId: string }) => {
-    const { results, loading, error } = usePollResults(eventId);
-    if (loading) return <LoadingState />;
+    const { event, eventDates, loading, error } = useEventResults(eventId);
+    const [voteCounts, setVoteCounts] = useState<Record<string, { yes: number; no: number; maybe: number }>>({});
+    const [votesLoading, setVotesLoading] = useState(true);
+
+    // Load vote counts for event dates
+    useEffect(() => {
+      const loadVoteCounts = async () => {
+        if (!eventDates || eventDates.length === 0) {
+          setVotesLoading(false);
+          return;
+        }
+
+        try {
+          setVotesLoading(true);
+
+          // Load all votes for this event's dates
+          const { data: votesData, error: votesError } = await supabase
+            .from('votes_events')
+            .select('*')
+            .in('poll_event_id', eventDates.map(d => d.id));
+
+          if (votesError) {
+            console.error('Error loading votes:', votesError);
+            setVotesLoading(false);
+            return;
+          }
+
+          // Calculate vote counts for each date
+          const counts: Record<string, { yes: number; no: number; maybe: number }> = {};
+
+          eventDates.forEach(date => {
+            counts[date.id] = { yes: 0, no: 0, maybe: 0 };
+          });
+
+          votesData?.forEach(vote => {
+            const dateId = vote.poll_event_id;
+            if (counts[dateId]) {
+              switch (vote.vote_type) {
+                case 2: counts[dateId].yes++; break;
+                case 1: counts[dateId].maybe++; break;
+                case -2: counts[dateId].no++; break;
+              }
+            }
+          });
+
+          setVoteCounts(counts);
+        } catch (err) {
+          console.error('Error loading vote counts:', err);
+        } finally {
+          setVotesLoading(false);
+        }
+      };
+
+      loadVoteCounts();
+    }, [eventDates]);
+
+    if (loading || votesLoading) return <LoadingState />;
     if (error) return <ErrorState message={error} onRetry={() => { }} />;
-    if (!results || results.length === 0) return <Text style={{ padding: 16, color: '#888' }}>No votes yet.</Text>;
-
-    // Transform the data to match PollScreenCard's expected format for events
-    const transformedEvents = results.map(result => {
-      const transformedEvent = { ...result.game } as any;
-
-      // Flatten the nested votes structure using forEach
-      if (result.game.votes?.votes) {
-        Object.entries(result.game.votes.votes).forEach(([voteType, count]) => {
-          transformedEvent[voteType] = count || 0;
-        });
-      }
-
-      return transformedEvent;
-    });
+    if (!eventDates || eventDates.length === 0) return <Text style={{ padding: 16, color: '#888' }}>No event dates available.</Text>;
 
     return (
-      <PollScreenCard
-        games={transformedEvents}
-        onViewDetails={() => router.push({ pathname: '/event/[id]/results', params: { id: eventId } })}
-      />
+      <View style={styles.eventResultsContainer}>
+        <Text style={styles.eventResultsTitle}>Event Date Results</Text>
+
+        {/* Table Header */}
+        <View style={styles.eventTableHeader}>
+          <Text style={styles.eventTableHeaderDate}>Date</Text>
+          <Text style={styles.eventTableHeaderVote}>Ideal</Text>
+          <Text style={styles.eventTableHeaderVote}>Doable</Text>
+          <Text style={styles.eventTableHeaderVote}>No</Text>
+        </View>
+
+        {/* Table Rows */}
+        {eventDates.map((eventDate, index) => {
+          const counts = voteCounts[eventDate.id] || { yes: 0, no: 0, maybe: 0 };
+          const displayLocation = event?.use_same_location && event?.location
+            ? event.location
+            : eventDate.location || 'Location not set';
+          const displayTime = event?.use_same_time && event?.start_time && event?.end_time
+            ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
+            : eventDate.start_time && eventDate.end_time
+              ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
+              : 'Time not set';
+
+          return (
+            <View key={eventDate.id} style={styles.eventTableRow}>
+              <View style={styles.eventTableDateCell}>
+                <Text style={styles.eventTableDateText}>
+                  {format(new Date(eventDate.event_date), 'MMM d, yyyy')}
+                </Text>
+                <Text style={styles.eventTableDateSubtext}>
+                  {displayLocation !== 'Location not set' ? displayLocation : displayTime}
+                </Text>
+              </View>
+              <View style={styles.eventTableVoteCell}>
+                <Text style={[styles.eventTableVoteCount, { color: '#10b981' }]}>{counts.yes}</Text>
+              </View>
+              <View style={styles.eventTableVoteCell}>
+                <Text style={[styles.eventTableVoteCount, { color: '#f59e0b' }]}>{counts.maybe}</Text>
+              </View>
+              <View style={styles.eventTableVoteCell}>
+                <Text style={[styles.eventTableVoteCount, { color: '#ef4444' }]}>{counts.no}</Text>
+              </View>
+            </View>
+          );
+        })}
+
+        <TouchableOpacity
+          style={styles.viewDetailsButton}
+          onPress={() => router.push({ pathname: '/event/[id]/results', params: { id: eventId } })}
+        >
+          <Text style={styles.viewDetailsButtonText}>View Full Results</Text>
+        </TouchableOpacity>
+      </View>
     );
   }, [router]);
 
@@ -768,5 +876,86 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 15,
     color: '#2563eb',
+  },
+  // Event Results Dropdown Styles
+  eventResultsContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+  },
+  eventResultsTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 16,
+  },
+  // Table Styles
+  eventTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+  },
+  eventTableHeaderDate: {
+    flex: 2,
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+  },
+  eventTableHeaderVote: {
+    flex: 1,
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    textAlign: 'center',
+  },
+  eventTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f4',
+    alignItems: 'center',
+  },
+  eventTableDateCell: {
+    flex: 2,
+  },
+  eventTableDateText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    marginBottom: 2,
+  },
+  eventTableDateSubtext: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#666666',
+  },
+  eventTableVoteCell: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  eventTableVoteCount: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+  },
+  viewDetailsButton: {
+    backgroundColor: '#ff9654',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  viewDetailsButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: 'white',
   },
 }); 
