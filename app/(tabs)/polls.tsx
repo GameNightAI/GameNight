@@ -70,10 +70,16 @@ export default function PollsScreen() {
       }
       setCurrentUserId(user.id);
 
-      // Load all polls
+      // Load all game polls (polls with associated games, not events)
       const { data: allPollsData, error: allPollsError } = await supabase
         .from('polls')
-        .select('*')
+        .select(`
+          *,
+          poll_games!inner(
+            id,
+            game_id
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (allPollsError) throw allPollsError;
