@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Animated, Platform, Modal } from 'react-native';
-import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isBefore, startOfDay } from 'date-fns';
+import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isBefore, startOfDay, min, max } from 'date-fns';
 import { CreateEventDetails } from './CreateEventDetails';
 import { DateReviewModal } from './DateReviewModal';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
@@ -37,8 +37,9 @@ interface EventOptions {
 
 export default function CreateEventModal({ visible, onClose, onSuccess, pollId }: CreateEventModalProps) {
   const router = useRouter();
-  const [eventName, setEventName] = useState('GameNyte');
+  const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
+  const [defaultEventName, setDefaultEventName] = useState('');
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [showDateReviewModal, setShowDateReviewModal] = useState(false);
   const [eventOptions, setEventOptions] = useState<EventOptions>({
@@ -67,6 +68,31 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
       setShowDateReviewModal(false);
     }
   }, [visible]);
+
+  // Update default event name when selected dates change
+  useEffect(() => {
+    if (selectedDates.length === 0) {
+      setDefaultEventName('');
+      if (!eventName || eventName.startsWith('GameNyte - Vote on')) {
+        setEventName('');
+      }
+    } else if (selectedDates.length === 1) {
+      const date = selectedDates[0];
+      const newDefaultName = `GameNyte - Vote on ${format(date, 'MMM/DD')}`;
+      setDefaultEventName(newDefaultName);
+      if (!eventName || eventName.startsWith('GameNyte - Vote on')) {
+        setEventName(newDefaultName);
+      }
+    } else {
+      const minDate = min(selectedDates);
+      const maxDate = max(selectedDates);
+      const newDefaultName = `GameNyte - Vote on ${format(minDate, 'MMM/DD')} - ${format(maxDate, 'MMM/DD')}`;
+      setDefaultEventName(newDefaultName);
+      if (!eventName || eventName.startsWith('GameNyte - Vote on')) {
+        setEventName(newDefaultName);
+      }
+    }
+  }, [selectedDates]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev =>
@@ -214,8 +240,9 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
       Toast.show({ type: 'success', text1: 'Event created successfully!' });
 
       // Reset form
-      setEventName('GameNyte');
+      setEventName('');
       setEventDescription('');
+      setDefaultEventName('');
       setEventOptions({
         useSameLocation: true,
         useSameTime: true,

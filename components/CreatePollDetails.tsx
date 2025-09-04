@@ -64,21 +64,18 @@ export const CreatePollDetails: React.FC<CreatePollDetailsProps> = ({
             style={styles.titleInput}
             value={title}
             onChangeText={setTitle}
-            placeholder="Enter a custom title or keep the default"
+            placeholder={title ? "Enter a custom title or keep the default" : "Poll title will appear when games are selected"}
             placeholderTextColor="#999999"
             maxLength={100}
             autoFocus
           />
 
           <Text style={[styles.label, styles.descriptionLabel]}>Description (Optional)</Text>
-          <Text style={styles.sublabel}>
-            Add context, instructions, or any additional information for voters
-          </Text>
           <TextInput
             style={styles.descriptionInput}
             value={description}
             onChangeText={setDescription}
-            placeholder="e.g., Vote for your top 3 games, or Let's decide what to play this weekend"
+            placeholder="Add context, instructions, or any additional information for voters"
             placeholderTextColor="#999999"
             maxLength={500}
             multiline

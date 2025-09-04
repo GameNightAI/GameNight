@@ -44,7 +44,7 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
     <View style={styles.overlay}>
       <View style={styles.dialog}>
         <View style={styles.header}>
-          <Text style={styles.title}>Event Details</Text>
+          <Text style={styles.title}>Edit Event Details</Text>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={handleClose}
@@ -56,29 +56,26 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.label}>Event Name</Text>
+          <Text style={styles.label}>Event Name (Optional)</Text>
           <Text style={styles.sublabel}>
-            Give your event a memorable name
+            Customize your event title or keep the auto-generated name
           </Text>
           <TextInput
             style={styles.titleInput}
             value={eventName}
             onChangeText={setEventName}
-            placeholder="Enter event name"
+            placeholder="Event title will appear when dates are selected"
             placeholderTextColor="#999999"
             maxLength={100}
             autoFocus
           />
 
           <Text style={[styles.label, styles.descriptionLabel]}>Description (Optional)</Text>
-          <Text style={styles.sublabel}>
-            Add context, details, or any additional information about the event
-          </Text>
           <TextInput
             style={styles.descriptionInput}
             value={description}
             onChangeText={setDescription}
-            placeholder="e.g., Monthly board game night, or Casual gaming meetup"
+            placeholder="Add context, details, or any additional information about the event"
             placeholderTextColor="#999999"
             maxLength={500}
             multiline
