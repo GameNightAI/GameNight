@@ -31,6 +31,7 @@ export function ScrollableTimePicker({
   const [manualHourInput, setManualHourInput] = useState('');
   const [manualMinuteInput, setManualMinuteInput] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const hourScrollRef = useRef<ScrollView | null>(null);
   const minuteScrollRef = useRef<ScrollView | null>(null);
@@ -40,11 +41,11 @@ export function ScrollableTimePicker({
   const minutes = [0, 15, 30, 45];
   const periods: ('AM' | 'PM')[] = ['AM', 'PM'];
 
-  // Initialize with current time or provided time
   useEffect(() => {
-    if (visible && initialTime) {
-      const hour = initialTime.getHours();
-      const minute = initialTime.getMinutes();
+    if (visible && !hasInitialized) {
+      const now = initialTime ?? new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
       const displayHour = hour === 0 ? 12 : (hour > 12 ? hour - 12 : hour);
       const displayMinute = Math.floor(minute / 15) * 15;
       const period = hour >= 12 ? 'PM' : 'AM';
@@ -53,7 +54,6 @@ export function ScrollableTimePicker({
       setSelectedMinute(displayMinute);
       setSelectedPeriod(period);
 
-      // Auto-scroll to selected values
       setTimeout(() => {
         const hourIndex = hours.indexOf(displayHour);
         const minuteIndex = minutes.indexOf(displayMinute);
@@ -64,14 +64,16 @@ export function ScrollableTimePicker({
         if (minuteScrollRef.current && minuteIndex >= 0) {
           minuteScrollRef.current.scrollTo({ y: minuteIndex * 60, animated: false });
         }
+
+        setHasInitialized(true);
       }, 100);
-    } else if (visible) {
-      // Reset to default values
-      setSelectedHour(6);
-      setSelectedMinute(0);
-      setSelectedPeriod('PM');
     }
-  }, [visible, initialTime]);
+
+    // Reset init flag when modal closes
+    if (!visible && hasInitialized) {
+      setHasInitialized(false);
+    }
+  }, [visible, initialTime, hasInitialized]);
 
   const createTimeFromSelection = (): Date => {
     const now = new Date();
@@ -100,10 +102,27 @@ export function ScrollableTimePicker({
     const hour = parseInt(manualHourInput, 10);
     const minute = parseInt(manualMinuteInput, 10);
 
-    // Validate inputs
-    if (hour >= 1 && hour <= 12 && minute >= 0 && minute <= 59) {
-      setSelectedHour(hour);
-      setSelectedMinute(minute);
+    if (!isNaN(hour) && !isNaN(minute)) {
+      const clampedHour = Math.max(1, Math.min(12, hour));
+      const clampedMinute = Math.max(0, Math.min(59, minute));
+      const roundedMinute = Math.floor(clampedMinute / 15) * 15;
+
+      setSelectedHour(clampedHour);
+      setSelectedMinute(roundedMinute);
+
+      // Sync scroll to match manual input
+      const hourIndex = hours.indexOf(clampedHour);
+      const minuteIndex = minutes.indexOf(roundedMinute);
+
+      setTimeout(() => {
+        if (hourScrollRef.current && hourIndex >= 0) {
+          hourScrollRef.current.scrollTo({ y: hourIndex * 60, animated: true });
+        }
+        if (minuteScrollRef.current && minuteIndex >= 0) {
+          minuteScrollRef.current.scrollTo({ y: minuteIndex * 60, animated: true });
+        }
+      }, 100);
+
       setShowManualInput(false);
       setManualHourInput('');
       setManualMinuteInput('');
@@ -134,13 +153,6 @@ export function ScrollableTimePicker({
     scrollRef: React.RefObject<ScrollView | null>;
     formatter?: (value: number) => string;
   }) => {
-    const handleScroll = (event: any) => {
-      const index = Math.round(event.nativeEvent.contentOffset.y / 60);
-      if (index >= 0 && index < items.length) {
-        onValueChange(items[index]);
-      }
-    };
-
     const handleScrollEnd = (event: any) => {
       const index = Math.round(event.nativeEvent.contentOffset.y / 60);
       if (index >= 0 && index < items.length) {
@@ -156,7 +168,6 @@ export function ScrollableTimePicker({
           showsVerticalScrollIndicator={false}
           onMomentumScrollEnd={handleScrollEnd}
           onScrollEndDrag={handleScrollEnd}
-          onScroll={Platform.OS === 'web' ? handleScroll : undefined}
         >
           {/* Top padding */}
           <View style={styles.scrollPadding} />
