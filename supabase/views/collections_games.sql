@@ -1,6 +1,4 @@
-drop view collections_games;
-
-create view collections_games with (security_invoker = on) as
+create or replace view collections_games with (security_invoker = on) as
   select
     collections.id,
     collections.user_id,
@@ -28,10 +26,13 @@ create view collections_games with (security_invoker = on) as
     games.thumbnail,
     collections.created_at,
     complexity_view.id as complexity_tier,
-    complexity_view.description as complexity_desc
+    complexity_view.description as complexity_desc,
+    games.boardgamecategory,
+    games.boardgamemechanic,
+    games.boardgamefamily
   from
     collections
     left join games on collections.bgg_game_id = games.id
-    left join complexity_view on
-      complexity_view.min_complexity < games.complexity 
+    left join complexity_view
+      on complexity_view.min_complexity < games.complexity 
       and games.complexity <= complexity_view.max_complexity

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView } from 'react-native';
 import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight } from 'lucide-react-native';
 import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 
@@ -42,9 +42,10 @@ function decodeHTML(html: string): string {
 
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showUnownedExpansions, setShowUnownedExpansions] = useState(false);
 
   const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
+    setIsExpanded(currentIsExpanded => !currentIsExpanded); // Callback function since it depends on the current state
   };
 
   const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
@@ -73,6 +74,60 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       ) : (
         'N/A'
       )
+  );
+
+  const ownedExpansionCount = game.expansions.filter(exp => exp.is_owned).length
+  const ownedExpansionText = game.expansions.length > 0 ?
+    `${ownedExpansionCount} of ${game.expansions.length} expansion${game.expansions.length > 1 ? 's' : ''} owned`
+    : 'No expansions available'
+
+  const expansionItems = game.expansions && game.expansions
+    .filter(exp => exp.is_owned || showUnownedExpansions)
+    .map(exp =>
+      <li
+        key={exp.id}
+        style={exp.is_owned ?
+          styles.infoTextEmphasis
+          : null
+        }
+      >
+        {exp.name}
+      </li>
+    );
+  const expansionList = ( 
+    <View style={[
+      //styles.detailContainer,
+      styles.infoText,
+    ]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={null}
+      >
+        <Text style={styles.infoTextEmphasis}>
+          {ownedExpansionText}
+        </Text>
+        {ownedExpansionCount !== game.expansions.length &&
+          <TouchableOpacity
+              style={styles.expButton}
+              onPress={() => setShowUnownedExpansions(currentShow => !currentShow)}
+            >
+              <Text style={styles.expButtonText}>
+                {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
+              </Text>
+          </TouchableOpacity>
+        }
+      </ScrollView>
+      {expansionItems.length > 0 &&
+        <ul style={{
+          //...styles.infoText,
+          //listStyleType: 'none',
+          paddingLeft: 10,
+        }}>
+          {expansionItems}
+        </ul>
+      }
+    </View>
   );
 
   return (
@@ -186,6 +241,8 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {expansionList}
 
           </View>
         </Animated.View>
@@ -318,5 +375,22 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginTop: 2,
     textAlign: 'center',
+  },
+  expButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 8,
+    paddingHorizontal: 8,
+    //paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+  },
+  expButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    //marginLeft: 8,
   },
 });

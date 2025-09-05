@@ -1,6 +1,4 @@
-drop view expansions_players_view;
-
-create view expansions_players_view with (security_invoker = on) as
+create or replace view expansions_players_view with (security_invoker = on) as
   select
     collections_games.*,
     e.min_exp_players,

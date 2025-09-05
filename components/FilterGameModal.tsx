@@ -85,12 +85,54 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     setOpenDropdownIndex(isOpen ? index : null);
   };
 
+  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
+    .map(_ => ({ value: parseInt(_), label: _ }));
+  const timeOptions = [
+    { value: 1, min: 1, max: 30, label: '30 min or less' },
+    { value: 31, min: 31, max: 60, label: '31-60 min' },
+    { value: 61, min: 61, max: 90, label: '61-90 min' },
+    { value: 91, min: 91, max: 120, label: '91-120 min' },
+    { value: 121, min: 121, max: Infinity, label: 'More than 120 min' },
+  ];
+  const ageOptions = [
+    { value: 1, min: 1, max: 5, label: '5 and under' },
+    { value: 6, min: 6, max: 7, label: '6-7' },
+    { value: 8, min: 8, max: 9, label: '8-9' },
+    { value: 10, min: 10, max: 11, label: '10-11' },
+    { value: 12, min: 12, max: 13, label: '12-13' },
+    { value: 14, min: 14, max: 15, label: '14-15' },
+    { value: 16, min: 16, max: Infinity, label: '16 and up' },
+  ];
+  const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
+    .map(_ => ({ value: _, label: _ }));
+  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy']
+    .map((_, i) => ({ value: i + 1, label: _ }));
+
+  const handleFilter = () => {
+    //onApplyFilter()
+    //onSearch(players, time, playTime === '120+');
+    onClose();
+  };
+
+  const toggleFilterOption = (
+    option: FilterOption,
+    currentValues: FilterOption[],
+    setter: (value: FilterOption[]) => void
+  ) => {
+    const isSelected = currentValues.some(v => v.value === option.value);
+    if (isSelected) {
+      setter(currentValues.filter(v => v.value !== option.value));
+    } else {
+      setter([...currentValues, option]);
+    }
+  };
+
   const clearAllFilters = () => {
     filterConfigs.forEach(config => {
       config.onChange([]);
     });
-  };
-
+  }
+    
   const handleApplyFilters = () => {
     onApplyFilters();
   };
