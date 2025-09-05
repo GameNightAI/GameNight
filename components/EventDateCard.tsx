@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Calendar, MapPin, Clock, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { Calendar, MapPin, Clock } from 'lucide-react-native';
 import { format } from 'date-fns';
 
 import { EVENT_VOTING_OPTIONS, EVENT_ICON_MAP, EventVoteType, getEventIconColor, getEventVoteBgColor, getEventVoteBorderColor } from './eventVotingOptions';
 import { PollEvent } from '@/types/poll';
+import { TruncatedText } from './TruncatedText';
 
 interface EventDateCardProps {
   eventDate: PollEvent;
@@ -32,8 +33,6 @@ export const EventDateCard = ({
   const isMobile = width < 500;
   const isSmallScreen = width < 400;
 
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  const toggleExpanded = () => setIsExpanded((prev) => !prev);
 
   const getButtonStyle = (voteType: EventVoteType) => {
     const isSelected = selectedVote === voteType;
@@ -56,121 +55,66 @@ export const EventDateCard = ({
 
   return (
     <Animated.View entering={FadeIn.delay(index * 100)} style={styles.card}>
-      <TouchableOpacity
-        style={styles.expandTouchable}
-        activeOpacity={0.85}
-        onPress={toggleExpanded}
-      >
-        {/* Main content area */}
-        <View style={[styles.mainContent, isMobile && styles.mainContentMobile]}>
-          {/* Date info and details row */}
-          <View style={[styles.dateInfoRow, isMobile && styles.dateInfoRowMobile]}>
-            <View style={styles.dateIcon}>
-              <Calendar size={isSmallScreen ? 20 : 24} color="#8b5cf6" />
-            </View>
-            <View style={[styles.dateInfo, isMobile && styles.dateInfoMobile]}>
-              <Text style={[styles.dateText, isSmallScreen && styles.dateTextSmall]}>
-                {format(date, 'EEEE, MMMM d, yyyy')}
-              </Text>
-              <View style={styles.dateDetails}>
-                <View style={styles.dateDetailRow}>
-                  <MapPin size={isSmallScreen ? 12 : 14} color="#6b7280" />
-                  <Text style={[styles.dateDetailText, isSmallScreen && styles.dateDetailTextSmall]}>
-                    {displayLocation}
-                  </Text>
-                </View>
-                <View style={styles.dateDetailRow}>
-                  <Clock size={isSmallScreen ? 12 : 14} color="#6b7280" />
-                  <Text style={[styles.dateDetailText, isSmallScreen && styles.dateDetailTextSmall]}>
-                    {displayTime}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.chevronContainer}>
-              <Text style={[styles.infoText, isSmallScreen && styles.infoTextSmall]}>Vote</Text>
-              {isExpanded ? (
-                <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
-              ) : (
-                <ChevronRight size={isSmallScreen ? 20 : 24} color="#ff9654" />
-              )}
-            </View>
+      {/* Main content area */}
+      <View style={[styles.mainContent, isMobile && styles.mainContentMobile]}>
+        {/* Date info and details row */}
+        <View style={[styles.dateInfoRow, isMobile && styles.dateInfoRowMobile]}>
+          <View style={styles.dateIcon}>
+            <Calendar size={isSmallScreen ? 20 : 24} color="#8b5cf6" />
           </View>
-
-          {/* Voting buttons row - moved below date info for mobile */}
-          <View style={[styles.voteButtonsContainer, isMobile && styles.voteButtonsContainerMobile]}>
-            {EVENT_VOTING_OPTIONS.map(option => {
-              const IconComponent = EVENT_ICON_MAP[option.icon];
-              return (
-                <View key={option.value} style={styles.voteButtonWrapper}>
-                  <TouchableOpacity
-                    style={getButtonStyle(option.value)}
-                    onPress={() => onVote(eventDate.id, option.value)}
-                    disabled={disabled}
-                  >
-                    <IconComponent
-                      size={isSmallScreen ? 16 : 20}
-                      color={getEventIconColor(option.value, selectedVote === option.value)}
-                    />
-                  </TouchableOpacity>
-                  <Text style={styles.voteButtonLabel}>{option.label}</Text>
-                  {voteCounts && (
-                    <Text style={styles.voteCount}>
-                      {option.value === 2 ? voteCounts.yes :
-                        option.value === 1 ? voteCounts.maybe :
-                          voteCounts.no}
-                    </Text>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      </TouchableOpacity>
-
-      {isExpanded && (
-        <Animated.View
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(150)}
-          style={styles.expandedContent}
-        >
-          <View style={styles.detailsContainer}>
-            <View style={styles.detailRow}>
-              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
-                <Calendar size={16} color="#8b5cf6" />
-                <Text style={styles.detailLabel}>Date</Text>
-                <Text style={styles.detailValue}>
-                  {format(date, 'MMMM d, yyyy')}
-                </Text>
+          <View style={[styles.dateInfo, isMobile && styles.dateInfoMobile]}>
+            <Text style={[styles.dateText, isSmallScreen && styles.dateTextSmall]}>
+              {format(date, 'EEEE, MMMM d, yyyy')}
+            </Text>
+            <View style={styles.dateDetails}>
+              <View style={styles.dateDetailRow}>
+                <MapPin size={isSmallScreen ? 12 : 14} color="#6b7280" />
+                <TruncatedText
+                  text={displayLocation}
+                  maxLength={35}
+                  textStyle={[styles.dateDetailText, isSmallScreen && styles.dateDetailTextSmall]}
+                  buttonTextStyle={[styles.truncateButtonText, isSmallScreen && styles.truncateButtonTextSmall]}
+                />
               </View>
-              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
-                <Clock size={16} color="#6b7280" />
-                <Text style={styles.detailLabel}>Time</Text>
-                <Text style={styles.detailValue}>
+              <View style={styles.dateDetailRow}>
+                <Clock size={isSmallScreen ? 12 : 14} color="#6b7280" />
+                <Text style={[styles.dateDetailText, isSmallScreen && styles.dateDetailTextSmall]}>
                   {displayTime}
                 </Text>
               </View>
             </View>
-            <View style={styles.detailRow}>
-              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
-                <MapPin size={16} color="#ef4444" />
-                <Text style={styles.detailLabel}>Location</Text>
-                <Text style={styles.detailValue}>
-                  {displayLocation}
-                </Text>
-              </View>
-              {voteCounts && (
-                <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
-                  <Text style={styles.detailLabel}>Total Votes</Text>
-                  <Text style={styles.detailValue}>
-                    {voteCounts.yes + voteCounts.no + voteCounts.maybe}
-                  </Text>
-                </View>
-              )}
-            </View>
           </View>
-        </Animated.View>
-      )}
+        </View>
+
+        {/* Voting buttons row - moved below date info for mobile */}
+        <View style={[styles.voteButtonsContainer, isMobile && styles.voteButtonsContainerMobile]}>
+          {EVENT_VOTING_OPTIONS.map(option => {
+            const IconComponent = EVENT_ICON_MAP[option.icon];
+            return (
+              <View key={option.value} style={styles.voteButtonWrapper}>
+                <TouchableOpacity
+                  style={getButtonStyle(option.value)}
+                  onPress={() => onVote(eventDate.id, option.value)}
+                  disabled={disabled}
+                >
+                  <IconComponent
+                    size={isSmallScreen ? 16 : 20}
+                    color={getEventIconColor(option.value, selectedVote === option.value)}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.voteButtonLabel}>{option.label}</Text>
+                {voteCounts && (
+                  <Text style={styles.voteCount}>
+                    {option.value === 2 ? voteCounts.yes :
+                      option.value === 1 ? voteCounts.maybe :
+                        voteCounts.no}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      </View>
     </Animated.View>
   );
 };
@@ -253,21 +197,6 @@ const styles = StyleSheet.create({
   dateDetailTextSmall: {
     fontSize: 11,
   },
-  chevronContainer: {
-    marginLeft: 'auto',
-    marginRight: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  infoText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-  },
-  infoTextSmall: {
-    fontSize: 10,
-  },
   voteButtonsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -311,46 +240,13 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
   },
-  expandTouchable: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  expandedContent: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  detailsContainer: {
-    gap: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  detailItem: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#f7f9fc',
-    padding: 12,
-    borderRadius: 8,
-  },
-  detailItemSmall: {
-    borderRadius: 4,
-  },
-  detailLabel: {
-    fontFamily: 'Poppins-Regular',
+  truncateButtonText: {
+    color: '#0070f3',
     fontSize: 12,
-    color: '#666666',
-    marginTop: 4,
-    textAlign: 'center',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
-  detailValue: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    marginTop: 2,
-    textAlign: 'center',
+  truncateButtonTextSmall: {
+    fontSize: 10,
   },
 });

@@ -4,8 +4,6 @@ import { format } from 'date-fns';
 import { ScrollableTimePicker } from './ScrollableTimePicker';
 
 interface EventOptions {
-  useSameLocation: boolean;
-  useSameTime: boolean;
   location: string;
   startTime: Date | null;
   endTime: Date | null;
@@ -24,6 +22,7 @@ interface DateReviewModalProps {
   onFinalize: (eventOptions: EventOptions) => void;
   selectedDates: Date[];
   eventOptions: EventOptions;
+  defaultLocation: string;
   pollId?: string; // Optional poll ID for creating events
 }
 
@@ -32,7 +31,8 @@ export function DateReviewModal({
   onClose,
   onFinalize,
   selectedDates,
-  eventOptions
+  eventOptions,
+  defaultLocation
 }: DateReviewModalProps) {
   const [localEventOptions, setLocalEventOptions] = useState(eventOptions);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -40,6 +40,8 @@ export function DateReviewModal({
   const [timeValidationError, setTimeValidationError] = useState('');
   const [dateSpecificOptions, setDateSpecificOptions] = useState<Record<string, DateSpecificOptions>>({});
   const [currentEditingDate, setCurrentEditingDate] = useState<string>('');
+  const [customTimeDates, setCustomTimeDates] = useState<Set<string>>(new Set());
+  const [customLocationDates, setCustomLocationDates] = useState<Set<string>>(new Set());
 
   const formatTime = (date: Date | null): string => {
     if (!date) return '';
@@ -54,6 +56,11 @@ export function DateReviewModal({
 
   const saveTimeSelection = (newTime: Date) => {
     if (timePickerMode === 'start') {
+      // Validate start time is before end time if end time exists
+      if (localEventOptions.endTime && newTime >= localEventOptions.endTime) {
+        setTimeValidationError('Start time must be before end time');
+        return;
+      }
       setLocalEventOptions(prev => ({ ...prev, startTime: newTime }));
     } else {
       // Validate end time is after start time
@@ -79,6 +86,36 @@ export function DateReviewModal({
 
   const getDateKey = (date: Date): string => {
     return date.toISOString().split('T')[0];
+  };
+
+  const toggleCustomTime = (date: Date) => {
+    const dateKey = getDateKey(date);
+    setCustomTimeDates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dateKey)) {
+        newSet.delete(dateKey);
+        // Clear custom time when toggling off
+        updateDateSpecificOptions(date, { startTime: null, endTime: null });
+      } else {
+        newSet.add(dateKey);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleCustomLocation = (date: Date) => {
+    const dateKey = getDateKey(date);
+    setCustomLocationDates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dateKey)) {
+        newSet.delete(dateKey);
+        // Clear custom location when toggling off
+        updateDateSpecificOptions(date, { location: '' });
+      } else {
+        newSet.add(dateKey);
+      }
+      return newSet;
+    });
   };
 
   const getDateSpecificOptions = (date: Date): DateSpecificOptions => {
@@ -117,19 +154,19 @@ export function DateReviewModal({
     };
 
     if (timePickerMode === 'start') {
-      // Validate end time is after start time
+      // Validate start time is before end time if end time exists
       if (currentOptions.endTime && newTime >= currentOptions.endTime) {
-        setTimeValidationError('End time must be after start time');
+        setTimeValidationError('Start time must be before end time');
         return;
       }
-      updateDateSpecificOptions(new Date(dateKey), { startTime: newTime });
+      updateDateSpecificOptions(new Date(dateKey + 'T00:00:00'), { startTime: newTime });
     } else {
       // Validate end time is after start time
       if (currentOptions.startTime && newTime <= currentOptions.startTime) {
         setTimeValidationError('End time must be after start time');
         return;
       }
-      updateDateSpecificOptions(new Date(dateKey), { endTime: newTime });
+      updateDateSpecificOptions(new Date(dateKey + 'T00:00:00'), { endTime: newTime });
     }
 
     setShowTimePicker(false);
@@ -200,49 +237,26 @@ export function DateReviewModal({
             ) : null}
           </View>
 
-          {/* Location Input */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Event Location</Text>
-            <TextInput
-              style={styles.textInput}
-              value={localEventOptions.location}
-              onChangeText={(text) => setLocalEventOptions(prev => ({ ...prev, location: text }))}
-              placeholder="Enter event location"
-            />
-          </View>
 
-          {/* Toggle Switches */}
-          <View style={styles.toggleSection}>
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Use same time for all dates</Text>
-              <Switch
-                value={localEventOptions.useSameTime}
-                onValueChange={(value) => setLocalEventOptions(prev => ({ ...prev, useSameTime: value }))}
-              />
-            </View>
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Use same location for all dates</Text>
-              <Switch
-                value={localEventOptions.useSameLocation}
-                onValueChange={(value) => setLocalEventOptions(prev => ({ ...prev, useSameLocation: value }))}
-              />
-            </View>
-          </View>
 
           <ScrollView style={styles.dateReviewContent} showsVerticalScrollIndicator={false}>
             {selectedDates.map((date, index) => {
+              const dateKey = getDateKey(date);
               const dateOptions = getDateSpecificOptions(date);
-              const displayTime = localEventOptions.useSameTime
-                ? (localEventOptions.startTime && localEventOptions.endTime
-                  ? `${formatTime(localEventOptions.startTime)} - ${formatTime(localEventOptions.endTime)}`
-                  : 'Time not set')
-                : (dateOptions.startTime && dateOptions.endTime
+              const hasCustomTime = customTimeDates.has(dateKey);
+              const hasCustomLocation = customLocationDates.has(dateKey);
+
+              const displayTime = hasCustomTime
+                ? (dateOptions.startTime && dateOptions.endTime
                   ? `${formatTime(dateOptions.startTime)} - ${formatTime(dateOptions.endTime)}`
+                  : 'Time not set')
+                : (localEventOptions.startTime && localEventOptions.endTime
+                  ? `${formatTime(localEventOptions.startTime)} - ${formatTime(localEventOptions.endTime)}`
                   : 'Time not set');
 
-              const displayLocation = localEventOptions.useSameLocation
-                ? localEventOptions.location || 'Location not set'
-                : dateOptions.location || 'Location not set';
+              const displayLocation = hasCustomLocation
+                ? (dateOptions.location || 'Location not set')
+                : (defaultLocation || 'Location not set');
 
               return (
                 <View key={index} style={styles.dateCard}>
@@ -253,50 +267,63 @@ export function DateReviewModal({
                     <Text style={styles.dateCardDate}>
                       {format(date, 'MMMM d, yyyy')}
                     </Text>
-                    <Text style={styles.dateCardDayTime}>
-                      {format(date, 'EEEE')} • {displayTime}
-                    </Text>
-                    <Text style={styles.dateCardLocation}>
-                      📍 {displayLocation}
-                    </Text>
-
-                    {/* Date-specific options when toggles are off */}
-                    {!localEventOptions.useSameTime && (
-                      <View style={styles.dateSpecificTimeSection}>
-                        <Text style={styles.dateSpecificLabel}>Time for this date:</Text>
-                        <View style={styles.dateSpecificTimeInputs}>
+                    <View style={styles.dateCardDayTimeContainer}>
+                      <Text style={styles.dateCardDayTime}>
+                        {format(date, 'EEEE')} •
+                      </Text>
+                      {hasCustomTime ? (
+                        <View style={styles.customTimeInputs}>
                           <TouchableOpacity
-                            style={styles.dateTimeButton}
+                            style={styles.inlineTimeButton}
                             onPress={() => openTimePickerForDate(date, 'start')}
                           >
-                            <Text style={styles.dateTimeButtonText}>
+                            <Text style={styles.inlineTimeButtonText}>
                               {dateOptions.startTime ? formatTime(dateOptions.startTime) : 'Start Time'}
                             </Text>
                           </TouchableOpacity>
+                          <Text style={styles.timeSeparator}>-</Text>
                           <TouchableOpacity
-                            style={styles.dateTimeButton}
+                            style={styles.inlineTimeButton}
                             onPress={() => openTimePickerForDate(date, 'end')}
                           >
-                            <Text style={styles.dateTimeButtonText}>
+                            <Text style={styles.inlineTimeButtonText}>
                               {dateOptions.endTime ? formatTime(dateOptions.endTime) : 'End Time'}
                             </Text>
                           </TouchableOpacity>
                         </View>
-                      </View>
-                    )}
-
-                    {!localEventOptions.useSameLocation && (
-                      <View style={styles.dateSpecificLocationSection}>
-                        <Text style={styles.dateSpecificLabel}>Location for this date:</Text>
+                      ) : (
+                        <Text style={styles.dateCardDayTime}>{displayTime}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.dateCardLocation}>
+                      📍 {hasCustomLocation ? (
                         <TextInput
-                          style={styles.dateLocationInput}
+                          style={styles.inlineLocationInput}
                           value={dateOptions.location}
                           onChangeText={(text) => updateDateSpecificOptions(date, { location: text })}
-                          placeholder="Enter location for this date"
+                          placeholder="Enter location"
                           maxLength={50}
                         />
+                      ) : displayLocation}
+                    </Text>
+
+                    {/* Toggle Switches */}
+                    <View style={styles.dateToggles}>
+                      <View style={styles.toggleRow}>
+                        <Text style={styles.toggleLabel}>Custom Time</Text>
+                        <Switch
+                          value={hasCustomTime}
+                          onValueChange={() => toggleCustomTime(date)}
+                        />
                       </View>
-                    )}
+                      <View style={styles.toggleRow}>
+                        <Text style={styles.toggleLabel}>Custom Location</Text>
+                        <Switch
+                          value={hasCustomLocation}
+                          onValueChange={() => toggleCustomLocation(date)}
+                        />
+                      </View>
+                    </View>
                   </View>
                 </View>
               );
@@ -316,7 +343,7 @@ export function DateReviewModal({
                 // Prepare the final event options with date-specific data
                 const finalOptions = {
                   ...localEventOptions,
-                  dateSpecificOptions: (!localEventOptions.useSameTime || !localEventOptions.useSameLocation) ? dateSpecificOptions : {}
+                  dateSpecificOptions: dateSpecificOptions
                 };
                 onFinalize(finalOptions);
               }}
@@ -453,10 +480,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#666666',
-  },
-  toggleSection: {
-    marginHorizontal: 16,
-    marginBottom: 0,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -605,5 +628,52 @@ const styles = StyleSheet.create({
     borderColor: '#e1e5ea',
     fontSize: 14,
     color: '#333333',
+  },
+  dateCardDayTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  customTimeInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  inlineTimeButton: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+  },
+  inlineTimeButtonText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#1a2b5f',
+  },
+  timeSeparator: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginHorizontal: 4,
+  },
+  inlineLocationInput: {
+    fontFamily: 'Poppins-Regular',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 6,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    fontSize: 14,
+    color: '#333333',
+    marginLeft: 4,
+    flex: 1,
+  },
+  dateToggles: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5ea',
   },
 });

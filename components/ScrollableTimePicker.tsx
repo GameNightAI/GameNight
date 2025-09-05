@@ -30,8 +30,10 @@ export function ScrollableTimePicker({
   const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>('PM');
   const [manualHourInput, setManualHourInput] = useState('');
   const [manualMinuteInput, setManualMinuteInput] = useState('');
+  const [manualPeriodInput, setManualPeriodInput] = useState<'AM' | 'PM'>('PM');
   const [showManualInput, setShowManualInput] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [lastValidTime, setLastValidTime] = useState<{ hour: number, minute: number, period: 'AM' | 'PM' } | null>(null);
 
   const hourScrollRef = useRef<ScrollView | null>(null);
   const minuteScrollRef = useRef<ScrollView | null>(null);
@@ -54,6 +56,11 @@ export function ScrollableTimePicker({
       setSelectedMinute(displayMinute);
       setSelectedPeriod(period);
 
+      // Initialize manual input values to match the initial time
+      setManualHourInput(displayHour.toString());
+      setManualMinuteInput(displayMinute.toString().padStart(2, '0'));
+      setManualPeriodInput(period);
+
       setTimeout(() => {
         const hourIndex = hours.indexOf(displayHour);
         const minuteIndex = minutes.indexOf(displayMinute);
@@ -75,44 +82,110 @@ export function ScrollableTimePicker({
     }
   }, [visible, initialTime, hasInitialized]);
 
+  // Update lastValidTime when scroll wheel values change
+  useEffect(() => {
+    if (!showManualInput) {
+      setLastValidTime({
+        hour: selectedHour,
+        minute: selectedMinute,
+        period: selectedPeriod
+      });
+    }
+  }, [selectedHour, selectedMinute, selectedPeriod, showManualInput]);
+
   const createTimeFromSelection = (): Date => {
     const now = new Date();
-    let hour = selectedHour;
+
+    // Use manual input values if in manual input mode, otherwise use selected values
+    let hour, minute, period;
+
+    if (showManualInput) {
+      const manualHour = parseInt(manualHourInput, 10);
+      const manualMinute = parseInt(manualMinuteInput, 10);
+
+      hour = (!isNaN(manualHour) && manualHour >= 1 && manualHour <= 12) ? manualHour : selectedHour;
+      minute = (!isNaN(manualMinute) && manualMinute >= 0 && manualMinute <= 59)
+        ? Math.floor(manualMinute / 15) * 15
+        : selectedMinute;
+      period = manualPeriodInput;
+    } else {
+      hour = selectedHour;
+      minute = selectedMinute;
+      period = selectedPeriod;
+    }
 
     // Convert to 24-hour format
-    if (selectedPeriod === 'PM' && selectedHour !== 12) {
+    if (period === 'PM' && hour !== 12) {
       hour += 12;
-    } else if (selectedPeriod === 'AM' && selectedHour === 12) {
+    } else if (period === 'AM' && hour === 12) {
       hour = 0;
     }
 
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, selectedMinute);
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute);
   };
 
   const handleSave = () => {
+    // createTimeFromSelection() already handles manual input values
     const newTime = createTimeFromSelection();
     onSave(newTime);
   };
 
   const formatTime = (): string => {
+    // If in manual input mode, show the current manual input values
+    if (showManualInput) {
+      // Always show what's in the manual input fields, even if empty
+      const displayHour = manualHourInput || '';
+      const displayMinute = manualMinuteInput || '';
+      const period = manualPeriodInput;
+
+      // Format the display with proper padding for minutes
+      const formattedMinute = displayMinute ? displayMinute.padStart(2, '0') : '';
+      return `${displayHour}:${formattedMinute} ${period}`;
+    }
     return `${selectedHour}:${selectedMinute.toString().padStart(2, '0')} ${selectedPeriod}`;
   };
 
-  const handleManualTimeSubmit = () => {
+  const validateAndSetManualTime = () => {
     const hour = parseInt(manualHourInput, 10);
     const minute = parseInt(manualMinuteInput, 10);
 
-    if (!isNaN(hour) && !isNaN(minute)) {
-      const clampedHour = Math.max(1, Math.min(12, hour));
-      const clampedMinute = Math.max(0, Math.min(59, minute));
-      const roundedMinute = Math.floor(clampedMinute / 15) * 15;
+    let shouldUpdate = false;
+    let clampedHour = selectedHour;
+    let clampedMinute = selectedMinute;
 
+    // Update hour if valid (1-12)
+    if (!isNaN(hour) && hour >= 1 && hour <= 12) {
+      clampedHour = Math.max(1, Math.min(12, hour));
+      shouldUpdate = true;
+    }
+
+    // Update minute if valid (0-59)
+    if (!isNaN(minute) && minute >= 0 && minute <= 59) {
+      clampedMinute = Math.floor(minute / 15) * 15; // Round to nearest 15
+      shouldUpdate = true;
+    }
+
+    // Update period if it changed
+    if (manualPeriodInput !== selectedPeriod) {
+      shouldUpdate = true;
+    }
+
+    if (shouldUpdate) {
+      // Update the selected values immediately
       setSelectedHour(clampedHour);
-      setSelectedMinute(roundedMinute);
+      setSelectedMinute(clampedMinute);
+      setSelectedPeriod(manualPeriodInput);
+
+      // Store the last valid time
+      setLastValidTime({
+        hour: clampedHour,
+        minute: clampedMinute,
+        period: manualPeriodInput
+      });
 
       // Sync scroll to match manual input
       const hourIndex = hours.indexOf(clampedHour);
-      const minuteIndex = minutes.indexOf(roundedMinute);
+      const minuteIndex = minutes.indexOf(clampedMinute);
 
       setTimeout(() => {
         if (hourScrollRef.current && hourIndex >= 0) {
@@ -122,11 +195,39 @@ export function ScrollableTimePicker({
           minuteScrollRef.current.scrollTo({ y: minuteIndex * 60, animated: true });
         }
       }, 100);
-
-      setShowManualInput(false);
-      setManualHourInput('');
-      setManualMinuteInput('');
     }
+  };
+
+  const handleManualInputBlur = () => {
+    // Apply the manual input values to the selected values before exiting
+    const hour = parseInt(manualHourInput, 10);
+    const minute = parseInt(manualMinuteInput, 10);
+
+    if (!isNaN(hour) && hour >= 1 && hour <= 12) {
+      setSelectedHour(hour);
+    }
+    if (!isNaN(minute) && minute >= 0 && minute <= 59) {
+      setSelectedMinute(Math.floor(minute / 15) * 15);
+    }
+    setSelectedPeriod(manualPeriodInput);
+
+    setShowManualInput(false);
+  };
+
+  const handleManualInputSubmit = () => {
+    // Apply the manual input values to the selected values before exiting
+    const hour = parseInt(manualHourInput, 10);
+    const minute = parseInt(manualMinuteInput, 10);
+
+    if (!isNaN(hour) && hour >= 1 && hour <= 12) {
+      setSelectedHour(hour);
+    }
+    if (!isNaN(minute) && minute >= 0 && minute <= 59) {
+      setSelectedMinute(Math.floor(minute / 15) * 15);
+    }
+    setSelectedPeriod(manualPeriodInput);
+
+    setShowManualInput(false);
   };
 
   const toggleManualInput = () => {
@@ -134,9 +235,12 @@ export function ScrollableTimePicker({
     if (!showManualInput) {
       setManualHourInput(selectedHour.toString());
       setManualMinuteInput(selectedMinute.toString().padStart(2, '0'));
-    } else {
-      setManualHourInput('');
-      setManualMinuteInput('');
+      setManualPeriodInput(selectedPeriod);
+      setLastValidTime({
+        hour: selectedHour,
+        minute: selectedMinute,
+        period: selectedPeriod
+      });
     }
   };
 
@@ -160,6 +264,15 @@ export function ScrollableTimePicker({
       }
     };
 
+    const handleTimeOptionPress = (item: number) => {
+      onValueChange(item);
+      // Scroll to the selected item
+      const index = items.indexOf(item);
+      if (scrollRef.current && index >= 0) {
+        scrollRef.current.scrollTo({ y: index * 60, animated: true });
+      }
+    };
+
     return (
       <View style={styles.timeColumn}>
         <ScrollView
@@ -173,14 +286,18 @@ export function ScrollableTimePicker({
           <View style={styles.scrollPadding} />
 
           {items.map((item, index) => (
-            <View key={item} style={styles.timeOption}>
+            <TouchableOpacity
+              key={item}
+              style={styles.timeOption}
+              onPress={() => handleTimeOptionPress(item)}
+            >
               <Text style={[
                 styles.timeOptionText,
                 item === selectedValue && styles.timeOptionTextSelected
               ]}>
                 {formatter ? formatter(item) : item}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))}
 
           {/* Bottom padding */}
@@ -219,41 +336,126 @@ export function ScrollableTimePicker({
                   <TextInput
                     style={styles.manualTimeInput}
                     value={manualHourInput}
-                    onChangeText={setManualHourInput}
+                    onChangeText={(text) => {
+                      setManualHourInput(text);
+                      // Update time immediately as user types
+                      setTimeout(() => validateAndSetManualTime(), 50);
+                    }}
+                    onSubmitEditing={() => {
+                      validateAndSetManualTime();
+                      setShowManualInput(false);
+                    }}
                     placeholder="6"
                     placeholderTextColor="#999999"
                     keyboardType="numeric"
                     maxLength={2}
                     autoFocus={true}
+                    returnKeyType="next"
                   />
                   <Text style={styles.timeSeparator}>:</Text>
                   <TextInput
                     style={styles.manualTimeInput}
                     value={manualMinuteInput}
-                    onChangeText={setManualMinuteInput}
+                    onChangeText={(text) => {
+                      setManualMinuteInput(text);
+                      // Update time immediately as user types
+                      setTimeout(() => validateAndSetManualTime(), 50);
+                    }}
+                    onSubmitEditing={() => {
+                      validateAndSetManualTime();
+                      setShowManualInput(false);
+                    }}
                     placeholder="30"
                     placeholderTextColor="#999999"
                     keyboardType="numeric"
                     maxLength={2}
+                    returnKeyType="done"
                   />
-                  <Text style={styles.timeSeparator}>{selectedPeriod}</Text>
                 </View>
-                <View style={styles.manualInputActions}>
+                <View style={styles.manualPeriodContainer}>
                   <TouchableOpacity
-                    style={styles.manualInputButton}
-                    onPress={handleManualTimeSubmit}
-                  >
-                    <Text style={styles.manualInputButtonText}>✓</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.manualInputButton}
+                    style={[
+                      styles.manualPeriodButton,
+                      manualPeriodInput === 'AM' && styles.manualPeriodButtonSelected
+                    ]}
                     onPress={() => {
-                      setShowManualInput(false);
-                      setManualHourInput('');
-                      setManualMinuteInput('');
+                      setManualPeriodInput('AM');
+                      setSelectedPeriod('AM');
+                      // Immediately update scroll wheel to match
+                      const hour = parseInt(manualHourInput, 10);
+                      const minute = parseInt(manualMinuteInput, 10);
+
+                      if (!isNaN(hour) && hour >= 1 && hour <= 12) {
+                        setSelectedHour(hour);
+                        // Sync scroll wheel position
+                        const hourIndex = hours.indexOf(hour);
+                        setTimeout(() => {
+                          if (hourScrollRef.current && hourIndex >= 0) {
+                            hourScrollRef.current.scrollTo({ y: hourIndex * 60, animated: true });
+                          }
+                        }, 50);
+                      }
+                      if (!isNaN(minute) && minute >= 0 && minute <= 59) {
+                        const roundedMinute = Math.floor(minute / 15) * 15;
+                        setSelectedMinute(roundedMinute);
+                        // Sync scroll wheel position
+                        const minuteIndex = minutes.indexOf(roundedMinute);
+                        setTimeout(() => {
+                          if (minuteScrollRef.current && minuteIndex >= 0) {
+                            minuteScrollRef.current.scrollTo({ y: minuteIndex * 60, animated: true });
+                          }
+                        }, 50);
+                      }
                     }}
                   >
-                    <Text style={styles.manualInputButtonText}>✕</Text>
+                    <Text style={[
+                      styles.manualPeriodButtonText,
+                      manualPeriodInput === 'AM' && styles.manualPeriodButtonTextSelected
+                    ]}>
+                      AM
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.manualPeriodButton,
+                      manualPeriodInput === 'PM' && styles.manualPeriodButtonSelected
+                    ]}
+                    onPress={() => {
+                      setManualPeriodInput('PM');
+                      setSelectedPeriod('PM');
+                      // Immediately update scroll wheel to match
+                      const hour = parseInt(manualHourInput, 10);
+                      const minute = parseInt(manualMinuteInput, 10);
+
+                      if (!isNaN(hour) && hour >= 1 && hour <= 12) {
+                        setSelectedHour(hour);
+                        // Sync scroll wheel position
+                        const hourIndex = hours.indexOf(hour);
+                        setTimeout(() => {
+                          if (hourScrollRef.current && hourIndex >= 0) {
+                            hourScrollRef.current.scrollTo({ y: hourIndex * 60, animated: true });
+                          }
+                        }, 50);
+                      }
+                      if (!isNaN(minute) && minute >= 0 && minute <= 59) {
+                        const roundedMinute = Math.floor(minute / 15) * 15;
+                        setSelectedMinute(roundedMinute);
+                        // Sync scroll wheel position
+                        const minuteIndex = minutes.indexOf(roundedMinute);
+                        setTimeout(() => {
+                          if (minuteScrollRef.current && minuteIndex >= 0) {
+                            minuteScrollRef.current.scrollTo({ y: minuteIndex * 60, animated: true });
+                          }
+                        }, 50);
+                      }
+                    }}
+                  >
+                    <Text style={[
+                      styles.manualPeriodButtonText,
+                      manualPeriodInput === 'PM' && styles.manualPeriodButtonTextSelected
+                    ]}>
+                      PM
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -363,12 +565,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '90%',
     maxWidth: 350,
-    maxHeight: '70%',
+    height: '80%',
+    maxHeight: 600,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    display: 'flex',
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
@@ -412,7 +617,33 @@ const styles = StyleSheet.create({
   manualInputContainer: {
     flexDirection: 'column',
     alignItems: 'center',
+    gap: 16,
+  },
+  manualPeriodContainer: {
+    flexDirection: 'row',
     gap: 12,
+  },
+  manualPeriodButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  manualPeriodButtonSelected: {
+    backgroundColor: '#0070f3',
+    borderColor: '#0070f3',
+  },
+  manualPeriodButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#666666',
+  },
+  manualPeriodButtonTextSelected: {
+    color: 'white',
   },
   manualInputFields: {
     flexDirection: 'row',
@@ -437,29 +668,13 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginHorizontal: 4,
   },
-  manualInputActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  manualInputButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#0070f3',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  manualInputButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: 'white',
-  },
   timePickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
     paddingHorizontal: 20,
+    flex: 1,
   },
   timeColumn: {
     flex: 1,
@@ -548,6 +763,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e1e5ea',
     gap: 12,
+    flexShrink: 0, // Prevent buttons from shrinking
   },
   cancelButton: {
     flex: 1,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Animated, Platform, Modal } from 'react-native';
-import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isBefore, startOfDay } from 'date-fns';
+import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth, isSameDay, isBefore, startOfDay, min, max } from 'date-fns';
 import { CreateEventDetails } from './CreateEventDetails';
 import { DateReviewModal } from './DateReviewModal';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
@@ -27,8 +27,6 @@ interface DateSpecificOptions {
 
 // Interface for event creation options (UI state + poll_events data)
 interface EventOptions {
-  useSameLocation: boolean;
-  useSameTime: boolean;
   location: string;
   startTime: Date | null;
   endTime: Date | null;
@@ -37,13 +35,13 @@ interface EventOptions {
 
 export default function CreateEventModal({ visible, onClose, onSuccess, pollId }: CreateEventModalProps) {
   const router = useRouter();
-  const [eventName, setEventName] = useState('GameNyte');
+  const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
+  const [eventLocation, setEventLocation] = useState('');
+  const [defaultEventName, setDefaultEventName] = useState('');
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [showDateReviewModal, setShowDateReviewModal] = useState(false);
   const [eventOptions, setEventOptions] = useState<EventOptions>({
-    useSameLocation: true,
-    useSameTime: true,
     location: '',
     startTime: null,
     endTime: null,
@@ -52,6 +50,22 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [loading, setLoading] = useState(false);
   const animation = useRef(new Animated.Value(0)).current;
+
+  const resetForm = () => {
+    setEventName('');
+    setEventDescription('');
+    setEventLocation('');
+    setDefaultEventName('');
+    setEventOptions({
+      location: '',
+      startTime: null,
+      endTime: null,
+    });
+    setSelectedDates([]);
+    setCurrentMonth(new Date()); // Reset calendar to current month
+    setShowEventDetailsModal(false);
+    setShowDateReviewModal(false);
+  };
 
   useEffect(() => {
     if (visible) {
@@ -62,11 +76,35 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
       }).start();
     } else {
       animation.setValue(0);
-      // Reset internal modal states when main modal closes
-      setShowEventDetailsModal(false);
-      setShowDateReviewModal(false);
+      // Reset form when modal closes
+      resetForm();
     }
   }, [visible]);
+
+  // Update default event name when selected dates change
+  useEffect(() => {
+    if (selectedDates.length === 0) {
+      setDefaultEventName('');
+      if (!eventName || eventName.startsWith('GameNyte - ')) {
+        setEventName('');
+      }
+    } else if (selectedDates.length === 1) {
+      const date = selectedDates[0];
+      const newDefaultName = `GameNyte - ${format(date, 'MMM/dd')}`;
+      setDefaultEventName(newDefaultName);
+      if (!eventName || eventName.startsWith('GameNyte - ')) {
+        setEventName(newDefaultName);
+      }
+    } else {
+      const minDate = min(selectedDates);
+      const maxDate = max(selectedDates);
+      const newDefaultName = `GameNyte - ${format(minDate, 'MMM/dd')} - ${format(maxDate, 'MMM/dd')}`;
+      setDefaultEventName(newDefaultName);
+      if (!eventName || eventName.startsWith('GameNyte - ')) {
+        setEventName(newDefaultName);
+      }
+    }
+  }, [selectedDates]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev =>
@@ -78,44 +116,33 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
 
-    // Get all days in the month
-    const monthDays = eachDayOfInterval({ start, end });
+    // Adjust start to beginning of the first calendar week (Monday-start)
+    let startDay = start.getDay(); // Sunday = 0
+    startDay = startDay === 0 ? 6 : startDay - 1; // Convert to Monday = 0
 
-    // Get the first day of the week for the first day of the month
-    // Monday = 0, Tuesday = 1, ..., Sunday = 6
-    let firstDayOfWeek = start.getDay();
-    firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Convert Sunday=0 to Sunday=6, others shift by 1
+    // Calculate the first date to display (could be from the previous month)
+    const calendarStart = new Date(start);
+    calendarStart.setDate(start.getDate() - startDay);
 
-    // Add days from previous month to fill the first week
-    const prevMonthDays = [];
-    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-      const prevDate = new Date(start);
-      prevDate.setDate(start.getDate() - (i + 1));
-      prevMonthDays.push({ date: prevDate, isCurrentMonth: false, isPast: true });
+    // Build exactly 35 days (5 weeks)
+    const days: {
+      date: Date;
+      isCurrentMonth: boolean;
+      isPast: boolean;
+    }[] = [];
+
+    for (let i = 0; i < 35; i++) {
+      const date = new Date(calendarStart);
+      date.setDate(calendarStart.getDate() + i);
+
+      days.push({
+        date,
+        isCurrentMonth: isSameMonth(date, currentMonth),
+        isPast: isBefore(date, startOfDay(new Date())),
+      });
     }
 
-    // Add current month days
-    const currentMonthDays = monthDays.map(date => ({
-      date,
-      isCurrentMonth: true,
-      isPast: isBefore(date, startOfDay(new Date()))
-    }));
-
-    // Calculate how many days we need to fill exactly 5 rows (35 days total)
-    const totalDays = prevMonthDays.length + currentMonthDays.length;
-    const remainingDays = 35 - totalDays; // 5 rows × 7 days = 35
-
-    // Add days from next month to fill the remaining slots
-    const nextMonthDays = [];
-    for (let i = 1; i <= remainingDays; i++) {
-      const nextDate = new Date(end);
-      nextDate.setDate(end.getDate() + i);
-      nextMonthDays.push({ date: nextDate, isCurrentMonth: false, isPast: false });
-    }
-
-    // Ensure we return exactly 35 days
-    const allDays = [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
-    return allDays.slice(0, 35);
+    return days;
   };
 
   const toggleDateSelection = (date: Date) => {
@@ -133,9 +160,10 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     return selectedDates.some(d => isSameDay(d, date));
   };
 
-  const handleEventDetailsSave = (name: string, description: string) => {
+  const handleEventDetailsSave = (name: string, description: string, location: string) => {
     setEventName(name);
     setEventDescription(description);
+    setEventLocation(location);
   };
 
   const handleCreate = async (finalEventOptions: EventOptions) => {
@@ -179,17 +207,10 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
         const dateSpecificOptions = finalEventOptions.dateSpecificOptions?.[dateKey];
 
         // Determine location and time for this specific date
-        const location = finalEventOptions.useSameLocation
-          ? finalEventOptions.location
-          : (dateSpecificOptions?.location || '');
+        const location = dateSpecificOptions?.location || eventLocation || '';
 
-        const startTime = finalEventOptions.useSameTime
-          ? finalEventOptions.startTime
-          : (dateSpecificOptions?.startTime || null);
-
-        const endTime = finalEventOptions.useSameTime
-          ? finalEventOptions.endTime
-          : (dateSpecificOptions?.endTime || null);
+        const startTime = dateSpecificOptions?.startTime || finalEventOptions.startTime || null;
+        const endTime = dateSpecificOptions?.endTime || finalEventOptions.endTime || null;
 
         const eventData = {
           poll_id: poll.id,
@@ -214,16 +235,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
       Toast.show({ type: 'success', text1: 'Event created successfully!' });
 
       // Reset form
-      setEventName('GameNyte');
-      setEventDescription('');
-      setEventOptions({
-        useSameLocation: true,
-        useSameTime: true,
-        location: '',
-        startTime: null,
-        endTime: null,
-      });
-      setSelectedDates([]);
+      resetForm();
 
       // Close modal and call success callback
       onClose();
@@ -280,15 +292,13 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
               style={styles.input}
             >
               <Text style={eventName ? styles.eventNameText : styles.placeholderText}>
-                {eventName || 'Enter Event Name & Description'}
+                {eventName || 'Enter Event Details (Optional)'}
               </Text>
-              {eventDescription && (
-                <View style={styles.eventDetailsPreview}>
-                  <Text style={styles.eventDescriptionText} numberOfLines={2}>
-                    {eventDescription}
-                  </Text>
-                </View>
-              )}
+              <View style={styles.eventDetailsPreview}>
+                <Text style={styles.eventDescriptionText} numberOfLines={2}>
+                  {eventDescription || ''}
+                </Text>
+              </View>
             </TouchableOpacity>
 
             <Text style={styles.availabilityLabel}>Set Available Dates</Text>
@@ -317,8 +327,14 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
 
               {/* Day Headers */}
               <View style={styles.dayHeaders}>
-                {days.map(day => (
-                  <Text key={day} style={styles.dayHeader}>
+                {days.map((day, index) => (
+                  <Text
+                    key={day}
+                    style={[
+                      styles.dayHeader,
+                      index === days.length - 1 && styles.lastDayHeader // Remove border from last header
+                    ]}
+                  >
                     {day}
                   </Text>
                 ))}
@@ -393,6 +409,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
         onSave={handleEventDetailsSave}
         currentEventName={eventName}
         currentDescription={eventDescription}
+        currentLocation={eventLocation}
       />
 
       {/* Date Review Modal */}
@@ -402,6 +419,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
         onFinalize={handleCreate}
         selectedDates={selectedDates}
         eventOptions={eventOptions}
+        defaultLocation={eventLocation}
         pollId={pollId}
       />
     </Modal>
@@ -515,6 +533,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     borderTopWidth: 1,
     borderTopColor: '#eee',
+    minHeight: 0,
   },
   eventDescriptionText: {
     fontSize: 12,
@@ -558,6 +577,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 350, // Fixed maximum width
     alignSelf: 'center',
+    overflow: 'hidden', // Prevent overflow
   },
   monthNavigation: {
     flexDirection: 'row',
@@ -576,36 +596,41 @@ const styles = StyleSheet.create({
   },
   dayHeaders: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     marginBottom: 5,
+    width: '100%',
   },
   dayHeader: {
-    width: '14.28%', // 100% ÷ 7 columns = 14.28%
-    height: 50, // Match row height
+    flex: 1, // Equal width for each header
+    height: 30, // Reduced height for headers
     textAlign: 'center',
-    lineHeight: 50,
+    lineHeight: 30,
     backgroundColor: '#e1e5ea',
     fontSize: 12,
     fontWeight: 'bold',
     color: '#1a2b5f',
+    borderRightWidth: 1,
+    borderRightColor: '#d1d5db',
   },
   dayHeaderText: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#1a2b5f',
   },
+  lastDayHeader: {
+    borderRightWidth: 0, // Remove border from last header
+  },
   calendarGrid: {
-    width: 330, // Fixed width
-    height: 300, // Fixed height (330 * 6/7 ≈ 300)
+    width: '100%', // Use full width of container
+    height: 250, // Fixed height for 5 rows (50 * 5 = 250)
   },
   calendarRow: {
     flexDirection: 'row',
     width: '100%',
-    height: 50, // Fixed height per row (300 ÷ 6 = 50)
+    height: 50, // Fixed height per row (250 ÷ 5 = 50)
   },
   calendarDay: {
-    width: '14.28%', // 100% ÷ 7 columns = 14.28%
-    aspectRatio: 1, // Square cells
+    flex: 1, // Equal width for each day cell
+    height: 50, // Match row height
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,

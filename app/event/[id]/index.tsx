@@ -51,7 +51,6 @@ export default function EventScreen() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [isCreator, setIsCreator] = useState(false);
-  const [creatorName, setCreatorName] = useState<string | null>(null);
   const [userVotes, setUserVotes] = useState<Record<string, EventVoteType>>({});
   const [voteCounts, setVoteCounts] = useState<Record<string, { yes: number; no: number; maybe: number }>>({});
   const [voting, setVoting] = useState(false);
@@ -106,17 +105,17 @@ export default function EventScreen() {
         }
 
         // Get creator name
-        if (eventData.user_id) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('username, email')
-            .eq('id', eventData.user_id)
-            .maybeSingle();
+        // if (eventData.user_id) {
+        //   const { data: profileData } = await supabase
+        //     .from('profiles')
+        //     .select('username, email')
+        //     .eq('id', eventData.user_id)
+        //     .maybeSingle();
 
-          if (profileData) {
-            setCreatorName(profileData.username || profileData.email || null);
-          }
-        }
+        //   if (profileData) {
+        //     setCreatorName(profileData.username || profileData.email || null);
+        //   }
+        // }
 
         // Load user votes and vote counts
         await loadVotes(id as string, currentUser?.id);
@@ -297,44 +296,28 @@ export default function EventScreen() {
     <ScrollView style={styles.container}>
       {/* Event Header */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
+          <Text style={styles.backLink}>&larr; Back to Events</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>{event.title}</Text>
         {event.description && (
           <Text style={styles.description}>{event.description}</Text>
         )}
-        <View style={styles.creatorInfo}>
-          <Text style={styles.creatorText}>
-            Created by {creatorName || 'Anonymous'}
-          </Text>
-        </View>
+        <Text style={styles.subtitle}>
+          Created by {user?.email || 'Anonymous'}
+        </Text>
       </View>
 
-      {/* Event Details */}
-      <View style={styles.detailsSection}>
-        <View style={styles.detailRow}>
-          <Calendar size={20} color="#6b7280" />
-          <Text style={styles.detailText}>
-            {eventDates.length} date{eventDates.length !== 1 ? 's' : ''} selected
+      {!user && (
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>
+            Want to create your own events?{' '}
           </Text>
+          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+            <Text style={styles.signUpLink}>Sign up for free</Text>
+          </TouchableOpacity>
         </View>
-
-        {event.use_same_location && event.location && (
-          <View style={styles.detailRow}>
-            <MapPin size={20} color="#6b7280" />
-            <Text style={styles.detailText}>{event.location}</Text>
-          </View>
-        )}
-
-        {event.use_same_time && event.start_time && event.end_time && (
-          <View style={styles.detailRow}>
-            <Clock size={20} color="#6b7280" />
-            <Text style={styles.detailText}>
-              {formatTimeString(event.start_time)} - {formatTimeString(event.end_time)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-
+      )}
 
       {/* Event Dates */}
       <View style={styles.datesSection}>
@@ -393,32 +376,53 @@ const styles = StyleSheet.create({
     backgroundColor: '#f7f9fc',
   },
   header: {
-    backgroundColor: 'white',
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e5ea',
+    backgroundColor: '#1a2b5f',
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
     fontSize: 24,
-    color: '#1a2b5f',
+    fontFamily: 'Poppins-Bold',
+    color: '#fff',
     marginBottom: 8,
   },
   description: {
-    fontFamily: 'Poppins-Regular',
     fontSize: 16,
-    color: '#666666',
+    fontFamily: 'Poppins-Regular',
+    color: '#fff',
     marginBottom: 12,
     lineHeight: 22,
   },
-  creatorInfo: {
+  subtitle: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#fff',
+    opacity: 0.8,
+  },
+  backLink: {
+    color: '#1d4ed8',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    marginBottom: 8,
+    textDecorationLine: 'underline',
+    alignSelf: 'flex-start',
+  },
+  signUpContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  creatorText: {
-    fontFamily: 'Poppins-Regular',
+  signUpText: {
     fontSize: 14,
-    color: '#8d8d8d',
+    fontFamily: 'Poppins-Regular',
+    color: '#666666',
+  },
+  signUpLink: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#ff9654',
+    textDecorationLine: 'underline',
   },
   detailsSection: {
     backgroundColor: 'white',

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Share2, Edit, Trash2, MapPin, Clock, Calendar } from 'lucide-react-native';
 import { format } from 'date-fns';
+import { TruncatedText } from './TruncatedText';
 
 interface EventCardProps {
   event: {
@@ -93,7 +94,12 @@ export function EventCard({
 
         <View style={styles.detailRow}>
           <MapPin size={16} color="#666666" />
-          <Text style={styles.detailText}>{getDisplayLocation()}</Text>
+          <TruncatedText
+            text={getDisplayLocation()}
+            maxLength={35}
+            textStyle={styles.detailText}
+            buttonTextStyle={styles.truncateButtonText}
+          />
         </View>
 
         <View style={styles.detailRow}>
@@ -211,5 +217,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333333',
     marginLeft: 5,
+  },
+  truncateButtonText: {
+    color: '#0070f3',
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });

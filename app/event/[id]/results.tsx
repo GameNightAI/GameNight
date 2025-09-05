@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Poll, PollEvent } from '@/types/poll';
 import Toast from 'react-native-toast-message';
 import * as Clipboard from 'expo-clipboard';
+import { TruncatedText } from '@/components/TruncatedText';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -253,117 +254,133 @@ export default function EventResultsScreen() {
 
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
+    <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>← Back to Event</Text>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
+          <Text style={styles.backLink}>&larr; Back to Events</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Event Results</Text>
         <Text style={styles.subtitle}>{event.title}</Text>
       </View>
 
-      {/* Event Information */}
-      <View style={styles.overallStats}>
-        <Text style={styles.sectionTitle}>Event Information</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Calendar size={24} color="#10b981" />
-            <Text style={styles.statNumber}>{eventDates.length}</Text>
-            <Text style={styles.statLabel}>Event Dates</Text>
-          </View>
+      {!user && (
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>
+            Want to create your own events?{' '}
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+            <Text style={styles.signUpLink}>Sign up for free</Text>
+          </TouchableOpacity>
         </View>
-      </View>
+      )}
 
-      {/* Event Dates */}
-      <View style={styles.dateResults}>
-        <Text style={styles.sectionTitle}>Event Date Rankings</Text>
-        {rankedDates.length === 0 ? (
-          <Text style={styles.emptyText}>No votes have been cast yet.</Text>
-        ) : (
-          rankedDates.map((eventDate) => {
-            const date = new Date(eventDate.event_date);
-            const displayLocation = event.use_same_location && event.location
-              ? event.location
-              : eventDate.location || 'Location not set';
-            const displayTime = event.use_same_time && event.start_time && event.end_time
-              ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
-              : eventDate.start_time && eventDate.end_time
-                ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
-                : 'Time not set';
-            const counts = voteCounts[eventDate.id] || { yes: 0, no: 0, maybe: 0 };
-
-            return (
-              <View key={eventDate.id} style={styles.dateResultCard}>
-                <View style={styles.dateResultHeader}>
-                  <View style={styles.rankingContainer}>
-                    <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(eventDate.ranking) }]}>
-                      <Text style={styles.rankingNumber}>{eventDate.ranking}</Text>
-                    </View>
-                    <View style={styles.rankingInfo}>
-                      <Text style={styles.rankingLabel}>
-                        {`${eventDate.ranking}${getOrdinalSuffix(eventDate.ranking)} Place`}
-                      </Text>
-                      <Text style={styles.scoreText}>
-                        {eventDate.totalVotes} vote{eventDate.totalVotes !== 1 ? 's' : ''} • Score: {eventDate.totalScore}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.dateInfo}>
-                  <Text style={styles.dateText}>
-                    {format(date, 'EEEE, MMMM d, yyyy')}
-                  </Text>
-                  <View style={styles.dateDetails}>
-                    <View style={styles.dateDetailRow}>
-                      <MapPin size={16} color="#6b7280" />
-                      <Text style={styles.dateDetailText}>{displayLocation}</Text>
-                    </View>
-                    <View style={styles.dateDetailRow}>
-                      <Clock size={16} color="#6b7280" />
-                      <Text style={styles.dateDetailText}>{displayTime}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.voteBreakdown}>
-                    <Text style={styles.voteBreakdownText}>
-                      Ideal: {counts.yes} • Doable: {counts.maybe} • No: {counts.no}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            );
-          })
-        )}
-      </View>
-
-
-
-      {/* Share Button */}
-      <TouchableOpacity
-        style={styles.shareButton}
-        onPress={async () => {
-          try {
-            // Copy event URL to clipboard
-            const baseUrl = Platform.select({
-              web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
-              default: 'https://gamenyte.netlify.app',
-            });
-            const eventUrl = `${baseUrl}/event/${event.id}`;
-
-            await Clipboard.setStringAsync(eventUrl);
-            Toast.show({ type: 'success', text1: 'Event link copied to clipboard!' });
-          } catch (err) {
-            console.log('Error copying to clipboard:', err);
-            Toast.show({ type: 'error', text1: 'Failed to copy link' });
-          }
-        }}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.shareButtonText}>Share Event</Text>
-      </TouchableOpacity>
-    </ScrollView>
+
+        {/* Event Dates */}
+        <View style={styles.dateResults}>
+          <Text style={styles.sectionTitle}>Event Date Rankings</Text>
+          {rankedDates.length === 0 ? (
+            <Text style={styles.emptyText}>No votes have been cast yet.</Text>
+          ) : (
+            rankedDates.map((eventDate) => {
+              const date = new Date(eventDate.event_date);
+              const displayLocation = event.use_same_location && event.location
+                ? event.location
+                : eventDate.location || 'Location not set';
+              const displayTime = event.use_same_time && event.start_time && event.end_time
+                ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
+                : eventDate.start_time && eventDate.end_time
+                  ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
+                  : 'Time not set';
+              const counts = voteCounts[eventDate.id] || { yes: 0, no: 0, maybe: 0 };
+
+              return (
+                <View key={eventDate.id} style={styles.dateResultCard}>
+                  <View style={styles.dateResultHeader}>
+                    <View style={styles.rankingContainer}>
+                      <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(eventDate.ranking) }]}>
+                        <Text style={styles.rankingNumber}>{eventDate.ranking}</Text>
+                      </View>
+                      <View style={styles.rankingInfo}>
+                        <Text style={styles.rankingLabel}>
+                          {`${eventDate.ranking}${getOrdinalSuffix(eventDate.ranking)} Place`}
+                        </Text>
+                        <Text style={styles.scoreText}>
+                          {eventDate.totalVotes} vote{eventDate.totalVotes !== 1 ? 's' : ''} • Score: {eventDate.totalScore}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.dateInfo}>
+                    <Text style={styles.dateText}>
+                      {format(date, 'EEEE, MMMM d, yyyy')}
+                    </Text>
+                    <View style={styles.dateDetails}>
+                      <View style={styles.dateDetailRow}>
+                        <MapPin size={16} color="#6b7280" />
+                        <TruncatedText
+                          text={displayLocation}
+                          maxLength={35}
+                          textStyle={styles.dateDetailText}
+                          buttonTextStyle={styles.truncateButtonText}
+                        />
+                      </View>
+                      <View style={styles.dateDetailRow}>
+                        <Clock size={16} color="#6b7280" />
+                        <Text style={styles.dateDetailText}>{displayTime}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.voteBreakdown}>
+                      <Text style={styles.voteBreakdownText}>
+                        Ideal: {counts.yes} • Doable: {counts.maybe} • No: {counts.no}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </View>
+
+
+
+        {/* Share Button */}
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={async () => {
+            try {
+              // Copy event URL to clipboard
+              const baseUrl = Platform.select({
+                web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
+                default: 'https://gamenyte.netlify.app',
+              });
+              const eventUrl = `${baseUrl}/event/${event.id}`;
+
+              await Clipboard.setStringAsync(eventUrl);
+              Toast.show({ type: 'success', text1: 'Event link copied to clipboard!' });
+            } catch (err) {
+              console.log('Error copying to clipboard:', err);
+              Toast.show({ type: 'error', text1: 'Failed to copy link' });
+            }
+          }}
+        >
+          <Text style={styles.shareButtonText}>Share Event</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <View style={styles.bottomActionsContainer}>
+        <TouchableOpacity
+          style={styles.backToVotingButton}
+          onPress={() => router.push({ pathname: '/event/[id]', params: { id: event.id } })}
+        >
+          <Text style={styles.backToVotingButtonText}>Back to Voting</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -373,30 +390,74 @@ const styles = StyleSheet.create({
     backgroundColor: '#f7f9fc',
   },
   header: {
-    backgroundColor: 'white',
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e5ea',
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
-  backButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#0070f3',
+    backgroundColor: '#1a2b5f',
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
     fontSize: 24,
-    color: '#1a2b5f',
-    marginBottom: 4,
+    fontFamily: 'Poppins-Bold',
+    color: '#fff',
+    marginBottom: 8,
   },
   subtitle: {
+    fontSize: 14,
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    color: '#fff',
+    opacity: 0.8,
+  },
+  backLink: {
+    color: '#1d4ed8',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    marginBottom: 8,
+    textDecorationLine: 'underline',
+    alignSelf: 'flex-start',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  scrollContent: {
+    paddingHorizontal: 8,
+    paddingBottom: 32,
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  signUpContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signUpText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
     color: '#666666',
+  },
+  signUpLink: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#ff9654',
+    textDecorationLine: 'underline',
+  },
+  bottomActionsContainer: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  backToVotingButton: {
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  backToVotingButtonText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#ffffff',
   },
   overallStats: {
     backgroundColor: 'white',
@@ -539,5 +600,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: 'white',
+  },
+  truncateButtonText: {
+    color: '#0070f3',
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });

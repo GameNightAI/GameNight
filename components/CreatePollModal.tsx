@@ -213,7 +213,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       newDefaultTitle = `Vote on ${totalSelectedGames} games`;
     }
     setDefaultTitle(newDefaultTitle);
-    if ((!pollTitle || pollTitle.startsWith('Vote on')) && newDefaultTitle) {
+    if (totalSelectedGames === 0) {
+      // Reset to empty when no games are selected
+      setPollTitle('');
+    } else if ((!pollTitle || pollTitle.startsWith('Vote on')) && newDefaultTitle) {
       setPollTitle(newDefaultTitle);
     }
   }, [selectedGamesForPoll]);
