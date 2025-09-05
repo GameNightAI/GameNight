@@ -6,9 +6,10 @@ import { useDeviceType } from '@/hooks/useDeviceType';
 interface CreateEventDetailsProps {
   isVisible: boolean;
   onClose: () => void;
-  onSave: (eventName: string, description: string) => void;
+  onSave: (eventName: string, description: string, location: string) => void;
   currentEventName: string;
   currentDescription: string;
+  currentLocation: string;
 }
 
 export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
@@ -17,24 +18,28 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
   onSave,
   currentEventName,
   currentDescription,
+  currentLocation,
 }) => {
   const deviceType = useDeviceType();
   const [eventName, setEventName] = useState(currentEventName);
   const [description, setDescription] = useState(currentDescription);
+  const [location, setLocation] = useState(currentLocation);
 
   useEffect(() => {
     setEventName(currentEventName);
     setDescription(currentDescription);
-  }, [currentEventName, currentDescription]);
+    setLocation(currentLocation);
+  }, [currentEventName, currentDescription, currentLocation]);
 
   const handleSave = () => {
-    onSave(eventName, description);
+    onSave(eventName, description, location);
     onClose();
   };
 
   const handleClose = () => {
     setEventName(currentEventName); // Reset to original value
     setDescription(currentDescription); // Reset to original value
+    setLocation(currentLocation); // Reset to original value
     onClose();
   };
 
@@ -68,6 +73,19 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
             placeholderTextColor="#999999"
             maxLength={100}
             autoFocus
+          />
+
+          <Text style={[styles.label, styles.locationLabel]}>Location (Optional)</Text>
+          <Text style={styles.sublabel}>
+            Default location for all event dates
+          </Text>
+          <TextInput
+            style={styles.locationInput}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Enter default location for all dates"
+            placeholderTextColor="#999999"
+            maxLength={100}
           />
 
           <Text style={[styles.label, styles.descriptionLabel]}>Description (Optional)</Text>
@@ -113,6 +131,8 @@ type Styles = {
   label: TextStyle;
   sublabel: TextStyle;
   titleInput: TextStyle;
+  locationLabel: TextStyle;
+  locationInput: TextStyle;
   descriptionLabel: TextStyle;
   descriptionInput: TextStyle;
   footer: ViewStyle;
@@ -182,6 +202,21 @@ const styles = StyleSheet.create<Styles>({
     marginBottom: 6,
   },
   titleInput: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#333333',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 6,
+    marginBottom: 0,
+  },
+  locationLabel: {
+    marginTop: 12,
+  },
+  locationInput: {
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#333333',

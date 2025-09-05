@@ -27,8 +27,6 @@ interface DateSpecificOptions {
 
 // Interface for event creation options (UI state + poll_events data)
 interface EventOptions {
-  useSameLocation: boolean;
-  useSameTime: boolean;
   location: string;
   startTime: Date | null;
   endTime: Date | null;
@@ -39,12 +37,11 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   const router = useRouter();
   const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
+  const [eventLocation, setEventLocation] = useState('');
   const [defaultEventName, setDefaultEventName] = useState('');
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [showDateReviewModal, setShowDateReviewModal] = useState(false);
   const [eventOptions, setEventOptions] = useState<EventOptions>({
-    useSameLocation: true,
-    useSameTime: true,
     location: '',
     startTime: null,
     endTime: null,
@@ -73,22 +70,22 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   useEffect(() => {
     if (selectedDates.length === 0) {
       setDefaultEventName('');
-      if (!eventName || eventName.startsWith('GameNyte - Vote on')) {
+      if (!eventName || eventName.startsWith('GameNyte - ')) {
         setEventName('');
       }
     } else if (selectedDates.length === 1) {
       const date = selectedDates[0];
-      const newDefaultName = `GameNyte - Vote on ${format(date, 'MMM/DD')}`;
+      const newDefaultName = `GameNyte - ${format(date, 'MMM/dd')}`;
       setDefaultEventName(newDefaultName);
-      if (!eventName || eventName.startsWith('GameNyte - Vote on')) {
+      if (!eventName || eventName.startsWith('GameNyte - ')) {
         setEventName(newDefaultName);
       }
     } else {
       const minDate = min(selectedDates);
       const maxDate = max(selectedDates);
-      const newDefaultName = `GameNyte - Vote on ${format(minDate, 'MMM/DD')} - ${format(maxDate, 'MMM/DD')}`;
+      const newDefaultName = `GameNyte - ${format(minDate, 'MMM/dd')} - ${format(maxDate, 'MMM/dd')}`;
       setDefaultEventName(newDefaultName);
-      if (!eventName || eventName.startsWith('GameNyte - Vote on')) {
+      if (!eventName || eventName.startsWith('GameNyte - ')) {
         setEventName(newDefaultName);
       }
     }
@@ -159,9 +156,10 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     return selectedDates.some(d => isSameDay(d, date));
   };
 
-  const handleEventDetailsSave = (name: string, description: string) => {
+  const handleEventDetailsSave = (name: string, description: string, location: string) => {
     setEventName(name);
     setEventDescription(description);
+    setEventLocation(location);
   };
 
   const handleCreate = async (finalEventOptions: EventOptions) => {
@@ -205,17 +203,10 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
         const dateSpecificOptions = finalEventOptions.dateSpecificOptions?.[dateKey];
 
         // Determine location and time for this specific date
-        const location = finalEventOptions.useSameLocation
-          ? finalEventOptions.location
-          : (dateSpecificOptions?.location || '');
+        const location = dateSpecificOptions?.location || eventLocation || '';
 
-        const startTime = finalEventOptions.useSameTime
-          ? finalEventOptions.startTime
-          : (dateSpecificOptions?.startTime || null);
-
-        const endTime = finalEventOptions.useSameTime
-          ? finalEventOptions.endTime
-          : (dateSpecificOptions?.endTime || null);
+        const startTime = dateSpecificOptions?.startTime || finalEventOptions.startTime || null;
+        const endTime = dateSpecificOptions?.endTime || finalEventOptions.endTime || null;
 
         const eventData = {
           poll_id: poll.id,
@@ -242,10 +233,9 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
       // Reset form
       setEventName('');
       setEventDescription('');
+      setEventLocation('');
       setDefaultEventName('');
       setEventOptions({
-        useSameLocation: true,
-        useSameTime: true,
         location: '',
         startTime: null,
         endTime: null,
@@ -307,7 +297,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
               style={styles.input}
             >
               <Text style={eventName ? styles.eventNameText : styles.placeholderText}>
-                {eventName || 'Enter Event Name & Description'}
+                {eventName || 'Enter Event Details (Optional)'}
               </Text>
               {eventDescription && (
                 <View style={styles.eventDetailsPreview}>
@@ -420,6 +410,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
         onSave={handleEventDetailsSave}
         currentEventName={eventName}
         currentDescription={eventDescription}
+        currentLocation={eventLocation}
       />
 
       {/* Date Review Modal */}
@@ -429,6 +420,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
         onFinalize={handleCreate}
         selectedDates={selectedDates}
         eventOptions={eventOptions}
+        defaultLocation={eventLocation}
         pollId={pollId}
       />
     </Modal>
