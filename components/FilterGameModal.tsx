@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
-import { Search, X, Check } from 'lucide-react-native';
+import { X, Check } from 'lucide-react-native';
 import Select, { components as selectComponents } from 'react-select';
 import { isSafari } from '@/utils/safari-polyfill';
 import { Game } from '@/types/game';
@@ -12,47 +12,78 @@ interface FilterOption {
   max?: number;
 }
 
+interface FilterConfig {
+  key: string;
+  label: string;
+  placeholder: string;
+  options: FilterOption[];
+  value: FilterOption[];
+  onChange: (value: FilterOption[]) => void;
+}
+
 interface FilterGameModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onApplyFilter: () => void;
-  playerCount: FilterOption[];
-  playTime: FilterOption[];
-  age: FilterOption[];
-  gameType: FilterOption[];
-  complexity: FilterOption[];
-  setPlayerCount: (value: FilterOption[]) => void;
-  setPlayTime: (value: FilterOption[]) => void;
-  setAge: (value: FilterOption[]) => void;
-  setGameType: (value: FilterOption[]) => void;
-  setComplexity: (value: FilterOption[]) => void;
+  onApplyFilters: () => void;
+  title?: string;
+  description?: string;
+  applyButtonText?: string;
+  filterConfigs: FilterConfig[];
 }
 
 export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   isVisible,
   onClose,
-  onApplyFilter,
-  playerCount,
-  playTime,
-  age,
-  gameType,
-  complexity,
-  setPlayerCount,
-  setPlayTime,
-  setAge,
-  setGameType,
-  setComplexity,
+  onApplyFilters,
+  title = "Filter Your Collection",
+  description = "All filters (optional)",
+  applyButtonText = "Apply Filters",
+  filterConfigs,
 }) => {
+  const CustomValueContainer = (props: any) => {
+    const {
+      selectProps,
+      getValue,
+      children,
+    } = props;
+
+    const selectedValues = getValue();
+
+    let displayText = selectProps.placeholder;
+    if (selectedValues.length > 0) {
+      displayText = `${selectProps.placeholder} (${selectedValues.length} selected)`;
+    }
+
+    return (
+      <selectComponents.ValueContainer {...props}>
+        <Text style={{
+          fontFamily: 'Poppins-Regular',
+          fontSize: 14,
+          color: '#333',
+          position: 'absolute', // Position it absolutely
+          top: '50%', // Center vertically
+          left: 10, // Align to left
+          transform: 'translateY(-50%)', // Perfect vertical centering
+          zIndex: 1, // Ensure it's above other elements
+        }}>
+          {displayText}
+        </Text>
+
+        {children}
+      </selectComponents.ValueContainer>
+    );
+  };
   const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
+
   const getFilterSectionZIndex = (index: number) => {
     if (openDropdownIndex === null) return 1000;
     if (openDropdownIndex === index) return 99999;
     return 1000;
   };
+
   const handleDropdownChange = (index: number, isOpen: boolean) => {
     setOpenDropdownIndex(isOpen ? index : null);
   };
-
 
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
     .map(_ => ({ value: parseInt(_), label: _ }));
@@ -97,14 +128,16 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   };
 
   const clearAllFilters = () => {
-    setPlayerCount([]);
-    setPlayTime([]);
-    setAge([]);
-    setGameType([]);
-    setComplexity([]);
+    filterConfigs.forEach(config => {
+      config.onChange([]);
+    });
+  }
+    
+  const handleApplyFilters = () => {
+    onApplyFilters();
   };
 
-  // Select styles (restored) with Safari-friendly tweaks and dynamic z-index support
+  // Select styles with Safari-friendly tweaks and dynamic z-index support
   const getSelectStyles = (index: number) => {
     const baseSelectStyles = {
       control: (baseStyles: any) => ({
@@ -160,17 +193,17 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         fontSize: 14,
         color: '#999999',
       }),
-      clearIndicator: (baseStyles: any) => ({
-        ...baseStyles,
-        color: '#666666',
-        fontSize: 11,
-        fontFamily: 'Poppins-SemiBold',
-        padding: '2px 6px',
-        cursor: 'pointer',
-        '&:hover': { color: '#ff9654' },
-        '& svg': { display: 'none' },
-        '&::after': { content: '"CLR"', display: 'block' },
-      }),
+      // clearIndicator: (baseStyles: any) => ({
+      //   ...baseStyles,
+      //   color: '#666666',
+      //   fontSize: 11,
+      //   fontFamily: 'Poppins-SemiBold',
+      //   padding: '2px 6px',
+      //   cursor: 'pointer',
+      //   '&:hover': { color: '#ff9654' },
+      //   '& svg': { display: 'none' },
+      //   '&::after': { content: '"CLR"', display: 'block' },
+      // }),
       multiValueLabel: (baseStyles: any) => ({
         ...baseStyles,
         fontFamily: 'Poppins-Regular',
@@ -191,15 +224,14 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const content = (
     <>
       <View style={styles.header}>
-        <Text style={styles.title}>Filter Games</Text>
+        <Text style={styles.title}>{title}</Text>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <X size={18} color="#666666" />
         </TouchableOpacity>
       </View>
 
       <Text style={styles.description}>
-        Filter your collection to find the perfect game for your group.{'\n'}
-        All filters are optional.
+        {description}
       </Text>
 
       <ScrollView
@@ -207,164 +239,45 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         contentContainerStyle={{ paddingBottom: 4, paddingTop: 2 }}
         showsVerticalScrollIndicator={true}
       >
-        {/* Player Count Filter */}
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(0) }]}>
-          <Select
-            placeholder="Player count"
-            value={playerCount}
-            onChange={(value) => setPlayerCount(Array.from(value || []))}
-            options={playerOptions}
-            defaultValue={[]}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(0)}
-            onMenuOpen={() => handleDropdownChange(0, true)}
-            onMenuClose={() => handleDropdownChange(0, false)}
-            formatOptionLabel={(option: any) => {
-              const isSelected = playerCount.some(p => p.value === option.value);
-              return (
-                <View style={styles.optionRow}>
-                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                    {isSelected && <Check size={12} color="#ffffff" />}
+        {filterConfigs.map((config, index) => (
+          <View key={config.key} style={[styles.filterSection, { zIndex: getFilterSectionZIndex(index) }]}>
+            <Select
+              placeholder={config.placeholder}
+              value={config.value}
+              onChange={(value) => config.onChange(Array.from(value || []))}
+              options={config.options}
+              defaultValue={[]}
+              isMulti
+              isClearable
+              isSearchable={false}
+              closeMenuOnSelect={false}
+              blurInputOnSelect={false}
+              hideSelectedOptions={false}
+              styles={getSelectStyles(index)}
+              onMenuOpen={() => handleDropdownChange(index, true)}
+              onMenuClose={() => handleDropdownChange(index, false)}
+              formatOptionLabel={(option: any) => {
+                const isSelected = config.value.some(v => v.value === option.value);
+                return (
+                  <View style={styles.optionRow}>
+                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                      {isSelected && <Check size={12} color="#ffffff" />}
+                    </View>
+                    <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                      {option.label}
+                    </Text>
                   </View>
-                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                    {option.label}
-                  </Text>
-                </View>
-              );
-            }}
-          />
-        </View>
-
-        {/* Play Time Filter */}
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(1) }]}>
-          <Select
-            placeholder="Play time"
-            value={playTime}
-            onChange={(value) => setPlayTime(Array.from(value || []))}
-            options={timeOptions}
-            defaultValue={[]}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(1)}
-            onMenuOpen={() => handleDropdownChange(1, true)}
-            onMenuClose={() => handleDropdownChange(1, false)}
-            formatOptionLabel={(option: any) => {
-              const isSelected = playTime.some(t => t.value === option.value);
-              return (
-                <View style={styles.optionRow}>
-                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                    {isSelected && <Check size={12} color="#ffffff" />}
-                  </View>
-                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                    {option.label}
-                  </Text>
-                </View>
-              );
-            }}
-          />
-        </View>
-
-        {/* Age Range Filter */}
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(2) }]}>
-          <Select
-            placeholder="Age range"
-            value={age}
-            onChange={(value) => setAge(Array.from(value || []))}
-            options={ageOptions}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(2)}
-            onMenuOpen={() => handleDropdownChange(2, true)}
-            onMenuClose={() => handleDropdownChange(2, false)}
-            formatOptionLabel={(option: any) => {
-              const isSelected = age.some(a => a.value === option.value);
-              return (
-                <View style={styles.optionRow}>
-                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                    {isSelected && <Check size={12} color="#ffffff" />}
-                  </View>
-                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                    {option.label}
-                  </Text>
-                </View>
-              );
-            }}
-          />
-        </View>
-
-        {/* Game Type Filter */}
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(3) }]}>
-          <Select
-            placeholder="Co-op / competitive"
-            value={gameType}
-            onChange={(value) => setGameType(Array.from(value || []))}
-            defaultValue={[]}
-            options={typeOptions}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(3)}
-            onMenuOpen={() => handleDropdownChange(3, true)}
-            onMenuClose={() => handleDropdownChange(3, false)}
-            formatOptionLabel={(option: any) => {
-              const isSelected = gameType.some(t => t.value === option.value);
-              return (
-                <View style={styles.optionRow}>
-                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                    {isSelected && <Check size={12} color="#ffffff" />}
-                  </View>
-                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                    {option.label}
-                  </Text>
-                </View>
-              );
-            }}
-          />
-        </View>
-
-        {/* Complexity Filter */}
-        <View style={[styles.filterSection, { zIndex: getFilterSectionZIndex(4) }]}>
-          <Select
-            placeholder="Game complexity"
-            value={complexity}
-            onChange={(value) => setComplexity(Array.from(value || []))}
-            defaultValue={[]}
-            options={complexityOptions}
-            isMulti
-            isClearable
-            isSearchable={false}
-            closeMenuOnSelect={false}
-            blurInputOnSelect={false}
-            styles={getSelectStyles(4)}
-            onMenuOpen={() => handleDropdownChange(4, true)}
-            onMenuClose={() => handleDropdownChange(4, false)}
-            formatOptionLabel={(option: any) => {
-              const isSelected = complexity.some(c => c.value === option.value);
-              return (
-                <View style={styles.optionRow}>
-                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                    {isSelected && <Check size={12} color="#ffffff" />}
-                  </View>
-                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                    {option.label}
-                  </Text>
-                </View>
-              );
-            }}
-          />
-        </View>
+                );
+              }}
+              components={{
+                ...selectComponents,
+                ValueContainer: CustomValueContainer,
+                MultiValue: () => null, // Hides default multi-value pills
+                Placeholder: () => null,
+              }}
+            />
+          </View>
+        ))}
 
         {/* Clear All Button */}
         <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
@@ -373,11 +286,10 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.searchButton}
-        onPress={handleFilter}
+        style={styles.applyButton}
+        onPress={handleApplyFilters}
       >
-        <Search color="#fff" size={18} />
-        <Text style={styles.searchButtonText}>Filter Games</Text>
+        <Text style={styles.applyButtonText}>{applyButtonText}</Text>
       </TouchableOpacity>
     </>
   );
@@ -386,7 +298,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     return (
       <View style={styles.overlay}>
         <View style={{
-          maxWidth: '95%',
+          maxWidth: '100%',
           maxHeight: '100%',
           width: '100%',
           display: 'flex',
@@ -429,7 +341,7 @@ export const filterGames = (
     let is_match = true;
 
     if (playerCount.length) {
-      is_match &&= playerCount.some(({value}) => (
+      is_match &&= playerCount.some(({ value }) => (
         // Ignore game.min_players when 15+ is selected,
         // since the number of actual players could be arbitrarily large.
         (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
@@ -534,19 +446,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingTop: 2,
   },
-  filterScrollView: {
-    flex: 1,
-    minHeight: 0,
-  },
   filterSection: {
     marginBottom: 6,
     position: 'relative',
-  },
-  filterLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#333333',
-    marginBottom: 8,
   },
   checkbox: {
     width: 20,
@@ -577,21 +479,18 @@ const styles = StyleSheet.create({
     color: '#ff9654',
     fontFamily: 'Poppins-SemiBold',
   },
-  searchButton: {
+  applyButton: {
     backgroundColor: '#ff9654',
     borderRadius: 12,
     padding: 12,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     marginTop: 16,
     marginBottom: 8,
   },
-  searchButtonText: {
+  applyButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#ffffff',
-    marginLeft: 8,
   },
   clearAllButton: {
     backgroundColor: '#e1e5ea',

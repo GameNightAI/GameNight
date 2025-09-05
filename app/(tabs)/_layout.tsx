@@ -36,7 +36,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName="collection"
+      initialRouteName="index"
       screenOptions={{
         headerShown: true,
         tabBarActiveTintColor: '#ff9654',
@@ -100,7 +100,7 @@ export default function TabLayout() {
           headerTitle: 'Game Tools',
         }}
       />
-      {EVENTS_SCREEN && <Tabs.Screen
+      <Tabs.Screen
         name="events"
         options={{
           title: 'Events',
@@ -109,7 +109,7 @@ export default function TabLayout() {
           ),
           headerTitle: 'Schedule Events',
         }}
-      />}
+      />
       <Tabs.Screen
         name="polls"
         options={{

@@ -7,7 +7,7 @@ import { getLastVisitedTab } from '@/utils/storage';
 export default function Index() {
   const [session, setSession] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [redirectPath, setRedirectPath] = useState<string>('/(tabs)/collection');
+  const [redirectPath, setRedirectPath] = useState<string>('/(tabs)/index');
 
   useEffect(() => {
     async function getSession() {
@@ -18,12 +18,9 @@ export default function Index() {
         if (currentSession) {
           // Get the last visited tab and redirect there
           const lastTab = await getLastVisitedTab();
-          if (lastTab && lastTab !== 'index') {
-            setRedirectPath(`/(tabs)/${lastTab}`);
-          } else {
-            // Default to collection if no last tab is saved or if it's 'index'
-            setRedirectPath('/(tabs)/collection');
-          }
+          // Always default to index (tools) for now
+          // TODO: Re-enable last tab navigation once tab conflicts are resolved
+          setRedirectPath('/(tabs)/');
         }
       } catch (error) {
         console.error('Error getting session:', error);

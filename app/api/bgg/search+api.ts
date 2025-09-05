@@ -4,7 +4,7 @@ export async function GET(request: Request) {
     const query = url.searchParams.get('query');
 
     if (!query) {
-      return new Response('Search query is required', { 
+      return new Response('Search query is required', {
         status: 400,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     }
 
     const bggUrl = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame&exact=0`;
-    
+
     const response = await fetch(bggUrl);
     const responseText = await response.text();
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Search proxy error:', error);
-    return new Response('Failed to search BGG', { 
+    return new Response('Failed to search BGG', {
       status: 500,
       headers: {
         'Access-Control-Allow-Origin': '*',

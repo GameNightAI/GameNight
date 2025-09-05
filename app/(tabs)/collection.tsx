@@ -2,20 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { RefreshCw, X, ListFilter, Plus, Camera, Vote } from 'lucide-react-native';
-import Toast from 'react-native-toast-message';
+import { X, ListFilter, Plus, Camera } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
-import { fetchGames } from '@/services/bggApi';
 import { GameItem } from '@/components/GameItem';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
-import { SyncModal } from '@/components/SyncModal';
-import { FilterModal } from '@/components/FilterModal';
-import { filterGames } from '@/components/FilterGameModal';
+import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 import { AddGameModal } from '@/components/AddGameModal';
 import { CreatePollModal } from '@/components/CreatePollModal';
@@ -23,6 +19,7 @@ import { Game } from '@/types/game';
 
 export default function CollectionScreen() {
   const insets = useSafeAreaInsets();
+  const [allGames, setAllGames] = useState<Game[]>([]);
   const [games, setGames] = useState<Game[]>([]);
 
   // Use fallback values for web platform
@@ -32,11 +29,10 @@ export default function CollectionScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
-  const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [createPollModalVisible, setCreatePollModalVisible] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+
   const router = useRouter();
 
   const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
@@ -134,6 +130,7 @@ export default function CollectionScreen() {
       }).toArray();
       console.log(mappedGames);
 
+      setAllGames(mappedGames);
       const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
 
@@ -143,8 +140,9 @@ export default function CollectionScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+
     }
-  }, [playerCount, playTime, age, gameType, complexity]);
+  }, []);
 
   const handleDelete = useCallback(async () => {
     if (!gameToDelete) return;
@@ -161,6 +159,7 @@ export default function CollectionScreen() {
 
       if (error) throw error;
 
+      setAllGames(prevGames => prevGames.filter(game => game.id !== gameToDelete.id));
       setGames(prevGames => prevGames.filter(game => game.id !== gameToDelete.id));
     } catch (err) {
       console.error('Error deleting game:', err);
@@ -169,79 +168,10 @@ export default function CollectionScreen() {
     }
   }, [gameToDelete]);
 
-  const handleSync = async (username?: string) => {
-    try {
-      setSyncing(true);
-      setError(null);
-
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.replace('/auth/login');
-        return;
-      }
-
-      if (!username || !username.trim()) {
-        setError('Please enter a valid BoardGameGeek username');
-        return;  // Exit early since username is invalid
-      }
-
-      username = username.replace('@', ''); // Requested in GAM-134 ("Ignore @ when people enter BGG ID")
-      const bggGames = await fetchGames(username);
-
-      if (!bggGames || bggGames.length === 0) {
-        setError('No games found in collection. Make sure your collection is public and contains board games.');
-        return;
-      }
-
-      // Create a Map to store unique games, using bgg_game_id as the key
-      const uniqueGames = new Map();
-
-      // Only keep the last occurrence of each game ID
-      bggGames.forEach(game => {
-        uniqueGames.set(game.id, {
-          user_id: user.id,
-          bgg_game_id: game.id,
-          name: game.name,
-          thumbnail: game.thumbnail,
-          min_players: game.min_players,
-          max_players: game.max_players,
-          playing_time: game.playing_time,
-          minplaytime: game.minPlaytime,
-          maxplaytime: game.maxPlaytime,
-          year_published: game.yearPublished,
-          description: game.description,
-        });
-      });
-
-      // Convert the Map values back to an array
-      const uniqueGamesList = Array.from(uniqueGames.values());
-
-      const { error: insertError } = await supabase
-        .from('collections')
-        .upsert(uniqueGamesList, { onConflict: 'user_id,bgg_game_id' });
-
-      if (insertError) throw insertError;
-
-      await loadGames();
-      Toast.show({ type: 'success', text1: 'Collection imported!' });
-      setSyncModalVisible(false);
-    } catch (err) {
-      console.error('Error in handleSync:', err);
-      setError(err instanceof Error ? err.message : 'Failed to sync games');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleFilter = useCallback(() => {
-    loadGames();
-  }, [loadGames]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadGames();
-  }, [loadGames]);
+  const applyFilters = useCallback(() => {
+    const filteredGames = filterGames(allGames, playerCount, playTime, age, gameType, complexity);
+    setGames(filteredGames);
+  }, [allGames, playerCount, playTime, age, gameType, complexity]);
 
   const clearFilters = () => {
     setPlayerCount([]);
@@ -249,7 +179,16 @@ export default function CollectionScreen() {
     setAge([]);
     setGameType([]);
     setComplexity([]);
+    // Immediately show all games when filters are cleared
+    if (allGames.length > 0) {
+      setGames(allGames);
+    }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadGames();
+  }, [loadGames]);
 
   // Convert collection filters to CreatePollModal format
   const convertFiltersForPoll = () => {
@@ -267,6 +206,12 @@ export default function CollectionScreen() {
     loadGames();
   }, [loadGames]);
 
+  useEffect(() => {
+    if (allGames.length > 0) {
+      applyFilters();
+    }
+  }, [applyFilters]);
+
   if (loading) {
     return <LoadingState />;
   }
@@ -279,7 +224,7 @@ export default function CollectionScreen() {
     return (
       <EmptyState
         username={null}
-        onRefresh={handleSync}
+        onRefresh={loadGames}
         loadGames={loadGames}
         message={isFiltered ? 'No games found' : undefined}
         buttonText={isFiltered ? "Clear Filters" : undefined}
@@ -314,11 +259,11 @@ export default function CollectionScreen() {
             <Plus size={20} color="#ff9654" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.syncButton}
-            onPress={() => setSyncModalVisible(true)}
+            style={styles.createPollButton}
+            onPress={() => setCreatePollModalVisible(true)}
           >
-            <RefreshCw size={20} color="#ff9654" />
-            <Text style={styles.syncButtonText}>Sync with BGG</Text>
+            <Plus size={20} color="#ffffff" />
+            <Text style={styles.createPollButtonText}>Create Poll</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -331,13 +276,6 @@ export default function CollectionScreen() {
               onPress={() => setFilterModalVisible(true)}
             >
               <Text style={styles.clearButtonText}>Edit Filters</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.createPollButton}
-              onPress={() => setCreatePollModalVisible(true)}
-            >
-              <Vote size={16} color="#ffffff" />
-              <Text style={styles.createPollButtonText}>Create Poll</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -374,14 +312,7 @@ export default function CollectionScreen() {
         onCancel={() => setGameToDelete(null)}
       />
 
-      <SyncModal
-        isVisible={syncModalVisible}
-        onClose={() => setSyncModalVisible(false)}
-        onSync={handleSync}
-        loading={syncing}
-      />
-
-      <FilterModal
+      <FilterGameModal
         isVisible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         onApplyFilters={() => setFilterModalVisible(false)}
@@ -392,7 +323,7 @@ export default function CollectionScreen() {
           {
             key: 'playerCount',
             label: 'Player Count',
-            placeholder: 'Player count',
+            placeholder: '# Players',
             options: playerOptions,
             value: playerCount,
             onChange: setPlayerCount,
@@ -400,7 +331,7 @@ export default function CollectionScreen() {
           {
             key: 'playTime',
             label: 'Play Time',
-            placeholder: 'Play time',
+            placeholder: 'Play Time',
             options: timeOptions,
             value: playTime,
             onChange: setPlayTime,
@@ -408,7 +339,7 @@ export default function CollectionScreen() {
           {
             key: 'age',
             label: 'Age Range',
-            placeholder: 'Age range',
+            placeholder: 'Age Range',
             options: ageOptions,
             value: age,
             onChange: setAge,
@@ -416,7 +347,7 @@ export default function CollectionScreen() {
           {
             key: 'gameType',
             label: 'Game Type',
-            placeholder: 'Co-op / competitive',
+            placeholder: 'Play Style',
             options: typeOptions,
             value: gameType,
             onChange: setGameType,
@@ -424,7 +355,7 @@ export default function CollectionScreen() {
           {
             key: 'complexity',
             label: 'Complexity',
-            placeholder: 'Game complexity',
+            placeholder: 'Complexity',
             options: complexityOptions,
             value: complexity,
             onChange: setComplexity,
@@ -436,6 +367,7 @@ export default function CollectionScreen() {
         isVisible={addGameModalVisible}
         onClose={() => setAddGameModalVisible(false)}
         onGameAdded={loadGames}
+        userCollectionIds={allGames.map(g => g.id.toString())}
       />
 
       <CreatePollModal
@@ -445,7 +377,6 @@ export default function CollectionScreen() {
           setCreatePollModalVisible(false);
           // Navigate to polls tab with refresh parameter
           router.push('/(tabs)/polls?refresh=true');
-          Toast.show({ type: 'success', text1: 'Poll created successfully!' });
         }}
         initialFilters={convertFiltersForPoll()}
       />
@@ -492,22 +423,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ff9654',
   },
-  syncButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ff9654',
-  },
-  syncButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
-    marginLeft: 8,
-  },
   filterBanner: {
     backgroundColor: '#f0f0f0',
     paddingVertical: 8,
@@ -519,6 +434,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+
   clearButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -537,16 +453,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ff9654',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
+    gap: 8,
+    marginRight: 8,
   },
   createPollButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#ffffff',
-    marginLeft: 4,
   },
+
   listContent: {
     padding: 16,
   },

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import Toast from 'react-native-toast-message';
 import { supabase } from '@/services/supabase';
@@ -11,11 +11,52 @@ export default function ResetPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const [fontsLoaded] = useFonts({
     'Poppins-Regular': Poppins_400Regular,
     'Poppins-SemiBold': Poppins_600SemiBold,
   });
+
+  // Cross-platform function to get the base URL
+  const getBaseUrl = () => {
+    // Check environment variables first
+    if (process.env.EXPO_PUBLIC_LOCAL_DEV_URL) {
+      return process.env.EXPO_PUBLIC_LOCAL_DEV_URL;
+    }
+
+    if (process.env.EXPO_PUBLIC_PRODUCTION_URL) {
+      return process.env.EXPO_PUBLIC_PRODUCTION_URL;
+    }
+
+    // Fallback based on environment
+    if (process.env.NODE_ENV === 'development') {
+      return 'http://localhost:8081';
+    }
+
+    // Default to production
+    return 'https://www.gamenyte.app';
+  };
+
+  // Check for error parameters from redirects
+  useEffect(() => {
+    const errorParam = params.error as string;
+    if (errorParam) {
+      switch (errorParam) {
+        case 'invalid_link':
+          setError('The password reset link is invalid or has expired. Please request a new one.');
+          break;
+        case 'no_tokens':
+          setError('No valid reset tokens found. Please use the link from your email.');
+          break;
+        case 'unexpected_error':
+          setError('An unexpected error occurred. Please try again.');
+          break;
+        default:
+          setError('Something went wrong. Please try again.');
+      }
+    }
+  }, [params.error]);
 
   if (!fontsLoaded) {
     return null;
@@ -31,7 +72,7 @@ export default function ResetPasswordScreen() {
       await supabase.auth.signOut();
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/auth/update-password',
+        redirectTo: getBaseUrl() + '/auth/reset-password-handler',
       });
       if (error) {
         setError(error.message);

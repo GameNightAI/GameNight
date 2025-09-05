@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import Toast from 'react-native-toast-message';
+import * as Linking from 'expo-linking';
 import { supabase } from '@/services/supabase';
 
 export default function UpdatePasswordScreen() {
@@ -13,27 +14,123 @@ export default function UpdatePasswordScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const [fontsLoaded] = useFonts({
     'Poppins-Regular': Poppins_400Regular,
     'Poppins-SemiBold': Poppins_600SemiBold,
   });
 
-  // On mount, check for access_token in the URL hash
+  // On mount, check for access_token and handle password reset flow
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash;
-      if (hash) {
-        const params = new URLSearchParams(hash.replace('#', '?'));
-        const access_token = params.get('access_token');
-        if (access_token) {
-          supabase.auth.setSession({ access_token, refresh_token: access_token });
+    const handlePasswordReset = async () => {
+      try {
+        setCheckingAuth(true);
+        // Check if we're in a password reset flow
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('Error getting session:', error);
+          setError('Authentication error. Please try the reset link again.');
+          return;
         }
+
+        if (!data.session) {
+          // Check for authentication tokens based on platform
+          let access_token: string | null = null;
+          let refresh_token: string | null = null;
+
+          if (Platform.OS === 'web') {
+            // Web platform: check URL parameters
+            try {
+              const urlParams = new URLSearchParams(
+                typeof window !== 'undefined' ? window.location.search : ''
+              );
+              access_token = urlParams.get('access_token');
+              refresh_token = urlParams.get('refresh_token');
+            } catch (error) {
+              console.warn('Could not parse URL parameters:', error);
+            }
+          } else {
+            // Mobile platform: check for deep link parameters
+            const initialURL = await Linking.getInitialURL();
+            if (initialURL) {
+              const url = new URL(initialURL);
+              access_token = url.searchParams.get('access_token');
+              refresh_token = url.searchParams.get('refresh_token');
+            }
+          }
+
+          if (access_token) {
+            // Set the session with the tokens from URL
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token,
+              refresh_token: refresh_token || access_token
+            });
+
+            if (sessionError) {
+              console.error('Error setting session:', sessionError);
+              setError('Invalid reset link. Please request a new password reset.');
+              return;
+            }
+
+            console.log('Password reset session established');
+            setIsAuthenticated(true);
+          } else {
+            // No tokens found, user needs to use a valid reset link
+            if (Platform.OS === 'web') {
+              setError('Please use the password reset link from your email.');
+            } else {
+              setError('Please use the password reset link from your email or open the link in the app.');
+            }
+          }
+        } else {
+          console.log('User session found, ready to update password');
+          setIsAuthenticated(true);
+        }
+      } catch (err) {
+        console.error('Error in password reset flow:', err);
+        setError('An unexpected error occurred. Please try again.');
+      } finally {
+        setCheckingAuth(false);
       }
-    }
+    };
+
+    handlePasswordReset();
   }, []);
 
   if (!fontsLoaded) {
     return null;
+  }
+
+  if (checkingAuth) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Verifying Reset Link</Text>
+        <Text style={styles.subtitle}>
+          {Platform.OS === 'web'
+            ? 'Please wait while we verify your password reset link...'
+            : 'Please wait while we verify your reset link...'
+          }
+        </Text>
+      </View>
+    );
+  }
+
+  if (!isAuthenticated && error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Reset Link Invalid</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.button} onPress={() => router.replace('/auth/reset-password')}>
+          <Text style={styles.buttonText}>Request New Reset Link</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backLink} onPress={() => router.replace('/auth/login')}>
+          <Text style={styles.backText}>Back to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   const handleUpdatePassword = async () => {

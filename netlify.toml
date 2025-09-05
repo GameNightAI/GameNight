@@ -15,6 +15,13 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Allow auth routes to pass through to your app (important for Supabase password reset)
+[[redirects]]
+  from = "/auth/*"
+  to = "/index.html"
+  status = 200
+
+# Catch everything else
 [[redirects]]
   from = "*"
   to = "/index.html"

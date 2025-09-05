@@ -1,9 +1,33 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView } from 'react-native';
-import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain } from 'lucide-react-native';
+import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight } from 'lucide-react-native';
 import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 
 import { Game } from '@/types/game';
+
+// Helper function to get play time display with proper priority
+function getPlayTimeDisplay(game: Game): string {
+  // Priority 1: Show min-max range if both exist
+  if (game.minPlaytime && game.maxPlaytime) {
+    if (game.minPlaytime === game.maxPlaytime) {
+      return `${game.minPlaytime} min`;
+    }
+    return `${game.minPlaytime}-${game.maxPlaytime} min`;
+  }
+
+  // Priority 2: Show individual min or max if only one exists
+  if (game.minPlaytime || game.maxPlaytime) {
+    return `${game.minPlaytime || game.maxPlaytime} min`;
+  }
+
+  // Priority 3: Fall back to playing_time if no min/max available
+  if (game.playing_time) {
+    return `${game.playing_time} min`;
+  }
+
+  // Default: No time information available
+  return 'N/A';
+}
 
 interface GameItemProps {
   game: Game;
@@ -44,7 +68,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             </>
           )}
           <Text>
-            {` player${maxPlayers === 1 ? '': 's'}`}
+            {` player${maxPlayers === 1 ? '' : 's'}`}
           </Text>
         </>
       ) : (
@@ -121,7 +145,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       <TouchableOpacity
         style={styles.mainContent}
         onPress={toggleExpanded}
-        activeOpacity={0.7}
+        activeOpacity={0.85}
       >
         <Image
           source={{ uri: game.thumbnail }}
@@ -134,13 +158,6 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             <Text style={styles.title} numberOfLines={2}>
               {decodeHTML(game.name)}
             </Text>
-            <View style={styles.expandIcon}>
-              {isExpanded ? (
-                <ChevronUp size={20} color="#666666" />
-              ) : (
-                <ChevronDown size={20} color="#666666" />
-              )}
-            </View>
           </View>
 
           <View style={styles.infoRow}>
@@ -150,21 +167,26 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
                 {playerCountText}
               </Text>
             </View>
+          </View>
 
+          <View style={[styles.infoRow, { marginTop: 4 }]}>
             <View style={styles.infoItem}>
               <Clock size={16} color="#666666" />
               <Text style={styles.infoText}>
-                {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'N/A'}
+                {getPlayTimeDisplay(game)}
               </Text>
             </View>
           </View>
         </View>
 
-        {isExpanded ? (
-          <ChevronUp size={24} color="#ff9654" />
-        ) : (
-          <ChevronDown size={24} color="#ff9654" />
-        )}
+        <View style={styles.chevronContainer}>
+          <Text style={styles.infoText}>Info</Text>
+          {isExpanded ? (
+            <ChevronDown size={24} color="#ff9654" />
+          ) : (
+            <ChevronRight size={24} color="#ff9654" />
+          )}
+        </View>
       </TouchableOpacity>
 
       {isExpanded && (
@@ -253,6 +275,9 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   thumbnail: {
     width: 80,
@@ -268,15 +293,24 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    justifyContent: 'flex-start',
+    marginBottom: 4,
+    marginTop: -8,
   },
   title: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#1a2b5f',
-    paddingRight: 24,
     flex: 1,
+    lineHeight: 20,
+  },
+  chevronContainer: {
+    marginLeft: 'auto',
+    marginRight: -5,
+    marginTop: 55,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 0,
   },
   expandIcon: {
     marginLeft: 8,
@@ -291,7 +325,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-start',
     gap: 16,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   infoItem: {
     flexDirection: 'row',
@@ -299,7 +333,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 13,
+    fontSize: 12,
     color: '#666666',
     marginLeft: 4,
   },

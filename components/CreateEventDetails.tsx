@@ -3,33 +3,43 @@ import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, TextInp
 import { X } from 'lucide-react-native';
 import { useDeviceType } from '@/hooks/useDeviceType';
 
-interface CreatePollDescrModalProps {
+interface CreateEventDetailsProps {
   isVisible: boolean;
   onClose: () => void;
-  onSave: (description: string) => void;
+  onSave: (eventName: string, description: string, location: string) => void;
+  currentEventName: string;
   currentDescription: string;
+  currentLocation: string;
 }
 
-export const CreatePollDescrModal: React.FC<CreatePollDescrModalProps> = ({
+export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
   isVisible,
   onClose,
   onSave,
+  currentEventName,
   currentDescription,
+  currentLocation,
 }) => {
   const deviceType = useDeviceType();
+  const [eventName, setEventName] = useState(currentEventName);
   const [description, setDescription] = useState(currentDescription);
+  const [location, setLocation] = useState(currentLocation);
 
   useEffect(() => {
+    setEventName(currentEventName);
     setDescription(currentDescription);
-  }, [currentDescription]);
+    setLocation(currentLocation);
+  }, [currentEventName, currentDescription, currentLocation]);
 
   const handleSave = () => {
-    onSave(description);
+    onSave(eventName, description, location);
     onClose();
   };
 
   const handleClose = () => {
+    setEventName(currentEventName); // Reset to original value
     setDescription(currentDescription); // Reset to original value
+    setLocation(currentLocation); // Reset to original value
     onClose();
   };
 
@@ -39,7 +49,7 @@ export const CreatePollDescrModal: React.FC<CreatePollDescrModalProps> = ({
     <View style={styles.overlay}>
       <View style={styles.dialog}>
         <View style={styles.header}>
-          <Text style={styles.title}>Edit Poll Description</Text>
+          <Text style={styles.title}>Edit Event Details</Text>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={handleClose}
@@ -51,21 +61,44 @@ export const CreatePollDescrModal: React.FC<CreatePollDescrModalProps> = ({
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.label}>Description (Optional)</Text>
+          <Text style={styles.label}>Event Name (Optional)</Text>
           <Text style={styles.sublabel}>
-            Add context, instructions, or any additional information for voters
+            Customize your event title or keep the auto-generated name
           </Text>
+          <TextInput
+            style={styles.titleInput}
+            value={eventName}
+            onChangeText={setEventName}
+            placeholder="Event title will appear when dates are selected"
+            placeholderTextColor="#999999"
+            maxLength={100}
+            autoFocus
+          />
+
+          <Text style={[styles.label, styles.locationLabel]}>Location (Optional)</Text>
+          <Text style={styles.sublabel}>
+            Default location for all event dates
+          </Text>
+          <TextInput
+            style={styles.locationInput}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Enter default location for all dates"
+            placeholderTextColor="#999999"
+            maxLength={100}
+          />
+
+          <Text style={[styles.label, styles.descriptionLabel]}>Description (Optional)</Text>
           <TextInput
             style={styles.descriptionInput}
             value={description}
             onChangeText={setDescription}
-            placeholder="e.g., Vote for your top 3 games, or Let's decide what to play this weekend"
+            placeholder="Add context, details, or any additional information about the event"
             placeholderTextColor="#999999"
             maxLength={500}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
-            autoFocus
           />
         </View>
 
@@ -97,6 +130,10 @@ type Styles = {
   content: ViewStyle;
   label: TextStyle;
   sublabel: TextStyle;
+  titleInput: TextStyle;
+  locationLabel: TextStyle;
+  locationInput: TextStyle;
+  descriptionLabel: TextStyle;
   descriptionInput: TextStyle;
   footer: ViewStyle;
   cancelButton: ViewStyle;
@@ -135,7 +172,8 @@ const styles = StyleSheet.create<Styles>({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Platform.OS === 'web' ? 20 : 16,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e1e5ea',
   },
@@ -148,7 +186,8 @@ const styles = StyleSheet.create<Styles>({
     color: '#1a2b5f',
   },
   content: {
-    padding: Platform.OS === 'web' ? 20 : 16,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
+    paddingVertical: Platform.OS === 'web' ? 12 : 8,
   },
   label: {
     fontFamily: 'Poppins-SemiBold',
@@ -160,18 +199,48 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#666666',
-    marginBottom: 12,
+    marginBottom: 6,
   },
-  descriptionInput: {
+  titleInput: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
+    fontSize: 14,
     color: '#333333',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
     borderRadius: 12,
     padding: 12,
-    marginTop: 8,
+    marginTop: 6,
+    marginBottom: 0,
+  },
+  locationLabel: {
+    marginTop: 12,
+  },
+  locationInput: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#333333',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 6,
+    marginBottom: 0,
+  },
+  descriptionLabel: {
+    marginTop: 12,
+  },
+  descriptionInput: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#333333',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 6,
     minHeight: 100,
     textAlignVertical: 'top',
   },
@@ -179,7 +248,8 @@ const styles = StyleSheet.create<Styles>({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 12,
-    padding: Platform.OS === 'web' ? 20 : 16,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
+    paddingVertical: Platform.OS === 'web' ? 12 : 8,
     borderTopWidth: 1,
     borderTopColor: '#e1e5ea',
   },

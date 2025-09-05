@@ -6,6 +6,30 @@ import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown, ThumbsUp, Heart, Star,
 
 import { VOTING_OPTIONS, ICON_MAP, VoteType, getIconColor } from './votingOptions';
 
+// Helper function to get play time display with proper priority
+function getPlayTimeDisplay(game: Game): string {
+  // Priority 1: Show min-max range if both exist
+  if (game.minPlaytime && game.maxPlaytime) {
+    if (game.minPlaytime === game.maxPlaytime) {
+      return `${game.minPlaytime} min`;
+    }
+    return `${game.minPlaytime}-${game.maxPlaytime} min`;
+  }
+
+  // Priority 2: Show individual min or max if only one exists
+  if (game.minPlaytime || game.maxPlaytime) {
+    return `${game.minPlaytime || game.maxPlaytime} min`;
+  }
+
+  // Priority 3: Fall back to playing_time if no min/max available
+  if (game.playing_time) {
+    return `${game.playing_time} min`;
+  }
+
+  // Default: No time information available
+  return 'Unknown time';
+}
+
 // Utility to get score by voteType
 const getScoreByVoteType = (voteType: string): number => {
   const option = VOTING_OPTIONS.find(opt => opt.value === voteType);
@@ -103,7 +127,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
             <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
               <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
               <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
-                {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.maxPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                {game.min_players}-{game.max_players} players • {getPlayTimeDisplay(game)}
               </Text>
             </View>
             <View style={styles.chevronContainer}>
