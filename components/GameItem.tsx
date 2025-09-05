@@ -80,23 +80,14 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
           {ownedExpansionText}
         </Text>
         {ownedExpansionCount !== game.expansions.length &&
-          <button
-            type="button"
-            onClick={() => setShowUnownedExpansions(currentShow => !currentShow)}
-            style={{
-              marginLeft: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#fff',
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: '#ff9654',
-            }}
-          >
-            {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
-          </button>
+          <TouchableOpacity
+              style={styles.expButton}
+              onPress={() => setShowUnownedExpansions(currentShow => !currentShow)}
+            >
+              <Text style={styles.expButtonText}>
+                {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
+              </Text>
+          </TouchableOpacity>
         }
       </span>
       {expansionItems.length > 0 &&
@@ -346,5 +337,21 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginTop: 2,
     textAlign: 'center',
+  },
+  expButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+  },
+  expButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    marginLeft: 8,
   },
 });
