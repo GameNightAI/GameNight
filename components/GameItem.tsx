@@ -75,7 +75,11 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       //styles.detailContainer,
       styles.infoText,
     ]}>
-      <span>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={null}
+      >
         <Text style={styles.infoTextEmphasis}>
           {ownedExpansionText}
         </Text>
@@ -89,7 +93,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
               </Text>
           </TouchableOpacity>
         }
-      </span>
+      </ScrollView>
       {expansionItems.length > 0 &&
         <ul style={{
           //...styles.infoText,
