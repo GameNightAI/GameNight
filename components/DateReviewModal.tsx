@@ -246,13 +246,21 @@ export function DateReviewModal({
               const hasCustomTime = customTimeDates.has(dateKey);
               const hasCustomLocation = customLocationDates.has(dateKey);
 
+              const getDisplayTime = (startTime: Date | null, endTime: Date | null): string => {
+                if (startTime && endTime) {
+                  return ` ${formatTime(startTime)} - ${formatTime(endTime)}`;
+                } else if (startTime) {
+                  return ` Starts at ${formatTime(startTime)}`;
+                } else if (endTime) {
+                  return ` Ends at ${formatTime(endTime)}`;
+                } else {
+                  return ' Time not set';
+                }
+              };
+
               const displayTime = hasCustomTime
-                ? (dateOptions.startTime && dateOptions.endTime
-                  ? `${formatTime(dateOptions.startTime)} - ${formatTime(dateOptions.endTime)}`
-                  : 'Time not set')
-                : (localEventOptions.startTime && localEventOptions.endTime
-                  ? `${formatTime(localEventOptions.startTime)} - ${formatTime(localEventOptions.endTime)}`
-                  : 'Time not set');
+                ? getDisplayTime(dateOptions.startTime, dateOptions.endTime)
+                : getDisplayTime(localEventOptions.startTime, localEventOptions.endTime);
 
               const displayLocation = hasCustomLocation
                 ? (dateOptions.location || 'Location not set')
