@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 
 import { EVENT_VOTING_OPTIONS, EVENT_ICON_MAP, EventVoteType, getEventIconColor, getEventVoteBgColor, getEventVoteBorderColor } from './eventVotingOptions';
 import { PollEvent } from '@/types/poll';
+import { TruncatedText } from './TruncatedText';
 
 interface EventDateCardProps {
   eventDate: PollEvent;
@@ -68,9 +69,12 @@ export const EventDateCard = ({
             <View style={styles.dateDetails}>
               <View style={styles.dateDetailRow}>
                 <MapPin size={isSmallScreen ? 12 : 14} color="#6b7280" />
-                <Text style={[styles.dateDetailText, isSmallScreen && styles.dateDetailTextSmall]}>
-                  {displayLocation}
-                </Text>
+                <TruncatedText
+                  text={displayLocation}
+                  maxLength={35}
+                  textStyle={[styles.dateDetailText, isSmallScreen && styles.dateDetailTextSmall]}
+                  buttonTextStyle={[styles.truncateButtonText, isSmallScreen && styles.truncateButtonTextSmall]}
+                />
               </View>
               <View style={styles.dateDetailRow}>
                 <Clock size={isSmallScreen ? 12 : 14} color="#6b7280" />
@@ -235,5 +239,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
+  },
+  truncateButtonText: {
+    color: '#0070f3',
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  truncateButtonTextSmall: {
+    fontSize: 10,
   },
 });

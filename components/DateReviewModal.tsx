@@ -56,6 +56,11 @@ export function DateReviewModal({
 
   const saveTimeSelection = (newTime: Date) => {
     if (timePickerMode === 'start') {
+      // Validate start time is before end time if end time exists
+      if (localEventOptions.endTime && newTime >= localEventOptions.endTime) {
+        setTimeValidationError('Start time must be before end time');
+        return;
+      }
       setLocalEventOptions(prev => ({ ...prev, startTime: newTime }));
     } else {
       // Validate end time is after start time
@@ -149,9 +154,9 @@ export function DateReviewModal({
     };
 
     if (timePickerMode === 'start') {
-      // Validate end time is after start time
+      // Validate start time is before end time if end time exists
       if (currentOptions.endTime && newTime >= currentOptions.endTime) {
-        setTimeValidationError('End time must be after start time');
+        setTimeValidationError('Start time must be before end time');
         return;
       }
       updateDateSpecificOptions(new Date(dateKey + 'T00:00:00'), { startTime: newTime });

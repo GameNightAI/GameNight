@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Poll, PollEvent } from '@/types/poll';
 import Toast from 'react-native-toast-message';
 import * as Clipboard from 'expo-clipboard';
+import { TruncatedText } from '@/components/TruncatedText';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -321,7 +322,12 @@ export default function EventResultsScreen() {
                     <View style={styles.dateDetails}>
                       <View style={styles.dateDetailRow}>
                         <MapPin size={16} color="#6b7280" />
-                        <Text style={styles.dateDetailText}>{displayLocation}</Text>
+                        <TruncatedText
+                          text={displayLocation}
+                          maxLength={35}
+                          textStyle={styles.dateDetailText}
+                          buttonTextStyle={styles.truncateButtonText}
+                        />
                       </View>
                       <View style={styles.dateDetailRow}>
                         <Clock size={16} color="#6b7280" />
@@ -594,5 +600,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: 'white',
+  },
+  truncateButtonText: {
+    color: '#0070f3',
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
