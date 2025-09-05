@@ -357,6 +357,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#ff9654',
-    marginLeft: 8,
+    //marginLeft: 8,
   },
 });
