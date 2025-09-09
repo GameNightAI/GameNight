@@ -314,6 +314,9 @@ export function ScrollableTimePicker({
     };
 
     const handleScrollEnd = (event: any) => {
+      return null;
+      
+      
       const scrollY = event.nativeEvent.contentOffset.y;
       const index = Math.round(scrollY / 60);
 
