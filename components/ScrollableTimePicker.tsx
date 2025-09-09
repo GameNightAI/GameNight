@@ -314,9 +314,7 @@ export function ScrollableTimePicker({
     };
 
     const handleScrollEnd = (event: any) => {
-      return null;
-      
-      
+
       const scrollY = event.nativeEvent.contentOffset.y;
       const index = Math.round(scrollY / 60);
 
@@ -343,7 +341,7 @@ export function ScrollableTimePicker({
     const handleTimeOptionPress = (item: number) => {
       onValueChange(item);
       // Switch focus to scroll wheel mode when user taps
-      setIsManualInputFocused(false);
+      // setIsManualInputFocused(false);
       // Sync manual input when scroll wheel changes
       if (items === hours) {
         setManualHourInput(item.toString());
