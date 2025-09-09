@@ -133,7 +133,7 @@ export function ScrollableTimePicker({
     const now = new Date();
 
     // Use manual input values if manual input is focused, otherwise use scroll wheel values
-    let hour, minute, period;
+    let hour;
 
     /* if (isManualInputFocused) {
       const manualHour = parseInt(manualHourInput, 10);
@@ -151,13 +151,15 @@ export function ScrollableTimePicker({
     } */
 
     // Convert to 24-hour format
-    if (period === 'PM' && hour !== 12) {
-      hour += 12;
-    } else if (period === 'AM' && hour === 12) {
+    if (selectedPeriod === 'PM' && selectedHour !== 12) {
+      hour = selectedHour + 12;
+    } else if (selectedPeriod === 'AM' && selectedHour === 12) {
       hour = 0;
+    } else {
+      hour = selectedHour
     }
-
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute);
+    
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, selectedMinute);
   };
 
   const handleSave = () => {
