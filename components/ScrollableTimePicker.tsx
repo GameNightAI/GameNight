@@ -341,13 +341,13 @@ export function ScrollableTimePicker({
     const handleTimeOptionPress = (item: number) => {
       onValueChange(item);
       // Switch focus to scroll wheel mode when user taps
-      // setIsManualInputFocused(false);
+      setIsManualInputFocused(false);
       // Sync manual input when scroll wheel changes
-      if (items === hours) {
+      /* if (items === hours) {
         setManualHourInput(item.toString());
       } else if (items === minutes) {
         setManualMinuteInput(item.toString().padStart(2, '0'));
-      }
+      } */
     };
 
     return (
