@@ -32,7 +32,7 @@ export function ScrollableTimePicker({
   const [manualMinuteInput, setManualMinuteInput] = useState('');
   const [manualPeriodInput, setManualPeriodInput] = useState<'AM' | 'PM'>('PM');
   const [showManualInput, setShowManualInput] = useState(false);
-  const [lastValidTime, setLastValidTime] = useState<{ hour: number, minute: number, period: 'AM' | 'PM' } | null>(null);
+  // const [lastValidTime, setLastValidTime] = useState<{ hour: number, minute: number, period: 'AM' | 'PM' } | null>(null);
   const [isManualInputFocused, setIsManualInputFocused] = useState(false);
   const minuteInputRef = useRef<TextInput | null>(null);
 
@@ -101,7 +101,7 @@ export function ScrollableTimePicker({
   }, [visible, initialTime]);
 
   // Update lastValidTime when scroll wheel values change
-  useEffect(() => {
+  /* useEffect(() => {
     if (!isManualInputFocused) {
       setLastValidTime({
         hour: selectedHour,
@@ -109,7 +109,7 @@ export function ScrollableTimePicker({
         period: selectedPeriod
       });
     }
-  }, [selectedHour, selectedMinute, selectedPeriod, isManualInputFocused]);
+  }, [selectedHour, selectedMinute, selectedPeriod, isManualInputFocused]); */
 
   // Update showManualInput based on focus state
   useEffect(() => {
@@ -218,11 +218,11 @@ export function ScrollableTimePicker({
       setSelectedPeriod(manualPeriodInput);
 
       // Store the last valid time
-      setLastValidTime({
+      /* setLastValidTime({
         hour: clampedHour,
         minute: clampedMinute,
         period: manualPeriodInput
-      });
+      }); */
     } else {
       // If no valid input, maintain current scroll wheel position
       // Don't let them revert to default values
@@ -276,11 +276,11 @@ export function ScrollableTimePicker({
       setManualHourInput(selectedHour.toString());
       setManualMinuteInput(selectedMinute.toString().padStart(2, '0'));
       setManualPeriodInput(selectedPeriod);
-      setLastValidTime({
+      /* setLastValidTime({
         hour: selectedHour,
         minute: selectedMinute,
         period: selectedPeriod
-      });
+      }); */
       setIsManualInputFocused(true);
     } else {
       // Switching to scroll wheel mode
@@ -314,6 +314,7 @@ export function ScrollableTimePicker({
     };
 
     const handleScrollEnd = (event: any) => {
+
       const scrollY = event.nativeEvent.contentOffset.y;
       const index = Math.round(scrollY / 60);
 
