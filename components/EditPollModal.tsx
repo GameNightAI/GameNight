@@ -32,6 +32,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const [hasExistingVotes, setHasExistingVotes] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [warningDismissed, setWarningDismissed] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState<'save' | 'addGames'>('save');
   const [showCreatePollModal, setShowCreatePollModal] = useState(false);
   const [dynamicPollTitle, setDynamicPollTitle] = useState(pollTitle);
@@ -46,6 +47,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
       // Reset the title change flag when opening a new poll
       setIsTitleManuallyChanged(false);
       setDynamicPollTitle(pollTitle);
+      // Reset warning dismissed state when opening modal
+      setWarningDismissed(false);
     }
   }, [isVisible, pollId, pollTitle]);
 
@@ -324,12 +327,18 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
           </View>
 
           {/* Warning about existing votes */}
-          {hasExistingVotes && (
+          {hasExistingVotes && !warningDismissed && (
             <View style={styles.warningHeader}>
               <AlertTriangle size={20} color="#f59e0b" />
               <Text style={styles.warningHeaderText}>
-                This poll already has votes
+                This poll already has {voteCount} vote{voteCount !== 1 ? 's' : ''}
               </Text>
+              <TouchableOpacity
+                style={styles.warningDismissButton}
+                onPress={() => setWarningDismissed(true)}
+              >
+                <X size={16} color="#92400e" />
+              </TouchableOpacity>
             </View>
           )}
 
@@ -547,6 +556,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#92400e',
+  },
+  warningDismissButton: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(146, 64, 14, 0.1)',
   },
   content: {
     flex: 1,
