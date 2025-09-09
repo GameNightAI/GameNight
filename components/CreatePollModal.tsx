@@ -956,7 +956,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           // Add to searchAddedGames and automatically select for poll
           setSearchAddedGames(prev => [...prev, game]);
           setSelectedGamesForPoll(prev => [...prev, game]);
-          setIsGameSearchModalVisible(false);
+          // Modal stays open so user can add more games
         }}
         existingGameIds={selectedGames.map(g => g.id.toString())}
         userCollectionIds={[]}

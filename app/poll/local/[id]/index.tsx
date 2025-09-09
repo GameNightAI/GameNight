@@ -10,6 +10,15 @@ import { GameCard } from '@/components/PollGameCard';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 
+// Helper function to get complexity description
+function getComplexityDescription(complexity: number): string {
+  if (complexity < 1.5) return 'Light';
+  if (complexity < 2.5) return 'Medium Light';
+  if (complexity < 3.5) return 'Medium';
+  if (complexity < 4.5) return 'Medium Heavy';
+  return 'Heavy';
+}
+
 // Custom hook for local voting that bypasses user authentication
 const useLocalPollData = (pollId: string | string[] | undefined) => {
   const [poll, setPoll] = useState<any>(null);
@@ -132,7 +141,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
           is_cooperative: game.is_cooperative || false,
           complexity: game.complexity || 1,
           complexity_tier: game.complexity_tier || 1,
-          complexity_desc: game.complexity_desc || '',
+          complexity_desc: game.complexity ? getComplexityDescription(game.complexity) : '',
           average: game.average ?? null,
           bayesaverage: game.bayesaverage ?? null,
           votes: voteData,
@@ -231,6 +240,7 @@ export default function LocalPollScreen() {
       if (!trimmedName) {
         setNameError(true);
         Toast.show({ type: 'error', text1: 'Please enter your name' });
+        setSubmitting(false);
         return;
       }
       const finalName = trimmedName;

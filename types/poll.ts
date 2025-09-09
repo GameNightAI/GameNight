@@ -20,6 +20,7 @@ export interface Vote {
   poll_id: string;
   game_id: number;
   voter_name?: string;
+  vote_type: number;
   created_at: string;
 }
 
