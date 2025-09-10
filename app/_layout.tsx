@@ -36,7 +36,7 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
       </Stack>
       <Toast />
-      <StatusBar style="light" />
+      <StatusBar style="light" backgroundColor="#1a2b5f" />
     </>
   );
 }
