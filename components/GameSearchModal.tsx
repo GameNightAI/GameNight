@@ -6,6 +6,7 @@ import { debounce } from 'lodash';
 import { Game } from '@/types/game';
 import { XMLParser } from 'fast-xml-parser';
 import Toast from 'react-native-toast-message';
+import { sortGamesByTitle } from '@/utils/sortingUtils';
 
 
 interface GameSearchModalProps {
@@ -55,6 +56,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
     }
   }, [isVisible]);
 
+
   const fetchSearchResults = useCallback(async (term: string) => {
     try {
       // Perform an API request based on the search term
@@ -85,7 +87,10 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
           .in('id', ids)
           .order('rank');
 
-        setSearchResults(games || []);
+        // Sort games alphabetically by title, ignoring articles
+        const sortedGames = sortGamesByTitle(games || []);
+
+        setSearchResults(sortedGames);
       }
     } catch (error) {
       console.error('Error fetching data:', error);

@@ -5,6 +5,7 @@ import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import Toast from 'react-native-toast-message';
 import { CreatePollModal } from './CreatePollModal';
+import { sortGamesByTitle } from '@/utils/sortingUtils';
 
 
 interface EditPollModalProps {
@@ -192,7 +193,9 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         bayesaverage: game.bayesaverage ?? null,
       }));
 
-      setAvailableGames(collectionGames);
+      // Sort games alphabetically by title, ignoring articles
+      const sortedGames = sortGamesByTitle(collectionGames);
+      setAvailableGames(sortedGames);
     } catch (err) {
       console.error('Error loading games:', err);
       setError('Failed to load games');

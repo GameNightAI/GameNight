@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import Select, { components as selectComponents } from 'react-select';
@@ -74,15 +74,52 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     );
   };
   const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const modalContainerRef = useRef<View>(null);
 
   const getFilterSectionZIndex = (index: number) => {
     if (openDropdownIndex === null) return 1000;
-    if (openDropdownIndex === index) return 99999;
+    if (openDropdownIndex === index) {
+      // Give the last dropdown (complexity) an even higher z-index
+      return index === filterConfigs.length - 1 ? 9999999 : 99999;
+    }
     return 1000;
   };
 
   const handleDropdownChange = (index: number, isOpen: boolean) => {
     setOpenDropdownIndex(isOpen ? index : null);
+
+    // Check if this is the last dropdown (complexity) opening
+    const isLastDropdown = index === filterConfigs.length - 1;
+
+    // Auto-scroll when the last dropdown (complexity) opens
+    if (isOpen && isLastDropdown) {
+
+      // Small delay to ensure the dropdown is rendered before scrolling
+      setTimeout(() => {
+        // Scroll to show the last dropdown with enough space for the dropdown menu
+        const dropdownHeight = 200; // maxHeight from menuList styles
+        const extraPadding = 30; // Extra padding for better visibility
+        const scrollOffset = dropdownHeight + extraPadding;
+
+        // Try scrolling the ScrollView first
+        scrollViewRef.current?.scrollTo({
+          y: scrollOffset,
+          animated: true
+        });
+
+        // Also try scrolling the modal container if available
+        if (modalContainerRef.current) {
+          // For web, we can use window.scrollTo as a fallback
+          if (Platform.OS === 'web') {
+            window.scrollTo({
+              top: scrollOffset,
+              behavior: 'smooth'
+            });
+          }
+        }
+      }, 100);
+    }
   };
 
   const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
@@ -132,7 +169,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       config.onChange([]);
     });
   }
-    
+
   const handleApplyFilters = () => {
     onApplyFilters();
   };
@@ -172,14 +209,14 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         zIndex: getFilterSectionZIndex(index),
         position: 'absolute',
         maxHeight: 'none',
-        overflow: 'hidden',
+        overflow: 'visible',
         ...(isSafari?.() && {
           WebkitBorderRadius: 8,
         }),
       }),
       menuList: (baseStyles: any) => ({
         ...baseStyles,
-        maxHeight: 160,
+        maxHeight: 200, // Increased to accommodate all 5 complexity options
         overflow: 'auto',
       }),
       option: (baseStyles: any, state: any) => ({
@@ -235,6 +272,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </Text>
 
       <ScrollView
+        ref={scrollViewRef}
         style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={{ paddingBottom: 4, paddingTop: 2 }}
         showsVerticalScrollIndicator={true}
@@ -297,16 +335,20 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   if (Platform.OS === 'web') {
     return (
       <View style={styles.overlay}>
-        <View style={{
-          maxWidth: '100%',
-          maxHeight: '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 20,
-        }}>
+        <View
+          ref={modalContainerRef}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20,
+            overflow: 'visible',
+          }}
+        >
           <View style={styles.dialog}>
             {content}
           </View>
@@ -402,6 +444,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 999999,
     padding: Platform.OS === 'web' ? 20 : 10,
+    overflow: 'visible',
   },
   dialog: {
     backgroundColor: 'white',
@@ -413,7 +456,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'visible',
     display: 'flex',
     flexDirection: 'column',
     paddingHorizontal: 12,
@@ -504,5 +547,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#333333',
+  },
+  debugText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    color: '#ff9654',
+    textAlign: 'center',
+    backgroundColor: '#fff5ef',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#ff9654',
   },
 });
