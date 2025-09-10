@@ -17,11 +17,6 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Import CSS only on web platform
-    if (Platform.OS === 'web') {
-      import("@ncdai/react-wheel-picker/dist/style.css");
-    }
-    
     // Initialize Safari compatibility fixes
     initializeSafariFixes();
     persistSessionInSafari();
