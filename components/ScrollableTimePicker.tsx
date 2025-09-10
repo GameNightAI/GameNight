@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Platform, TextInput } from 'react-native';
+import { WheelPicker, WheelPickerWrapper, type WheelPickerOption } from 'wheel-picker'
 import { format } from 'date-fns';
 
 interface TimeSelection {
@@ -36,13 +37,16 @@ export function ScrollableTimePicker({
   // const [isManualInputFocused, setIsManualInputFocused] = useState(false);
   // const minuteInputRef = useRef<TextInput | null>(null);
 
-  const hourScrollRef = useRef<ScrollView | null>(null);
-  const minuteScrollRef = useRef<ScrollView | null>(null);
+  // const hourScrollRef = useRef<ScrollView | null>(null);
+  // const minuteScrollRef = useRef<ScrollView | null>(null);
 
   // Generate time options
-  const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-  const minutes = [0, 15, 30, 45];
-  const periods: ('AM' | 'PM')[] = ['AM', 'PM'];
+  const hours = Array.from({ length: 12 }, (_, i) => ({value: i + 1, label: (i + 1).toString()}));
+  const minutes = ([0, 15, 30, 45]).map(_ => ({value: _, label: _.toString().padStart(2, '0')}));
+  const periods: ('AM' | 'PM')[] = [
+    { value: 'AM', label: 'AM' },
+    { value: 'PM', label: 'PM' },
+  ];
 
   // Initialize time picker every time modal opens
   useEffect(() => {
@@ -75,7 +79,7 @@ export function ScrollableTimePicker({
       // setManualPeriodInput(period as 'AM' | 'PM');
 
       // Initialize scroll wheels
-      const hourIndex = hours.indexOf(displayHour);
+      /* const hourIndex = hours.indexOf(displayHour);
       const minuteIndex = minutes.indexOf(displayMinute);
 
       // Use requestAnimationFrame to ensure the scroll views are ready
@@ -96,7 +100,7 @@ export function ScrollableTimePicker({
         if (minuteScrollRef.current && minuteIndex >= 0) {
           minuteScrollRef.current.scrollTo({ y: minuteIndex * 60, animated: false });
         }
-      }, 200);
+      }, 200); */
     }
   }, [visible, initialTime]);
 
@@ -117,7 +121,7 @@ export function ScrollableTimePicker({
   }, [isManualInputFocused]); */
 
   // Sync scroll wheels when selected values change
-  useEffect(() => {
+  /* useEffect(() => {
     const hourIndex = hours.indexOf(selectedHour);
     const minuteIndex = minutes.indexOf(selectedMinute);
 
@@ -127,7 +131,7 @@ export function ScrollableTimePicker({
     if (minuteScrollRef.current && minuteIndex >= 0) {
       minuteScrollRef.current.scrollTo({ y: minuteIndex * 60, animated: true });
     }
-  }, [selectedHour, selectedMinute]);
+  }, [selectedHour, selectedMinute]); */
 
   const createTimeFromSelection = (): Date => {
     const now = new Date();
@@ -156,7 +160,7 @@ export function ScrollableTimePicker({
     } else if (selectedPeriod === 'AM' && selectedHour === 12) {
       hour = 0;
     } else {
-      hour = selectedHour
+      hour = selectedHour;
     }
     
     return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, selectedMinute);
@@ -290,7 +294,7 @@ export function ScrollableTimePicker({
     }
   }; */
 
-  const TimePickerColumn = ({
+  /* const TimePickerColumn = ({
     items,
     selectedValue,
     onValueChange,
@@ -330,26 +334,26 @@ export function ScrollableTimePicker({
 
         onValueChange(items[clampedIndex]);
         // Switch focus to scroll wheel mode when user scrolls
-        /* setIsManualInputFocused(false);
+         setIsManualInputFocused(false);
         // Sync manual input when scroll wheel changes
         if (items === hours) {
           setManualHourInput(items[clampedIndex].toString());
         } else if (items === minutes) {
           setManualMinuteInput(items[clampedIndex].toString().padStart(2, '0'));
-        } */
+        } 
       }
     };
 
     const handleTimeOptionPress = (item: number) => {
       onValueChange(item);
       // Switch focus to scroll wheel mode when user taps
-      /* setIsManualInputFocused(false);
+      setIsManualInputFocused(false);
       // Sync manual input when scroll wheel changes
       if (items === hours) {
         setManualHourInput(item.toString());
       } else if (items === minutes) {
         setManualMinuteInput(item.toString().padStart(2, '0'));
-      } */
+      }
     };
 
     return (
@@ -365,7 +369,6 @@ export function ScrollableTimePicker({
           onMomentumScrollEnd={handleScrollEnd}
           onScrollEndDrag={handleScrollEnd}
         >
-          {/* Top padding */}
           <View style={styles.scrollPadding} />
 
           {items.map((item, index) => (
@@ -382,16 +385,14 @@ export function ScrollableTimePicker({
               </Text>
             </TouchableOpacity>
           ))}
-
-          {/* Bottom padding */}
+          
           <View style={styles.scrollPadding} />
         </ScrollView>
-
-        {/* Selection indicator */}
+        
         <View style={styles.selectionIndicator} />
       </View>
     );
-  };
+  }; */
 
   if (!visible) return null;
 
@@ -513,20 +514,33 @@ export function ScrollableTimePicker({
             )}
           </View> */}
 
+          <WheelPickerWrapper>
+            <WheelPicker
+              options={hours}
+              value={selectedHour}
+              onValueChange={setSelectedHour}
+            />
+            <WheelPicker
+              options={minutes}
+              value={selectedMinute}
+              onValueChange={setSelectedMinute}
+            />
+            <WheelPicker
+              options={periods}
+              value={selectedPeriod}
+              onValueChange={setSelectedPeriod}
+            />
+          </WheelPickerWrapper>
+
           {/* Time Picker */}
-          <View style={styles.timePickerContainer}>
-            {/* Hours */}
+          {/* <View style={styles.timePickerContainer}>
             <TimePickerColumn
               items={hours}
               selectedValue={selectedHour}
               onValueChange={setSelectedHour}
               scrollRef={hourScrollRef}
             />
-
-            {/* Separator */}
             <Text style={styles.separator}>:</Text>
-
-            {/* Minutes */}
             <TimePickerColumn
               items={minutes}
               selectedValue={selectedMinute}
@@ -534,8 +548,6 @@ export function ScrollableTimePicker({
               scrollRef={minuteScrollRef}
               formatter={(minute) => minute.toString().padStart(2, '0')}
             />
-
-            {/* AM/PM */}
             <View style={styles.periodContainer}>
               <TouchableOpacity
                 style={[
@@ -578,7 +590,7 @@ export function ScrollableTimePicker({
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </View> */}
 
           {/* Validation Error */}
           {validationError ? (
