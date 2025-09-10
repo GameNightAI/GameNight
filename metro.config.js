@@ -7,6 +7,6 @@ const config = getDefaultConfig(__dirname, {
 });
 
 // Add the additional resolver
-config.resolver.sourceExts = [...config.resolver.sourceExts, 'mjs', 'css'];
+config.resolver.sourceExts = [...config.resolver.sourceExts, 'mjs'];
 
 module.exports = config;
