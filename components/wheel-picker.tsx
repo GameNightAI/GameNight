@@ -1,12 +1,12 @@
 import "@ncdai/react-wheel-picker/style.css";
- 
+
 import * as WheelPickerPrimitive from "@ncdai/react-wheel-picker";
- 
+
 import { cn } from "@/lib/utils";
- 
+
 type WheelPickerOption = WheelPickerPrimitive.WheelPickerOption;
 type WheelPickerClassNames = WheelPickerPrimitive.WheelPickerClassNames;
- 
+
 function WheelPickerWrapper({
   className,
   ...props
@@ -23,7 +23,7 @@ function WheelPickerWrapper({
     />
   );
 }
- 
+
 function WheelPicker({
   classNames,
   ...props
@@ -40,6 +40,6 @@ function WheelPicker({
     />
   );
 }
- 
+
 export { WheelPicker, WheelPickerWrapper };
 export type { WheelPickerClassNames, WheelPickerOption };
