@@ -5,11 +5,41 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "gamenyte",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gamenyte.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "gamenyte",
+            "CFBundleURLSchemes": [
+              "gamenyte"
+            ]
+          }
+        ]
+      }
+    },
+    "android": {
+      "package": "com.gamenyte.app",
+      "versionCode": 1,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "gamenyte"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -22,7 +52,13 @@
       "web"
     ],
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-linking",
+        {
+          "scheme": "gamenyte"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

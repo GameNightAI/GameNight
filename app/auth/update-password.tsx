@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import Toast from 'react-native-toast-message';
 import * as Linking from 'expo-linking';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '@/services/supabase';
 
 export default function UpdatePasswordScreen() {
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
-  const params = useLocalSearchParams();
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -22,13 +23,14 @@ export default function UpdatePasswordScreen() {
     'Poppins-SemiBold': Poppins_600SemiBold,
   });
 
-  // On mount, check for access_token and handle password reset flow
+  // Check authentication status on mount
   useEffect(() => {
-    const handlePasswordReset = async () => {
+    const checkAuthStatus = async () => {
       try {
         setCheckingAuth(true);
-        // Check if we're in a password reset flow
-        const { data, error } = await supabase.auth.getSession();
+
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
           console.error('Error getting session:', error);
@@ -36,8 +38,13 @@ export default function UpdatePasswordScreen() {
           return;
         }
 
-        if (!data.session) {
-          // Check for authentication tokens based on platform
+        if (session && session.user) {
+          console.log('Valid session found for user:', session.user.id);
+          setIsAuthenticated(true);
+        } else {
+          console.log('No valid session found, checking for URL parameters');
+
+          // Fallback: Check for authentication tokens in URL parameters
           let access_token: string | null = null;
           let refresh_token: string | null = null;
 
@@ -63,6 +70,7 @@ export default function UpdatePasswordScreen() {
           }
 
           if (access_token) {
+            console.log('Found access token in URL, setting session');
             // Set the session with the tokens from URL
             const { error: sessionError } = await supabase.auth.setSession({
               access_token,
@@ -72,32 +80,39 @@ export default function UpdatePasswordScreen() {
             if (sessionError) {
               console.error('Error setting session:', sessionError);
               setError('Invalid reset link. Please request a new password reset.');
-              return;
-            }
-
-            console.log('Password reset session established');
-            setIsAuthenticated(true);
-          } else {
-            // No tokens found, user needs to use a valid reset link
-            if (Platform.OS === 'web') {
-              setError('Please use the password reset link from your email.');
             } else {
-              setError('Please use the password reset link from your email or open the link in the app.');
+              console.log('Session established from URL parameters');
+              setIsAuthenticated(true);
             }
+          } else {
+            console.log('No valid session or tokens found');
+            setError('No valid session found. Please use the password reset link from your email.');
           }
-        } else {
-          console.log('User session found, ready to update password');
-          setIsAuthenticated(true);
         }
       } catch (err) {
-        console.error('Error in password reset flow:', err);
+        console.error('Error checking auth status:', err);
         setError('An unexpected error occurred. Please try again.');
       } finally {
         setCheckingAuth(false);
       }
     };
 
-    handlePasswordReset();
+    // Also listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, !!session);
+      if (event === 'SIGNED_IN' && session) {
+        setIsAuthenticated(true);
+        setCheckingAuth(false);
+      } else if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+      }
+    });
+
+    checkAuthStatus();
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   if (!fontsLoaded) {
@@ -109,49 +124,113 @@ export default function UpdatePasswordScreen() {
       <View style={styles.container}>
         <Text style={styles.title}>Verifying Reset Link</Text>
         <Text style={styles.subtitle}>
-          {Platform.OS === 'web'
-            ? 'Please wait while we verify your password reset link...'
-            : 'Please wait while we verify your reset link...'
-          }
+          Please wait while we verify your password reset link...
         </Text>
       </View>
     );
   }
 
-  if (!isAuthenticated && error) {
+  if (!isAuthenticated) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Reset Link Invalid</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.button} onPress={() => router.replace('/auth/reset-password')}>
+        <Text style={styles.title}>Reset Link Required</Text>
+        <Text style={styles.errorText}>
+          {error || 'Please use the password reset link from your email to access this page.'}
+        </Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => router.replace('/auth/reset-password')}
+        >
           <Text style={styles.buttonText}>Request New Reset Link</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.backLink} onPress={() => router.replace('/auth/login')}>
+        <TouchableOpacity
+          style={styles.backLink}
+          onPress={() => router.replace('/auth/login')}
+        >
           <Text style={styles.backText}>Back to Login</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  const validatePassword = (pwd: string) => {
+    if (pwd.length < 6) {
+      return 'Password must be at least 6 characters long';
+    }
+    return null;
+  };
+
   const handleUpdatePassword = async () => {
+    // Add haptic feedback for mobile
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    // Validation
+    if (!password.trim()) {
+      setError('Please enter a new password.');
+      return;
+    }
+
+    if (!confirmPassword.trim()) {
+      setError('Please confirm your password.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(false);
+
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      console.log('Updating user password');
+
+      const { data, error } = await supabase.auth.updateUser({
+        password: password
+      });
+
       if (error) {
+        console.error('Password update error:', error);
         setError(error.message);
-        Toast.show({ type: 'error', text1: 'Update Failed', text2: error.message });
-      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Update Failed',
+          text2: error.message
+        });
+      } else if (data.user) {
+        console.log('Password updated successfully for user:', data.user.id);
         setSuccess(true);
-        Toast.show({ type: 'success', text1: 'Password Updated', text2: 'You can now log in with your new password.' });
+        Toast.show({
+          type: 'success',
+          text1: 'Password Updated',
+          text2: 'You can now log in with your new password.'
+        });
+
         // Clear the session after successful password update
-        await supabase.auth.signOut();
-        setTimeout(() => router.replace('/auth/login'), 2000);
+        setTimeout(async () => {
+          await supabase.auth.signOut();
+          router.replace('/auth/login?message=password_updated');
+        }, 2000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update password');
-      Toast.show({ type: 'error', text1: 'Unexpected Error', text2: err instanceof Error ? err.message : 'Failed to update password' });
+      console.error('Unexpected error updating password:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update password';
+      setError(errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Unexpected Error',
+        text2: errorMessage
+      });
     } finally {
       setLoading(false);
     }
@@ -161,15 +240,28 @@ export default function UpdatePasswordScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Set New Password</Text>
       <Text style={styles.subtitle}>Enter your new password below.</Text>
+
       <TextInput
         style={styles.input}
         value={password}
         onChangeText={setPassword}
         placeholder="New password"
         secureTextEntry
+        autoComplete="new-password"
       />
+
+      <TextInput
+        style={styles.input}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder="Confirm new password"
+        secureTextEntry
+        autoComplete="new-password"
+      />
+
       {error && <Text style={styles.errorText}>{error}</Text>}
       {success && <Text style={styles.successText}>Password updated! Redirecting to login...</Text>}
+
       <TouchableOpacity
         style={[styles.button, loading && styles.buttonDisabled]}
         onPress={handleUpdatePassword}
@@ -177,7 +269,11 @@ export default function UpdatePasswordScreen() {
       >
         <Text style={styles.buttonText}>{loading ? 'Updating...' : 'Update Password'}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.backLink} onPress={() => router.replace('/auth/login')}>
+
+      <TouchableOpacity
+        style={styles.backLink}
+        onPress={() => router.replace('/auth/login')}
+      >
         <Text style={styles.backText}>Back to Login</Text>
       </TouchableOpacity>
     </View>
@@ -254,4 +350,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     textDecorationLine: 'underline',
   },
-}); 
+});
