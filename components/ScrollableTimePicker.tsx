@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Platform, TextInput } from 'react-native';
-import { WheelPicker, WheelPickerWrapper, type WheelPickerOption } from '@/components/react-wheel-picker';
+import { WheelPicker, WheelPickerWrapper, type WheelPickerOption } from '@/components/wheel-picker';
 import { format } from 'date-fns';
 
 interface TimeSelection {
