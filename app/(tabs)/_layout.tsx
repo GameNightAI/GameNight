@@ -118,7 +118,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="polls"
         options={{
-          title: 'Polls',
+          title: 'Organize',
           tabBarIcon: ({ color, size }) => (
             <Vote color={color} size={size} />
           ),
