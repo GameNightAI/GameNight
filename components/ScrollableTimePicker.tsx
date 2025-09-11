@@ -529,7 +529,7 @@ export function ScrollableTimePicker({
               options={periods}
               value={selectedPeriod}
               onValueChange={setSelectedPeriod}
-              styles={[
+              style={[
                 styles.periodContainer,
                 styles.periodButton,
                 styles.periodButtionText,
