@@ -529,11 +529,10 @@ export function ScrollableTimePicker({
               options={periods}
               value={selectedPeriod}
               onValueChange={setSelectedPeriod}
-              style={[
-                styles.periodContainer,
-                styles.periodButton,
-                styles.periodButtionText,
-              ]}
+              classNames={{
+                optionItem: 'time-wheel-picker-am-pm-option',
+                highlightItem: 'time-wheel-picker-am-pm-highlight',
+              }}
             />
           </WheelPickerWrapper>
 
