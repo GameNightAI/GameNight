@@ -26,6 +26,10 @@ export default function ResetPasswordHandler() {
         if (Platform.OS === 'web') {
           try {
             if (typeof window !== 'undefined') {
+              console.log('Full URL:', window.location.href);
+              console.log('Search params:', window.location.search);
+              console.log('Hash params:', window.location.hash);
+
               // Use both hash and search params for better compatibility
               const urlParams = new URLSearchParams(window.location.search);
               const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -34,7 +38,13 @@ export default function ResetPasswordHandler() {
               refresh_token = urlParams.get('refresh_token') || hashParams.get('refresh_token');
               type = urlParams.get('type') || hashParams.get('type');
 
-              console.log('Web platform tokens:', { access_token: !!access_token, refresh_token: !!refresh_token, type });
+              console.log('Web platform tokens:', {
+                access_token: !!access_token,
+                refresh_token: !!refresh_token,
+                type,
+                access_token_length: access_token?.length || 0,
+                refresh_token_length: refresh_token?.length || 0
+              });
             }
           } catch (error) {
             console.warn('Could not parse URL parameters:', error);
@@ -79,7 +89,12 @@ export default function ResetPasswordHandler() {
           console.log('Valid recovery tokens found, proceeding with reset flow');
           await handlePasswordResetFlow(access_token, refresh_token);
         } else {
-          console.log('No valid recovery tokens found:', { type, hasAccessToken: !!access_token });
+          console.log('No valid recovery tokens found:', {
+            type,
+            hasAccessToken: !!access_token,
+            access_token_value: access_token ? access_token.substring(0, 20) + '...' : 'null',
+            refresh_token_value: refresh_token ? refresh_token.substring(0, 20) + '...' : 'null'
+          });
           router.replace('/auth/reset-password?error=no_tokens');
         }
       } catch (err) {
