@@ -32,6 +32,9 @@ export default function ResetPasswordHandler() {
 
         if (allParams.error) {
           addLog(`❌ Error in URL: ${allParams.error}`);
+          addLog(`Error code: ${allParams.error_code || 'none'}`);
+          addLog(`Error description: ${allParams.error_description || 'none'}`);
+          addLog(`Full error params: ${JSON.stringify(allParams)}`);
           router.replace(`/auth/reset-password?error=${allParams.error}`);
           return;
         }
