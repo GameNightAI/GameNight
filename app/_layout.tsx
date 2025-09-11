@@ -5,7 +5,8 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import Toast from 'react-native-toast-message';
 import { initializeSafariFixes, persistSessionInSafari } from '@/utils/safari-polyfill';
-// import "@ncdai/react-wheel-picker/style.css";
+import "@ncdai/react-wheel-picker/style.css";
+import "./index.css";
 
 export default function RootLayout() {
   useFrameworkReady();
