@@ -158,23 +158,27 @@ export default function ResetPasswordHandler() {
       try {
         console.log('Attempting PKCE code exchange for code:', pkceCode.substring(0, 20) + '...');
 
-        // Use the correct Supabase PKCE exchange method
-        const { data, error } = await supabase.auth.exchangeCodeForSession(pkceCode);
+        // For password reset flows, we need to use verifyOtp with the recovery type
+        // The code from the URL is actually an OTP token, not a PKCE code
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: pkceCode,
+          type: 'recovery'
+        });
 
         if (error) {
-          console.error('PKCE exchange error:', error);
+          console.error('OTP verification error:', error);
           return false;
         }
 
         if (!data?.session) {
-          console.error('PKCE exchange returned no session');
+          console.error('OTP verification returned no session');
           return false;
         }
 
-        console.log('PKCE exchange successful, session established for user:', data.session.user?.id);
+        console.log('OTP verification successful, session established for user:', data.session.user?.id);
         return true;
       } catch (err) {
-        console.error('Error during PKCE exchange:', err);
+        console.error('Error during OTP verification:', err);
         return false;
       }
     };
