@@ -552,9 +552,9 @@ export function ScrollableTimePicker({
             />
           </WheelPickerWrapper>
           
-          <label for="native-time">Sample time input:</label>
+          <label htmlFor="native-time">Sample time input:</label>
           <input id="native-time" type="time" step="15"/>
-          <label for="native-date">Sample date input:</label>
+          <label htmlFor="native-date">Sample date input:</label>
           <input id="native-date" type="date"/>
 
           {/* Time Picker */}
