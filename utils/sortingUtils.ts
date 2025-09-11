@@ -9,8 +9,8 @@
  */
 export const removeArticlesFromTitle = (title: string): string => {
   const articles = [
-    // English articles
-    'the', 'a', 'an', 'some',
+    // English articles, removed from sort:  'a', 'an', and 'some' 
+    'the',
     /*
     // French articles
     'le', 'la', 'les', 'un', 'une', 'des',
