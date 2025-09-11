@@ -41,9 +41,9 @@ export function ScrollableTimePicker({
   // const minuteScrollRef = useRef<ScrollView | null>(null);
 
   // Generate time options
-  const hours = Array.from({ length: 12 }, (_, i) => ({value: i + 1, label: (i + 1).toString()}));
-  const minutes = ([0, 15, 30, 45]).map(_ => ({value: _, label: _.toString().padStart(2, '0')}));
-  const periods: ('AM' | 'PM')[] = [
+  const hours: WheelPickerOption[] = Array.from({ length: 12 }, (_, i) => ({value: i + 1, label: (i + 1).toString()}));
+  const minutes: WheelPickerOption[] = ([0, 15, 30, 45]).map(_ => ({value: _, label: _.toString().padStart(2, '0')}));
+  const periods: WheelPickerOption[] = [
     { value: 'AM', label: 'AM' },
     { value: 'PM', label: 'PM' },
   ];
@@ -529,6 +529,11 @@ export function ScrollableTimePicker({
               options={periods}
               value={selectedPeriod}
               onValueChange={setSelectedPeriod}
+              styles={[
+                styles.periodContainer,
+                styles.periodButton,
+                styles.periodButtionText,
+              ]}
             />
           </WheelPickerWrapper>
 
