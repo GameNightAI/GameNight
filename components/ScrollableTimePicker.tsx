@@ -521,7 +521,7 @@ export function ScrollableTimePicker({
               onValueChange={setSelectedHour}
               classNames={{
                 optionItem: 'time-wheel-picker-hour-min-option',
-                highlightItem: 'time-wheel-picker-am-pm-highlight',
+                highlightItem: 'time-wheel-picker-hour-min-highlight',
               }}
             />
             <WheelPicker
@@ -529,7 +529,7 @@ export function ScrollableTimePicker({
               value={selectedMinute}
               onValueChange={setSelectedMinute}
               classNames={{
-                optionItem: 'time-wheel-picker-hour-min-highlight',
+                optionItem: 'time-wheel-picker-hour-min-option',
                 highlightItem: 'time-wheel-picker-hour-min-highlight',
               }}
             />
