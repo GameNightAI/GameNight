@@ -13,18 +13,18 @@
 .time-wheel-picker-am-pm-option {
   padding: 12 16;  
   border-radius: 8;
-  background-color: '#f3f4f6';
+  background-color: #f3f4f6;
   border-width: 1;
-  border-color: '#e1e5ea';
+  border-color: #e1e5ea;
   min-width: 60;
-  align-items: 'center';
-  font-family: 'Poppins-SemiBold';
+  align-items: center;
+  font-family: Poppins-SemiBold;
   font-size: 16;
-  color: '#666666';
+  color: #666666;
 }
 
 .time-wheel-picker-am-pm-highlight {
-  background-color: '#0070f3';
-  border-color: '#0070f3';
-  color: 'white';
+  background-color: #0070f3;
+  border-color: #0070f3;
+  color: white;
 }
