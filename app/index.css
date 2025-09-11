@@ -24,6 +24,20 @@
   color: #0070f3;
 }
 
+.time-wheel-picker-hour-min-highlight-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 60;
+  margin-top: -30;
+  border-top-width: 2;
+  border-bottom-width: 2;
+  border-color: #0070f3;
+  background-color: rgba(0, 112, 243, 0.1);
+  pointer-events: none;
+}
+
 .time-wheel-picker-am-pm-option {
   padding: 12 16;  
   border-radius: 8;

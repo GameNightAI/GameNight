@@ -513,15 +513,19 @@ export function ScrollableTimePicker({
               </TouchableOpacity>
             )}
           </View> */}
-
+          
+          <input type="time"/>
+          
           <WheelPickerWrapper className="time-wheel-picker-wrapper">
             <WheelPicker
               options={hours}
               value={selectedHour}
               onValueChange={setSelectedHour}
+              infinite
               classNames={{
                 optionItem: 'time-wheel-picker-hour-min-option',
                 highlightItem: 'time-wheel-picker-hour-min-highlight',
+                highlightWrapper: 'time-wheel-picker-hour-min-highlight-wrapper',
               }}
             />
             <WheelPicker
@@ -531,6 +535,7 @@ export function ScrollableTimePicker({
               classNames={{
                 optionItem: 'time-wheel-picker-hour-min-option',
                 highlightItem: 'time-wheel-picker-hour-min-highlight',
+                highlightWrapper: 'time-wheel-picker-hour-min-highlight-wrapper',
               }}
             />
             <WheelPicker
