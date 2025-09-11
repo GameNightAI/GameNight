@@ -519,11 +519,19 @@ export function ScrollableTimePicker({
               options={hours}
               value={selectedHour}
               onValueChange={setSelectedHour}
+              classNames={{
+                optionItem: 'time-wheel-picker-hour-min-option',
+                highlightItem: 'time-wheel-picker-am-pm-highlight',
+              }}
             />
             <WheelPicker
               options={minutes}
               value={selectedMinute}
               onValueChange={setSelectedMinute}
+              classNames={{
+                optionItem: 'time-wheel-picker-hour-min-highlight',
+                highlightItem: 'time-wheel-picker-hour-min-highlight',
+              }}
             />
             <WheelPicker
               options={periods}
