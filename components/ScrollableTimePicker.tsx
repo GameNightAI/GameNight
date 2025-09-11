@@ -513,30 +513,33 @@ export function ScrollableTimePicker({
               </TouchableOpacity>
             )}
           </View> */}
+         
           
-          <input type="time"/>
-          
-          <WheelPickerWrapper className="time-wheel-picker-wrapper">
+          <WheelPickerWrapper className={/*"time-wheel-picker-wrapper"*/null}>
             <WheelPicker
               options={hours}
               value={selectedHour}
               onValueChange={setSelectedHour}
               infinite
-              classNames={{
+              classNames={/*{
                 optionItem: 'time-wheel-picker-hour-min-option',
                 highlightItem: 'time-wheel-picker-hour-min-highlight',
                 highlightWrapper: 'time-wheel-picker-hour-min-highlight-wrapper',
-              }}
+              }*/
+                null
+              }
             />
             <WheelPicker
               options={minutes}
               value={selectedMinute}
               onValueChange={setSelectedMinute}
-              classNames={{
+              classNames={/*{
                 optionItem: 'time-wheel-picker-hour-min-option',
                 highlightItem: 'time-wheel-picker-hour-min-highlight',
                 highlightWrapper: 'time-wheel-picker-hour-min-highlight-wrapper',
-              }}
+              }*/
+                null
+              }
             />
             <WheelPicker
               options={periods}
@@ -548,6 +551,11 @@ export function ScrollableTimePicker({
               }}
             />
           </WheelPickerWrapper>
+          
+          <label for="native-time">Sample time input:</label>
+          <input id="native-time" type="time" step="15"/>
+          <label for="native-date">Sample date input:</label>
+          <input id="native-date" type="date"/>
 
           {/* Time Picker */}
           {/* <View style={styles.timePickerContainer}>
