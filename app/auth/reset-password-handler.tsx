@@ -156,12 +156,10 @@ export default function ResetPasswordHandler() {
     // Handle PKCE code exchange for session
     const handlePkceCodeFlow = async (pkceCode: string): Promise<boolean> => {
       try {
-        // Newer Supabase email links (PKCE) provide a "code" param that must be exchanged
-        // Attempt to exchange code for a session
-        // @ts-ignore - accommodate different client signatures across versions
-        const { data, error } = await (supabase.auth as any).exchangeCodeForSession
-          ? await (supabase.auth as any).exchangeCodeForSession({ code: pkceCode })
-          : await (supabase.auth as any).exchangeCodeForSession(pkceCode);
+        console.log('Attempting PKCE code exchange for code:', pkceCode.substring(0, 20) + '...');
+
+        // Use the correct Supabase PKCE exchange method
+        const { data, error } = await supabase.auth.exchangeCodeForSession(pkceCode);
 
         if (error) {
           console.error('PKCE exchange error:', error);
@@ -173,6 +171,7 @@ export default function ResetPasswordHandler() {
           return false;
         }
 
+        console.log('PKCE exchange successful, session established for user:', data.session.user?.id);
         return true;
       } catch (err) {
         console.error('Error during PKCE exchange:', err);
