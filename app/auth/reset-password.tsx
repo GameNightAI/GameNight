@@ -69,6 +69,9 @@ export default function ResetPasswordScreen() {
       await supabase.auth.signOut();
 
       const redirectUrl = `${getBaseUrl()}/auth/reset-password-handler`;
+      console.log('Current window.location.origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
+      console.log('Platform.OS:', Platform.OS);
+      console.log('getBaseUrl() result:', getBaseUrl());
       console.log('Sending reset email with redirect URL:', redirectUrl);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {

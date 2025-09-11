@@ -52,13 +52,7 @@
       "web"
     ],
     "plugins": [
-      "expo-router",
-      [
-        "expo-linking",
-        {
-          "scheme": "gamenyte"
-        }
-      ]
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true

@@ -256,7 +256,7 @@ export default function PollsScreen() {
         if (navigator.share) {
           await navigator.share({
             title: 'Vote on which game to play!',
-            //text: 'Help us decide which game to play by voting in this poll.',
+            text: 'Help us decide which game to play by voting in this poll.',
             url: shareUrl,
           });
         } else {
