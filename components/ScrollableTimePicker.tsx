@@ -561,7 +561,7 @@ export function ScrollableTimePicker({
           </WheelPickerWrapper>
           
           <label htmlFor="native-time">Sample time input:</label>
-          <input id="native-time" type="time" step="900">18:00</input>
+          <input id="native-time" type="time" step="900" value="18:00"/>
           <label htmlFor="native-date">Sample date input:</label>
           <input id="native-date" type="date"/>
 
