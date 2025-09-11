@@ -86,14 +86,17 @@ export default function ResetPasswordHandler() {
 
     const handlePKCEFlow = async (code: string) => {
       try {
-        addDebugInfo('🔧 Exchanging PKCE code for session...');
+        addDebugInfo('🔧 Verifying OTP token for password reset...');
 
-        // Use the exchangeCodeForSession method for PKCE
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        // Use verifyOtp for password reset tokens (not PKCE exchange)
+        const { data, error } = await supabase.auth.verifyOtp({
+          token: code,
+          type: 'recovery'
+        });
 
         if (error) {
-          addDebugInfo(`❌ PKCE exchange failed: ${error.message}`);
-          console.error('PKCE exchange error:', error);
+          addDebugInfo(`❌ OTP verification failed: ${error.message}`);
+          console.error('OTP verification error:', error);
           router.replace('/auth/reset-password?error=invalid_code');
           return;
         }
@@ -104,7 +107,7 @@ export default function ResetPasswordHandler() {
           return;
         }
 
-        addDebugInfo(`✅ PKCE session created for user: ${data.user.id}`);
+        addDebugInfo(`✅ OTP verified, session created for user: ${data.user.id}`);
         addDebugInfo(`Session expires: ${data.session.expires_at}`);
 
         // Verify the session is working

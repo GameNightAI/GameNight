@@ -41,7 +41,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true, // Enable for web password reset flows
-    flowType: 'pkce', // PKCE flow for better security and Safari compatibility
+    // Removed flowType to use default flow for password reset compatibility
     debug: process.env.NODE_ENV === 'development',
   },
   global: {
