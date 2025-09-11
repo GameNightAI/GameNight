@@ -14,13 +14,10 @@ export default function ResetPasswordHandler() {
 
   useEffect(() => {
     const handleReset = async () => {
-      addLog('🔍 Starting password reset handler...');
+      addLog('🔍 Processing password reset...');
 
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const fullUrl = window.location.href;
-        addLog(`📍 Current URL: ${fullUrl}`);
-
-        // Let's see what parameters we have
+        // Extract URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
@@ -28,27 +25,23 @@ export default function ResetPasswordHandler() {
         urlParams.forEach((value, key) => allParams[key] = value);
         hashParams.forEach((value, key) => allParams[key] = value);
 
-        addLog(`🔑 Found parameters: ${Object.keys(allParams).join(', ')}`);
+        addLog(`🔑 Parameters: ${Object.keys(allParams).join(', ')}`);
 
         if (allParams.error) {
-          addLog(`❌ Error in URL: ${allParams.error}`);
-          addLog(`Error code: ${allParams.error_code || 'none'}`);
-          addLog(`Error description: ${allParams.error_description || 'none'}`);
-          addLog(`Full error params: ${JSON.stringify(allParams)}`);
+          addLog(`❌ Error: ${allParams.error} (${allParams.error_code || 'no_code'})`);
           router.replace(`/auth/reset-password?error=${allParams.error}`);
           return;
         }
 
-        // Check what we received
+        // Process based on available tokens
         if (allParams.access_token) {
-          addLog('✅ Found access_token - this is implicit flow');
+          addLog('✅ Using implicit flow');
           await handleImplicitFlow(allParams);
         } else if (allParams.code) {
-          addLog('✅ Found code - this is PKCE flow');
+          addLog('✅ Using PKCE flow');
           await handlePKCEFlow(allParams.code);
         } else {
-          addLog('❌ No access_token or code found');
-          addLog(`Available params: ${JSON.stringify(allParams)}`);
+          addLog('❌ No valid tokens found');
           router.replace('/auth/reset-password?error=no_tokens');
         }
       }
@@ -56,7 +49,7 @@ export default function ResetPasswordHandler() {
 
     const handleImplicitFlow = async (params: Record<string, string>) => {
       try {
-        addLog('🔧 Using implicit flow with setSession...');
+        addLog('🔧 Setting up session...');
 
         const { data, error } = await supabase.auth.setSession({
           access_token: params.access_token,
@@ -70,10 +63,10 @@ export default function ResetPasswordHandler() {
         }
 
         if (data.session) {
-          addLog(`✅ Session created! User: ${data.user?.email}`);
+          addLog(`✅ Session created for ${data.user?.email}`);
           router.replace('/auth/update-password');
         } else {
-          addLog('❌ No session created');
+          addLog('❌ Session creation failed');
           router.replace('/auth/reset-password?error=no_session');
         }
       } catch (err) {
@@ -84,7 +77,7 @@ export default function ResetPasswordHandler() {
 
     const handlePKCEFlow = async (code: string) => {
       try {
-        addLog('🔧 Using PKCE flow with exchangeCodeForSession...');
+        addLog('🔧 Exchanging code for session...');
 
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
@@ -95,10 +88,10 @@ export default function ResetPasswordHandler() {
         }
 
         if (data.session) {
-          addLog(`✅ PKCE session created! User: ${data.user?.email}`);
+          addLog(`✅ PKCE session created for ${data.user?.email}`);
           router.replace('/auth/update-password');
         } else {
-          addLog('❌ No session from PKCE exchange');
+          addLog('❌ PKCE session creation failed');
           router.replace('/auth/reset-password?error=no_pkce_session');
         }
       } catch (err) {
