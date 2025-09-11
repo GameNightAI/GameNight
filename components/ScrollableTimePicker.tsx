@@ -514,7 +514,7 @@ export function ScrollableTimePicker({
             )}
           </View> */}
 
-          <WheelPickerWrapper>
+          <WheelPickerWrapper className="time-wheel-picker-wrapper">
             <WheelPicker
               options={hours}
               value={selectedHour}

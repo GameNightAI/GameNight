@@ -1,0 +1,16 @@
+.time-wheel-picker-wrapper {
+  flexDirection: row;
+  alignItems: center;
+  justifyContent: center;
+  paddingVertical: 20;
+  paddingHorizontal: 20;
+  flex: 1;
+}
+
+.time-wheel-picker {
+  
+}
+
+.am-pm-wheel-picker {
+
+}
