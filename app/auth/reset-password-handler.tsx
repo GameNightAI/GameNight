@@ -21,6 +21,7 @@ export default function ResetPasswordHandler() {
         let access_token: string | null = null;
         let refresh_token: string | null = null;
         let type: string | null = null;
+        let code: string | null = null; // PKCE code fallback
 
         // Enhanced URL parameter extraction
         if (Platform.OS === 'web') {
@@ -37,13 +38,15 @@ export default function ResetPasswordHandler() {
               access_token = urlParams.get('access_token') || hashParams.get('access_token');
               refresh_token = urlParams.get('refresh_token') || hashParams.get('refresh_token');
               type = urlParams.get('type') || hashParams.get('type');
+              code = urlParams.get('code') || hashParams.get('code');
 
               console.log('Web platform tokens:', {
                 access_token: !!access_token,
                 refresh_token: !!refresh_token,
                 type,
                 access_token_length: access_token?.length || 0,
-                refresh_token_length: refresh_token?.length || 0
+                refresh_token_length: refresh_token?.length || 0,
+                has_code: !!code
               });
             }
           } catch (error) {
@@ -58,6 +61,7 @@ export default function ResetPasswordHandler() {
               access_token = url.searchParams.get('access_token');
               refresh_token = url.searchParams.get('refresh_token');
               type = url.searchParams.get('type');
+              code = url.searchParams.get('code');
 
               console.log('Mobile platform tokens:', { access_token: !!access_token, refresh_token: !!refresh_token, type });
             } catch (error) {
@@ -88,6 +92,18 @@ export default function ResetPasswordHandler() {
         if (type === 'recovery' && access_token) {
           console.log('Valid recovery tokens found, proceeding with reset flow');
           await handlePasswordResetFlow(access_token, refresh_token);
+        } else if (code) {
+          // PKCE code flow fallback (Supabase may send a code instead of tokens)
+          console.log('PKCE code detected, exchanging for session');
+          const exchangeResult = await handlePkceCodeFlow(code);
+          if (!exchangeResult) {
+            router.replace('/auth/reset-password?error=invalid_link');
+            return;
+          }
+          console.log('PKCE exchange succeeded, redirecting to update password');
+          setTimeout(() => {
+            router.replace('/auth/update-password');
+          }, 100);
         } else {
           console.log('No valid recovery tokens found:', {
             type,
@@ -134,6 +150,33 @@ export default function ResetPasswordHandler() {
       } catch (err) {
         console.error('Error in password reset flow:', err);
         router.replace('/auth/reset-password?error=unexpected_error');
+      }
+    };
+
+    // Handle PKCE code exchange for session
+    const handlePkceCodeFlow = async (pkceCode: string): Promise<boolean> => {
+      try {
+        // Newer Supabase email links (PKCE) provide a "code" param that must be exchanged
+        // Attempt to exchange code for a session
+        // @ts-ignore - accommodate different client signatures across versions
+        const { data, error } = await (supabase.auth as any).exchangeCodeForSession
+          ? await (supabase.auth as any).exchangeCodeForSession({ code: pkceCode })
+          : await (supabase.auth as any).exchangeCodeForSession(pkceCode);
+
+        if (error) {
+          console.error('PKCE exchange error:', error);
+          return false;
+        }
+
+        if (!data?.session) {
+          console.error('PKCE exchange returned no session');
+          return false;
+        }
+
+        return true;
+      } catch (err) {
+        console.error('Error during PKCE exchange:', err);
+        return false;
       }
     };
 
