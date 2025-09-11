@@ -1,0 +1,64 @@
+.time-wheel-picker-wrapper {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 20;
+  flex: 1;
+}
+
+.time-wheel-picker-hour-min-option {
+  flex: 1;
+  max-width: 80;
+  height: 60;
+  position: relative;
+  justify-content: center;
+  align-items: center;
+  font-family: Poppins-Regular;
+  font-size: 24;
+  color: #666666;
+}
+
+.time-wheel-picker-hour-min-highlight {
+  font-family: Poppins-SemiBold;
+  font-size: 28;
+  color: #0070f3;
+}
+
+.time-wheel-picker-hour-min-highlight-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 60;
+  margin-top: -30;
+  border-top-width: 2;
+  border-bottom-width: 2;
+  border-color: #0070f3;
+  background-color: rgba(0, 112, 243, 0.1);
+  pointer-events: none;
+}
+
+.time-wheel-picker-am-pm-option {
+  padding: 12 16;  
+  border-radius: 8;
+  background-color: #f3f4f6;
+  border-width: 1;
+  border-color: #e1e5ea;
+  min-width: 60;
+  align-items: center;
+  font-family: Poppins-SemiBold;
+  font-size: 16;
+  color: #666666;
+  margin-left: 20;
+  gap: 8;
+}
+
+.time-wheel-picker-am-pm-highlight {
+  border-radius: 8;
+  background-color: #0070f3;
+  border-width: 1;
+  border-color: #0070f3;
+  font-family: Poppins-SemiBold;
+  font-size: 16;
+  color: white;
+}
