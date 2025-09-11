@@ -48,6 +48,43 @@ export default function ResetPasswordHandler() {
                 refresh_token_length: refresh_token?.length || 0,
                 has_code: !!code
               });
+
+              // Check if this is a Supabase verification URL that needs to be handled differently
+              if (code) {
+                console.log('Detected verification code, attempting to verify...');
+
+                // Try to get the email from the URL or use a generic approach
+                const emailParam = urlParams.get('email') || hashParams.get('email');
+
+                if (emailParam) {
+                  console.log('Found email in URL, attempting verifyOtp with email:', emailParam);
+                  const { data, error } = await supabase.auth.verifyOtp({
+                    email: emailParam,
+                    token: code,
+                    type: 'recovery'
+                  });
+
+                  if (error) {
+                    console.error('Email verification error:', error);
+                  } else if (data?.session) {
+                    console.log('Email verification successful, session established for user:', data.session.user?.id);
+                    setTimeout(() => {
+                      router.replace('/auth/update-password');
+                    }, 100);
+                    return;
+                  }
+                } else {
+                  console.log('No email found in URL, trying direct verification...');
+                  const verificationResult = await handleSupabaseVerificationUrl(window.location.href);
+                  if (verificationResult) {
+                    console.log('Supabase verification successful, redirecting to update password');
+                    setTimeout(() => {
+                      router.replace('/auth/update-password');
+                    }, 100);
+                    return;
+                  }
+                }
+              }
             }
           } catch (error) {
             console.warn('Could not parse URL parameters:', error);
@@ -150,6 +187,33 @@ export default function ResetPasswordHandler() {
       } catch (err) {
         console.error('Error in password reset flow:', err);
         router.replace('/auth/reset-password?error=unexpected_error');
+      }
+    };
+
+    // Handle Supabase verification URL directly
+    const handleSupabaseVerificationUrl = async (url: string): Promise<boolean> => {
+      try {
+        console.log('Processing Supabase verification URL:', url);
+
+        // Let Supabase handle the verification by redirecting to the URL
+        // This will process the verification and redirect back to our app
+        window.location.href = url;
+
+        // Wait a moment for the redirect to complete
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Check if we now have a session
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session) {
+          console.log('Session established after verification:', session.user?.id);
+          return true;
+        }
+
+        return false;
+      } catch (err) {
+        console.error('Error processing verification URL:', err);
+        return false;
       }
     };
 
