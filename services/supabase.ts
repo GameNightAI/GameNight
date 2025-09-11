@@ -41,7 +41,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true, // Enable for web password reset flows
-    // flowType: 'pkce', // PKCE flow for better security and Safari compatibility
+    flowType: 'pkce', // PKCE flow for better security and Safari compatibility
+    debug: process.env.NODE_ENV === 'development',
   },
   global: {
     headers: {
@@ -53,11 +54,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Safari-specific session recovery
 export const initializeSupabaseSession = async () => {
   try {
-    // Check if we have a session stored
-    const session = await supabase.auth.getSession();
+    console.log('Initializing Supabase session...');
 
-    if (session.data.session) {
-      console.log('Session found, user is authenticated');
+    // Check if we have a session stored
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (error) {
+      console.warn('Error getting session:', error);
+      return;
+    }
+
+    if (session) {
+      console.log('Session found, user is authenticated:', session.user?.id);
     } else {
       console.log('No session found, user is anonymous');
     }
