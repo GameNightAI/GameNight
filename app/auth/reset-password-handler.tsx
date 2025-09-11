@@ -18,76 +18,30 @@ export default function ResetPasswordHandler() {
     const handlePasswordReset = async () => {
       try {
         setStatus('processing');
+        console.log('Starting password reset handler...');
+
         let access_token: string | null = null;
         let refresh_token: string | null = null;
         let type: string | null = null;
-        let code: string | null = null; // PKCE code fallback
 
-        // Enhanced URL parameter extraction
         if (Platform.OS === 'web') {
-          try {
-            if (typeof window !== 'undefined') {
-              console.log('Full URL:', window.location.href);
-              console.log('Search params:', window.location.search);
-              console.log('Hash params:', window.location.hash);
+          if (typeof window !== 'undefined') {
+            console.log('Full URL:', window.location.href);
 
-              // Use both hash and search params for better compatibility
-              const urlParams = new URLSearchParams(window.location.search);
-              const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            // Parse URL parameters from both search and hash
+            const urlParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
-              access_token = urlParams.get('access_token') || hashParams.get('access_token');
-              refresh_token = urlParams.get('refresh_token') || hashParams.get('refresh_token');
-              type = urlParams.get('type') || hashParams.get('type');
-              code = urlParams.get('code') || hashParams.get('code');
+            access_token = urlParams.get('access_token') || hashParams.get('access_token');
+            refresh_token = urlParams.get('refresh_token') || hashParams.get('refresh_token');
+            type = urlParams.get('type') || hashParams.get('type');
 
-              console.log('Web platform tokens:', {
-                access_token: !!access_token,
-                refresh_token: !!refresh_token,
-                type,
-                access_token_length: access_token?.length || 0,
-                refresh_token_length: refresh_token?.length || 0,
-                has_code: !!code
-              });
-
-              // Check if this is a Supabase verification URL that needs to be handled differently
-              if (code) {
-                console.log('Detected verification code, attempting to verify...');
-
-                // Try to get the email from the URL or use a generic approach
-                const emailParam = urlParams.get('email') || hashParams.get('email');
-
-                if (emailParam) {
-                  console.log('Found email in URL, attempting verifyOtp with email:', emailParam);
-                  const { data, error } = await supabase.auth.verifyOtp({
-                    email: emailParam,
-                    token: code,
-                    type: 'recovery'
-                  });
-
-                  if (error) {
-                    console.error('Email verification error:', error);
-                  } else if (data?.session) {
-                    console.log('Email verification successful, session established for user:', data.session.user?.id);
-                    setTimeout(() => {
-                      router.replace('/auth/update-password');
-                    }, 100);
-                    return;
-                  }
-                } else {
-                  console.log('No email found in URL, trying direct verification...');
-                  const verificationResult = await handleSupabaseVerificationUrl(window.location.href);
-                  if (verificationResult) {
-                    console.log('Supabase verification successful, redirecting to update password');
-                    setTimeout(() => {
-                      router.replace('/auth/update-password');
-                    }, 100);
-                    return;
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            console.warn('Could not parse URL parameters:', error);
+            console.log('Extracted tokens:', {
+              hasAccessToken: !!access_token,
+              hasRefreshToken: !!refresh_token,
+              type: type,
+              accessTokenLength: access_token?.length || 0
+            });
           }
         } else {
           // Mobile platform handling
@@ -98,9 +52,12 @@ export default function ResetPasswordHandler() {
               access_token = url.searchParams.get('access_token');
               refresh_token = url.searchParams.get('refresh_token');
               type = url.searchParams.get('type');
-              code = url.searchParams.get('code');
 
-              console.log('Mobile platform tokens:', { access_token: !!access_token, refresh_token: !!refresh_token, type });
+              console.log('Mobile tokens extracted:', {
+                hasAccessToken: !!access_token,
+                hasRefreshToken: !!refresh_token,
+                type: type
+              });
             } catch (error) {
               console.error('Error parsing mobile URL:', error);
             }
@@ -108,172 +65,91 @@ export default function ResetPasswordHandler() {
 
           // Listen for incoming links
           const subscription = Linking.addEventListener('url', (event) => {
-            try {
-              const url = new URL(event.url);
-              const mobileAccessToken = url.searchParams.get('access_token');
-              const mobileRefreshToken = url.searchParams.get('refresh_token');
-              const mobileType = url.searchParams.get('type');
-
-              if (mobileType === 'recovery' && mobileAccessToken) {
-                handlePasswordResetFlow(mobileAccessToken, mobileRefreshToken);
-              }
-            } catch (error) {
-              console.error('Error handling mobile deep link:', error);
-            }
+            handleDeepLink(event.url);
           });
 
           return () => subscription?.remove();
         }
 
-        // Validate tokens and proceed with reset flow
-        if (type === 'recovery' && access_token) {
-          console.log('Valid recovery tokens found, proceeding with reset flow');
-          await handlePasswordResetFlow(access_token, refresh_token);
-        } else if (code) {
-          // PKCE code flow fallback (Supabase may send a code instead of tokens)
-          console.log('PKCE code detected, exchanging for session');
-          const exchangeResult = await handlePkceCodeFlow(code);
-          if (!exchangeResult) {
-            router.replace('/auth/reset-password?error=invalid_link');
-            return;
-          }
-          console.log('PKCE exchange succeeded, redirecting to update password');
-          setTimeout(() => {
-            router.replace('/auth/update-password');
-          }, 100);
-        } else {
-          console.log('No valid recovery tokens found:', {
-            type,
-            hasAccessToken: !!access_token,
-            access_token_value: access_token ? access_token.substring(0, 20) + '...' : 'null',
-            refresh_token_value: refresh_token ? refresh_token.substring(0, 20) + '...' : 'null'
-          });
-          router.replace('/auth/reset-password?error=no_tokens');
-        }
+        // Proceed with session establishment
+        await establishSession(access_token, refresh_token, type);
+
       } catch (err) {
-        console.error('Error handling password reset:', err);
+        console.error('Error in password reset handler:', err);
         router.replace('/auth/reset-password?error=unexpected_error');
       }
     };
 
-    const handlePasswordResetFlow = async (accessToken: string, refreshToken: string | null) => {
+    const handleDeepLink = async (url: string) => {
       try {
-        console.log('Setting session with tokens');
+        const urlObj = new URL(url);
+        const access_token = urlObj.searchParams.get('access_token');
+        const refresh_token = urlObj.searchParams.get('refresh_token');
+        const type = urlObj.searchParams.get('type');
 
-        // Set the session with the tokens from URL
-        const { data, error: sessionError } = await supabase.auth.setSession({
+        if (type === 'recovery' && access_token) {
+          await establishSession(access_token, refresh_token, type);
+        }
+      } catch (error) {
+        console.error('Error handling deep link:', error);
+      }
+    };
+
+    const establishSession = async (accessToken: string | null, refreshToken: string | null, type: string | null) => {
+      try {
+        // Validate we have the required tokens
+        if (type !== 'recovery' || !accessToken) {
+          console.log('Invalid tokens for recovery:', { type, hasAccessToken: !!accessToken });
+          router.replace('/auth/reset-password?error=no_tokens');
+          return;
+        }
+
+        console.log('Attempting to set session with tokens...');
+
+        // Clear any existing session first
+        await supabase.auth.signOut();
+
+        // Wait a moment for sign out to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Set the new session
+        const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken || accessToken
         });
 
-        if (sessionError) {
-          console.error('Error setting session:', sessionError);
+        if (error) {
+          console.error('Error setting session:', error);
           router.replace('/auth/reset-password?error=invalid_link');
           return;
         }
 
-        if (!data.session) {
-          console.error('No session created despite no error');
+        if (!data.session || !data.user) {
+          console.error('No session or user created');
           router.replace('/auth/reset-password?error=missing_session');
           return;
         }
 
-        console.log('Session established successfully, redirecting to update password');
-        // Add a small delay to ensure session is fully established
-        setTimeout(() => {
-          router.replace('/auth/update-password');
-        }, 100);
+        console.log('Session established successfully for user:', data.user.id);
+        console.log('Session expires at:', data.session.expires_at);
+
+        // Verify session is actually working
+        const { data: sessionCheck, error: sessionError } = await supabase.auth.getUser();
+
+        if (sessionError || !sessionCheck.user) {
+          console.error('Session verification failed:', sessionError);
+          router.replace('/auth/reset-password?error=session_verification_failed');
+          return;
+        }
+
+        console.log('Session verified, redirecting to update password...');
+
+        // Redirect to update password page
+        router.replace('/auth/update-password');
 
       } catch (err) {
-        console.error('Error in password reset flow:', err);
-        router.replace('/auth/reset-password?error=unexpected_error');
-      }
-    };
-
-    // Handle Supabase verification URL directly
-    const handleSupabaseVerificationUrl = async (url: string): Promise<boolean> => {
-      try {
-        console.log('Processing Supabase verification URL:', url);
-
-        // Let Supabase handle the verification by redirecting to the URL
-        // This will process the verification and redirect back to our app
-        window.location.href = url;
-
-        // Wait a moment for the redirect to complete
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Check if we now have a session
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session) {
-          console.log('Session established after verification:', session.user?.id);
-          return true;
-        }
-
-        return false;
-      } catch (err) {
-        console.error('Error processing verification URL:', err);
-        return false;
-      }
-    };
-
-    // Handle PKCE code exchange for session
-    const handlePkceCodeFlow = async (pkceCode: string): Promise<boolean> => {
-      try {
-        console.log('Attempting PKCE code exchange for code:', pkceCode.substring(0, 20) + '...');
-
-        // Try different approaches for the code verification
-        let data, error;
-
-        // First try: verifyOtp with token parameter
-        try {
-          const result = await supabase.auth.verifyOtp({
-            token: pkceCode,
-            type: 'recovery'
-          });
-          data = result.data;
-          error = result.error;
-        } catch (err) {
-          console.log('verifyOtp with token failed, trying alternative approach...');
-
-          // Second try: verifyOtp with token_hash parameter
-          try {
-            const result = await supabase.auth.verifyOtp({
-              token_hash: pkceCode,
-              type: 'recovery'
-            });
-            data = result.data;
-            error = result.error;
-          } catch (err2) {
-            console.log('verifyOtp with token_hash failed, trying exchangeCodeForSession...');
-
-            // Third try: exchangeCodeForSession (in case it's actually a PKCE code)
-            try {
-              const result = await supabase.auth.exchangeCodeForSession(pkceCode);
-              data = result.data;
-              error = result.error;
-            } catch (err3) {
-              console.error('All verification methods failed:', { err, err2, err3 });
-              return false;
-            }
-          }
-        }
-
-        if (error) {
-          console.error('Code verification error:', error);
-          return false;
-        }
-
-        if (!data?.session) {
-          console.error('Code verification returned no session');
-          return false;
-        }
-
-        console.log('Code verification successful, session established for user:', data.session.user?.id);
-        return true;
-      } catch (err) {
-        console.error('Error during code verification:', err);
-        return false;
+        console.error('Error establishing session:', err);
+        router.replace('/auth/reset-password?error=session_error');
       }
     };
 
@@ -288,14 +164,11 @@ export default function ResetPasswordHandler() {
     <View style={styles.container}>
       <Text style={styles.title}>Processing Password Reset</Text>
       <Text style={styles.subtitle}>
-        {Platform.OS === 'web'
-          ? 'Please wait while we verify your reset link...'
-          : 'Please wait while we process your password reset...'
-        }
+        Please wait while we verify your reset link...
       </Text>
-      {status === 'processing' && (
-        <Text style={styles.statusText}>Verifying authentication tokens...</Text>
-      )}
+      <Text style={styles.statusText}>
+        {status === 'processing' ? 'Verifying authentication tokens...' : 'Redirecting...'}
+      </Text>
     </View>
   );
 }
