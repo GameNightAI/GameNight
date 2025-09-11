@@ -526,7 +526,11 @@ export function ScrollableTimePicker({
                 highlightItem: 'time-wheel-picker-hour-min-highlight',
                 highlightWrapper: 'time-wheel-picker-hour-min-highlight-wrapper',
               }*/
-                null
+                //null
+                {
+                  optionItem: 'time-wheel-picker-am-pm-option',
+                  highlightItem: 'time-wheel-picker-am-pm-highlight',
+                }
               }
             />
             <WheelPicker
@@ -538,7 +542,11 @@ export function ScrollableTimePicker({
                 highlightItem: 'time-wheel-picker-hour-min-highlight',
                 highlightWrapper: 'time-wheel-picker-hour-min-highlight-wrapper',
               }*/
-                null
+                //null
+                {
+                  optionItem: 'time-wheel-picker-am-pm-option',
+                  highlightItem: 'time-wheel-picker-am-pm-highlight',
+                }
               }
             />
             <WheelPicker
