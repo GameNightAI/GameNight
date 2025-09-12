@@ -223,9 +223,9 @@ export function DateReviewModal({
                 />
               </label>
               <datalist id="meal-times">
-                <option value="12:00">
-                <option value="12:30">
-                <option value="13:00">
+                <option value="12:00"/>
+                <option value="12:30"/>
+                <option value="13:00"/>
               </datalist>
             </View>
             
