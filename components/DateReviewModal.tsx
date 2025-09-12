@@ -209,7 +209,7 @@ export function DateReviewModal({
                     ...prevOptions,
                     startTime: convertTimeInputToDate(e.target.value),
                   }))}
-                  defaultValue="18:00"
+                  list="meal-times"
                 />
               </label>
               <label>
@@ -222,6 +222,11 @@ export function DateReviewModal({
                   }))}
                 />
               </label>
+              <datalist id="meal-times">
+                <option value="12:00">
+                <option value="12:30">
+                <option value="13:00">
+              </datalist>
             </View>
             
             {/* <View style={styles.timeInputs}>
