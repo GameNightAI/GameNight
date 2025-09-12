@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView } from 'react-native';
-import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus } from 'lucide-react-native';
+import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus, Check } from 'lucide-react-native';
 import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { supabase } from '@/services/supabase';
 
@@ -165,7 +165,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
           disabled={updatingExpansion === exp.id}
         >
           {updatingExpansion === exp.id ? (
-            <Text style={styles.expansionButtonText}>...</Text>
+            <Check size={12} color="#666666" />
           ) : exp.is_owned ? (
             <Minus size={12} color="#e74c3c" />
           ) : (
