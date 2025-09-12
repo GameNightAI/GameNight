@@ -67,7 +67,6 @@ export const CreatePollDetails: React.FC<CreatePollDetailsProps> = ({
             placeholder={title ? "Enter a custom title or keep the default" : "Poll title will appear when games are selected"}
             placeholderTextColor="#999999"
             maxLength={100}
-            autoFocus
           />
 
           <Text style={[styles.label, styles.descriptionLabel]}>Description (Optional)</Text>
@@ -184,7 +183,7 @@ const styles = StyleSheet.create<Styles>({
   },
   titleInput: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: 16, // 16px prevents Safari zoom
     color: '#333333',
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -199,7 +198,7 @@ const styles = StyleSheet.create<Styles>({
   },
   descriptionInput: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: 16, // 16px prevents Safari zoom
     color: '#333333',
     backgroundColor: '#ffffff',
     borderWidth: 1,
