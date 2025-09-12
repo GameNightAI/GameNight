@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Alert, Image } from 'react-native';
-import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, AlertTriangle } from 'lucide-react-native';
+import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, AlertTriangle, SquarePen } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import Toast from 'react-native-toast-message';
 import { CreatePollModal } from './CreatePollModal';
+import { CreatePollDetails } from './CreatePollDetails';
 import { sortGamesByTitle } from '@/utils/sortingUtils';
 
 
@@ -38,6 +39,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const [showCreatePollModal, setShowCreatePollModal] = useState(false);
   const [dynamicPollTitle, setDynamicPollTitle] = useState(pollTitle);
   const [isTitleManuallyChanged, setIsTitleManuallyChanged] = useState(false);
+  const [dynamicPollDescription, setDynamicPollDescription] = useState(pollDescription || '');
+  const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
 
 
 
@@ -48,10 +51,11 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
       // Reset the title change flag when opening a new poll
       setIsTitleManuallyChanged(false);
       setDynamicPollTitle(pollTitle);
+      setDynamicPollDescription(pollDescription || '');
       // Reset warning dismissed state when opening modal
       setWarningDismissed(false);
     }
-  }, [isVisible, pollId, pollTitle]);
+  }, [isVisible, pollId, pollTitle, pollDescription]);
 
   // Function to generate updated poll title based on game count
   const generateUpdatedTitle = (gameCount: number) => {
@@ -264,15 +268,23 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         }
       }
 
-      // Update the poll title if it has changed
+      // Update the poll title and description if they have changed
+      const updates: any = {};
       if (dynamicPollTitle !== pollTitle) {
-        const { error: titleError } = await supabase
+        updates.title = dynamicPollTitle;
+      }
+      if (dynamicPollDescription !== (pollDescription || '')) {
+        updates.description = dynamicPollDescription.trim() || null;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const { error: updateError } = await supabase
           .from('polls')
-          .update({ title: dynamicPollTitle })
+          .update(updates)
           .eq('id', pollId);
 
-        if (titleError) {
-          throw titleError;
+        if (updateError) {
+          throw updateError;
         }
       }
 
@@ -390,21 +402,23 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
           )}
 
           <ScrollView style={styles.content}>
-            <View style={styles.pollInfo}>
-              <Text style={styles.editTitleLabel}>Edit Title (Optional):</Text>
-              <TextInput
-                style={styles.titleInput}
-                value={dynamicPollTitle}
-                onChangeText={(text) => {
-                  setDynamicPollTitle(text);
-                  setIsTitleManuallyChanged(true);
-                }}
-                placeholder="Enter custom poll title"
-                placeholderTextColor="#999999"
-              />
-              {pollDescription && (
-                <Text style={styles.pollDescription}>{pollDescription}</Text>
-              )}
+            <View style={styles.descriptionSection}>
+              <TouchableOpacity
+                style={[styles.descriptionButton, (dynamicPollDescription || isTitleManuallyChanged) && styles.descriptionButtonActive]}
+                onPress={() => setIsDetailsModalVisible(true)}
+              >
+                <View style={styles.descriptionButtonContent}>
+                  <View style={styles.descriptionButtonLeft}>
+                    <Text style={styles.descriptionButtonLabel}>Edit Title & Description</Text>
+                  </View>
+                  <View style={styles.descriptionButtonRight}>
+                    <View style={[styles.descriptionButtonIndicator, { opacity: (dynamicPollDescription || isTitleManuallyChanged) ? 1 : 0 }]}>
+                      <Text style={styles.descriptionButtonIndicatorText}>✓</Text>
+                    </View>
+                    <SquarePen size={20} color="#666666" />
+                  </View>
+                </View>
+              </TouchableOpacity>
             </View>
 
             {originalPollGames.length > 0 && (
@@ -501,6 +515,19 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         preselectedGames={originalPollGames}
         isAddingToExistingPoll={true}
       />
+
+      {/* CreatePollDetails Modal for editing title and description */}
+      <CreatePollDetails
+        isVisible={isDetailsModalVisible}
+        onClose={() => setIsDetailsModalVisible(false)}
+        onSave={(title, description) => {
+          setDynamicPollTitle(title);
+          setDynamicPollDescription(description);
+          setIsDetailsModalVisible(false);
+        }}
+        currentTitle={dynamicPollTitle}
+        currentDescription={dynamicPollDescription}
+      />
     </>
   );
 };
@@ -574,43 +601,56 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 10,
   },
-  pollInfo: {
-    paddingTop: 0,
-    paddingBottom: 8,
-    paddingHorizontal: 10,
-    paddingLeft: 0,
-    // backgroundColor: '#f8fafc',
-    borderRadius: 8,
+  descriptionSection: {
+    marginBottom: 10,
+    width: '100%',
+    paddingTop: 4,
   },
-  pollTitle: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
-    marginTop: 0,
-    marginBottom: 4,
-  },
-  editTitleLabel: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  titleInput: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
+  descriptionButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e1e5ea',
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 0,
+    padding: 10,
+    marginTop: 8,
   },
-  pollDescription: {
+  descriptionButtonActive: {
+    borderColor: '#ff9654',
+    backgroundColor: '#fff5ef',
+  },
+  descriptionButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  descriptionButtonLeft: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  descriptionButtonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  descriptionButtonLabel: {
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    color: '#1a2b5f',
+  },
+  descriptionButtonIndicator: {
+    backgroundColor: '#16a34a',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  descriptionButtonIndicatorText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'Poppins-SemiBold',
   },
   currentGamesSection: {
     marginBottom: 0,
