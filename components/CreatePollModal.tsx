@@ -704,6 +704,33 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         {searchAddedGames.length > 0 && (
           <View style={styles.searchAddedSection}>
             {searchAddedGames.map(game => {
+              const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
+              const useMaxExpPlayers = game.max_exp_players > game.max_players;
+              const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
+              const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
+              const playerCountText = (
+                maxPlayers > 0
+                  ? (
+                    <>
+                      <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+                        {minPlayers}
+                      </Text>
+                      {minPlayers !== maxPlayers && (
+                        <>
+                          <Text>-</Text>
+                          <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+                            {maxPlayers}
+                          </Text>
+                        </>
+                      )}
+                      <Text>
+                        {` player${maxPlayers === 1 ? '' : 's'}`}
+                      </Text>
+                    </>
+                  ) : (
+                    'N/A'
+                  )
+              );
               const isAlreadyInPoll = preselectedGames?.some(pg => pg.id === game.id);
               return (
                 <TouchableOpacity
@@ -738,7 +765,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                       styles.playerCount,
                       isAlreadyInPoll && styles.playerCountDisabled
                     ]}>
-                      {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                      {playerCountText} • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
                     </Text>
                     {isAlreadyInPoll && (
                       <Text style={styles.alreadyInPollText}>Already in poll</Text>
@@ -1725,6 +1752,10 @@ const selectStyles = {
     ...baseStyles,
     marginBottom: 12,
   }),
+  infoTextEmphasis: {
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
+  },
   menu: (baseStyles: any, state: any) => ({
     ...baseStyles,
     backgroundColor: '#ffffff',
