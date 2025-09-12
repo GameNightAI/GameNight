@@ -31,7 +31,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasExistingVotes, setHasExistingVotes] = useState(false);
-  const [voteCount, setVoteCount] = useState(0);
+  const [voterCount, setVoterCount] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState<'save' | 'addGames'>('save');
@@ -89,12 +89,16 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     try {
       const { data: votes, error } = await supabase
         .from('votes')
-        .select('id')
+        .select('voter_name')
         .eq('poll_id', pollId);
 
       if (!error && votes) {
-        setHasExistingVotes(votes.length > 0);
-        setVoteCount(votes.length);
+        // Count unique voters (distinct voter_name values)
+        const uniqueVoters = new Set(votes.map((vote: any) => vote.voter_name).filter((name: any) => name));
+        const voterCount = uniqueVoters.size;
+
+        setHasExistingVotes(voterCount > 0);
+        setVoterCount(voterCount);
       }
     } catch (err) {
       console.error('Error checking existing votes:', err);
@@ -334,7 +338,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
             <View style={styles.warningHeader}>
               <AlertTriangle size={20} color="#f59e0b" />
               <Text style={styles.warningHeaderText}>
-                This poll already has {voteCount} vote{voteCount !== 1 ? 's' : ''}
+                This poll already has {voterCount} voter{voterCount !== 1 ? 's' : ''}
               </Text>
               <TouchableOpacity
                 style={styles.warningDismissButton}
