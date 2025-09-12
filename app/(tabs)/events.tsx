@@ -346,40 +346,44 @@ export default function EventsScreen() {
           <Text style={styles.eventTableHeaderVote}>No</Text>
         </View>
 
-        {/* Table Rows */}
-        {eventDates.map((eventDate, index) => {
-          const counts = voteCounts[eventDate.id] || { yes: 0, no: 0, maybe: 0 };
-          const displayLocation = event?.use_same_location && event?.location
-            ? event.location
-            : eventDate.location || 'Location not set';
-          const displayTime = event?.use_same_time && event?.start_time && event?.end_time
-            ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
-            : eventDate.start_time && eventDate.end_time
-              ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
-              : 'Time not set';
+        {/* Table Rows - sorted by total score */}
+        {eventDates
+          .map(eventDate => {
+            const counts = voteCounts[eventDate.id] || { yes: 0, no: 0, maybe: 0 };
+            // Calculate total score: Ideal (2) + Doable (1) - No (-2)
+            const totalScore = (counts.yes * 2) + (counts.maybe * 1) + (counts.no * -2);
+            return { eventDate, counts, totalScore };
+          })
+          .sort((a, b) => b.totalScore - a.totalScore) // Sort by total score descending
+          .map(({ eventDate, counts }, index) => {
+            const displayTime = event?.use_same_time && event?.start_time && event?.end_time
+              ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
+              : eventDate.start_time && eventDate.end_time
+                ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
+                : 'Time not set';
 
-          return (
-            <View key={eventDate.id} style={styles.eventTableRow}>
-              <View style={styles.eventTableDateCell}>
-                <Text style={styles.eventTableDateText}>
-                  {format(new Date(eventDate.event_date), 'MMM d, yyyy')}
-                </Text>
-                <Text style={styles.eventTableDateSubtext}>
-                  {displayLocation !== 'Location not set' ? displayLocation : displayTime}
-                </Text>
+            return (
+              <View key={eventDate.id} style={styles.eventTableRow}>
+                <View style={styles.eventTableDateCell}>
+                  <Text style={styles.eventTableDateText}>
+                    {format(new Date(eventDate.event_date), 'MMM d, yyyy')}
+                  </Text>
+                  <Text style={styles.eventTableDateSubtext}>
+                    {displayTime}
+                  </Text>
+                </View>
+                <View style={styles.eventTableVoteCell}>
+                  <Text style={[styles.eventTableVoteCount, { color: '#10b981' }]}>{counts.yes}</Text>
+                </View>
+                <View style={styles.eventTableVoteCell}>
+                  <Text style={[styles.eventTableVoteCount, { color: '#f59e0b' }]}>{counts.maybe}</Text>
+                </View>
+                <View style={styles.eventTableVoteCell}>
+                  <Text style={[styles.eventTableVoteCount, { color: '#ef4444' }]}>{counts.no}</Text>
+                </View>
               </View>
-              <View style={styles.eventTableVoteCell}>
-                <Text style={[styles.eventTableVoteCount, { color: '#10b981' }]}>{counts.yes}</Text>
-              </View>
-              <View style={styles.eventTableVoteCell}>
-                <Text style={[styles.eventTableVoteCount, { color: '#f59e0b' }]}>{counts.maybe}</Text>
-              </View>
-              <View style={styles.eventTableVoteCell}>
-                <Text style={[styles.eventTableVoteCount, { color: '#ef4444' }]}>{counts.no}</Text>
-              </View>
-            </View>
-          );
-        })}
+            );
+          })}
 
         <TouchableOpacity
           style={styles.viewDetailsButton}

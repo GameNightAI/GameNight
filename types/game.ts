@@ -1,3 +1,12 @@
+export interface Expansion {
+  id: number;
+  name: string;
+  min_players: number;
+  max_players: number;
+  is_owned: boolean;
+  thumbnail: string;
+}
+
 export interface Game {
   id: number;
   name: string;
@@ -20,4 +29,5 @@ export interface Game {
   complexity_desc: string;
   average?: number | null;
   bayesaverage: number | null;
+  expansions: Expansion[];
 }
