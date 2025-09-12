@@ -175,8 +175,8 @@ export function DateReviewModal({
 
   if (!visible) return null;
 
-  let inputStartTime = null;
-  let inputEndTime = null;
+  let inputStartTime = '';
+  let inputEndTime = '';
 
   return (
     <Modal visible={visible} transparent animationType="fade">
