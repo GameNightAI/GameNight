@@ -174,6 +174,12 @@ export function DateReviewModal({
   };
 
   if (!visible) return null;
+  
+  convertTimeInputToDate = (timeString: string, date: Date) => {
+    date ||= new Date();
+    let [ hour, min ] = timeString.split(':');
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, min);
+  }
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -193,8 +199,31 @@ export function DateReviewModal({
 
           {/* Time Inputs */}
           <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Event Time</Text>
             <View style={styles.timeInputs}>
+              <Text style={styles.inputLabel}>Event Time</Text>
+              <label>
+                Start
+                <input
+                  type="time"
+                  onChange={(e) => setLocalEventOptions(prevOptions => ({
+                    ...prevOptions,
+                    startTime: convertTimeInputToDate(e.target.value),
+                  }))}
+                />
+              </label>
+              <label>
+                End
+                <input
+                  type="time"
+                  onChange={(e) => setLocalEventOptions(prevOptions => ({
+                    ...prevOptions,
+                    endTime: convertTimeInputToDate(e.target.value),
+                  }))}
+                />
+              </label>
+            </View>
+            
+            {/* <View style={styles.timeInputs}>
               <View style={styles.timeInputContainer}>
                 <TouchableOpacity
                   style={styles.timeButton}
@@ -231,13 +260,11 @@ export function DateReviewModal({
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
+            </View> */}
             {timeValidationError ? (
               <Text style={styles.validationError}>{timeValidationError}</Text>
             ) : null}
           </View>
-
-
 
           <ScrollView style={styles.dateReviewContent} showsVerticalScrollIndicator={false}>
             {selectedDates.map((date, index) => {
@@ -281,7 +308,31 @@ export function DateReviewModal({
                       </Text>
                       {hasCustomTime ? (
                         <View style={styles.customTimeInputs}>
-                          <TouchableOpacity
+                          <label style={styles.inlineTimeButtonText}>
+                            Start
+                            <input
+                              type="time"
+                              onChange={(e) => updateDateSpecificOptions(
+                                date,
+                                { startTime: convertTimeInputToDate(e.target.value) }
+                              )}                            
+                              style={styles.inlineTimeButtonText}
+                            />
+                          </label>
+                          {/* <Text style={styles.timeSeparator}>-</Text> */}
+                          <label style={styles.inlineTimeButtonText}>
+                            End
+                            <input
+                              type="time"
+                              onChange={(e) => updateDateSpecificOptions(
+                                date,
+                                { endTime: convertTimeInputToDate(e.target.value) }
+                              )}
+                              style={styles.inlineTimeButtonText}
+                            />
+                          </label>
+                          
+                          {/* <TouchableOpacity
                             style={styles.inlineTimeButton}
                             onPress={() => openTimePickerForDate(date, 'start')}
                           >
@@ -297,7 +348,7 @@ export function DateReviewModal({
                             <Text style={styles.inlineTimeButtonText}>
                               {dateOptions.endTime ? formatTime(dateOptions.endTime) : 'End Time'}
                             </Text>
-                          </TouchableOpacity>
+                          </TouchableOpacity> */}
                         </View>
                       ) : (
                         <Text style={styles.dateCardDayTime}>{displayTime}</Text>
@@ -363,7 +414,7 @@ export function DateReviewModal({
       </View>
 
       {/* Scrollable Time Picker Modal */}
-      <ScrollableTimePicker
+      {/* <ScrollableTimePicker
         visible={showTimePicker}
         onClose={() => setShowTimePicker(false)}
         onSave={currentEditingDate ? saveTimeSelectionForDate : saveTimeSelection}
@@ -375,7 +426,7 @@ export function DateReviewModal({
         }
         title={`Select ${timePickerMode === 'start' ? 'Start' : 'End'} Time`}
         validationError={timeValidationError}
-      />
+      /> */}
     </Modal>
   );
 }
@@ -643,7 +694,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   customTimeInputs: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     marginLeft: 4,
   },
