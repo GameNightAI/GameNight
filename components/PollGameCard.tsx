@@ -61,6 +61,8 @@ interface Game {
   image?: string;
   average?: number | null;
   minAge?: number;
+  min_exp_players: number;
+  max_exp_players: number;
   // userVote property removed as it is not used
 }
 
@@ -95,14 +97,40 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
     ];
   };
 
-
-
   const [isExpanded, setIsExpanded] = React.useState(false);
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
 
   function hasRemovesGame(option: typeof VOTING_OPTIONS[number]): option is typeof VOTING_OPTIONS[number] & { removesGame: true } {
     return 'removesGame' in option && option.removesGame === true;
   }
+
+  const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
+  const useMaxExpPlayers = game.max_exp_players > game.max_players;
+  const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
+  const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
+  const playerCountText = (
+    maxPlayers > 0
+      ? (
+        <>
+          <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+            {minPlayers}
+          </Text>
+          {minPlayers !== maxPlayers && (
+            <>
+              <Text>-</Text>
+              <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+                {maxPlayers}
+              </Text>
+            </>
+          )}
+          <Text>
+            {` player${maxPlayers === 1 ? '' : 's'}`}
+          </Text>
+        </>
+      ) : (
+        'N/A'
+      )
+  );
 
   return (
     <Animated.View entering={FadeIn.delay(index * 100)} style={styles.card}>
@@ -127,7 +155,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
             <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
               <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
               <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
-                {game.min_players}-{game.max_players} players • {getPlayTimeDisplay(game)}
+                {playerCountText} • {getPlayTimeDisplay(game)}
               </Text>
             </View>
             <View style={styles.chevronContainer}>
@@ -286,6 +314,10 @@ const styles = StyleSheet.create({
   },
   infoTextSmall: {
     fontSize: 10,
+  },
+  infoTextEmphasis: {
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
   },
   name: {
     fontSize: 16,
