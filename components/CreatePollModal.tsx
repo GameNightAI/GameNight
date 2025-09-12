@@ -591,7 +591,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            <View style={styles.descriptionSection}>
+            {/* Additional Options section - hidden for now */}
+            {/* <View style={styles.descriptionSection}>
               <TouchableOpacity
                 style={[styles.descriptionButton, pollDescription && styles.descriptionButtonActive]}
                 onPress={() => setIsAdditionalOptionsModalVisible(true)}
@@ -608,7 +609,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   </View>
                 </View>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </>
         )}
 
@@ -1202,7 +1203,7 @@ const styles = StyleSheet.create<Styles>({
     paddingHorizontal: 0,
   },
   titleSection: {
-    marginBottom: 10,
+    marginBottom: 0,
     width: '100%',
     paddingTop: 4,
   },
