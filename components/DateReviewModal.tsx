@@ -314,7 +314,7 @@ export function DateReviewModal({
                               type="time"
                               onChange={(e) => updateDateSpecificOptions(
                                 date,
-                                { startTime: e.target.value }
+                                { startTime: convertTimeInputToDate(e.target.value) }
                               )}                            
                               style={styles.inlineTimeButtonText}
                             />
@@ -326,7 +326,7 @@ export function DateReviewModal({
                               type="time"
                               onChange={(e) => updateDateSpecificOptions(
                                 date,
-                                { endTime: e.target.value }
+                                { endTime: convertTimeInputToDate(e.target.value) }
                               )}
                               style={styles.inlineTimeButtonText}
                             />
