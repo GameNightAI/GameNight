@@ -175,7 +175,7 @@ export function DateReviewModal({
 
   if (!visible) return null;
   
-  convertTimeInputToDate = (timeString, date) => {
+  convertTimeInputToDate = (timeString: string, date: Date) => {
     date ||= new Date();
     let [ hour, min ] = timeString.split(':');
     return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, min);
@@ -308,6 +308,30 @@ export function DateReviewModal({
                       </Text>
                       {hasCustomTime ? (
                         <View style={styles.customTimeInputs}>
+                          <label style={styles.inlineTimeButtonText}>
+                            Start
+                            <input
+                              type="time"
+                              onChange={(e) => updateDateSpecificOptions(
+                                date,
+                                { startTime: e.target.value }
+                              )}                            
+                              style={styles.inlineTimeButtonText}
+                            />
+                          </label>
+                          <Text style={styles.timeSeparator}>-</Text>
+                          <label style={styles.inlineTimeButtonText}>
+                            Start
+                            <input
+                              type="time"
+                              onChange={(e) => updateDateSpecificOptions(
+                                date,
+                                { endTime: e.target.value }
+                              )}
+                              style={styles.inlineTimeButtonText}
+                            />
+                          </label>
+                          
                           {/* <TouchableOpacity
                             style={styles.inlineTimeButton}
                             onPress={() => openTimePickerForDate(date, 'start')}
