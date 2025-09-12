@@ -399,6 +399,7 @@ export default function CollectionScreen() {
             <GameItem
               game={item}
               onDelete={() => setGameToDelete(item)}
+              onExpansionUpdate={loadGames}
             />
           </Animated.View>
         )}
