@@ -175,9 +175,14 @@ export function DateReviewModal({
 
   if (!visible) return null;
   
-  convertInputToDate = dateString => {
-    let [ hour, min ] = dateString.split(':')
-    return new Date(0, 0, 0, hour, min);
+  convertInputToDate = (timeString, d) => {
+    let [ hour, min ] = timeString.split(':')
+    if (!d) {
+      d = new Date()
+    }
+    let result = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour, min);
+    console.log(result);
+    return result;
   }
 
   return (
@@ -200,7 +205,7 @@ export function DateReviewModal({
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>Event Time</Text>
             <label>
-              Start Time
+              Start
               <input
                 type="time"
                 onChange={(e) => setLocalEventOptions(prevOptions => ({
@@ -210,7 +215,7 @@ export function DateReviewModal({
               />
             </label>
             <label>
-              End Time
+              End
               <input
                 type="time"
                 onChange={(e) => setLocalEventOptions(prevOptions => ({
