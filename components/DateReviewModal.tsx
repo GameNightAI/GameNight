@@ -203,20 +203,20 @@ export function DateReviewModal({
               Start Time
               <input
                 type="time"
-                onChange={(e) => setLocalEventOptions({
+                onChange={(e) => setLocalEventOptions(prevOptions => ({
                   ...prevOptions,
                   startTime: convertInputToDate(e.target.value),
-                })}
+                }))}
               />
             </label>
             <label>
               End Time
               <input
                 type="time"
-                onChange={(e) => setLocalEventOptions({
+                onChange={(e) => setLocalEventOptions(prevOptions => ({
                   ...prevOptions,
                   endTime: convertInputToDate(e.target.value),
-                })}
+                }))}
               />
             </label>
             
