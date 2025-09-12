@@ -319,9 +319,9 @@ export function DateReviewModal({
                               style={styles.inlineTimeButtonText}
                             />
                           </label>
-                          <Text style={styles.timeSeparator}>-</Text>
+                          {/* <Text style={styles.timeSeparator}>-</Text> */}
                           <label style={styles.inlineTimeButtonText}>
-                            Start
+                            End
                             <input
                               type="time"
                               onChange={(e) => updateDateSpecificOptions(
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   customTimeInputs: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     marginLeft: 4,
   },
