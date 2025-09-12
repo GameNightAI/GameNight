@@ -514,7 +514,6 @@ export function ScrollableTimePicker({
             )}
           </View> */}
          
-          
           <WheelPickerWrapper className={/*"time-wheel-picker-wrapper"*/null}>
             <WheelPicker
               options={hours}
@@ -561,9 +560,7 @@ export function ScrollableTimePicker({
           </WheelPickerWrapper>
           
           <label htmlFor="native-time">Sample time input:</label>
-          <input id="native-time" type="time" step="15"/>
-          <label htmlFor="native-date">Sample date input:</label>
-          <input id="native-date" type="date"/>
+          <input id="native-time" type="time" defaultValue="18:00"/>
 
           {/* Time Picker */}
           {/* <View style={styles.timePickerContainer}>
