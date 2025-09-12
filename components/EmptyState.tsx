@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, Platform } from 'react-native';
-import { RefreshCw, Search, Star, Filter, Users, Plus, X, Dice6 } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { RefreshCw, Search, Star, Filter, Users, Plus } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { AddGameModal } from '@/components/AddGameModal';
@@ -13,6 +13,7 @@ interface EmptyStateProps {
   buttonText?: string;
   showSyncButton?: boolean;
   handleClearFilters: any;
+  onSyncClick?: () => void;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -22,78 +23,21 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   message,
   buttonText = "Refresh",
   showSyncButton = false,
-  handleClearFilters
+  handleClearFilters,
+  onSyncClick
 }) => {
-  const [inputUsername, setInputUsername] = useState('');
-  const [error, setError] = useState('');
-  const [showModal, setShowModal] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const router = useRouter();
 
   const handleImportCollection = () => {
-    if (!inputUsername.trim()) {
-      setError('Please enter a BoardGameGeek username');
-      return;
+    if (onSyncClick) {
+      onSyncClick();
+    } else {
+      // Fallback to old behavior if onSyncClick is not provided
+      onRefresh();
     }
-    setError('');
-    onRefresh(inputUsername.trim());
-    setInputUsername('');
-    setShowModal(false);
   };
 
-  const openImportModal = () => {
-    setShowModal(true);
-    setError('');
-    setInputUsername('');
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setError('');
-    setInputUsername('');
-  };
-
-  const modalContent = (
-    <View style={styles.modalDialog}>
-      <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle}>Import BGG Collection</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
-          <X size={20} color="#666666" />
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.modalDescription}>
-        Enter your BoardGameGeek username to import your collection
-      </Text>
-
-      <View style={styles.modalInputContainer}>
-        <TextInput
-          style={styles.modalInput}
-          placeholder="BGG Username"
-          value={inputUsername}
-          onChangeText={(text) => {
-            setInputUsername(text);
-            setError('');
-          }}
-          onSubmitEditing={handleImportCollection}
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoFocus
-        />
-      </View>
-
-      {error ? <Text style={styles.modalErrorText}>{error}</Text> : null}
-
-      <TouchableOpacity
-        style={styles.modalImportButton}
-        onPress={handleImportCollection}
-      >
-        <Search size={20} color="#ffffff" />
-        <Text style={styles.modalImportButtonText}>Import Collection</Text>
-      </TouchableOpacity>
-
-    </View>
-  );
 
   if (showSyncButton) {
     return (
@@ -143,32 +87,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {/* Import BGG Collection Button */}
         <TouchableOpacity
           style={styles.importButton}
-          onPress={openImportModal}
+          onPress={handleImportCollection}
           activeOpacity={0.8}
         >
           <Search size={20} color="#ffffff" />
           <Text style={styles.importButtonText}>Import BGG Collection</Text>
         </TouchableOpacity>
-
-        {/* Import Modal */}
-        {Platform.OS === 'web' ? (
-          showModal && (
-            <View style={styles.webModalOverlay}>
-              {modalContent}
-            </View>
-          )
-        ) : (
-          <Modal
-            visible={showModal}
-            transparent
-            animationType="fade"
-            onRequestClose={closeModal}
-          >
-            <View style={styles.modalOverlay}>
-              {modalContent}
-            </View>
-          </Modal>
-        )}
 
         <AddGameModal
           isVisible={addGameModalVisible}
@@ -311,103 +235,6 @@ const styles = StyleSheet.create({
     color: '#8d8d8d',
     textAlign: 'center',
     maxWidth: 280,
-    lineHeight: 18,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  webModalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: 20,
-  },
-  modalDialog: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  modalDescription: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  modalInputContainer: {
-    marginBottom: 16,
-  },
-  modalInput: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-  },
-  modalErrorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#e74c3c',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalImportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  modalImportButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-    marginLeft: 8,
-  },
-  modalHelpText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
-    color: '#8d8d8d',
-    textAlign: 'center',
     lineHeight: 18,
   },
   // Legacy styles for non-sync scenarios

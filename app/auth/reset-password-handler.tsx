@@ -1,110 +1,120 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
 import { supabase } from '@/services/supabase';
 
 export default function ResetPasswordHandler() {
   const router = useRouter();
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const addLog = (message: string) => {
+    console.log(message);
+    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
 
   useEffect(() => {
-    const handlePasswordReset = async () => {
-      try {
-        let access_token: string | null = null;
-        let refresh_token: string | null = null;
-        let type: string | null = null;
+    const handleReset = async () => {
+      addLog('🔍 Processing password reset...');
 
-        if (Platform.OS === 'web') {
-          // Web platform: use URL search parameters
-          // Use a safer approach that doesn't rely on window.location directly
-          try {
-            const urlParams = new URLSearchParams(
-              typeof window !== 'undefined' ? window.location.search : ''
-            );
-            access_token = urlParams.get('access_token');
-            refresh_token = urlParams.get('refresh_token');
-            type = urlParams.get('type');
-          } catch (error) {
-            console.warn('Could not parse URL parameters:', error);
-          }
-        } else {
-          // Mobile platform: use expo-linking to get the initial URL
-          const initialURL = await Linking.getInitialURL();
-          if (initialURL) {
-            const url = new URL(initialURL);
-            access_token = url.searchParams.get('access_token');
-            refresh_token = url.searchParams.get('refresh_token');
-            type = url.searchParams.get('type');
-          }
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        // Extract URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
-          // Also listen for incoming links (in case the app is already open)
-          const subscription = Linking.addEventListener('url', (event) => {
-            const url = new URL(event.url);
-            const mobileAccessToken = url.searchParams.get('access_token');
-            const mobileRefreshToken = url.searchParams.get('refresh_token');
-            const mobileType = url.searchParams.get('type');
+        const allParams: Record<string, string> = {};
+        urlParams.forEach((value, key) => allParams[key] = value);
+        hashParams.forEach((value, key) => allParams[key] = value);
 
-            if (mobileType === 'recovery' && mobileAccessToken) {
-              handleMobilePasswordReset(mobileAccessToken, mobileRefreshToken);
-            }
-          });
+        addLog(`🔑 Parameters: ${Object.keys(allParams).join(', ')}`);
 
-          // Cleanup subscription
-          return () => subscription?.remove();
-        }
-
-        // Handle the password reset flow
-        if (type === 'recovery' && access_token) {
-          await handlePasswordResetFlow(access_token, refresh_token);
-        } else {
-          // No valid recovery tokens, redirect to reset password page
-          router.replace('/auth/reset-password?error=no_tokens');
-        }
-      } catch (err) {
-        console.error('Error handling password reset:', err);
-        router.replace('/auth/reset-password?error=unexpected_error');
-      }
-    };
-
-    const handlePasswordResetFlow = async (accessToken: string, refreshToken: string | null) => {
-      try {
-        // Set the session with the tokens from URL
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || accessToken
-        });
-
-        if (sessionError) {
-          console.error('Error setting session:', sessionError);
-          // Redirect to reset password page with error
-          router.replace('/auth/reset-password?error=invalid_link');
+        if (allParams.error) {
+          addLog(`❌ Error: ${allParams.error} (${allParams.error_code || 'no_code'})`);
+          router.replace(`/auth/reset-password?error=${allParams.error}`);
           return;
         }
 
-        // Successfully authenticated, redirect to update password
-        router.replace('/auth/update-password');
+        // Process based on available tokens
+        if (allParams.access_token) {
+          addLog('✅ Using implicit flow');
+          await handleImplicitFlow(allParams);
+        } else if (allParams.code) {
+          addLog('✅ Using PKCE flow');
+          await handlePKCEFlow(allParams.code);
+        } else {
+          addLog('❌ No valid tokens found');
+          router.replace('/auth/reset-password?error=no_tokens');
+        }
+      }
+    };
+
+    const handleImplicitFlow = async (params: Record<string, string>) => {
+      try {
+        addLog('🔧 Setting up session...');
+
+        const { data, error } = await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token || params.access_token
+        });
+
+        if (error) {
+          addLog(`❌ setSession failed: ${error.message}`);
+          router.replace('/auth/reset-password?error=session_failed');
+          return;
+        }
+
+        if (data.session) {
+          addLog(`✅ Session created for ${data.user?.email}`);
+          router.replace('/auth/update-password');
+        } else {
+          addLog('❌ Session creation failed');
+          router.replace('/auth/reset-password?error=no_session');
+        }
       } catch (err) {
-        console.error('Error in password reset flow:', err);
+        addLog(`💥 Implicit flow error: ${err}`);
         router.replace('/auth/reset-password?error=unexpected_error');
       }
     };
 
-    const handleMobilePasswordReset = async (accessToken: string, refreshToken: string | null) => {
-      await handlePasswordResetFlow(accessToken, refreshToken);
+    const handlePKCEFlow = async (code: string) => {
+      try {
+        addLog('🔧 Exchanging code for session...');
+
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (error) {
+          addLog(`❌ exchangeCodeForSession failed: ${error.message}`);
+          router.replace('/auth/reset-password?error=code_exchange_failed');
+          return;
+        }
+
+        if (data.session) {
+          addLog(`✅ PKCE session created for ${data.user?.email}`);
+          router.replace('/auth/update-password');
+        } else {
+          addLog('❌ PKCE session creation failed');
+          router.replace('/auth/reset-password?error=no_pkce_session');
+        }
+      } catch (err) {
+        addLog(`💥 PKCE flow error: ${err}`);
+        router.replace('/auth/reset-password?error=pkce_error');
+      }
     };
 
-    handlePasswordReset();
+    handleReset();
   }, [router]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Processing Password Reset</Text>
-      <Text style={styles.subtitle}>
-        {Platform.OS === 'web'
-          ? 'Please wait while we verify your reset link...'
-          : 'Please wait while we process your password reset...'
-        }
-      </Text>
+      <Text style={styles.subtitle}>Analyzing reset link...</Text>
+
+      <View style={styles.logContainer}>
+        {logs.map((log, index) => (
+          <Text key={index} style={styles.logText}>
+            {log}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 }
@@ -113,20 +123,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f7f9fc',
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 20,
+    paddingTop: 60,
   },
   title: {
-    fontSize: 24,
-    color: '#1a2b5f',
-    marginBottom: 12,
-    textAlign: 'center',
+    fontSize: 20,
     fontWeight: '600',
+    color: '#1a2b5f',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
     color: '#1a2b5f',
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  logContainer: {
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 8,
+    maxHeight: 400,
+  },
+  logText: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 5,
+    fontFamily: 'monospace',
   },
 });

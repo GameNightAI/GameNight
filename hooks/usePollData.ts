@@ -8,6 +8,15 @@ import { Game } from '@/types/game';
 import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE, getVoteTypeKeyFromScore } from '@/components/votingOptions';
 import { getUsername } from '@/utils/storage';
 
+// Helper function to get complexity description
+function getComplexityDescription(complexity: number): string {
+  if (complexity < 1.5) return 'Light';
+  if (complexity < 2.5) return 'Medium Light';
+  if (complexity < 3.5) return 'Medium';
+  if (complexity < 4.5) return 'Medium Heavy';
+  return 'Heavy';
+}
+
 interface GameVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
   voters: { name: string; vote_type: number }[];
@@ -193,15 +202,18 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
           min_players: game.min_players || 1,
           max_players: game.max_players || 1,
+          min_exp_players: game.min_exp_players || game.min_players || 1,
+          max_exp_players: game.max_exp_players || game.max_players || 1,
           playing_time: game.playing_time || 0,
           minPlaytime: game.minplaytime || 0,
           maxPlaytime: game.maxplaytime || 0,
           description: game.description || '',
           minAge: game.min_age || 0,
           is_cooperative: game.is_cooperative || false,
+          is_teambased: game.is_teambased || false,
           complexity: game.complexity || 1,
           complexity_tier: game.complexity_tier || 1,
-          complexity_desc: game.complexity_desc || '',
+          complexity_desc: game.complexity ? getComplexityDescription(game.complexity) : '',
           average: game.average ?? null,
           bayesaverage: game.bayesaverage ?? null,
           votes: voteData,

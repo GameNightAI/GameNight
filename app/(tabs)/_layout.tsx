@@ -45,7 +45,12 @@ export default function TabLayout() {
           styles.tabBar,
           {
             paddingBottom: Math.max(8, safeAreaBottom),
-            height: 60 + Math.max(8, safeAreaBottom)
+            height: 60 + Math.max(8, safeAreaBottom),
+            // Enhanced touch targets for mobile
+            ...(Platform.OS !== 'web' && {
+              paddingTop: 8,
+              minHeight: 60 + Math.max(8, safeAreaBottom)
+            })
           }
         ],
         tabBarLabelStyle: styles.tabBarLabel,
@@ -113,7 +118,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="polls"
         options={{
-          title: 'Polls',
+          title: 'Organize',
           tabBarIcon: ({ color, size }) => (
             <Vote color={color} size={size} />
           ),

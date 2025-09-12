@@ -15,6 +15,7 @@ import { FilterGameModal } from './FilterGameModal';
 import { GameSearchModal } from './GameSearchModal';
 import { PollSuccessModal } from './PollSuccessModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
+import { sortGamesByTitle } from '@/utils/sortingUtils';
 import { useCallback } from 'react';
 
 interface CreatePollModalProps {
@@ -257,8 +258,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         max_exp_players: game.max_exp_players,
       }));
 
-      setAvailableGames(games);
-      setFilteredGames(games);
+      // Sort games alphabetically by title, ignoring articles
+      const sortedGames = sortGamesByTitle(games);
+      setAvailableGames(sortedGames);
+      setFilteredGames(sortedGames);
     } catch (err) {
       console.error('Error loading games:', err);
       setError('Failed to load games');
@@ -983,7 +986,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           // Add to searchAddedGames and automatically select for poll
           setSearchAddedGames(prev => [...prev, game]);
           setSelectedGamesForPoll(prev => [...prev, game]);
-          setIsGameSearchModalVisible(false);
+          // Modal stays open so user can add more games
         }}
         existingGameIds={selectedGames.map(g => g.id.toString())}
         userCollectionIds={[]}
