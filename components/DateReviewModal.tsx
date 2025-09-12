@@ -209,6 +209,7 @@ export function DateReviewModal({
                     ...prevOptions,
                     startTime: convertTimeInputToDate(e.target.value),
                   }))}
+                  defaultValue="18:00"
                 />
               </label>
               <label>
