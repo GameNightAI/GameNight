@@ -175,10 +175,10 @@ export function DateReviewModal({
 
   if (!visible) return null;
   
-  convertInputToDate = (timeString, date) => {
+  convertTimeInputToDate = (timeString, date) => {
     date ||= new Date();
     let [ hour, min ] = timeString.split(':');
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour, min);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, min);
   }
 
   return (
@@ -207,7 +207,7 @@ export function DateReviewModal({
                   type="time"
                   onChange={(e) => setLocalEventOptions(prevOptions => ({
                     ...prevOptions,
-                    startTime: convertInputToDate(e.target.value),
+                    startTime: convertTimeInputToDate(e.target.value),
                   }))}
                 />
               </label>
@@ -217,7 +217,7 @@ export function DateReviewModal({
                   type="time"
                   onChange={(e) => setLocalEventOptions(prevOptions => ({
                     ...prevOptions,
-                    endTime: convertInputToDate(e.target.value),
+                    endTime: convertTimeInputToDate(e.target.value),
                   }))}
                 />
               </label>
