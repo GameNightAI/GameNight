@@ -101,6 +101,46 @@ export const safariEventFix = () => {
   }
 };
 
+// Safari-specific input zoom prevention
+export const safariInputZoomFix = () => {
+  if (!isSafari()) return;
+
+  // Add viewport meta tag to prevent zoom
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if (viewport) {
+    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+  } else {
+    const meta = document.createElement('meta');
+    meta.name = 'viewport';
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    document.head.appendChild(meta);
+  }
+
+  // Prevent zoom on input focus
+  document.addEventListener('focusin', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      // Set viewport to prevent zoom
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      }
+    }
+  });
+
+  // Restore normal viewport when input loses focus
+  document.addEventListener('focusout', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      // Restore normal viewport
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
+    }
+  });
+};
+
 // Initialize all Safari fixes
 export const initializeSafariFixes = () => {
   if (typeof window === 'undefined') return;
@@ -108,6 +148,7 @@ export const initializeSafariFixes = () => {
   safariStorageFix();
   safariFetchFix();
   safariEventFix();
+  safariInputZoomFix();
 
   console.log('Safari compatibility fixes initialized');
 };
