@@ -1,6 +1,8 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Dimensions } from 'react-native';
-import { Dice6, RotateCcw, Plus, Minus, X } from 'lucide-react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Dimensions, Platform, Switch } from 'react-native';
+import { Dice6, RotateCcw, Plus, Minus, X, Settings } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -35,8 +37,40 @@ export default function DigitalDiceScreen() {
   const [showResults, setShowResults] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customSides, setCustomSides] = useState('');
+  const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Load haptic setting on mount
+  useEffect(() => {
+    const loadHapticSetting = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('dice_haptic_enabled');
+        if (saved !== null) {
+          setHapticEnabled(JSON.parse(saved));
+        }
+      } catch (error) {
+        console.log('Error loading haptic setting:', error);
+      }
+    };
+    loadHapticSetting();
+  }, []);
+
+  // Save haptic setting when changed
+  const toggleHaptic = async (value: boolean) => {
+    setHapticEnabled(value);
+    try {
+      await AsyncStorage.setItem('dice_haptic_enabled', JSON.stringify(value));
+    } catch (error) {
+      console.log('Error saving haptic setting:', error);
+    }
+  };
 
   const rollDice = useCallback(() => {
+    // Add haptic feedback for mobile (if enabled)
+    if (Platform.OS !== 'web' && hapticEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
     setIsRolling(true);
     setShowResults(false);
     setResults([]);
@@ -328,8 +362,58 @@ export default function DigitalDiceScreen() {
               {isRolling ? 'Rolling...' : 'Roll Dice'}
             </Text>
           </TouchableOpacity>
+
+          {/* Settings Button */}
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => setShowSettings(true)}
+          >
+            <Settings size={20} color="#666666" />
+            <Text style={styles.settingsButtonText}>Settings</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Settings Modal */}
+      <Modal
+        visible={showSettings}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSettings(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Dice Settings</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowSettings(false)}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Haptic Feedback</Text>
+                <Text style={styles.settingDescription}>
+                  {Platform.OS === 'web'
+                    ? 'Haptic feedback is not available on web'
+                    : 'Feel vibrations when rolling dice'
+                  }
+                </Text>
+              </View>
+              <Switch
+                value={hapticEnabled}
+                onValueChange={toggleHaptic}
+                disabled={Platform.OS === 'web'}
+                trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
+                thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -784,5 +868,46 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#666666',
+  },
+  settingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+  },
+  settingsButtonText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    marginLeft: 8,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  settingTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#1a2b5f',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 20,
   },
 });

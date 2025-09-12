@@ -94,7 +94,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
         {exp.name}
       </li>
     );
-  const expansionList = ( 
+  const expansionList = (
     <View style={[
       //styles.detailContainer,
       styles.infoText,
@@ -109,12 +109,12 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
         </Text>
         {ownedExpansionCount !== game.expansions.length &&
           <TouchableOpacity
-              style={styles.expButton}
-              onPress={() => setShowUnownedExpansions(currentShow => !currentShow)}
-            >
-              <Text style={styles.expButtonText}>
-                {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
-              </Text>
+            style={styles.expButton}
+            onPress={() => setShowUnownedExpansions(currentShow => !currentShow)}
+          >
+            <Text style={styles.expButtonText}>
+              {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
+            </Text>
           </TouchableOpacity>
         }
       </ScrollView>
@@ -235,8 +235,12 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             </View>
 
             <View style={styles.detailRow}>
-              <TouchableOpacity onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}/`)}>
-                <Text style={styles.infoText}>
+              <TouchableOpacity
+                style={styles.bggButton}
+                onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}/`)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.bggButtonText}>
                   View on BGG
                 </Text>
               </TouchableOpacity>
@@ -392,5 +396,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ff9654',
     //marginLeft: 8,
+  },
+  bggButton: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+  },
+  bggButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    textAlign: 'center',
   },
 });

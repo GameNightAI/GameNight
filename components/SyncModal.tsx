@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator } from 'react-native';
-import { Search, X, Info } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator, Animated } from 'react-native';
+import { Search, X, Info, CheckCircle } from 'lucide-react-native';
 
 interface SyncModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSync: (username: string) => void;
+  onSync: (username: string) => Promise<void>;
   loading?: boolean;
+  syncProgress?: {
+    stage: 'connecting' | 'fetching' | 'processing' | 'saving' | 'complete';
+    message: string;
+    progress?: number;
+  } | null;
 }
 
 export const SyncModal: React.FC<SyncModalProps> = ({
@@ -14,17 +19,56 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   onClose,
   onSync,
   loading = false,
+  syncProgress,
 }) => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [pulseAnim] = useState(new Animated.Value(1));
 
-  const handleSync = () => {
+  useEffect(() => {
+    if (loading && syncProgress?.stage !== 'complete') {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 0.7,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [loading, syncProgress?.stage, pulseAnim]);
+
+  const handleSync = async () => {
     if (!username.trim()) {
       setError('Please enter a BoardGameGeek username');
       return;
     }
     setError('');
-    onSync(username.trim());
+    try {
+      await onSync(username.trim());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sync collection');
+    }
+  };
+
+  const getProgressMessage = () => {
+    if (!syncProgress) return 'Importing Games...';
+    return syncProgress.message;
+  };
+
+  const getProgressIcon = () => {
+    if (syncProgress?.stage === 'complete') {
+      return <CheckCircle size={20} color="#10b981" />;
+    }
+    return <ActivityIndicator color="#ffffff" size="small" />;
   };
 
   const content = (
@@ -60,10 +104,10 @@ export const SyncModal: React.FC<SyncModalProps> = ({
         disabled={loading}
       >
         {loading ? (
-          <>
-            <ActivityIndicator color="#ffffff" size="small" />
-            <Text style={styles.syncButtonText}>Importing Games...</Text>
-          </>
+          <Animated.View style={[styles.loadingContainer, { opacity: pulseAnim }]}>
+            {getProgressIcon()}
+            <Text style={styles.syncButtonText}>{getProgressMessage()}</Text>
+          </Animated.View>
         ) : (
           <>
             <Search color="#fff" size={20} />
@@ -71,6 +115,22 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           </>
         )}
       </TouchableOpacity>
+
+      {syncProgress && (
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${syncProgress.progress || 0}%` }
+              ]}
+            />
+          </View>
+          <Text style={styles.progressText}>
+            {syncProgress.stage === 'complete' ? 'Collection imported successfully!' : getProgressMessage()}
+          </Text>
+        </View>
+      )}
     </View>
   );
 
@@ -193,6 +253,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressContainer: {
+    marginTop: 16,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: '#e1e5ea',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#ff9654',
+    borderRadius: 2,
+  },
+  progressText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
   },
   infoContainer: {
     flexDirection: 'row',

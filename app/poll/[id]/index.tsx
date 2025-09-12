@@ -159,6 +159,7 @@ export default function PollScreen() {
       if (!trimmedName) {
         setNameError(true);
         Toast.show({ type: 'error', text1: 'Please enter your name' });
+        setSubmitting(false);
         return;
       }
       const finalName = trimmedName;

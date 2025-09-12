@@ -15,7 +15,10 @@ import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 import { AddGameModal } from '@/components/AddGameModal';
 import { CreatePollModal } from '@/components/CreatePollModal';
+import { SyncModal } from '@/components/SyncModal';
 import { Game } from '@/types/game';
+import { sortGamesByTitle } from '@/utils/sortingUtils';
+import { fetchGames } from '@/services/bggApi';
 
 export default function CollectionScreen() {
   const insets = useSafeAreaInsets();
@@ -32,6 +35,13 @@ export default function CollectionScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const [createPollModalVisible, setCreatePollModalVisible] = useState(false);
+  const [syncModalVisible, setSyncModalVisible] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{
+    stage: 'connecting' | 'fetching' | 'processing' | 'saving' | 'complete';
+    message: string;
+    progress?: number;
+  } | null>(null);
 
   const router = useRouter();
 
@@ -71,14 +81,12 @@ export default function CollectionScreen() {
         .order('is_expansion_owned', { ascending: false })
         .order('expansion_name', { ascending: true })
 
-      console.log(`${data.length} rows returned from collections_games_expansions`);
-
       if (error) throw error;
 
-      const gameGroups = Map.groupBy(data, (game => game.bgg_game_id))
+      const gameGroups = Map.groupBy(data || [], (game => game.bgg_game_id))
       const mappedGames = gameGroups.values().map((gameGroup) => {
         let game = gameGroup[0];
-        
+
         let expansions = gameGroup
           .filter(row => row.expansion_id)
           .map(row => ({
@@ -89,20 +97,20 @@ export default function CollectionScreen() {
             is_owned: row.is_expansion_owned,
             thumbnail: row.expansion_thumbnail,
           }));
-        
+
         let mins = gameGroup
           .filter(row => row.is_expansion_owned)
           .map(row => row.expansion_min_players)
           .toSorted();
         let min_exp_players = mins.length ? mins[0] : null;
-        
+
         let maxs = gameGroup
           .filter(row => row.is_expansion_owned)
           .map(row => row.expansion_max_players)
           .toSorted()
           .toReversed();
         let max_exp_players = maxs.length ? maxs[0] : null;
-        
+
         return {
           id: game.bgg_game_id,
           name: game.name,
@@ -130,8 +138,10 @@ export default function CollectionScreen() {
       }).toArray();
       console.log(mappedGames);
 
-      setAllGames(mappedGames);
-      const filteredGames = filterGames(mappedGames, playerCount, playTime, age, gameType, complexity);
+      // Sort games alphabetically by title, ignoring articles
+      const sortedGames = sortGamesByTitle(mappedGames);
+      setAllGames(sortedGames);
+      const filteredGames = filterGames(sortedGames, playerCount, playTime, age, gameType, complexity);
       setGames(filteredGames);
 
     } catch (err) {
@@ -190,6 +200,105 @@ export default function CollectionScreen() {
     loadGames();
   }, [loadGames]);
 
+  const handleSync = useCallback(async (username: string) => {
+    try {
+      setSyncing(true);
+      setSyncProgress({
+        stage: 'connecting',
+        message: 'Connecting to BoardGameGeek...',
+        progress: 10,
+      });
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/auth/login');
+        return;
+      }
+
+      if (!username || !username.trim()) {
+        throw new Error('Please enter a valid BoardGameGeek username');
+      }
+
+      username = username.replace('@', ''); // Remove @ if present
+
+      setSyncProgress({
+        stage: 'fetching',
+        message: 'Fetching your collection from BGG...',
+        progress: 30,
+      });
+
+      const bggGames = await fetchGames(username);
+
+      if (!bggGames || bggGames.length === 0) {
+        throw new Error('No games found in collection. Make sure your collection is public and contains board games.');
+      }
+
+      setSyncProgress({
+        stage: 'processing',
+        message: `Processing ${bggGames.length} games...`,
+        progress: 60,
+      });
+
+      // Create a Map to store unique games, using bgg_game_id as the key
+      const uniqueGames = new Map();
+
+      // Only keep the last occurrence of each game ID
+      bggGames.forEach(game => {
+        uniqueGames.set(game.id, {
+          user_id: user.id,
+          bgg_game_id: game.id,
+          name: game.name,
+          thumbnail: game.thumbnail,
+          min_players: game.min_players,
+          max_players: game.max_players,
+          playing_time: game.playing_time,
+          minplaytime: game.minPlaytime,
+          maxplaytime: game.maxPlaytime,
+          year_published: game.yearPublished,
+          description: game.description,
+        });
+      });
+
+      // Convert the Map values back to an array
+      const uniqueGamesList = Array.from(uniqueGames.values());
+
+      setSyncProgress({
+        stage: 'saving',
+        message: 'Saving games to your collection...',
+        progress: 80,
+      });
+
+      const { error: insertError } = await supabase
+        .from('collections')
+        .upsert(uniqueGamesList, { onConflict: 'user_id,bgg_game_id' });
+
+      if (insertError) throw insertError;
+
+      setSyncProgress({
+        stage: 'complete',
+        message: 'Collection imported successfully!',
+        progress: 100,
+      });
+
+      // Wait a moment to show completion, then refresh and close modal
+      setTimeout(async () => {
+        await loadGames();
+        setSyncModalVisible(false);
+        setSyncProgress(null);
+        setSyncing(false);
+      }, 1500);
+
+    } catch (err) {
+      console.error('Error in handleSync:', err);
+      setSyncProgress({
+        stage: 'complete',
+        message: err instanceof Error ? err.message : 'Failed to sync collection',
+        progress: 0,
+      });
+      setSyncing(false);
+    }
+  }, [loadGames, router]);
+
   // Convert collection filters to CreatePollModal format
   const convertFiltersForPoll = () => {
     const convertedFilters = {
@@ -230,6 +339,7 @@ export default function CollectionScreen() {
         buttonText={isFiltered ? "Clear Filters" : undefined}
         showSyncButton={!isFiltered}
         handleClearFilters={clearFilters}
+        onSyncClick={() => setSyncModalVisible(true)}
       />
     );
   }
@@ -379,6 +489,18 @@ export default function CollectionScreen() {
           router.push('/(tabs)/polls?refresh=true');
         }}
         initialFilters={convertFiltersForPoll()}
+      />
+
+      <SyncModal
+        isVisible={syncModalVisible}
+        onClose={() => {
+          setSyncModalVisible(false);
+          setSyncProgress(null);
+          setSyncing(false);
+        }}
+        onSync={handleSync}
+        loading={syncing}
+        syncProgress={syncProgress}
       />
     </View>
   );

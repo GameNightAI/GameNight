@@ -217,7 +217,7 @@ export default function EventsScreen() {
         if (navigator.share) {
           await navigator.share({
             title: 'Vote on event dates!',
-            //text: 'Help us decide when to meet by voting on available dates.',
+            text: 'Help us decide when to meet by voting on available dates.',
             url: shareUrl,
           });
         } else {
