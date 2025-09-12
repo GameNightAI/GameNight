@@ -175,6 +175,9 @@ export function DateReviewModal({
 
   if (!visible) return null;
 
+  let inputStartTime = null;
+  let inputEndTime = null;
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
@@ -198,21 +201,21 @@ export function DateReviewModal({
               Start Time
               <input
                 type="time"
-                value={localEventOptions.startTime}
-                onChange={() => setLocalEventOptions(prevOptions => ({
+                value={inputStartTime}
+                onChange={() => console.log(inputStartTime)}/*() => setLocalEventOptions({
                   ...prevOptions,
-                  startTime: localEventOptions.startTime,
-                }))}
+                  startTime: inputStartTime,
+                })*/}
               />
             </label>
             <label>
               End Time
               <input
                 type="time"
-                value={localEventOptions.endTime}
+                value={inputEndTime}
                 onChange={() => setLocalEventOptions(prevOptions => ({
                   ...prevOptions,
-                  endTime: localEventOptions.endTime,
+                  endTime: endStartTime,
                 }))}
               />
             </label>
