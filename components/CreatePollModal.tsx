@@ -1761,6 +1761,10 @@ const styles = StyleSheet.create<Styles>({
     color: '#999999',
     marginTop: 4,
   },
+  infoTextEmphasis: {
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
+  },
 });
 
 const selectStyles = {
@@ -1782,10 +1786,6 @@ const selectStyles = {
     ...baseStyles,
     marginBottom: 12,
   }),
-  infoTextEmphasis: {
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
-  },
   menu: (baseStyles: any, state: any) => ({
     ...baseStyles,
     backgroundColor: '#ffffff',
