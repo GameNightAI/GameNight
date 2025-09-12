@@ -194,7 +194,30 @@ export function DateReviewModal({
           {/* Time Inputs */}
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>Event Time</Text>
-            <View style={styles.timeInputs}>
+            <label>
+              Start Time
+              <input
+                type="time"
+                value={localEventOptions.startTime}
+                onChange={setLocalEventOptions(prevOptions => ({
+                  ...prevOptions,
+                  startTime: localEventOptions.startTime,
+                })}
+              />
+            </label>
+            <label>
+              End Time
+              <input
+                type="time"
+                value={localEventOptions.endTime}
+                onChange={setLocalEventOptions(prevOptions => ({
+                  ...prevOptions,
+                  endTime: localEventOptions.endTime,
+                })}
+              />
+            </label>
+            
+            {/* <View style={styles.timeInputs}>
               <View style={styles.timeInputContainer}>
                 <TouchableOpacity
                   style={styles.timeButton}
@@ -231,13 +254,11 @@ export function DateReviewModal({
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
+            </View> */}
             {timeValidationError ? (
               <Text style={styles.validationError}>{timeValidationError}</Text>
             ) : null}
           </View>
-
-
 
           <ScrollView style={styles.dateReviewContent} showsVerticalScrollIndicator={false}>
             {selectedDates.map((date, index) => {
@@ -363,7 +384,7 @@ export function DateReviewModal({
       </View>
 
       {/* Scrollable Time Picker Modal */}
-      <ScrollableTimePicker
+      {/* <ScrollableTimePicker
         visible={showTimePicker}
         onClose={() => setShowTimePicker(false)}
         onSave={currentEditingDate ? saveTimeSelectionForDate : saveTimeSelection}
@@ -375,7 +396,7 @@ export function DateReviewModal({
         }
         title={`Select ${timePickerMode === 'start' ? 'Start' : 'End'} Time`}
         validationError={timeValidationError}
-      />
+      /> */}
     </Modal>
   );
 }
