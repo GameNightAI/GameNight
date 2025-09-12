@@ -202,7 +202,7 @@ export function DateReviewModal({
                 onChange={setLocalEventOptions(prevOptions => ({
                   ...prevOptions,
                   startTime: localEventOptions.startTime,
-                })}
+                }))}
               />
             </label>
             <label>
@@ -213,7 +213,7 @@ export function DateReviewModal({
                 onChange={setLocalEventOptions(prevOptions => ({
                   ...prevOptions,
                   endTime: localEventOptions.endTime,
-                })}
+                }))}
               />
             </label>
             
