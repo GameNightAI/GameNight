@@ -174,9 +174,11 @@ export function DateReviewModal({
   };
 
   if (!visible) return null;
-
-  let inputStartTime = '';
-  let inputEndTime = '';
+  
+  convertInputToDate = dateString => {
+    let [ hour, min ] = dateString.split(':')
+    return new Date(0, 0, 0, hour, min);
+  }
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -201,21 +203,20 @@ export function DateReviewModal({
               Start Time
               <input
                 type="time"
-                onChange={(e) => console.log(e.target.value, typeof e.target.value)/*() => setLocalEventOptions({
+                onChange={(e) => setLocalEventOptions({
                   ...prevOptions,
-                  startTime: inputStartTime,
-                })*/}
+                  startTime: convertInputToDate(e.target.value),
+                })}
               />
             </label>
             <label>
               End Time
               <input
                 type="time"
-                value={inputEndTime}
-                onChange={() => setLocalEventOptions(prevOptions => ({
+                onChange={(e) => setLocalEventOptions({
                   ...prevOptions,
-                  endTime: endStartTime,
-                }))}
+                  endTime: convertInputToDate(e.target.value),
+                })}
               />
             </label>
             
