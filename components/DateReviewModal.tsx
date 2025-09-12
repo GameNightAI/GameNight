@@ -202,7 +202,7 @@ export function DateReviewModal({
               <input
                 type="time"
                 value={inputStartTime}
-                onChange={() => console.log(inputStartTime)}/*() => setLocalEventOptions({
+                onChange={() => console.log(inputStartTime)/*() => setLocalEventOptions({
                   ...prevOptions,
                   startTime: inputStartTime,
                 })*/}
