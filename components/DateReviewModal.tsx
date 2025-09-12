@@ -199,7 +199,7 @@ export function DateReviewModal({
               <input
                 type="time"
                 value={localEventOptions.startTime}
-                onChange={setLocalEventOptions(prevOptions => ({
+                onChange={() => setLocalEventOptions(prevOptions => ({
                   ...prevOptions,
                   startTime: localEventOptions.startTime,
                 }))}
@@ -210,7 +210,7 @@ export function DateReviewModal({
               <input
                 type="time"
                 value={localEventOptions.endTime}
-                onChange={setLocalEventOptions(prevOptions => ({
+                onChange={() => setLocalEventOptions(prevOptions => ({
                   ...prevOptions,
                   endTime: localEventOptions.endTime,
                 }))}
