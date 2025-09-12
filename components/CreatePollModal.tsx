@@ -140,7 +140,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
     if (playerCount.length) {
       filtered = filtered.filter(game =>
-        playerCount.some(p => (
+        playerCount.some(({ value }) => (
           // Ignore game.min_players when 15+ is selected,
           // since the number of actual players could be arbitrarily large.
           (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
