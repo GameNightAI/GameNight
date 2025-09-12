@@ -175,14 +175,10 @@ export function DateReviewModal({
 
   if (!visible) return null;
   
-  convertInputToDate = (timeString, d) => {
-    let [ hour, min ] = timeString.split(':')
-    if (!d) {
-      d = new Date()
-    }
-    let result = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour, min);
-    console.log(result);
-    return result;
+  convertInputToDate = (timeString, date) => {
+    date ||= new Date();
+    let [ hour, min ] = timeString.split(':');
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour, min);
   }
 
   return (
@@ -203,27 +199,29 @@ export function DateReviewModal({
 
           {/* Time Inputs */}
           <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Event Time</Text>
-            <label>
-              Start
-              <input
-                type="time"
-                onChange={(e) => setLocalEventOptions(prevOptions => ({
-                  ...prevOptions,
-                  startTime: convertInputToDate(e.target.value),
-                }))}
-              />
-            </label>
-            <label>
-              End
-              <input
-                type="time"
-                onChange={(e) => setLocalEventOptions(prevOptions => ({
-                  ...prevOptions,
-                  endTime: convertInputToDate(e.target.value),
-                }))}
-              />
-            </label>
+            <View style={styles.timeInputs}>
+              <Text style={styles.inputLabel}>Event Time</Text>
+              <label>
+                Start
+                <input
+                  type="time"
+                  onChange={(e) => setLocalEventOptions(prevOptions => ({
+                    ...prevOptions,
+                    startTime: convertInputToDate(e.target.value),
+                  }))}
+                />
+              </label>
+              <label>
+                End
+                <input
+                  type="time"
+                  onChange={(e) => setLocalEventOptions(prevOptions => ({
+                    ...prevOptions,
+                    endTime: convertInputToDate(e.target.value),
+                  }))}
+                />
+              </label>
+            </View>
             
             {/* <View style={styles.timeInputs}>
               <View style={styles.timeInputContainer}>
@@ -310,7 +308,7 @@ export function DateReviewModal({
                       </Text>
                       {hasCustomTime ? (
                         <View style={styles.customTimeInputs}>
-                          <TouchableOpacity
+                          {/* <TouchableOpacity
                             style={styles.inlineTimeButton}
                             onPress={() => openTimePickerForDate(date, 'start')}
                           >
@@ -326,7 +324,7 @@ export function DateReviewModal({
                             <Text style={styles.inlineTimeButtonText}>
                               {dateOptions.endTime ? formatTime(dateOptions.endTime) : 'End Time'}
                             </Text>
-                          </TouchableOpacity>
+                          </TouchableOpacity> */}
                         </View>
                       ) : (
                         <Text style={styles.dateCardDayTime}>{displayTime}</Text>
