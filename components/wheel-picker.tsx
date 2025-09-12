@@ -1,5 +1,3 @@
-import "@ncdai/react-wheel-picker/style.css";
-
 import * as WheelPickerPrimitive from "@ncdai/react-wheel-picker";
 
 import { cn } from "@/lib/utils";
