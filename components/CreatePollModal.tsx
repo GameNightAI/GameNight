@@ -227,10 +227,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('collections_games')
+        .from('expansions_players_view')
         .select('*')
         .eq('user_id', user.id)
-        .order('name', { ascending: true });
+        .order('name', { ascending: true })
 
       if (error) throw error;
 
@@ -253,8 +253,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc,
         bayesaverage: game.bayesaverage ?? null,
-        min_exp_players: game.min_players || 0,
-        max_exp_players: game.max_players || 0,
+        min_exp_players: game.min_exp_players,
+        max_exp_players: game.max_exp_players,
       }));
 
       setAvailableGames(games);
