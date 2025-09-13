@@ -301,9 +301,9 @@ export function DateReviewModal({
 
               return (
                 <View key={index} style={styles.dateCard}>
-                  <View style={styles.dateCardIcon}>
+                  {/* <View style={styles.dateCardIcon}>
                     <Text style={styles.dateCardIconText}>📅</Text>
-                  </View>
+                  </View> */}
                   <View style={styles.dateCardContent}>
                     <Text style={styles.dateCardDate}>
                       {format(date, 'MMMM d, yyyy')}
