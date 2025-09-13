@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView, ActivityIndicator } from 'react-native';
-import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus, Check } from 'lucide-react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView, Animated as RNAnimated } from 'react-native';
+import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus, Loader2 } from 'lucide-react-native';
 import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { supabase } from '@/services/supabase';
 
@@ -41,6 +41,35 @@ function decodeHTML(html: string): string {
   txt.innerHTML = html;
   return txt.value;
 }
+
+// Fast spinning loader component
+const FastSpinningLoader: React.FC<{ size?: number; color?: string }> = ({ size = 12, color = "#666666" }) => {
+  const spinValue = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const spin = RNAnimated.loop(
+      RNAnimated.timing(spinValue, {
+        toValue: 1,
+        duration: 500, // Fast: 500ms per rotation
+        useNativeDriver: true,
+      })
+    );
+    spin.start();
+    return () => spin.stop();
+  }, [spinValue]);
+
+  const rotate = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <RNAnimated.View style={{ transform: [{ rotate }] }}>
+      <Loader2 size={size} color={color} />
+    </RNAnimated.View>
+  );
+};
+
 
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionUpdate }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -165,7 +194,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
           disabled={updatingExpansion === exp.id}
         >
           {updatingExpansion === exp.id ? (
-            <ActivityIndicator size="small" color="#666666" />
+            <FastSpinningLoader size={12} color="#666666" />
           ) : exp.is_owned ? (
             <Minus size={12} color="#e74c3c" />
           ) : (
