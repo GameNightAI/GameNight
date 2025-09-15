@@ -220,6 +220,9 @@ export function DateReviewModal({
                     }
                   />
                 </label>
+                <input type="reset" value="X" alt="Clear start time"/>
+              </form>
+              <form>
                 <label style={styles.timeButtonText}>
                   End
                   <input
@@ -230,7 +233,7 @@ export function DateReviewModal({
                     }))}
                   />
                 </label>
-                <input type="reset" value="X" alt="Clear the times"/>
+                <input type="reset" value="X" alt="Clear end time"/>
               </form>
               {/* <datalist id="time-options">
                 <option value="12:00"/>
