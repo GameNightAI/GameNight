@@ -2,8 +2,8 @@ input[type=time] {
   border: none;
   color: #2a2c2d;
   font-size: 14px;
-  font-family: helvetica;
-  width: 180px;
+  font-family: Poppins-Regular;
+  width: 90px;
 }
 
 /* Wrapper around the hour, minute, second, and am/pm fields as well as 
@@ -15,7 +15,7 @@ input[type=time]::-webkit-datetime-edit-fields-wrapper {
 /* The space between the fields - between hour and minute, the minute and 
 second, second and am/pm */
 input[type=time]::-webkit-datetime-edit-text {
-  padding: 19px 4px;
+  /* padding: 19px 4px; */
 }
 
 /* The naming convention for the hour, minute, second, and am/pm field is
@@ -23,14 +23,14 @@ input[type=time]::-webkit-datetime-edit-text {
 
 /* Hour */
 input[type=time]::-webkit-datetime-edit-hour-field {
-  background-color: #f2f4f5;
+  background-color: #f7f7fa;
   border-radius: 15%;
   padding: 19px 13px;
 }
 
 /* Minute */
 input[type=time]::-webkit-datetime-edit-minute-field {
-  background-color: #f2f4f5;
+  background-color: #f7f7fa;
   border-radius: 15%;
   padding: 19px 13px;
 }
@@ -39,7 +39,7 @@ input[type=time]::-webkit-datetime-edit-minute-field {
 input[type=time]::-webkit-datetime-edit-ampm-field {
   background-color: #7155d3;
   border-radius: 15%;
-  color: #fff;
+  /* color: #fff; */
   padding: 19px 13px;
 }
 
