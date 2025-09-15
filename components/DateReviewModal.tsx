@@ -238,7 +238,7 @@ export function DateReviewModal({
                     onClick={(e) => setLocalEventOptions(prevOptions => ({
                       ...prevOptions,
                       endTime: null,
-                    }))
+                    }))}
                   />
                 </form>
               </View>
