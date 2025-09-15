@@ -3,7 +3,7 @@ input[type=time] {
   color: #2a2c2d;
   font-size: 12px;
   font-family: Poppins-Regular;
-  width: 90px;
+  /* width: 90px; */
 }
 
 /* Wrapper around the hour, minute, second, and am/pm fields as well as 
@@ -37,7 +37,7 @@ input[type=time]::-webkit-datetime-edit-minute-field {
 
 /* AM/PM */
 input[type=time]::-webkit-datetime-edit-ampm-field {
-  background-color: #7155d3;
+  background-color: #f7f7fa;
   border-radius: 15%;
   /* color: #fff; */
   /* padding: 19px 13px; */
@@ -45,7 +45,7 @@ input[type=time]::-webkit-datetime-edit-ampm-field {
 
 /* 'X' button for resetting/clearing time */
 input[type=time]::-webkit-clear-button {
-  /* display: none; */
+  display: flex;
 }
 
 /* Up/Down arrows for incrementing/decrementing the value */
