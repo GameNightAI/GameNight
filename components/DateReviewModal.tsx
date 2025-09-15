@@ -183,6 +183,13 @@ export function DateReviewModal({
     return new Date(date.getFullYear(), date.getMonth(), date.getDate(), parseInt(hour), parseInt(min));
   };
 
+  const formatTimeForInput = (date: Date | null): string => {
+    if (!date) return '';
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   if (!visible) return null;
 
   return (
@@ -211,6 +218,7 @@ export function DateReviewModal({
                   <input
                     type="time"
                     style={styles.timeInput}
+                    value={formatTimeForInput(localEventOptions.startTime)}
                     onChange={(e) => setLocalEventOptions(prevOptions => ({
                       ...prevOptions,
                       startTime: convertTimeInputToDate(e.target.value, new Date()) || null,
@@ -237,6 +245,7 @@ export function DateReviewModal({
                   <input
                     type="time"
                     style={styles.timeInput}
+                    value={formatTimeForInput(localEventOptions.endTime)}
                     onChange={(e) => setLocalEventOptions(prevOptions => ({
                       ...prevOptions,
                       endTime: convertTimeInputToDate(e.target.value, new Date()) || null,
@@ -355,6 +364,7 @@ export function DateReviewModal({
                             <Text style={styles.timeFormLabel}>Start</Text>
                             <input type="time"
                               style={styles.customTimeInput}
+                              value={formatTimeForInput(dateOptions.startTime)}
                               onChange={(e) => updateDateSpecificOptions(
                                 date,
                                 { startTime: convertTimeInputToDate(e.target.value, date) }
@@ -377,6 +387,7 @@ export function DateReviewModal({
                             <Text style={styles.timeFormLabel}>End</Text>
                             <input type="time"
                               style={styles.customTimeInput}
+                              value={formatTimeForInput(dateOptions.endTime)}
                               onChange={(e) => updateDateSpecificOptions(
                                 date,
                                 { endTime: convertTimeInputToDate(e.target.value, date) }
