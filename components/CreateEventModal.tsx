@@ -98,7 +98,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     } else {
       const minDate = min(selectedDates);
       const maxDate = max(selectedDates);
-      const newDefaultName = `GameNyte - ${format(minDate, 'MMM/dd')} - ${format(maxDate, 'MMM/dd')}`;
+      const newDefaultName = `GameNyte - ${format(minDate, 'MMM.dd')} - ${format(maxDate, 'MMM.dd')}`;
       setDefaultEventName(newDefaultName);
       if (!eventName || eventName.startsWith('GameNyte - ')) {
         setEventName(newDefaultName);
