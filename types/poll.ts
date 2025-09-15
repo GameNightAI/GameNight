@@ -20,5 +20,24 @@ export interface Vote {
   poll_id: string;
   game_id: number;
   voter_name?: string;
+  vote_type: number;
   created_at: string;
+}
+
+export interface PollEvent {
+  id: string;
+  poll_id: string;
+  location?: string;
+  event_date: string;
+  start_time?: string;
+  end_time?: string;
+  created_at: string;
+}
+
+export interface VoteEvent {
+  id: string;
+  poll_event_id: string;
+  voter_name: string;
+  vote_type: number; // int2 in database
+  created_at: string; // TIMESTAMPTZ type in database
 }

@@ -5,6 +5,7 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import Toast from 'react-native-toast-message';
 import { initializeSafariFixes, persistSessionInSafari } from '@/utils/safari-polyfill';
+import './index.css';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -36,7 +37,7 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
       </Stack>
       <Toast />
-      <StatusBar style="light" />
+      <StatusBar style="light" backgroundColor="#1a2b5f" />
     </>
   );
 }

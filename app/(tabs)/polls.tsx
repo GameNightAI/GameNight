@@ -70,10 +70,16 @@ export default function PollsScreen() {
       }
       setCurrentUserId(user.id);
 
-      // Load all polls
+      // Load all game polls (polls with associated games, not events)
       const { data: allPollsData, error: allPollsError } = await supabase
         .from('polls')
-        .select('*')
+        .select(`
+          *,
+          poll_games!inner(
+            id,
+            game_id
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (allPollsError) throw allPollsError;
@@ -158,6 +164,8 @@ export default function PollsScreen() {
       setError(err instanceof Error ? err.message : 'Failed to load polls');
     } finally {
       setLoading(false);
+      // Reset newVotes when polls are refreshed
+      setNewVotes(false);
     }
   }, [router]);
 
@@ -189,7 +197,7 @@ export default function PollsScreen() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'votes',
         },
@@ -416,11 +424,10 @@ export default function PollsScreen() {
           zIndex: 10,
         }}>
           <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: isSmallMobile ? 11.25 : 15 }}>
-            New votes have been cast! Pull to refresh or tap below.
+            New votes have been cast! Refresh to dismiss.
           </Text>
           <TouchableOpacity onPress={() => {
             setNewVotes(false);
-            // Optionally, trigger a refetch of polls here
           }}>
             <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: isSmallMobile ? 12 : 16 }}>Dismiss</Text>
           </TouchableOpacity>

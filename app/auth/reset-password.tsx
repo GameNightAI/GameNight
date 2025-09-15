@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import Toast from 'react-native-toast-message';
 import { supabase } from '@/services/supabase';
@@ -11,38 +11,98 @@ export default function ResetPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const [fontsLoaded] = useFonts({
     'Poppins-Regular': Poppins_400Regular,
     'Poppins-SemiBold': Poppins_600SemiBold,
   });
 
+  const getBaseUrl = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+
+    // Fallback for mobile
+    return 'https://gamenyte.netlify.app';
+  };
+
+  // Check for error parameters from redirects
+  useEffect(() => {
+    const errorParam = params.error as string;
+    if (errorParam) {
+      switch (errorParam) {
+        case 'invalid_link':
+          setError('The password reset link is invalid or has expired. Please request a new one.');
+          break;
+        case 'no_tokens':
+          setError('No valid reset tokens found. Please use the link from your email.');
+          break;
+        case 'unexpected_error':
+          setError('An unexpected error occurred. Please try again.');
+          break;
+        case 'missing_session':
+          setError('Authentication session expired. Please request a new reset link.');
+          break;
+        default:
+          setError('Something went wrong. Please try again.');
+      }
+    }
+  }, [params.error]);
+
   if (!fontsLoaded) {
     return null;
   }
 
   const handleResetPassword = async () => {
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(false);
+
     try {
       // Clear any existing session before sending reset email
-      // This ensures the user goes through the full reset flow each time
       await supabase.auth.signOut();
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/auth/update-password',
+      const redirectUrl = `${getBaseUrl()}/auth/reset-password-handler`;
+      console.log('Current window.location.origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
+      console.log('Platform.OS:', Platform.OS);
+      console.log('getBaseUrl() result:', getBaseUrl());
+      console.log('Sending reset email with redirect URL:', redirectUrl);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: redirectUrl,
       });
+
       if (error) {
+        console.error('Reset password error:', error);
         setError(error.message);
-        Toast.show({ type: 'error', text1: 'Reset Failed', text2: error.message });
+        Toast.show({
+          type: 'error',
+          text1: 'Reset Failed',
+          text2: error.message
+        });
       } else {
         setSuccess(true);
-        Toast.show({ type: 'success', text1: 'Reset Email Sent', text2: 'Check your inbox for instructions.' });
+        Toast.show({
+          type: 'success',
+          text1: 'Reset Email Sent',
+          text2: 'Check your inbox for instructions.'
+        });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reset email');
-      Toast.show({ type: 'error', text1: 'Unexpected Error', text2: err instanceof Error ? err.message : 'Failed to send reset email' });
+      console.error('Unexpected error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send reset email';
+      setError(errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Unexpected Error',
+        text2: errorMessage
+      });
     } finally {
       setLoading(false);
     }
@@ -59,6 +119,7 @@ export default function ResetPasswordScreen() {
         placeholder="Enter your email"
         autoCapitalize="none"
         keyboardType="email-address"
+        autoComplete="email"
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
       {success && <Text style={styles.successText}>Reset email sent! Check your inbox.</Text>}
@@ -146,4 +207,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     textDecorationLine: 'underline',
   },
-}); 
+});

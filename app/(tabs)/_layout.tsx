@@ -36,7 +36,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName="collection"
+      initialRouteName="index"
       screenOptions={{
         headerShown: true,
         tabBarActiveTintColor: '#ff9654',
@@ -45,7 +45,12 @@ export default function TabLayout() {
           styles.tabBar,
           {
             paddingBottom: Math.max(8, safeAreaBottom),
-            height: 60 + Math.max(8, safeAreaBottom)
+            height: 60 + Math.max(8, safeAreaBottom),
+            // Enhanced touch targets for mobile
+            ...(Platform.OS !== 'web' && {
+              paddingTop: 8,
+              minHeight: 60 + Math.max(8, safeAreaBottom)
+            })
           }
         ],
         tabBarLabelStyle: styles.tabBarLabel,
@@ -100,7 +105,7 @@ export default function TabLayout() {
           headerTitle: 'Game Tools',
         }}
       />
-      {EVENTS_SCREEN && <Tabs.Screen
+      <Tabs.Screen
         name="events"
         options={{
           title: 'Events',
@@ -109,11 +114,11 @@ export default function TabLayout() {
           ),
           headerTitle: 'Schedule Events',
         }}
-      />}
+      />
       <Tabs.Screen
         name="polls"
         options={{
-          title: 'Polls',
+          title: 'Organize',
           tabBarIcon: ({ color, size }) => (
             <Vote color={color} size={size} />
           ),

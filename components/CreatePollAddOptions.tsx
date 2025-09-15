@@ -1,35 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useDeviceType } from '@/hooks/useDeviceType';
 
-interface CreatePollTitleModalProps {
+interface CreatePollAddOptionsProps {
   isVisible: boolean;
   onClose: () => void;
-  onSave: (title: string) => void;
-  currentTitle: string;
+  onSave: (options: any) => void;
+  currentOptions?: any;
 }
 
-export const CreatePollTitleModal: React.FC<CreatePollTitleModalProps> = ({
+export const CreatePollAddOptions: React.FC<CreatePollAddOptionsProps> = ({
   isVisible,
   onClose,
   onSave,
-  currentTitle,
+  currentOptions = {},
 }) => {
   const deviceType = useDeviceType();
-  const [title, setTitle] = useState(currentTitle);
-
-  useEffect(() => {
-    setTitle(currentTitle);
-  }, [currentTitle]);
 
   const handleSave = () => {
-    onSave(title);
+    onSave(currentOptions);
     onClose();
   };
 
   const handleClose = () => {
-    setTitle(currentTitle); // Reset to original value
     onClose();
   };
 
@@ -39,7 +33,7 @@ export const CreatePollTitleModal: React.FC<CreatePollTitleModalProps> = ({
     <View style={styles.overlay}>
       <View style={styles.dialog}>
         <View style={styles.header}>
-          <Text style={styles.title}>Edit Poll Title</Text>
+          <Text style={styles.title}>Additional Options</Text>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={handleClose}
@@ -51,19 +45,20 @@ export const CreatePollTitleModal: React.FC<CreatePollTitleModalProps> = ({
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.label}>Poll Title (Optional)</Text>
+          <Text style={styles.label}>Coming Soon</Text>
           <Text style={styles.sublabel}>
-            Customize your poll title or keep the auto-generated name
+            Additional poll configuration options will be available here in a future update.
           </Text>
-          <TextInput
-            style={styles.titleInput}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Enter a custom title or keep the default"
-            placeholderTextColor="#999999"
-            maxLength={100}
-            autoFocus
-          />
+
+          <View style={styles.placeholderContent}>
+            <Text style={styles.placeholderText}>
+              Future options may include:
+            </Text>
+            <Text style={styles.optionText}>• Maximum votes per person</Text>
+            <Text style={styles.optionText}>• Voting deadline</Text>
+            <Text style={styles.optionText}>• Anonymous voting</Text>
+            <Text style={styles.optionText}>• Custom voting rules</Text>
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -71,13 +66,7 @@ export const CreatePollTitleModal: React.FC<CreatePollTitleModalProps> = ({
             style={styles.cancelButton}
             onPress={handleClose}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleSave}
-          >
-            <Text style={styles.saveButtonText}>Save</Text>
+            <Text style={styles.cancelButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -94,12 +83,12 @@ type Styles = {
   content: ViewStyle;
   label: TextStyle;
   sublabel: TextStyle;
-  titleInput: TextStyle;
+  placeholderContent: ViewStyle;
+  placeholderText: TextStyle;
+  optionText: TextStyle;
   footer: ViewStyle;
   cancelButton: ViewStyle;
   cancelButtonText: TextStyle;
-  saveButton: ViewStyle;
-  saveButtonText: TextStyle;
 };
 
 const styles = StyleSheet.create<Styles>({
@@ -157,47 +146,42 @@ const styles = StyleSheet.create<Styles>({
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: '#666666',
-    marginBottom: 12,
+    marginBottom: 20,
   },
-  titleInput: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-    backgroundColor: '#ffffff',
+  placeholderContent: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e1e5ea',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 8,
+  },
+  placeholderText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#1a2b5f',
+    marginBottom: 12,
+  },
+  optionText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 13,
+    color: '#666666',
+    marginBottom: 6,
+    paddingLeft: 8,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
     padding: Platform.OS === 'web' ? 20 : 16,
     borderTopWidth: 1,
     borderTopColor: '#e1e5ea',
   },
   cancelButton: {
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
-  cancelButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#666666',
-  },
-  saveButton: {
     backgroundColor: '#ff9654',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
   },
-  saveButtonText: {
+  cancelButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#ffffff',

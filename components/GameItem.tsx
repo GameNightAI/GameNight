@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking } from 'react-native';
-import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight } from 'lucide-react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView, Animated as RNAnimated } from 'react-native';
+import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus, Loader2 } from 'lucide-react-native';
 import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
+import { supabase } from '@/services/supabase';
 
-import { Game } from '@/types/game';
+import { Game, Expansion } from '@/types/game';
 
 // Helper function to get play time display with proper priority
 function getPlayTimeDisplay(game: Game): string {
@@ -32,6 +33,7 @@ function getPlayTimeDisplay(game: Game): string {
 interface GameItemProps {
   game: Game;
   onDelete: (id: number) => void;
+  onExpansionUpdate?: () => void;
 }
 
 function decodeHTML(html: string): string {
@@ -40,11 +42,107 @@ function decodeHTML(html: string): string {
   return txt.value;
 }
 
-export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
+// Fast spinning loader component
+const FastSpinningLoader: React.FC<{ size?: number; color?: string }> = ({ size = 12, color = "#666666" }) => {
+  const spinValue = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const spin = RNAnimated.loop(
+      RNAnimated.timing(spinValue, {
+        toValue: 1,
+        duration: 500, // Fast: 500ms per rotation
+        useNativeDriver: true,
+      })
+    );
+    spin.start();
+    return () => spin.stop();
+  }, [spinValue]);
+
+  const rotate = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <RNAnimated.View style={{ transform: [{ rotate }] }}>
+      <Loader2 size={size} color={color} />
+    </RNAnimated.View>
+  );
+};
+
+
+export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionUpdate }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showUnownedExpansions, setShowUnownedExpansions] = useState(false);
+  const [updatingExpansion, setUpdatingExpansion] = useState<number | null>(null);
 
   const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
+    setIsExpanded(currentIsExpanded => !currentIsExpanded); // Callback function since it depends on the current state
+  };
+
+  const handleExpansionToggle = async (expansionId: number, isOwned: boolean) => {
+    try {
+      setUpdatingExpansion(expansionId);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (isOwned) {
+        // Remove expansion from collection
+        const { error } = await supabase
+          .from('collections')
+          .delete()
+          .eq('bgg_game_id', expansionId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Add expansion to collection
+        // First, we need to get the expansion details from the BGG API
+        const response = await fetch(`https://boardgamegeek.com/xmlapi2/thing?id=${expansionId}&stats=1`);
+        const xmlText = await response.text();
+
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+        const item = xmlDoc.querySelector('item');
+        if (!item) throw new Error('Expansion not found');
+
+        const name = item.querySelector('name[type="primary"]')?.getAttribute('value') ||
+          item.querySelector('name')?.getAttribute('value') || 'Unknown';
+        const thumbnail = item.querySelector('thumbnail')?.textContent || '';
+        const minPlayers = parseInt(item.querySelector('minplayers')?.textContent || '1');
+        const maxPlayers = parseInt(item.querySelector('maxplayers')?.textContent || '4');
+        const playingTime = parseInt(item.querySelector('playingtime')?.textContent || '60');
+        const yearPublished = parseInt(item.querySelector('yearpublished')?.textContent || '0');
+
+        const expansionData = {
+          user_id: user.id,
+          bgg_game_id: expansionId,
+          name: name,
+          thumbnail: thumbnail,
+          min_players: minPlayers,
+          max_players: maxPlayers,
+          playing_time: playingTime,
+          year_published: yearPublished,
+        };
+
+        const { error: insertError } = await supabase
+          .from('collections')
+          .upsert(expansionData);
+
+        if (insertError) throw insertError;
+      }
+
+      // Call the callback to refresh the collection
+      if (onExpansionUpdate) {
+        onExpansionUpdate();
+      }
+    } catch (err) {
+      console.error('Error updating expansion:', err);
+    } finally {
+      setUpdatingExpansion(null);
+    }
   };
 
   const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
@@ -73,6 +171,76 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
       ) : (
         'N/A'
       )
+  );
+
+  const ownedExpansionCount = game.expansions.filter((exp: Expansion) => exp.is_owned).length
+  const ownedExpansionText = game.expansions.length > 0 ?
+    `${ownedExpansionCount} of ${game.expansions.length} expansion${game.expansions.length > 1 ? 's' : ''} owned`
+    : 'No expansions available'
+
+  const expansionItems = game.expansions && game.expansions
+    .filter((exp: Expansion) => exp.is_owned || showUnownedExpansions)
+    .map((exp: Expansion) =>
+      <View
+        key={exp.id}
+        style={styles.expansionItem}
+      >
+        <TouchableOpacity
+          style={[
+            styles.expansionButton,
+            exp.is_owned ? styles.removeButton : styles.addButton
+          ]}
+          onPress={() => handleExpansionToggle(exp.id, exp.is_owned)}
+          disabled={updatingExpansion === exp.id}
+        >
+          {updatingExpansion === exp.id ? (
+            <FastSpinningLoader size={12} color="#666666" />
+          ) : exp.is_owned ? (
+            <Minus size={12} color="#e74c3c" />
+          ) : (
+            <Plus size={12} color="#10b981" />
+          )}
+        </TouchableOpacity>
+        <Text
+          style={exp.is_owned ?
+            styles.infoTextEmphasis
+            : styles.infoText
+          }
+        >
+          {exp.name}
+        </Text>
+      </View>
+    );
+  const expansionList = (
+    <View style={[
+      //styles.detailContainer,
+      styles.infoText,
+    ]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={null}
+      >
+        <Text style={styles.infoTextEmphasis}>
+          {ownedExpansionText}
+        </Text>
+        {ownedExpansionCount !== game.expansions.length &&
+          <TouchableOpacity
+            style={styles.expButton}
+            onPress={() => setShowUnownedExpansions(currentShow => !currentShow)}
+          >
+            <Text style={styles.expButtonText}>
+              {`${showUnownedExpansions ? 'Hide' : 'Show'} unowned`}
+            </Text>
+          </TouchableOpacity>
+        }
+      </ScrollView>
+      {expansionItems.length > 0 &&
+        <View style={styles.expansionList}>
+          {expansionItems}
+        </View>
+      }
+    </View>
   );
 
   return (
@@ -180,12 +348,18 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete }) => {
             </View>
 
             <View style={styles.detailRow}>
-              <TouchableOpacity onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}/`)}>
-                <Text style={styles.infoText}>
+              <TouchableOpacity
+                style={styles.bggButton}
+                onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}/`)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.bggButtonText}>
                   View on BGG
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {expansionList}
 
           </View>
         </Animated.View>
@@ -318,5 +492,74 @@ const styles = StyleSheet.create({
     color: '#1a2b5f',
     marginTop: 2,
     textAlign: 'center',
+  },
+  expButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 8,
+    paddingHorizontal: 8,
+    //paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+  },
+  expButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    //marginLeft: 8,
+  },
+  bggButton: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#ff9654',
+  },
+  bggButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#ff9654',
+    textAlign: 'center',
+  },
+  expansionList: {
+    paddingLeft: 10,
+    marginTop: 8,
+  },
+  expansionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginVertical: 2,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 6,
+  },
+  expansionButton: {
+    width: 18,
+    height: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  addButton: {
+    backgroundColor: '#d1fae5',
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  removeButton: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#e74c3c',
+  },
+  expansionButtonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 12,
+    color: '#666666',
   },
 });

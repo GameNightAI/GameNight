@@ -1,10 +1,12 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, FlatList, Image } from 'react-native';
 import { X, Plus } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { debounce } from 'lodash';
 import { Game } from '@/types/game';
 import { XMLParser } from 'fast-xml-parser';
+import Toast from 'react-native-toast-message';
+import { sortGamesByTitle } from '@/utils/sortingUtils';
 
 
 interface GameSearchModalProps {
@@ -35,8 +37,24 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   const [error, setError] = useState('');
   const [searchResults, setSearchResults] = useState<Game[]>([]);
   const [adding, setAdding] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const searchInputRef = useRef<TextInput>(null);
 
-
+  // Clear search bar when game is added or modal is closed
+  useEffect(() => {
+    if (!isVisible) {
+      setSearchQuery('');
+      setSearchResults([]);
+      setError('');
+      setSearching(false);
+      setAdding(false);
+    } else {
+      // Auto-focus the search input when modal opens
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 300);
+    }
+  }, [isVisible]);
 
 
   const fetchSearchResults = useCallback(async (term: string) => {
@@ -69,7 +87,10 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
           .in('id', ids)
           .order('rank');
 
-        setSearchResults(games || []);
+        // Sort games alphabetically by title, ignoring articles
+        const sortedGames = sortGamesByTitle(games || []);
+
+        setSearchResults(sortedGames);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -102,6 +123,11 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
     setSearchQuery('');
     setSearchResults([]);
     setError('');
+
+    // Refocus the search input after clearing
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
   };
 
   const handleAddGameToCollection = async (game: Game) => {
@@ -157,6 +183,16 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       if (insertError) throw insertError;
 
       onGameAdded?.(game);
+
+      // Show success toast
+      Toast.show({
+        type: 'success',
+        text1: 'Game Added!',
+        text2: `${game.name} has been added to your collection`,
+        visibilityTime: 2000,
+        autoHide: true,
+      });
+
       onClose();
     } catch (err) {
       console.error('Add game error:', err);
@@ -182,7 +218,25 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
 
 
     onGameSelected?.(game);
-    onClose();
+
+    // Show success message
+    setSuccessMessage(`${game.name} added successfully!`);
+    setError('');
+
+    // Clear search state after game is selected but keep modal open
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearching(false);
+
+    // Refocus the search input after clearing
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
+
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
   };
 
   const handleAction = (game: Game) => {
@@ -280,6 +334,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
               <TextInput
+                ref={searchInputRef}
                 style={styles.input}
                 placeholder={searchPlaceholder}
                 value={searchQuery}
@@ -297,6 +352,14 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
               )}
             </View>
           </View>
+
+          {successMessage ? (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>
+                {successMessage}
+              </Text>
+            </View>
+          ) : null}
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -470,5 +533,20 @@ const styles = StyleSheet.create({
     color: '#856404',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  successContainer: {
+    backgroundColor: '#d1fae5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  successText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#065f46',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

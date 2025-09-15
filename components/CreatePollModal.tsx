@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Dimensions, Platform, Image, ImageStyle } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen, ListFilter, Search } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { Game } from '@/types/game';
 import * as Clipboard from 'expo-clipboard';
@@ -8,11 +9,13 @@ import Toast from 'react-native-toast-message';
 import Select from 'react-select';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isSafari } from '@/utils/safari-polyfill';
-import { CreatePollTitleModal } from './CreatePollTitleModal';
-import { CreatePollDescrModal } from './CreatePollDescrModal';
+import { CreatePollDetails } from './CreatePollDetails';
+import { CreatePollAddOptions } from './CreatePollAddOptions';
 import { FilterGameModal } from './FilterGameModal';
 import { GameSearchModal } from './GameSearchModal';
+import { PollSuccessModal } from './PollSuccessModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
+import { sortGamesByTitle } from '@/utils/sortingUtils';
 import { useCallback } from 'react';
 
 interface CreatePollModalProps {
@@ -38,6 +41,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   initialFilters,
   isAddingToExistingPoll = false,
 }) => {
+  const router = useRouter();
   const deviceType = useDeviceType();
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
@@ -50,10 +54,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [defaultTitle, setDefaultTitle] = useState('');
   const [pollDescription, setPollDescription] = useState('');
   // Modal states
-  const [isTitleModalVisible, setIsTitleModalVisible] = useState(false);
-  const [isDescriptionModalVisible, setIsDescriptionModalVisible] = useState(false);
+  const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
+  const [isAdditionalOptionsModalVisible, setIsAdditionalOptionsModalVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isGameSearchModalVisible, setIsGameSearchModalVisible] = useState(false);
+  const [isPollCreatedModalVisible, setIsPollCreatedModalVisible] = useState(false);
+  const [createdPollUrl, setCreatedPollUrl] = useState('');
 
   // Filter states - changed to arrays for multi-select
   const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
@@ -128,13 +134,18 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const filterGames = useCallback(() => {
     let filtered = [...availableGames];
 
+    // Filter out games that are already added via search to prevent duplicates
+    filtered = filtered.filter(game =>
+      !searchAddedGames.some(searchGame => searchGame.id === game.id)
+    );
+
     if (playerCount.length) {
       filtered = filtered.filter(game =>
-        playerCount.some(p => (
+        playerCount.some(({ value }) => (
           // Ignore game.min_players when 15+ is selected,
           // since the number of actual players could be arbitrarily large.
-          (game.min_players <= p.value || p.value === 15)
-          && p.value <= game.max_players
+          (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
+          && value <= (Math.max(game.max_players, game.max_exp_players))
         ))
       );
     }
@@ -185,7 +196,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setFilteredGames(filtered);
     // Don't automatically remove selected games when filters change
     // This prevents scroll jumping when selecting filter options
-  }, [availableGames, playerCount, playTime, minAge, gameType, complexity]);
+  }, [availableGames, searchAddedGames, playerCount, playTime, minAge, gameType, complexity]);
 
   useEffect(() => {
     filterGames();
@@ -203,7 +214,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       newDefaultTitle = `Vote on ${totalSelectedGames} games`;
     }
     setDefaultTitle(newDefaultTitle);
-    if ((!pollTitle || pollTitle.startsWith('Vote on')) && newDefaultTitle) {
+    if (totalSelectedGames === 0) {
+      // Reset to empty when no games are selected
+      setPollTitle('');
+    } else if ((!pollTitle || pollTitle.startsWith('Vote on')) && newDefaultTitle) {
       setPollTitle(newDefaultTitle);
     }
   }, [selectedGamesForPoll]);
@@ -214,10 +228,10 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('collections_games')
+        .from('expansions_players_view')
         .select('*')
         .eq('user_id', user.id)
-        .order('name', { ascending: true });
+        .order('name', { ascending: true })
 
       if (error) throw error;
 
@@ -240,12 +254,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc,
         bayesaverage: game.bayesaverage ?? null,
-        min_exp_players: game.min_players || 0,
-        max_exp_players: game.max_players || 0,
+        min_exp_players: game.min_exp_players,
+        max_exp_players: game.max_exp_players,
       }));
 
-      setAvailableGames(games);
-      setFilteredGames(games);
+      // Sort games alphabetically by title, ignoring articles
+      const sortedGames = sortGamesByTitle(games);
+      setAvailableGames(sortedGames);
+      setFilteredGames(sortedGames);
     } catch (err) {
       console.error('Error loading games:', err);
       setError('Failed to load games');
@@ -332,14 +348,18 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
       if (gamesError) throw gamesError;
 
-      // Copy poll link to clipboard
-      const pollUrl = `${window.location.origin}/poll/${poll.id}/`;
-      await Clipboard.setStringAsync(pollUrl);
-      Toast.show({ type: 'success', text1: 'Poll link copied to clipboard!' });
+      // Show success modal for new polls, call onSuccess immediately for adding games
+      if (!isAddingToExistingPoll) {
+        const pollUrl = `${window.location.origin}/poll/${poll.id}/`;
+        setCreatedPollUrl(pollUrl);
+        setIsPollCreatedModalVisible(true);
 
-      // Pass pollType to onSuccess for downstream handling
-      onSuccess('single-user');
-      resetForm();
+        // Don't call onSuccess yet - wait for user to close the success modal
+      } else {
+        // For adding games to existing poll, call onSuccess immediately
+        onSuccess('add-games', allSelectedGames);
+        resetForm();
+      }
     } catch (err) {
       console.error('Error creating poll:', err);
       setError(err instanceof Error ? err.message : 'Failed to create poll');
@@ -393,12 +413,20 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setComplexity(newValue || []);
   };
 
-  // Modal handlers
-  const handleTitleSave = (title: string) => {
-    setPollTitle(title);
+  const handlePollCreatedModalClose = () => {
+    setIsPollCreatedModalVisible(false);
+    // SIMPLIFIED: Just close the success modal, keep main modal open
   };
 
-  const handleDescriptionSave = (description: string) => {
+  // Add a wrapper for onClose to debug when it's called
+  const handleMainModalClose = () => {
+    onClose();
+    resetForm();
+  };
+
+  // Modal handlers
+  const handleDetailsSave = (title: string, description: string) => {
+    setPollTitle(title);
     setPollDescription(description);
   };
 
@@ -526,10 +554,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       )}
       <TouchableOpacity
         style={styles.absoluteCloseButton}
-        onPress={() => {
-          onClose();
-          resetForm();
-        }}
+        onPress={handleMainModalClose}
         accessibilityLabel="Close"
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
@@ -550,11 +575,11 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             <View style={styles.titleSection}>
               <TouchableOpacity
                 style={[styles.titleButton, pollTitle && styles.titleButtonActive]}
-                onPress={() => setIsTitleModalVisible(true)}
+                onPress={() => setIsDetailsModalVisible(true)}
               >
                 <View style={styles.titleButtonContent}>
                   <View style={styles.titleButtonLeft}>
-                    <Text style={styles.titleButtonLabel}>Poll Title (Optional)</Text>
+                    <Text style={styles.titleButtonLabel}>Poll Details</Text>
                   </View>
                   <View style={styles.titleButtonRight}>
                     <View style={[styles.titleButtonIndicator, { opacity: pollTitle ? 1 : 0 }]}>
@@ -566,14 +591,15 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            <View style={styles.descriptionSection}>
+            {/* Additional Options section - hidden for now */}
+            {/* <View style={styles.descriptionSection}>
               <TouchableOpacity
                 style={[styles.descriptionButton, pollDescription && styles.descriptionButtonActive]}
-                onPress={() => setIsDescriptionModalVisible(true)}
+                onPress={() => setIsAdditionalOptionsModalVisible(true)}
               >
                 <View style={styles.descriptionButtonContent}>
                   <View style={styles.descriptionButtonLeft}>
-                    <Text style={styles.descriptionButtonLabel}>Description (Optional)</Text>
+                    <Text style={styles.descriptionButtonLabel}>Additional Options</Text>
                   </View>
                   <View style={styles.descriptionButtonRight}>
                     <View style={[styles.descriptionButtonIndicator, { opacity: pollDescription ? 1 : 0 }]}>
@@ -583,7 +609,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   </View>
                 </View>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </>
         )}
 
@@ -652,7 +678,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             style={styles.searchButton}
             onPress={() => setIsGameSearchModalVisible(true)}
           >
-            <Search size={20} color="#666666" />
+            <Search size={20} color="#fff" />
             <Text style={styles.searchButtonText}>Search for Games</Text>
           </TouchableOpacity>
         </View>
@@ -682,6 +708,33 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         {searchAddedGames.length > 0 && (
           <View style={styles.searchAddedSection}>
             {searchAddedGames.map(game => {
+              const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
+              const useMaxExpPlayers = game.max_exp_players > game.max_players;
+              const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
+              const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
+              const playerCountText = (
+                maxPlayers > 0
+                  ? (
+                    <>
+                      <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+                        {minPlayers}
+                      </Text>
+                      {minPlayers !== maxPlayers && (
+                        <>
+                          <Text>-</Text>
+                          <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+                            {maxPlayers}
+                          </Text>
+                        </>
+                      )}
+                      <Text>
+                        {` player${maxPlayers === 1 ? '' : 's'}`}
+                      </Text>
+                    </>
+                  ) : (
+                    'N/A'
+                  )
+              );
               const isAlreadyInPoll = preselectedGames?.some(pg => pg.id === game.id);
               return (
                 <TouchableOpacity
@@ -716,13 +769,13 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                       styles.playerCount,
                       isAlreadyInPoll && styles.playerCountDisabled
                     ]}>
-                      {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                      {playerCountText} • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
                     </Text>
                     {isAlreadyInPoll && (
                       <Text style={styles.alreadyInPollText}>Already in poll</Text>
                     )}
                   </View>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={styles.removeSearchGameButton}
                     onPress={() => {
                       // Remove from searchAddedGames
@@ -733,7 +786,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <X size={16} color="#666666" />
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                   <View style={[
                     styles.checkbox,
                     selectedGamesForPoll.some(g => g.id === game.id) && styles.checkboxSelected,
@@ -759,6 +812,33 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             filteredGames.map(game => {
               const isSelected = selectedGamesForPoll.some(g => g.id === game.id);
               const isAlreadyInPoll = preselectedGames?.some(pg => pg.id === game.id);
+              const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
+              const useMaxExpPlayers = game.max_exp_players > game.max_players;
+              const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
+              const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
+              const playerCountText = (
+                maxPlayers > 0
+                  ? (
+                    <>
+                      <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+                        {minPlayers}
+                      </Text>
+                      {minPlayers !== maxPlayers && (
+                        <>
+                          <Text>-</Text>
+                          <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+                            {maxPlayers}
+                          </Text>
+                        </>
+                      )}
+                      <Text>
+                        {` player${maxPlayers === 1 ? '' : 's'}`}
+                      </Text>
+                    </>
+                  ) : (
+                    'N/A'
+                  )
+              );
               return (
                 <TouchableOpacity
                   key={game.id}
@@ -793,7 +873,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                       styles.playerCount,
                       isAlreadyInPoll && styles.playerCountDisabled
                     ]}>
-                      {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                      {playerCountText} • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
                     </Text>
                     {isAlreadyInPoll && (
                       <Text style={styles.alreadyInPollText}>Already in poll</Text>
@@ -853,20 +933,24 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {content}
         </View>
       </View>
-      {/* Title Modal */}
-      <CreatePollTitleModal
-        isVisible={isTitleModalVisible}
-        onClose={() => setIsTitleModalVisible(false)}
-        onSave={handleTitleSave}
+      {/* Details Modal */}
+      <CreatePollDetails
+        isVisible={isDetailsModalVisible}
+        onClose={() => setIsDetailsModalVisible(false)}
+        onSave={handleDetailsSave}
         currentTitle={pollTitle}
+        currentDescription={pollDescription}
       />
 
-      {/* Description Modal */}
-      <CreatePollDescrModal
-        isVisible={isDescriptionModalVisible}
-        onClose={() => setIsDescriptionModalVisible(false)}
-        onSave={handleDescriptionSave}
-        currentDescription={pollDescription}
+      {/* Additional Options Modal */}
+      <CreatePollAddOptions
+        isVisible={isAdditionalOptionsModalVisible}
+        onClose={() => setIsAdditionalOptionsModalVisible(false)}
+        onSave={(options) => {
+          // Handle additional options when implemented
+          console.log('Additional options:', options);
+          setIsAdditionalOptionsModalVisible(false);
+        }}
       />
 
       {/* Filter Modal */}
@@ -881,7 +965,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {
             key: 'playerCount',
             label: 'Player Count',
-            placeholder: 'Player Count',
+            placeholder: '# Players',
             options: playerOptions,
             value: playerCount,
             onChange: setPlayerCount,
@@ -927,14 +1011,36 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         onClose={() => setIsGameSearchModalVisible(false)}
         mode="poll"
         onGameSelected={(game) => {
-          // Add to searchAddedGames but don't automatically select for poll
+          // Add to searchAddedGames and automatically select for poll
           setSearchAddedGames(prev => [...prev, game]);
-          setIsGameSearchModalVisible(false);
+          setSelectedGamesForPoll(prev => [...prev, game]);
+          // Modal stays open so user can add more games
         }}
         existingGameIds={selectedGames.map(g => g.id.toString())}
-        userCollectionIds={availableGames.map(g => g.id.toString())}
+        userCollectionIds={[]}
         title="Search for Games"
         searchPlaceholder="Enter search..."
+      />
+
+      {/* Poll Success Modal */}
+      <PollSuccessModal
+        isVisible={isPollCreatedModalVisible}
+        onClose={handlePollCreatedModalClose}
+        onDone={() => {
+          // Close both modals and call onSuccess
+          setIsPollCreatedModalVisible(false);
+          onSuccess('single-user');
+          resetForm();
+        }}
+        pollUrl={createdPollUrl}
+        onStartInPersonVoting={() => {
+          // Extract poll ID from URL and navigate to the local poll voting page
+          const pollId = createdPollUrl.split('/poll/')[1]?.split('/')[0];
+          if (pollId) {
+            // Use router.push for proper navigation to local voting
+            router.push(`/poll/local/${pollId}/`);
+          }
+        }}
       />
     </View>
   );
@@ -1097,7 +1203,7 @@ const styles = StyleSheet.create<Styles>({
     paddingHorizontal: 0,
   },
   titleSection: {
-    marginBottom: 10,
+    marginBottom: 0,
     width: '100%',
     paddingTop: 4,
   },
@@ -1329,9 +1435,7 @@ const styles = StyleSheet.create<Styles>({
     marginTop: 0,
   },
   searchButton: {
-    backgroundColor: '#fff5ef',
-    borderWidth: 1,
-    borderColor: '#ff9654',
+    backgroundColor: '#6c757d',
     borderRadius: 8,
     padding: 10,
     marginTop: 0,
@@ -1342,7 +1446,7 @@ const styles = StyleSheet.create<Styles>({
   searchButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
-    color: '#1a2b5f',
+    color: '#fff',
     marginLeft: 8,
   },
   searchAddedSection: {
@@ -1657,6 +1761,10 @@ const styles = StyleSheet.create<Styles>({
     fontSize: 10,
     color: '#999999',
     marginTop: 4,
+  },
+  infoTextEmphasis: {
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1a2b5f',
   },
 });
 
