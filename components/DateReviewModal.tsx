@@ -205,36 +205,38 @@ export function DateReviewModal({
           <View style={styles.inputSection}>
             <View style={styles.timeInputs}>
               <Text style={styles.inputLabel}>Event Time</Text>
-              <form>
-                <label style={styles.timeButtonText}>
-                  Start
-                  <input
-                    type="time"
-                    onChange={(e) => setLocalEventOptions(prevOptions => ({
-                      ...prevOptions,
-                      startTime: convertTimeInputToDate(e.target.value),
-                    }))}
-                    list={
-                      /* "time-options" */
-                      null
-                    }
-                  />
-                </label>
-                <input type="reset" value="X" alt="Clear start time"/>
-              </form>
-              <form>
-                <label style={styles.timeButtonText}>
-                  End
-                  <input
-                    type="time"
-                    onChange={(e) => setLocalEventOptions(prevOptions => ({
-                      ...prevOptions,
-                      endTime: convertTimeInputToDate(e.target.value),
-                    }))}
-                  />
-                </label>
-                <input type="reset" value="X" alt="Clear end time"/>
-              </form>
+              <View>
+                <form>
+                  <label style={styles.timeButtonText}>
+                    Start
+                    <input
+                      type="time"
+                      onChange={(e) => setLocalEventOptions(prevOptions => ({
+                        ...prevOptions,
+                        startTime: convertTimeInputToDate(e.target.value),
+                      }))}
+                      list={
+                        /* "time-options" */
+                        null
+                      }
+                    />
+                  </label>
+                  <input type="reset" value="✕" alt="Clear start time"/>
+                </form>
+                <form>
+                  <label style={styles.timeButtonText}>
+                    End
+                    <input
+                      type="time"
+                      onChange={(e) => setLocalEventOptions(prevOptions => ({
+                        ...prevOptions,
+                        endTime: convertTimeInputToDate(e.target.value),
+                      }))}
+                    />
+                  </label>
+                  <input type="reset" value="✕" alt="Clear end time"/>
+                </form>
+              </View>
               {/* <datalist id="time-options">
                 <option value="12:00"/>
                 <option value="12:30"/>
