@@ -209,19 +209,19 @@ export function DateReviewModal({
                 <form>
                   <label style={styles.timeButtonText}>
                     Start
-                    <input
-                      type="time"
+                    <input type="time"
                       onChange={(e) => setLocalEventOptions(prevOptions => ({
                         ...prevOptions,
                         startTime: convertTimeInputToDate(e.target.value),
                       }))}
-                      list={
-                        /* "time-options" */
-                        null
-                      }
                     />
                   </label>
-                  <input type="reset" value="✕" alt="Clear start time"/>
+                  <input type="reset" value="✕" alt="Clear start time"
+                    onClick={(e) => setLocalEventOptions(prevOptions => ({
+                      ...prevOptions,
+                      startTime: null,
+                    }))
+                  />
                 </form>
                 <form>
                   <label style={styles.timeButtonText}>
@@ -234,7 +234,13 @@ export function DateReviewModal({
                       }))}
                     />
                   </label>
-                  <input type="reset" value="✕" alt="Clear end time"/>
+                  <input
+                    type="reset" value="✕" alt="Clear end time"
+                    onClick={(e) => setLocalEventOptions(prevOptions => ({
+                      ...prevOptions,
+                      endTime: null,
+                    }))
+                  />
                 </form>
               </View>
               {/* <datalist id="time-options">
