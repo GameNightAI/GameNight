@@ -4,6 +4,7 @@ input[type=time] {
   font-size: 12px;
   font-family: Poppins-Regular;
   -webkit-tap-highlight-color: #0070f3;
+  background-color: #f7f7fa;
   /* width: 90px; */
 }
 
