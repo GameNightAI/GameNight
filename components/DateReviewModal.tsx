@@ -233,8 +233,7 @@ export function DateReviewModal({
                       }))}
                     />
                   </label>
-                  <input
-                    type="reset" value="✕" alt="Clear end time"
+                  <input type="reset" value="✕" alt="Clear end time"
                     onClick={(e) => setLocalEventOptions(prevOptions => ({
                       ...prevOptions,
                       endTime: null,
@@ -334,27 +333,41 @@ export function DateReviewModal({
                       </Text>
                       {hasCustomTime ? (
                         <View style={styles.customTimeInputs}>
-                          <label style={styles.inlineTimeButtonText}>
-                            Start
-                            <input
-                              type="time"
-                              onChange={(e) => updateDateSpecificOptions(
+                          <form>
+                            <label style={styles.inlineTimeButtonText}>
+                              Start
+                              <input type="time"
+                                onChange={(e) => updateDateSpecificOptions(
+                                  date,
+                                  { startTime: convertTimeInputToDate(e.target.value) }
+                                )}                            
+                              />
+                            </label>
+                            <input type="reset" value="✕" alt="Clear start time"
+                              onClick={(e) => updateDateSpecificOptions(
                                 date,
-                                { startTime: convertTimeInputToDate(e.target.value) }
-                              )}                            
+                                { startTime: null }
+                              )}               
                             />
-                          </label>
+                          </form>
                           {/* <Text style={styles.timeSeparator}>-</Text> */}
-                          <label style={styles.inlineTimeButtonText}>
-                            End
-                            <input
-                              type="time"
-                              onChange={(e) => updateDateSpecificOptions(
+                          <form>
+                            <label style={styles.inlineTimeButtonText}>
+                              End
+                              <input type="time"
+                                onChange={(e) => updateDateSpecificOptions(
+                                  date,
+                                  { endTime: convertTimeInputToDate(e.target.value) }
+                                )}
+                              />
+                            </label>
+                            <input type="reset" value="✕" alt="Clear end time"
+                              onClick={(e) => updateDateSpecificOptions(
                                 date,
-                                { endTime: convertTimeInputToDate(e.target.value) }
-                              )}
+                                { endTime: null }
+                              )}               
                             />
-                          </label>
+                          </form>
                           
                           {/* <TouchableOpacity
                             style={styles.inlineTimeButton}
