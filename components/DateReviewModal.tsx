@@ -351,7 +351,7 @@ export function DateReviewModal({
                   <View style={styles.dateCardContent}>
                     <View style={styles.dateCardDateContainer}>
                       <Text style={styles.dateCardDate}>
-                        {format(date, 'MMMM d, yyyy')}
+                        {format(date, 'MMM d, yyyy')}
                       </Text>
                       <Text style={styles.dateCardDayTime}>
                         • {format(date, 'EEEE')}
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
     borderColor: '#e1e5ea',
     borderStyle: 'solid',
     outline: 'none',
-    color: '#6b7280',
+    color: '#1a2b5f',
     fontSize: 12,
     fontFamily: 'Poppins-Regular',
     backgroundColor: '#f9fafb',
