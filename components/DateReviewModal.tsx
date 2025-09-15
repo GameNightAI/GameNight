@@ -176,6 +176,10 @@ export function DateReviewModal({
   if (!visible) return null;
   
   convertTimeInputToDate = (timeString: string, date: Date) => {
+    // Hopefully this should resolve the issue with hitting "Reset" on iOS crashing the app.
+    if (!timeString) {
+      return;
+    }
     date ||= new Date();
     let [ hour, min ] = timeString.split(':');
     return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, min);
@@ -209,7 +213,10 @@ export function DateReviewModal({
                     ...prevOptions,
                     startTime: convertTimeInputToDate(e.target.value),
                   }))}
-                  list="meal-times"
+                  list={
+                    /* "time-options" */
+                    null
+                  }
                 />
               </label>
               <label>
@@ -222,11 +229,11 @@ export function DateReviewModal({
                   }))}
                 />
               </label>
-              <datalist id="meal-times">
+              {/* <datalist id="time-options">
                 <option value="12:00"/>
                 <option value="12:30"/>
                 <option value="13:00"/>
-              </datalist>
+              </datalist> */}
             </View>
             
             {/* <View style={styles.timeInputs}>
