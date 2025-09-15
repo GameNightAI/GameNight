@@ -173,17 +173,17 @@ export function DateReviewModal({
     setTimeValidationError('');
   };
 
-  if (!visible) return null;
-  
-  convertTimeInputToDate = (timeString: string, date: Date) => {
+  const convertTimeInputToDate = (timeString: string, date: Date) => {
     // Hopefully this should resolve the issue with hitting "Reset" on iOS crashing the app.
     if (!timeString) {
       return;
     }
     date ||= new Date();
-    let [ hour, min ] = timeString.split(':');
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, min);
-  }
+    let [hour, min] = timeString.split(':');
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), parseInt(hour), parseInt(min));
+  };
+
+  if (!visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -203,51 +203,67 @@ export function DateReviewModal({
 
           {/* Time Inputs */}
           <View style={styles.inputSection}>
-            <View style={styles.timeInputs}>
-              <Text style={styles.inputLabel}>Event Time</Text>
-              <View>
-                <form>
-                  <label style={styles.timeButtonText}>
-                    Start
-                    <input type="time"
-                      onChange={(e) => setLocalEventOptions(prevOptions => ({
-                        ...prevOptions,
-                        startTime: convertTimeInputToDate(e.target.value),
-                      }))}
-                    />
-                  </label>
-                  <input type="reset" value="✕" alt="Clear start time"
-                    onClick={(e) => setLocalEventOptions(prevOptions => ({
+            <Text style={styles.inputLabel}>Event Time</Text>
+            <View style={styles.timeFormContainer}>
+              <View style={styles.timeForm}>
+                <View style={styles.timeInputRow}>
+                  <Text style={styles.timeFormLabel}>Start</Text>
+                  <input
+                    type="time"
+                    style={styles.timeInput}
+                    onChange={(e) => setLocalEventOptions(prevOptions => ({
                       ...prevOptions,
-                      startTime: null,
+                      startTime: convertTimeInputToDate(e.target.value, new Date()) || null,
                     }))}
                   />
-                </form>
-                <form>
-                  <label style={styles.timeButtonText}>
-                    End
-                    <input type="time"
-                      onChange={(e) => setLocalEventOptions(prevOptions => ({
+                  <button
+                    type="button"
+                    style={styles.timeResetButton}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setLocalEventOptions(prevOptions => ({
                         ...prevOptions,
-                        endTime: convertTimeInputToDate(e.target.value),
-                      }))}
-                    />
-                  </label>
-                  <input type="reset" value="✕" alt="Clear end time"
-                    onClick={(e) => setLocalEventOptions(prevOptions => ({
-                      ...prevOptions,
-                      endTime: null,
-                    }))}
-                  />
-                </form>
+                        startTime: null,
+                      }));
+                    }}
+                  >
+                    ✕
+                  </button>
+                </View>
               </View>
-              {/* <datalist id="time-options">
+              <View style={styles.timeForm}>
+                <View style={styles.timeInputRow}>
+                  <Text style={styles.timeFormLabel}>End</Text>
+                  <input
+                    type="time"
+                    style={styles.timeInput}
+                    onChange={(e) => setLocalEventOptions(prevOptions => ({
+                      ...prevOptions,
+                      endTime: convertTimeInputToDate(e.target.value, new Date()) || null,
+                    }))}
+                  />
+                  <button
+                    type="button"
+                    style={styles.timeResetButton}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setLocalEventOptions(prevOptions => ({
+                        ...prevOptions,
+                        endTime: null,
+                      }));
+                    }}
+                  >
+                    ✕
+                  </button>
+                </View>
+              </View>
+            </View>
+            {/* <datalist id="time-options">
                 <option value="12:00"/>
                 <option value="12:30"/>
                 <option value="13:00"/>
               </datalist> */}
-            </View>
-            
+
             {/* <View style={styles.timeInputs}>
               <View style={styles.timeInputContainer}>
                 <TouchableOpacity
@@ -324,51 +340,62 @@ export function DateReviewModal({
                     <Text style={styles.dateCardIconText}>📅</Text>
                   </View> */}
                   <View style={styles.dateCardContent}>
-                    <Text style={styles.dateCardDate}>
-                      {format(date, 'MMMM d, yyyy')}
-                    </Text>
-                    <View style={styles.dateCardDayTimeContainer}>
-                      <Text style={styles.dateCardDayTime}>
-                        {format(date, 'EEEE')} •
+                    <View style={styles.dateCardDateContainer}>
+                      <Text style={styles.dateCardDate}>
+                        {format(date, 'MMMM d, yyyy')}
                       </Text>
+                      <Text style={styles.dateCardDayTime}>
+                        • {format(date, 'EEEE')}
+                      </Text>
+                    </View>
+                    <View style={styles.dateCardDayTimeContainer}>
                       {hasCustomTime ? (
                         <View style={styles.customTimeInputs}>
-                          <form>
-                            <label style={styles.inlineTimeButtonText}>
-                              Start
-                              <input type="time"
-                                onChange={(e) => updateDateSpecificOptions(
-                                  date,
-                                  { startTime: convertTimeInputToDate(e.target.value) }
-                                )}                            
-                              />
-                            </label>
-                            <input type="reset" value="✕" alt="Clear start time"
-                              onClick={(e) => updateDateSpecificOptions(
+                          <View style={styles.timeInputRow}>
+                            <Text style={styles.timeFormLabel}>Start</Text>
+                            <input type="time"
+                              style={styles.customTimeInput}
+                              onChange={(e) => updateDateSpecificOptions(
                                 date,
-                                { startTime: null }
-                              )}               
+                                { startTime: convertTimeInputToDate(e.target.value, date) }
+                              )}
                             />
-                          </form>
-                          {/* <Text style={styles.timeSeparator}>-</Text> */}
-                          <form>
-                            <label style={styles.inlineTimeButtonText}>
-                              End
-                              <input type="time"
-                                onChange={(e) => updateDateSpecificOptions(
+                            <button type="button"
+                              style={styles.customTimeResetButton}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                updateDateSpecificOptions(
                                   date,
-                                  { endTime: convertTimeInputToDate(e.target.value) }
-                                )}
-                              />
-                            </label>
-                            <input type="reset" value="✕" alt="Clear end time"
-                              onClick={(e) => updateDateSpecificOptions(
+                                  { startTime: null }
+                                );
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </View>
+                          <View style={styles.timeInputRow}>
+                            <Text style={styles.timeFormLabel}>End</Text>
+                            <input type="time"
+                              style={styles.customTimeInput}
+                              onChange={(e) => updateDateSpecificOptions(
                                 date,
-                                { endTime: null }
-                              )}               
+                                { endTime: convertTimeInputToDate(e.target.value, date) }
+                              )}
                             />
-                          </form>
-                          
+                            <button type="button"
+                              style={styles.customTimeResetButton}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                updateDateSpecificOptions(
+                                  date,
+                                  { endTime: null }
+                                );
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </View>
+
                           {/* <TouchableOpacity
                             style={styles.inlineTimeButton}
                             onPress={() => openTimePickerForDate(date, 'start')}
@@ -450,20 +477,6 @@ export function DateReviewModal({
         </View>
       </View>
 
-      {/* Scrollable Time Picker Modal */}
-      {/* <ScrollableTimePicker
-        visible={showTimePicker}
-        onClose={() => setShowTimePicker(false)}
-        onSave={currentEditingDate ? saveTimeSelectionForDate : saveTimeSelection}
-        initialTime={currentEditingDate
-          ? (timePickerMode === 'start'
-            ? getDateSpecificOptions(new Date(currentEditingDate)).startTime
-            : getDateSpecificOptions(new Date(currentEditingDate)).endTime)
-          : (timePickerMode === 'start' ? localEventOptions.startTime : localEventOptions.endTime)
-        }
-        title={`Select ${timePickerMode === 'start' ? 'Start' : 'End'} Time`}
-        validationError={timeValidationError}
-      /> */}
     </Modal>
   );
 }
@@ -514,6 +527,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     borderWidth: 1,
     borderColor: '#e1e5ea',
+    minHeight: 22,
   },
   closeButtonText: {
     fontSize: 16,
@@ -522,13 +536,14 @@ const styles = StyleSheet.create({
   },
   inputSection: {
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 4,
   },
   inputLabel: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#1a2b5f',
-    marginBottom: 8,
+    marginBottom: 4,
+    paddingTop: 6,
   },
   textInput: {
     fontFamily: 'Poppins-Regular',
@@ -540,9 +555,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
   },
-  timeInputs: {
+  timeFormContainer: {
+    flexDirection: 'column',
+    gap: 6,
+    marginTop: 4,
+  },
+  timeForm: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  timeInputRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timeFormLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: '#1a2b5f',
+    minWidth: 32,
+    textAlign: 'left',
+  },
+  timeInput: {
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderStyle: 'solid',
+    outline: 'none',
+    color: '#1a2b5f',
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    backgroundColor: '#f8f9ff',
+    borderRadius: 8,
+    padding: 4,
+    minHeight: 22,
+    width: 140,
+    textAlign: 'center',
+  },
+  timeResetButton: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#666666',
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e1e5ea',
+    borderRadius: 8,
+    padding: 4,
+    minHeight: 28,
+    minWidth: 32,
+    textAlign: 'center',
+    marginLeft: 8,
   },
   timeInputContainer: {
     flexDirection: 'row',
@@ -593,6 +654,7 @@ const styles = StyleSheet.create({
   dateReviewContent: {
     flex: 1,
     padding: 16,
+    paddingTop: 8,
   },
   dateCard: {
     flexDirection: 'row',
@@ -619,11 +681,16 @@ const styles = StyleSheet.create({
   dateCardContent: {
     flex: 1,
   },
+  dateCardDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
   dateCardDate: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#1a2b5f',
-    marginBottom: 4,
   },
   dateCardDayTime: {
     fontFamily: 'Poppins-Regular',
@@ -646,11 +713,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   backButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: '#666666',
+    textAlign: 'center',
   },
   finalizeButton: {
     padding: 12,
@@ -659,11 +728,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   finalizeButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     color: 'white',
+    textAlign: 'center',
   },
   validationError: {
     fontFamily: 'Poppins-Regular',
@@ -735,18 +806,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 4,
   },
-  inlineTimeButton: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  customTimeInput: {
     borderWidth: 1,
     borderColor: '#e1e5ea',
+    borderStyle: 'solid',
+    outline: 'none',
+    color: '#6b7280',
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+    backgroundColor: '#f9fafb',
+    borderRadius: 4,
+    padding: 3,
+    paddingTop: 4,
+    minHeight: 20,
+    width: 100,
+    textAlign: 'center',
+    opacity: 0.8,
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  customTimeResetButton: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 10,
+    color: '#9ca3af',
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 4,
+    padding: 4,
+    minHeight: 20,
+    minWidth: 20,
+    textAlign: 'center',
+    marginLeft: 4,
+    opacity: 0.7,
+  },
+  inlineTimeButton: {
+    // Styling handled by global CSS
   },
   inlineTimeButtonText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#1a2b5f',
+    // Styling handled by global CSS
   },
   timeSeparator: {
     fontFamily: 'Poppins-Regular',

@@ -1,3 +1,18 @@
+{/* Scrollable Time Picker Modal */}
+      {/* <ScrollableTimePicker
+        visible={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onSave={currentEditingDate ? saveTimeSelectionForDate : saveTimeSelection}
+        initialTime={currentEditingDate
+          ? (timePickerMode === 'start'
+            ? getDateSpecificOptions(new Date(currentEditingDate)).startTime
+            : getDateSpecificOptions(new Date(currentEditingDate)).endTime)
+          : (timePickerMode === 'start' ? localEventOptions.startTime : localEventOptions.endTime)
+        }
+        title={`Select ${timePickerMode === 'start' ? 'Start' : 'End'} Time`}
+        validationError={timeValidationError}
+      /> */}
+
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Platform } from 'react-native';
 import { format } from 'date-fns';
