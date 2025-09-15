@@ -333,11 +333,29 @@ export default function EventScreen() {
           const displayLocation = event.use_same_location && event.location
             ? event.location
             : eventDate.location || 'Location not set';
-          const displayTime = event.use_same_time && event.start_time && event.end_time
-            ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
-            : eventDate.start_time && eventDate.end_time
-              ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
-              : 'Time not set';
+          const getDisplayTime = (startTime: string | null, endTime: string | null): string => {
+            if (startTime) {
+              startTime = formatTimeString(startTime);
+            }
+            if (endTime) {
+              endTime = formatTimeString(endTime);
+            }
+            if (startTime && endTime) {
+              return ` ${startTime} - ${endTime}`;
+            } else if (startTime) {
+              return ` Starts at ${startTime}`;
+            } else if (endTime) {
+              return ` Ends at ${endTime}`;
+            } else {
+              return ' Time not set';
+            }
+          };
+          let displayTime;
+          if (event.use_same_time && (event.start_time || event.end_time)) {
+            displayTime = getDisplayTime(event.start_time, event.end_time);
+          } else {
+            displayTime = getDisplayTime(eventDate.start_time, eventDate.end_time);
+          }
 
           return (
             <EventDateCard
