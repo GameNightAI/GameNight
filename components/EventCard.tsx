@@ -46,15 +46,26 @@ export function EventCard({
     if (eventDates.length > 0 && eventDates[0].location) return eventDates[0].location;
     return 'Location not set';
   };
-
+  
   const getDisplayTime = () => {
-    if (event.start_time && event.end_time) {
-      return `${event.start_time} - ${event.end_time}`;
+    const _ = (startTime: string | null, string: Date | null): string => {
+      if (startTime && endTime) {
+        return ` ${startTime} - ${endTime}`;
+      } else if (startTime) {
+        return ` Starts at ${startTime}`;
+      } else if (endTime) {
+        return ` Ends at ${endTime}`;
+      } else {
+        return ' Time not set';
+      }
+    };
+    if (event.start_time || event.end_time) {
+      return _(event.start_time, event.end_time);
     }
-    if (eventDates.length > 0 && eventDates[0].start_time && eventDates[0].end_time) {
-      return `${eventDates[0].start_time} - ${eventDates[0].end_time}`;
+    //if (eventDates.length > 0 && (eventDates[0].start_time || eventDates[0].end_time)) {
+    else {
+      return _(eventDates[0].start_time, eventDates[0].end_time);
     }
-    return 'Time not set';
   };
 
   const getDateRange = () => {
