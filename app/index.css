@@ -1,7 +1,7 @@
 input[type=time] {
   border: none;
   color: #2a2c2d;
-  font-size: 14px;
+  font-size: 12px;
   font-family: Poppins-Regular;
   width: 90px;
 }
@@ -25,14 +25,14 @@ input[type=time]::-webkit-datetime-edit-text {
 input[type=time]::-webkit-datetime-edit-hour-field {
   background-color: #f7f7fa;
   border-radius: 15%;
-  padding: 19px 13px;
+  /* padding: 19px 13px; */
 }
 
 /* Minute */
 input[type=time]::-webkit-datetime-edit-minute-field {
   background-color: #f7f7fa;
   border-radius: 15%;
-  padding: 19px 13px;
+  /* padding: 19px 13px; */
 }
 
 /* AM/PM */
@@ -40,12 +40,12 @@ input[type=time]::-webkit-datetime-edit-ampm-field {
   background-color: #7155d3;
   border-radius: 15%;
   /* color: #fff; */
-  padding: 19px 13px;
+  /* padding: 19px 13px; */
 }
 
 /* 'X' button for resetting/clearing time */
 input[type=time]::-webkit-clear-button {
-  display: none;
+  /* display: none; */
 }
 
 /* Up/Down arrows for incrementing/decrementing the value */
