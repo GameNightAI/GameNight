@@ -356,11 +356,6 @@ export default function EventScreen() {
           } else {
             displayTime = getDisplayTime(eventDate.start_time, eventDate.end_time);
           }
-          /* const displayTime = event.use_same_time && event.start_time && event.end_time
-            ? `${formatTimeString(event.start_time)} - ${formatTimeString(event.end_time)}`
-            : eventDate.start_time && eventDate.end_time
-              ? `${formatTimeString(eventDate.start_time)} - ${formatTimeString(eventDate.end_time)}`
-              : 'Time not set'; */
 
           return (
             <EventDateCard
