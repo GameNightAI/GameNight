@@ -839,7 +839,7 @@ const styles = StyleSheet.create({
   customTimeResetButton: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 10,
-    color: '#9ca3af',
+    color: '#666666',
     backgroundColor: '#f3f4f6',
     borderWidth: 1,
     borderColor: '#d1d5db',
