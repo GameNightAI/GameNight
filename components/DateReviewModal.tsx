@@ -176,6 +176,10 @@ export function DateReviewModal({
   if (!visible) return null;
   
   convertTimeInputToDate = (timeString: string, date: Date) => {
+    // Hopefully this should resolve the issue with hitting "Reset" on iOS crashing the app.
+    if (!timeString) {
+      return;
+    }
     date ||= new Date();
     let [ hour, min ] = timeString.split(':');
     return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, min);
@@ -201,26 +205,47 @@ export function DateReviewModal({
           <View style={styles.inputSection}>
             <View style={styles.timeInputs}>
               <Text style={styles.inputLabel}>Event Time</Text>
-              <label>
-                Start
-                <input
-                  type="time"
-                  onChange={(e) => setLocalEventOptions(prevOptions => ({
-                    ...prevOptions,
-                    startTime: convertTimeInputToDate(e.target.value),
-                  }))}
-                />
-              </label>
-              <label>
-                End
-                <input
-                  type="time"
-                  onChange={(e) => setLocalEventOptions(prevOptions => ({
-                    ...prevOptions,
-                    endTime: convertTimeInputToDate(e.target.value),
-                  }))}
-                />
-              </label>
+              <View>
+                <form>
+                  <label style={styles.timeButtonText}>
+                    Start
+                    <input type="time"
+                      onChange={(e) => setLocalEventOptions(prevOptions => ({
+                        ...prevOptions,
+                        startTime: convertTimeInputToDate(e.target.value),
+                      }))}
+                    />
+                  </label>
+                  <input type="reset" value="✕" alt="Clear start time"
+                    onClick={(e) => setLocalEventOptions(prevOptions => ({
+                      ...prevOptions,
+                      startTime: null,
+                    }))}
+                  />
+                </form>
+                <form>
+                  <label style={styles.timeButtonText}>
+                    End
+                    <input type="time"
+                      onChange={(e) => setLocalEventOptions(prevOptions => ({
+                        ...prevOptions,
+                        endTime: convertTimeInputToDate(e.target.value),
+                      }))}
+                    />
+                  </label>
+                  <input type="reset" value="✕" alt="Clear end time"
+                    onClick={(e) => setLocalEventOptions(prevOptions => ({
+                      ...prevOptions,
+                      endTime: null,
+                    }))}
+                  />
+                </form>
+              </View>
+              {/* <datalist id="time-options">
+                <option value="12:00"/>
+                <option value="12:30"/>
+                <option value="13:00"/>
+              </datalist> */}
             </View>
             
             {/* <View style={styles.timeInputs}>
@@ -295,9 +320,9 @@ export function DateReviewModal({
 
               return (
                 <View key={index} style={styles.dateCard}>
-                  <View style={styles.dateCardIcon}>
+                  {/* <View style={styles.dateCardIcon}>
                     <Text style={styles.dateCardIconText}>📅</Text>
-                  </View>
+                  </View> */}
                   <View style={styles.dateCardContent}>
                     <Text style={styles.dateCardDate}>
                       {format(date, 'MMMM d, yyyy')}
@@ -308,29 +333,41 @@ export function DateReviewModal({
                       </Text>
                       {hasCustomTime ? (
                         <View style={styles.customTimeInputs}>
-                          <label style={styles.inlineTimeButtonText}>
-                            Start
-                            <input
-                              type="time"
-                              onChange={(e) => updateDateSpecificOptions(
+                          <form>
+                            <label style={styles.inlineTimeButtonText}>
+                              Start
+                              <input type="time"
+                                onChange={(e) => updateDateSpecificOptions(
+                                  date,
+                                  { startTime: convertTimeInputToDate(e.target.value) }
+                                )}                            
+                              />
+                            </label>
+                            <input type="reset" value="✕" alt="Clear start time"
+                              onClick={(e) => updateDateSpecificOptions(
                                 date,
-                                { startTime: convertTimeInputToDate(e.target.value) }
-                              )}                            
-                              style={styles.inlineTimeButtonText}
+                                { startTime: null }
+                              )}               
                             />
-                          </label>
+                          </form>
                           {/* <Text style={styles.timeSeparator}>-</Text> */}
-                          <label style={styles.inlineTimeButtonText}>
-                            End
-                            <input
-                              type="time"
-                              onChange={(e) => updateDateSpecificOptions(
+                          <form>
+                            <label style={styles.inlineTimeButtonText}>
+                              End
+                              <input type="time"
+                                onChange={(e) => updateDateSpecificOptions(
+                                  date,
+                                  { endTime: convertTimeInputToDate(e.target.value) }
+                                )}
+                              />
+                            </label>
+                            <input type="reset" value="✕" alt="Clear end time"
+                              onClick={(e) => updateDateSpecificOptions(
                                 date,
-                                { endTime: convertTimeInputToDate(e.target.value) }
-                              )}
-                              style={styles.inlineTimeButtonText}
+                                { endTime: null }
+                              )}               
                             />
-                          </label>
+                          </form>
                           
                           {/* <TouchableOpacity
                             style={styles.inlineTimeButton}
