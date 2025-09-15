@@ -59,6 +59,10 @@ export function EventCard({
         return ' Time not set';
       }
     };
+    console.log('event.start_time:', event.start_time);
+    console.log('event.end_time:', event.end_time);
+    console.log('eventDates[0].start_time:', eventDates[0].start_time);
+    console.log('eventDates[0].end_time:', eventDates[0].end_time);
     if (event.start_time || event.end_time) {
       return _(event.start_time, event.end_time);
     }
