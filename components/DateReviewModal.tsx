@@ -220,14 +220,13 @@ export function DateReviewModal({
                     onClick={(e) => setLocalEventOptions(prevOptions => ({
                       ...prevOptions,
                       startTime: null,
-                    }))
+                    }))}
                   />
                 </form>
                 <form>
                   <label style={styles.timeButtonText}>
                     End
-                    <input
-                      type="time"
+                    <input type="time"
                       onChange={(e) => setLocalEventOptions(prevOptions => ({
                         ...prevOptions,
                         endTime: convertTimeInputToDate(e.target.value),
