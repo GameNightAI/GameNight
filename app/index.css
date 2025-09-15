@@ -3,6 +3,7 @@ input[type=time] {
   color: #2a2c2d;
   font-size: 12px;
   font-family: Poppins-Regular;
+  -webkit-tap-highlight-color: #0070f3;
   /* width: 90px; */
 }
 
