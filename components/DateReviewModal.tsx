@@ -205,7 +205,7 @@ export function DateReviewModal({
           <View style={styles.inputSection}>
             <View style={styles.timeInputs}>
               <Text style={styles.inputLabel}>Event Time</Text>
-              <label>
+              <label style={styles.timeButtonText}>
                 Start
                 <input
                   type="time"
@@ -219,7 +219,7 @@ export function DateReviewModal({
                   }
                 />
               </label>
-              <label>
+              <label style={styles.timeButtonText}>
                 End
                 <input
                   type="time"
@@ -329,7 +329,6 @@ export function DateReviewModal({
                                 date,
                                 { startTime: convertTimeInputToDate(e.target.value) }
                               )}                            
-                              style={styles.inlineTimeButtonText}
                             />
                           </label>
                           {/* <Text style={styles.timeSeparator}>-</Text> */}
@@ -341,7 +340,6 @@ export function DateReviewModal({
                                 date,
                                 { endTime: convertTimeInputToDate(e.target.value) }
                               )}
-                              style={styles.inlineTimeButtonText}
                             />
                           </label>
                           
