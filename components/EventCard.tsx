@@ -48,7 +48,7 @@ export function EventCard({
   };
   
   const getDisplayTime = () => {
-    const _ = (startTime: string | null, string: Date | null): string => {
+    const _ = (startTime: string | null, endTime: string | null): string => {
       if (startTime && endTime) {
         return ` ${startTime} - ${endTime}`;
       } else if (startTime) {
