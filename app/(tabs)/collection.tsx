@@ -59,9 +59,6 @@ export default function CollectionScreen() {
     complexity,
   ]).some(_ => _.length);
 
-  // const getCollection = useEffect(() => {
-  // }, []);
-
   const loadGames = useCallback(async () => {
     try {
       setError(null);
