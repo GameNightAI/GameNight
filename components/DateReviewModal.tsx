@@ -267,11 +267,6 @@ export function DateReviewModal({
                 </View>
               </View>
             </View>
-            {/* <datalist id="time-options">
-                <option value="12:00"/>
-                <option value="12:30"/>
-                <option value="13:00"/>
-              </datalist> */}
 
             {/* <View style={styles.timeInputs}>
               <View style={styles.timeInputContainer}>
@@ -345,9 +340,6 @@ export function DateReviewModal({
 
               return (
                 <View key={index} style={styles.dateCard}>
-                  {/* <View style={styles.dateCardIcon}>
-                    <Text style={styles.dateCardIconText}>📅</Text>
-                  </View> */}
                   <View style={styles.dateCardContent}>
                     <View style={styles.dateCardDateContainer}>
                       <Text style={styles.dateCardDate}>

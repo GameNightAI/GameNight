@@ -303,9 +303,10 @@ export default function EventScreen() {
         {event.description && (
           <Text style={styles.description}>{event.description}</Text>
         )}
-        <Text style={styles.subtitle}>
+        {/* Commented out until the creator logic is actually working */}
+        {/* <Text style={styles.subtitle}>
           Created by {user?.email || 'Anonymous'}
-        </Text>
+        </Text> */}
       </View>
 
       {!user && (
