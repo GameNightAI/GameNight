@@ -300,6 +300,9 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
                 </Text>
               </View>
             </TouchableOpacity>
+            <Text style={styles.clickToEditText}>
+              Click to edit details
+            </Text>
 
             <Text style={styles.availabilityLabel}>Set Available Dates</Text>
             <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>
@@ -499,7 +502,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
     padding: 12,
-    marginBottom: 12,
+    marginBottom: 4,
     borderWidth: 1,
     borderColor: '#e1e5ea',
   },
@@ -530,7 +533,7 @@ const styles = StyleSheet.create({
   },
   eventDetailsPreview: {
     marginTop: 4,
-    paddingTop: 4,
+    paddingTop: 0,
     borderTopWidth: 1,
     borderTopColor: '#eee',
     minHeight: 0,
@@ -539,6 +542,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#555',
     marginTop: 2,
+  },
+  clickToEditText: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 0,
+    fontStyle: 'italic',
   },
   availabilityLabel: {
     marginTop: 16,
