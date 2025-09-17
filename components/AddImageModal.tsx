@@ -17,6 +17,8 @@ const isMobile = screenWidth < 768;
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, Upload, X } from 'lucide-react-native';
 import { Alert } from 'react-native';
+import { useImagePicker } from '@/hooks/useImagePicker';
+import { useComponentCleanup } from '@/utils/memoryManagement';
 
 // Sample images
 const sampleImage2 = require('@/assets/images/sample-game-2.png');
@@ -34,24 +36,34 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   onNext,
   onBack,
 }) => {
-  const [image, setImage] = useState<{
-    uri: string;
-    name: string;
-    type: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    image,
+    loading,
+    error,
+    pickImage,
+    clearImage,
+    reset
+  } = useImagePicker();
+
   const [pickerVisible, setPickerVisible] = useState(true);
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
   const [instructionsModalVisible, setInstructionsModalVisible] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // Cleanup on component unmount
+  useComponentCleanup(() => {
+    clearImage();
+  });
 
   // Reset picker visibility when modal becomes visible
   useEffect(() => {
     if (isVisible) {
       setPickerVisible(true);
+      reset(); // Reset image picker state when modal opens
     }
-  }, [isVisible]);
+  }, [isVisible, reset]);
 
   const showFullSizeImage = (imageSource: any) => {
     setFullSizeImageSource(imageSource);
@@ -63,70 +75,13 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
     setFullSizeImageSource(null);
   };
 
-  const pickImage = async (fromCamera: boolean) => {
-    try {
-      console.log('Starting image picker, fromCamera:', fromCamera);
+  const handlePickImage = async (fromCamera: boolean) => {
+    // Temporarily hide modal to avoid conflicts
+    setPickerVisible(false);
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Temporarily hide modal to avoid conflicts
-      setPickerVisible(false);
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Check permissions first
-      if (fromCamera) {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission needed', 'Camera permission is required to take photos.');
-          setPickerVisible(true);
-          return;
-        }
-      } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission needed', 'Media library permission is required to select photos.');
-          setPickerVisible(true);
-          return;
-        }
-      }
-
-      let result: ImagePicker.ImagePickerResult;
-
-      if (fromCamera) {
-        console.log('Launching camera...');
-        result = await ImagePicker.launchCameraAsync({
-          mediaTypes: 'images',
-          quality: 0.7,
-        });
-      } else {
-        console.log('Launching image library...');
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: 'images',
-          quality: 0.7,
-        });
-      }
-
-      console.log('Image picker result:', result);
-
-      if (!result.canceled && result.assets?.length > 0) {
-        const asset = result.assets[0];
-        console.log('Selected asset:', asset);
-        const imageData = {
-          uri: asset.uri,
-          name: asset.fileName || 'photo.jpg',
-          type: asset.type || 'image/jpeg',
-        };
-        setImage(imageData);
-        setError(null);
-        console.log('Image set successfully:', imageData);
-      } else {
-        console.log('Image picker was canceled or no assets selected');
-      }
-    } catch (err) {
-      console.error('Error picking image:', err);
-      setError(`Failed to pick image: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      // Re-show modal after picker is done
-      setPickerVisible(true);
-    }
+    await pickImage(fromCamera);
+    setPickerVisible(true);
   };
 
   const selectSampleImage = (sampleNumber: number) => {
@@ -135,15 +90,16 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
       name: `sample-game-${sampleNumber}.png`,
       type: 'image/png',
     };
-    setImage(imageData);
-    setError(null);
+    // Note: This would need to be handled by the useImagePicker hook
+    // For now, we'll use the onNext callback directly
+    onNext(imageData);
   };
 
   const handleAnalyze = async () => {
     if (!image) return;
 
-    setLoading(true);
-    setError(null);
+    setAnalysisLoading(true);
+    setAnalysisError(null);
 
     try {
       const imageData = await fetch(image.uri);
@@ -199,7 +155,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
 
       // Handle backend response structure
       if (result.error) {
-        setError(result.error);
+        setAnalysisError(result.error);
         return;
       }
 
@@ -242,9 +198,9 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         }
       }
 
-      setError(userErrorMessage);
+      setAnalysisError(userErrorMessage);
     } finally {
-      setLoading(false);
+      setAnalysisLoading(false);
     }
   };
 
@@ -299,7 +255,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                     style={styles.uploadButton}
                     onPress={() => {
                       console.log('Take Photo button pressed');
-                      pickImage(true);
+                      handlePickImage(true);
                     }}
                   >
                     <Camera size={24} color="#fff" />
@@ -310,7 +266,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                   style={styles.uploadButton}
                   onPress={() => {
                     console.log('Choose from Library button pressed');
-                    pickImage(false);
+                    handlePickImage(false);
                   }}
                 >
                   <Upload size={24} color="#fff" />
@@ -335,12 +291,12 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
             <TouchableOpacity
               style={[
                 styles.analyzeButton,
-                loading && styles.analyzeButtonDisabled
+                (loading || analysisLoading) && styles.analyzeButtonDisabled
               ]}
               onPress={handleAnalyze}
-              disabled={loading}
+              disabled={loading || analysisLoading}
             >
-              {loading ? (
+              {(loading || analysisLoading) ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <>
@@ -354,8 +310,8 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
               <TouchableOpacity
                 style={styles.retakeButton}
                 onPress={() => {
-                  setImage(null);
-                  setError(null);
+                  clearImage();
+                  setAnalysisError(null);
                 }}
               >
                 <Text style={styles.retakeButtonText}>Change Photo</Text>
@@ -364,7 +320,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
           </View>
         )}
 
-        {error && <Text style={styles.errorText}>{error}</Text>}
+        {(error || analysisError) && <Text style={styles.errorText}>{error || analysisError}</Text>}
 
       </ScrollView>
     </View>

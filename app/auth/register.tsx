@@ -35,7 +35,7 @@ export default function RegisterScreen() {
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: Platform.OS === 'web' ? window.location.origin : 'gamenyte://auth/callback',
           data: {
             email_confirm: true,
           },
