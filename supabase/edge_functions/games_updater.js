@@ -1,12 +1,8 @@
 import { DOMParser } from 'xmldom';
-import { XMLParser } from 'fast-xml-parser';
-// import unzip from 'unzip-js';
-// import XMLHttpRequest from 'xhr2';
-// import zlib from 'node:zlib';
-// import StreamZip from 'node-stream-zip';
+// import { XMLParser } from 'fast-xml-parser';
 import yauzl from 'yauzl';
 import { parse } from 'csv-parse';
-// import { transform } from 'stream-transform';
+import { asyncBatch, arrayFromAsync } from 'iter-tools';
 
 const LOGIN_URL = 'https://boardgamegeek.com/login/api/v1';
 const BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks';
@@ -31,7 +27,7 @@ const getZipUrl = async () => {
     }
   );
   const html = await csvResponse.text();
-  console.log(await html);
+  // console.log(await html);
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(await html, 'text/html');
@@ -53,6 +49,7 @@ const zipBuffer = Buffer.from(await zipResponse.arrayBuffer());
 const parser = parse({
   columns: true
 });
+console.log(parser);
 
 /* const transformer = transform(
   (row, callback) => {
@@ -72,7 +69,7 @@ const parser = parse({
 yauzl.fromBuffer(await zipBuffer, { lazyEntries: true }, (err, zipfile) => {
   if (err) throw err;
   zipfile.readEntry();
-  zipfile.on('entry', (entry) => {
+  zipfile.on('entry', entry => {
     zipfile.openReadStream(entry, (err, readStream) => {
       if (err) throw err;
       readStream.pipe(parser);
@@ -80,18 +77,53 @@ yauzl.fromBuffer(await zipBuffer, { lazyEntries: true }, (err, zipfile) => {
   });
 });
 
+// https://docs.python.org/3/library/itertools.html#itertools.batched
+/* const batched = function* (iterable, n) {
+  var batch;
+  while (batch = Array.from(islice(iterable, n))) {
+    yield batch;
+  }
+}; */
 
+/* for await (const batch of batched(parser, 20)) {
+  console.log(batch);
+} */
 
-//console.log(parser);
-//parser.pipe(transformer).pipe(process.stdout);
+/* const processCsv = {};
+processCsv[Symbol.iterator] = async function* () {
+  for await (const row of parser) {
+    console.log(row);
+    yield row;
+  }
+}; */
 
-/* zlib.inflateRaw(await zipResponse.arrayBuffer(), (err, decompBuffer) => {
-  if (err) throw err;
-  console.log(decomp);
-}); */
+/* const processCsv = {
+  async *[Symbol.asyncIterator]() {
+    for await (const row of parser) {
+      yield row;
+    }
+  }
+}; */
 
-/* unzip(zipUrl, (err, zipFile) => {
-  zipFile.readEntries((err, entries) =>
-    entries.forEach(entry => console.log(entry))
-  );
-}); */
+// const bonk = batch(20, await processCsv);
+// console.log(bonk);
+
+// console.log(isIterable([]));
+
+// Make API calls in batches of 20 games at a time
+for await (const batch20 of await asyncBatch(20, parser)) {
+  const games = new Map();
+  for await (let row of batch20) {
+    games.set(row.id, row);
+    // We want 0 to show up as NULL in the database for sorting/filtering purposes
+    for (const col of ['average', 'bayesaverage', 'rank', 'yearpublished']) {
+      if (row[col] === '0') {
+        row[col] = '';
+      }
+    }
+  }  
+  
+  const ids = games.keys().join()
+  const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids}&stats=1`
+  
+}
