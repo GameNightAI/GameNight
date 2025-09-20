@@ -17,7 +17,7 @@ export async function fetchGames(username: string): Promise<Game[]> {
       console.log(`Received ${response.status} status, retrying in 2 seconds...`);
       await new Promise(resolve => setTimeout(resolve, 2000));
     } else if (!response.ok) {
-      throw new Error(`Failed to fetch collection: ${response.status}`);
+      throw new Error(`Failed to fetch collection: ${response.status} - ${response.statusText}`);
       break;
     } else {
       break;

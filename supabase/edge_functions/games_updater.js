@@ -2,24 +2,29 @@ import { DOMParser } from 'xmldom';
 // import { XMLParser } from 'fast-xml-parser';
 import yauzl from 'yauzl';
 import { parse } from 'csv-parse';
-import { asyncBatch, arrayFromAsync } from 'iter-tools';
+import { asyncBatch } from 'iter-tools';
 
 const LOGIN_URL = 'https://boardgamegeek.com/login/api/v1';
 const BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks';
+const SLEEP_TIME = 5 // seconds to wait before retrying BGG API request
 
 const getZipUrl = async () => {
+  
+  const username = process.env.BGG_USERNAME
+  console.log(`Logging ${username} in to BGG...`);
   const loginResponse = await fetch(
     LOGIN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ credentials: {
-        username: process.env.BGG_USERNAME,
+        username: username,
         password: process.env.BGG_PASSWORD
       }}),
     }
   );
   const cookie = await loginResponse.headers.getSetCookie();
 
+  console.log(`Fetching BGG zip URL from ${BGG_CSV_URL}...`);
   const csvResponse = await fetch(
     BGG_CSV_URL, {
       method: 'GET',
@@ -27,46 +32,30 @@ const getZipUrl = async () => {
     }
   );
   const html = await csvResponse.text();
-  // console.log(await html);
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(await html, 'text/html');
-  const url = await doc
+  const hyperlink = await doc
     .getElementById('maincontent')
     .getElementsByTagName('a')[0]
-    .getAttribute('href');
   
-  return url;
+  const url = await hyperlink.getAttribute('href');
+  const filename = await hyperlink.getAttribute('download');
+  
+  return [url, filename];
 }
 
-const zipUrl = await getZipUrl();
-// console.log(zipUrl);
+const [zipUrl, zipFilename] = await getZipUrl();
 
+console.log(`Downloading ${zipFilename}...`);
 const zipResponse = await fetch(zipUrl);
 const zipBuffer = Buffer.from(await zipResponse.arrayBuffer());
-// console.log(zipBuffer);
 
-const parser = parse({
-  columns: true
-});
-console.log(parser);
-
-/* const transformer = transform(
-  (row, callback) => {
-    callback(null, {
-      id: row.id,
-      name: row.name,
-      yearpublished: row.yearpublished,
-      rank: row.rank,
-      bayesaverage: row.bayesaverage,
-      average: row.average,
-      is_expansion: row.is_expansion,
-    });
-  },
-); */
+const parser = parse({ columns: true });
 
 // Unzip boardgames_ranks_YYYY-MM-DD.zip
 yauzl.fromBuffer(await zipBuffer, { lazyEntries: true }, (err, zipfile) => {
+  console.log(`Extracting ${zipFilename}...`);
   if (err) throw err;
   zipfile.readEntry();
   zipfile.on('entry', entry => {
@@ -77,53 +66,41 @@ yauzl.fromBuffer(await zipBuffer, { lazyEntries: true }, (err, zipfile) => {
   });
 });
 
-// https://docs.python.org/3/library/itertools.html#itertools.batched
-/* const batched = function* (iterable, n) {
-  var batch;
-  while (batch = Array.from(islice(iterable, n))) {
-    yield batch;
-  }
-}; */
-
-/* for await (const batch of batched(parser, 20)) {
-  console.log(batch);
-} */
-
-/* const processCsv = {};
-processCsv[Symbol.iterator] = async function* () {
-  for await (const row of parser) {
-    console.log(row);
-    yield row;
-  }
-}; */
-
-/* const processCsv = {
-  async *[Symbol.asyncIterator]() {
-    for await (const row of parser) {
-      yield row;
-    }
-  }
-}; */
-
-// const bonk = batch(20, await processCsv);
-// console.log(bonk);
-
-// console.log(isIterable([]));
-
+let gameCount = 0;
+console.log('Processing boardgames_ranks.csv...');
 // Make API calls in batches of 20 games at a time
-for await (const batch20 of await asyncBatch(20, parser)) {
+for await (const batch of await asyncBatch(20, parser)) {
   const games = new Map();
-  for await (let row of batch20) {
+  for await (let row of batch) {
     games.set(row.id, row);
     // We want 0 to show up as NULL in the database for sorting/filtering purposes
     for (const col of ['average', 'bayesaverage', 'rank', 'yearpublished']) {
       if (row[col] === '0') {
-        row[col] = '';
+        row[col] = null;
       }
     }
   }  
   
-  const ids = games.keys().join()
-  const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids}&stats=1`
+  const ids = Array.from(games.keys()).join();
+  const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids}&stats=1`;
+  let response;
   
+  while (1) {
+    response = await fetch(url);
+    const status = `${response.status} - ${response.statusText}`;
+    if (response.ok) {
+      break;
+    } else if ([
+      429, // Too many requests
+      502, // Bad gateway
+    ].includes(response.status)) {
+      console.log(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
+      await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
+    } else {
+      throw new Error(status);
+    }
+  }
+  
+  let xmlText = await response.text();
+  // console.log(xmlText);
 }
