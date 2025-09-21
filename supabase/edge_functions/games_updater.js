@@ -1,5 +1,5 @@
 import { DOMParser } from 'xmldom';
-// import { XMLParser } from 'fast-xml-parser';
+import { XMLParser } from 'fast-xml-parser';
 import yauzl from 'yauzl';
 import { parse } from 'csv-parse';
 import { asyncBatch } from 'iter-tools';
@@ -45,62 +45,101 @@ const getZipUrl = async () => {
   return [url, filename];
 }
 
-const [zipUrl, zipFilename] = await getZipUrl();
-
-console.log(`Downloading ${zipFilename}...`);
-const zipResponse = await fetch(zipUrl);
-const zipBuffer = Buffer.from(await zipResponse.arrayBuffer());
-
-const parser = parse({ columns: true });
-
-// Unzip boardgames_ranks_YYYY-MM-DD.zip
-yauzl.fromBuffer(await zipBuffer, { lazyEntries: true }, (err, zipfile) => {
-  console.log(`Extracting ${zipFilename}...`);
-  if (err) throw err;
-  zipfile.readEntry();
-  zipfile.on('entry', entry => {
-    zipfile.openReadStream(entry, (err, readStream) => {
-      if (err) throw err;
-      readStream.pipe(parser);
-    });
+const parseXml = (text) => {
+  
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    // attributeNamePrefix: '',
+    // textNodeName: 'value',
   });
-});
-
-let gameCount = 0;
-console.log('Processing boardgames_ranks.csv...');
-// Make API calls in batches of 20 games at a time
-for await (const batch of await asyncBatch(20, parser)) {
-  const games = new Map();
-  for await (let row of batch) {
-    games.set(row.id, row);
-    // We want 0 to show up as NULL in the database for sorting/filtering purposes
-    for (const col of ['average', 'bayesaverage', 'rank', 'yearpublished']) {
-      if (row[col] === '0') {
-        row[col] = null;
+  
+  let games = parser.parse(text).items.item;
+  // Handle edge case where the final batch of games is a single item
+  if (!Array.isArray(games)) {
+    games = [games];
+  }
+  for (game of games) {
+    const row = {};
+    for (poll of game.poll) {
+      if (poll.name === 'suggested_playerage') {
+        // Avoid division by zero
+        if poll.totalvotes == '0' {
+          row.suggested_playerage = null;
+        } else {
+          let ageSum = 0;
+          let voteSum = 0;
+          for (result in poll.results.result) {
+            const age = parseInt(result.value);
+            const voteCount = parseInt(
+          }
+        }
       }
-    }
-  }  
-  
-  const ids = Array.from(games.keys()).join();
-  const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids}&stats=1`;
-  let response;
-  
-  while (1) {
-    response = await fetch(url);
-    const status = `${response.status} - ${response.statusText}`;
-    if (response.ok) {
-      break;
-    } else if ([
-      429, // Too many requests
-      502, // Bad gateway
-    ].includes(response.status)) {
-      console.log(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
-      await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
-    } else {
-      throw new Error(status);
     }
   }
   
-  let xmlText = await response.text();
-  // console.log(xmlText);
 }
+
+const main = () => {
+
+  const [zipUrl, zipFilename] = await getZipUrl();
+
+  console.log(`Downloading ${zipFilename}...`);
+  const zipResponse = await fetch(zipUrl);
+  const zipBuffer = Buffer.from(await zipResponse.arrayBuffer());
+
+  const parser = parse({ columns: true });
+
+  // Unzip boardgames_ranks_YYYY-MM-DD.zip
+  yauzl.fromBuffer(await zipBuffer, { lazyEntries: true }, (err, zipfile) => {
+    console.log(`Extracting ${zipFilename}...`);
+    if (err) throw err;
+    zipfile.readEntry();
+    zipfile.on('entry', entry => {
+      zipfile.openReadStream(entry, (err, readStream) => {
+        if (err) throw err;
+        readStream.pipe(parser);
+      });
+    });
+  });
+
+  let gameCount = 0;
+  console.log('Processing boardgames_ranks.csv...');
+  // Make API calls in batches of 20 games at a time
+  for await (const batch of await asyncBatch(20, parser)) {
+    const games = new Map();
+    for await (let row of batch) {
+      games.set(row.id, row);
+      // We want 0 to show up as NULL in the database for sorting/filtering purposes
+      for (const col of ['average', 'bayesaverage', 'rank', 'yearpublished']) {
+        if (row[col] === '0') {
+          row[col] = null;
+        }
+      }
+    }  
+    
+    const ids = Array.from(games.keys()).join();
+    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids}&stats=1`;
+    // let response;
+    
+    while (1) {
+      const response = await fetch(url);
+      const status = `${response.status} - ${response.statusText}`;
+      if (response.ok) {
+        break;
+      } else if ([
+        429, // Too many requests
+        502, // Bad gateway
+      ].includes(response.status)) {
+        console.log(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
+        await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
+      } else {
+        throw new Error(status);
+      }
+    }
+    
+    let xmlText = await response.text();
+    // console.log(xmlText);
+  }
+};
+
+main();
