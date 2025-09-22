@@ -1,8 +1,8 @@
 import { DOMParser } from 'xmldom';
 import { XMLParser } from 'fast-xml-parser';
-import yauzl from 'yauzl';
+import yauzl from 'yauzl'; // "yet another unzip library" for node
 import { parse } from 'csv-parse';
-import { asyncBatch } from 'iter-tools';
+import { asyncBatch, asyncToArray, asyncMap } from 'iter-tools';
 
 const LOGIN_URL = 'https://boardgamegeek.com/login/api/v1';
 const BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks';
@@ -35,9 +35,10 @@ const getZipUrl = async () => {
   const csvResponse = await fetch(
     BGG_CSV_URL, {
       method: 'GET',
-      headers: { cookie: cookie.join(';') }
+      headers: { cookie: cookie.join(';') },
     }
   );
+  
   const html = await csvResponse.text();
 
   const parser = new DOMParser();
@@ -58,22 +59,41 @@ const hasTaxonomy = (game, type, value) => (
   )
 );
 
-const parser = new XMLParser({
+const parseSuggestedPlayers = (text) => (
+  text
+    .replaceAll(DASH, '-')
+    .split('')
+    .filter(c => '01234567890,+-'.includes(c))
+    .join('')
+);
+
+const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '',
-  // textNodeName: 'value',
 });
 
 const parseXml = function* (text) {
   
-  let games = parser.parse(text).items.item;
-  // console.log(games);
+  let games = xmlParser.parse(text).items.item;
   // Handle edge case where the final batch of games is a single item
   if (!Array.isArray(games)) {
     games = [games];
   }
   for (const game of games) {
-    const row = {};
+    const row = { id: game.id };
+    console.log(row);
+    
+    let names = game.name;
+    if (!Array.isArray(names)) {
+      names = [names];
+    }
+    console.log(names);
+    for (const { type, value } of names) {
+      if (type === 'primary') {
+        row.name = value;
+      }
+    }
+    
     for (const poll of game.poll) {
       if (poll.name === 'suggested_playerage') {
         // Avoid division by zero
@@ -82,43 +102,60 @@ const parseXml = function* (text) {
         } else {
           let ageSum = 0;
           let voteSum = 0;
-          for (const {value, numvotes} of poll.results.result) {
+          for (const { value, numvotes } of poll.results.result) {
             const age = parseInt(value);
             const voteCount = parseInt(numvotes);
             ageSum += age * voteCount;
             voteSum += voteCount;
-            console.log(ageSum, voteSum);
           }
           row.suggested_playerage = ageSum / voteSum; // weighted average
         }
       }
     }
+    
     let summaries = game['poll-summary'];
     if (!Array.isArray(summaries)) {
       summaries = [summaries];
     }
     for (const summary of summaries) {
       if (summary.name === 'suggested_numplayers') {
-        for (const result in summary.result) {
-          if (result.name === 'bestwith') {
-            row.best_players = null; // TODO
-          } else if (result.name === 'recommmendedwith') {
-            row.rec_players = null; // TODO
+        for (const { name, value } of summary.result) {
+          if (name === 'bestwith') {
+            row.best_players = parseSuggestedPlayers(value);
+          } else if (name === 'recommmendedwith') {
+            row.rec_players = parseSuggestedPlayers(value);
           }
         }
       }
     }
-    row.expansions = [];
+    row.is_expansion = game.type === 'boardgameexpansion';
+    const expansions = [];
     // Don't get expansions of expansions, just of base games
-    if (game.type === 'boardgame') {
+    if (!row.is_expansion) {
       for (const link of game.link) {
         if (link.type === 'boardgameexpansion') {
-          row.expansions.push(link.id);
+          expansions.push({
+            base_id: row.id,
+            expansion_id: link.id,
+          });
         }
       }
     }
-    row.id = game.id;
+    const ratings = game.statistics.ratings;
+    let ranks = ratings.ranks.rank;
+    if (!Array.isArray(ranks)) {
+      ranks = [ranks];
+    }
+    for (const { type, name, value } of ranks) {
+      if (type === 'subtype' && name === 'boardgame') {
+        row.rank = parseInt(value) || null;
+      }
+    }
     // NULL out 0 for filtering purposes (0 means no value)
+    row.average = parseFloat(ratings.average.value) || null;
+    row.bayesaverage = parseFloat(ratings.bayesaverage.value) || null;
+    row.complexity = parseFloat(ratings.averageweight.value) || null;
+    row.year_published = parseInt(game.yearpublished.value) || null;
     row.minplaytime = parseInt(game.minplaytime.value) || null;
     row.maxplaytime = parseInt(game.maxplaytime.value) || null;
     row.playing_time = parseInt(game.playingtime.value) || null;
@@ -127,8 +164,7 @@ const parseXml = function* (text) {
     row.min_age = parseInt(game.minage.value) || null;
     row.image_url = game.image;
     row.thumbnail = game.thumbnail;
-    // NULL out complexity=0 for filtering purposes, and in case we ever decide to do some math (0 means no votes)
-    row.complexity = parseFloat(game.statistics.ratings.averageweight.value) || null;
+    row.audio_url = null;
     row.description = null; // Leaving blank until we have more database storage
     row.is_cooperative = hasTaxonomy(game, 'boardgamemechanic', 'Cooperative Game');
     row.is_teambased = hasTaxonomy(game, 'boardgamemechanic', 'Team-Based Game');
@@ -140,7 +176,8 @@ const parseXml = function* (text) {
         .join(TAXONOMY_DELIMITER);
     }
     console.log(row);
-    yield row;
+    console.log(expansions);
+    yield [row, expansions];
   }
 }
 
@@ -173,19 +210,9 @@ const main = async () => {
     if (gameCount === 0) {
       console.log('Processing boardgames_ranks.csv...');
     }
-    const games = new Map();
-    for await (const row of batch) {
-      games.set(row.id, row);
-      // We want 0 to show up as NULL in the database for sorting/filtering purposes
-      for (const col of ['average', 'bayesaverage', 'rank', 'yearpublished']) {
-        if (row[col] === '0') {
-          row[col] = null;
-        }
-      }
-    }
     
-    const ids = Array.from(games.keys()).join();
-    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids}&stats=1`;
+    const ids = await asyncToArray(asyncMap((_ => _.id), batch));
+    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join()}&stats=1`;
     console.log(url);
     let response;
     
@@ -208,7 +235,7 @@ const main = async () => {
     
     let xmlText = await response.text();
     // console.log(xmlText);
-    for await (const row of parseXml(xmlText)) {
+    for await (const [game, expansions] of parseXml(xmlText)) {
       gameCount++;
     }
   }
