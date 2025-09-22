@@ -82,11 +82,9 @@ const parseXml = function* (text) {
         } else {
           let ageSum = 0;
           let voteSum = 0;
-          console.log(poll.results.result);
-          for (const result in poll.results) {
-            console.log(result);
-            const age = parseInt(result.value);
-            const voteCount = parseInt(result.numvotes);
+          for (const {value, numvotes} of poll.results.result) {
+            const age = parseInt(value);
+            const voteCount = parseInt(numvotes);
             ageSum += age * voteCount;
             voteSum += voteCount;
             console.log(ageSum, voteSum);
