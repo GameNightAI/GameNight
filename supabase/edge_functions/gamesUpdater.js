@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js'
 import { DOMParser } from 'xmldom';
 import { XMLParser } from 'fast-xml-parser';
 import yauzl from 'yauzl'; // "yet another unzip library" for node
@@ -12,6 +13,7 @@ const TAXONOMY_DELIMITER = '|';
 
 const getZipUrl = async () => {
   
+  // Need to be logged in to get the oh-so-secret zipfile link
   const username = process.env.BGG_USERNAME;
   console.log(`Logging ${username} in to BGG...`);
   const loginResponse = await fetch(
@@ -38,6 +40,9 @@ const getZipUrl = async () => {
       headers: { cookie: cookie.join(';') },
     }
   );
+  if (!csvResponse.ok) {
+    throw new Error(`Failed to fetch URL: ${csvResponse.status} - ${csvResponse.statusText}`);
+  }
   
   const html = await csvResponse.text();
 
@@ -81,7 +86,6 @@ const parseXml = function* (text) {
   }
   for (const game of games) {
     const row = { id: game.id };
-    console.log(row);
     
     let names = game.name;
     if (!Array.isArray(names)) {
@@ -164,7 +168,7 @@ const parseXml = function* (text) {
     row.min_age = parseInt(game.minage.value) || null;
     row.image_url = game.image;
     row.thumbnail = game.thumbnail;
-    row.audio_url = null;
+    row.audio_url = null; // We will probably never use this column
     row.description = null; // Leaving blank until we have more database storage
     row.is_cooperative = hasTaxonomy(game, 'boardgamemechanic', 'Cooperative Game');
     row.is_teambased = hasTaxonomy(game, 'boardgamemechanic', 'Team-Based Game');
@@ -175,18 +179,63 @@ const parseXml = function* (text) {
         .map(link => link.value)
         .join(TAXONOMY_DELIMITER);
     }
-    console.log(row);
-    console.log(expansions);
     yield [row, expansions];
   }
 }
 
 const main = async () => {
 
+  let response;
+  // console.log('Connecting to Supabase...');
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY,
+    { auth: {
+      // storage: storage,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+    }}
+  );
+  
+  const email = process.env.SUPABASE_EMAIL;
+  console.log(`Logging ${email} in to Supabase...`);
+  response = await supabase.auth.signInWithPassword({
+    email: email,
+    password: process.env.SUPABASE_PASSWORD,
+  });
+  if (response.error) {
+    throw new Error(`Failed to log in: ${response.error.message}`);
+  } else {
+    console.log('Successfully logged in.')
+  };
+  // console.log(data);
+  // console.log(error);
+
+  /* const testResponse = await supabase
+    .from('games_staging')
+    .select()
+    .limit(1)
+  console.log(testResponse); */
+
+  console.log('Deleting all rows from games_staging...');
+  response = await supabase
+    .from('games_staging')
+    .delete()
+    .neq('id', -42); // Supabase API requires a WHERE clause to delete records
+  if (response.error) {
+    throw new Error(response.error.message);
+  } else {
+     console.log('Successfully deleted games_staging.');
+  };
+
   const [zipUrl, zipFilename] = await getZipUrl();
 
   console.log(`Downloading ${zipFilename}...`);
   const zipResponse = await fetch(zipUrl);
+  if (!zipResponse.ok) {
+    throw new Error(`Failed to download ${zipFilename}: ${zipResponse.status} - ${zipResponse.statusText}`);
+  }
   const zipBuffer = Buffer.from(await zipResponse.arrayBuffer());
 
   const parser = parse({ columns: true });
@@ -211,7 +260,7 @@ const main = async () => {
       console.log('Processing boardgames_ranks.csv...');
     }
     
-    const ids = await asyncToArray(asyncMap((_ => _.id), batch));
+    const ids = await asyncToArray(asyncMap((game => game.id), batch));
     const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join()}&stats=1`;
     console.log(url);
     let response;
@@ -220,7 +269,6 @@ const main = async () => {
       response = await fetch(url);
       const status = `${response.status} - ${response.statusText}`;
       if (response.ok) {
-        // console.log(response)
         break;
       } else if ([
         429, // Too many requests
@@ -234,9 +282,12 @@ const main = async () => {
     }
     
     let xmlText = await response.text();
-    // console.log(xmlText);
     for await (const [game, expansions] of parseXml(xmlText)) {
       gameCount++;
+      response = await supabase
+        .from('games_staging')
+        .insert(game);
+      console.log(`Inserted game# ${gameCount}`);
     }
   }
 };
