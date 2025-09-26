@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 import { DOMParser } from 'xmldom';
 import { XMLParser } from 'fast-xml-parser';
 import yauzl from 'yauzl'; // "yet another unzip library" for node
@@ -10,6 +10,8 @@ const BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks';
 const SLEEP_TIME = 5 // seconds to wait before retrying BGG API request
 const DASH = '–' // NOT the hyphen character on the keyboard
 const TAXONOMY_DELIMITER = '|';
+const BGG_API_BATCH_SIZE = 20; // 20 is the maximum number of games allowed by https://boardgamegeek.com/xmlapi2/thing
+const SUPABASE_BATCH_SIZE = 1000; // number of rows per INSERT/UPSERT requests
 
 const getZipUrl = async () => {
   
@@ -31,7 +33,7 @@ const getZipUrl = async () => {
   } else {
     throw new Error(`Failed to log in: ${loginResponse.status} - ${loginResponse.statusText}`);
   }
-  const cookie = await loginResponse.headers.getSetCookie();
+  const cookie = loginResponse.headers.getSetCookie();
 
   console.log(`Fetching BGG zip URL from ${BGG_CSV_URL}...`);
   const csvResponse = await fetch(
@@ -47,28 +49,32 @@ const getZipUrl = async () => {
   const html = await csvResponse.text();
 
   const parser = new DOMParser();
-  const doc = parser.parseFromString(await html, 'text/html');
-  const hyperlink = await doc
+  const doc = parser.parseFromString( html, 'text/html');
+  const hyperlink = doc
     .getElementById('maincontent')
     .getElementsByTagName('a')[0];
   
-  const url = await hyperlink.getAttribute('href');
-  const filename = await hyperlink.getAttribute('download');
+  const url = hyperlink.getAttribute('href');
+  const filename = hyperlink.getAttribute('download');
   
   return [url, filename];
 }
 
-const hasTaxonomy = (game, type, value) => (
-  game.link.some(link =>
+const hasTaxonomy = (game, type, value) => {
+  let links = game.link;
+  if (!Array.isArray(links)) {
+    links = [links];
+  }
+  return links.some(link =>
     link.type === type && link.value === value
-  )
-);
+  );
+};
 
 const parseSuggestedPlayers = (text) => (
   text
     .replaceAll(DASH, '-')
     .split('')
-    .filter(c => '01234567890,+-'.includes(c))
+    .filter(c => '0123456789,+-'.includes(c))
     .join('')
 );
 
@@ -91,7 +97,6 @@ const parseXml = function* (text) {
     if (!Array.isArray(names)) {
       names = [names];
     }
-    console.log(names);
     for (const { type, value } of names) {
       if (type === 'primary') {
         row.name = value;
@@ -134,6 +139,10 @@ const parseXml = function* (text) {
     }
     row.is_expansion = game.type === 'boardgameexpansion';
     const expansions = [];
+    let links = game.link;
+    if (!Array.isArray(links)) {
+      links = [links];
+    }
     // Don't get expansions of expansions, just of base games
     if (!row.is_expansion) {
       for (const link of game.link) {
@@ -174,51 +183,89 @@ const parseXml = function* (text) {
     row.is_teambased = hasTaxonomy(game, 'boardgamemechanic', 'Team-Based Game');
     // BGG taxonomy
     for (const type of ['boardgamecategory', 'boardgamemechanic', 'boardgamefamily']) {
-      row[type] = game.link
+      row[type] = links
         .filter(link => link.type === type)
         .map(link => link.value)
         .join(TAXONOMY_DELIMITER);
     }
-    yield [row, expansions];
+    yield {
+      game: row,
+      expansions: expansions,
+    };
   }
 }
 
-const main = async () => {
-
-  let response;
-  // console.log('Connecting to Supabase...');
+const createSupabaseClient = async () => {
+  /* Use the service_role key (which bypasses RLS)
+  if we're running this in a Supabase edge function.
+  Otherwise, login as a normal user */
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY,
+    supabaseKey,
     { auth: {
-      // storage: storage,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
     }}
   );
-  
-  const email = process.env.SUPABASE_EMAIL;
-  console.log(`Logging ${email} in to Supabase...`);
-  response = await supabase.auth.signInWithPassword({
-    email: email,
-    password: process.env.SUPABASE_PASSWORD,
-  });
-  if (response.error) {
-    throw new Error(`Failed to log in: ${response.error.message}`);
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('Created Supabase client using SUPABASE_SERVICE_ROLE_KEY.');
   } else {
-    console.log('Successfully logged in.')
-  };
-  // console.log(data);
-  // console.log(error);
+    console.log('Created Supabase client using SUPABASE_ANON_KEY.');
+    const email = process.env.SUPABASE_EMAIL;
+    console.log(`Logging ${email} in to Supabase...`);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: process.env.SUPABASE_PASSWORD,
+    });
+    if (error) {
+    throw new Error(`Failed to log in: ${error.message}`);
+    } else {
+      console.log('Successfully logged in.')
+    };
+  }
+  return supabase;
+};
 
-  /* const testResponse = await supabase
-    .from('games_staging')
-    .select()
-    .limit(1)
-  console.log(testResponse); */
+const bggApiCaller = async function* (csvParser) {
+  // Make API calls in batches of 20 (or whatever the max that BGG allows) games at a time
+  for await (const bggBatch of asyncBatch(BGG_API_BATCH_SIZE, csvParser)) {
+    
+    const ids = await asyncToArray(asyncMap((game => game.id), bggBatch));
+    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join()}&stats=1`;
+    
+    let bggResponse;
+    while (1) {
+      bggResponse = await fetch(url);
+      const status = `${bggResponse.status} - ${bggResponse.statusText}`;
+      if (bggResponse.ok) {
+        break;
+      } else if (
+        bggResponse.status === 429 // Too many requests
+        || (bggResponse.status >= 500 && bggResponse.status < 600) // Server error
+      ) {
+        if (bggResponse.status !== 429) { // 429 happen so frequently that it's not worth logging.
+          console.log(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
+        }
+        await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
+      } else {
+        throw new Error(status);
+      }
+    }
+    
+    const xmlText = await bggResponse.text()
+    for (const row of parseXml(xmlText)) {
+      yield row;
+    }
+  }
+};
 
-  console.log('Deleting all rows from games_staging...');
+const main = async () => {
+
+  const supabase = await createSupabaseClient();
+
+  /* console.log('Deleting all rows from games_staging...');
   response = await supabase
     .from('games_staging')
     .delete()
@@ -227,7 +274,7 @@ const main = async () => {
     throw new Error(response.error.message);
   } else {
      console.log('Successfully deleted games_staging.');
-  };
+  }; */
 
   const [zipUrl, zipFilename] = await getZipUrl();
 
@@ -238,7 +285,7 @@ const main = async () => {
   }
   const zipBuffer = Buffer.from(await zipResponse.arrayBuffer());
 
-  const parser = parse({ columns: true });
+  const csvParser = parse({ columns: true });
 
   // Unzip boardgames_ranks_YYYY-MM-DD.zip
   yauzl.fromBuffer(await zipBuffer, { lazyEntries: true }, (err, zipfile) => {
@@ -248,47 +295,70 @@ const main = async () => {
     zipfile.on('entry', entry => {
       zipfile.openReadStream(entry, (err, readStream) => {
         if (err) throw err;
-        readStream.pipe(parser);
+        readStream.pipe(csvParser);
       });
     });
   });
 
   let gameCount = 0;
-  // Make API calls in batches of 20 games at a time
-  for await (const batch of await asyncBatch(20, parser)) {
+  let expansionCount = 0;
+  let games = [];
+  let expansions = [];
+  for await (const row of bggApiCaller(csvParser)) {
     if (gameCount === 0) {
       console.log('Processing boardgames_ranks.csv...');
-    }
-    
-    const ids = await asyncToArray(asyncMap((game => game.id), batch));
-    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join()}&stats=1`;
-    console.log(url);
-    let response;
-    
-    while (1) {
-      response = await fetch(url);
-      const status = `${response.status} - ${response.statusText}`;
-      if (response.ok) {
-        break;
-      } else if ([
-        429, // Too many requests
-        502, // Bad gateway
-      ].includes(response.status)) {
-        console.log(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
-        await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
+    }  
+    games.push(row.game);
+    expansions = expansions.concat(row.expansions);
+    gameCount++;
+    expansionCount += row.expansions.length;
+    if (games.length >= SUPABASE_BATCH_SIZE) {
+      const gamesResponse = await supabase
+        .from('games_staging')
+        .upsert(games);
+      if (gamesResponse.error) {
+        throw new Error(`Failed to upsert games: ${gamesResponse.error.message}`)
       } else {
-        throw new Error(status);
+        console.log(`Upserted ${gameCount} games so far...`);
+        games = [];
       }
     }
-    
-    let xmlText = await response.text();
-    for await (const [game, expansions] of parseXml(xmlText)) {
-      gameCount++;
-      response = await supabase
-        .from('games_staging')
-        .insert(game);
-      console.log(`Inserted game# ${gameCount}`);
+    if (expansions.length >= SUPABASE_BATCH_SIZE) {
+      const expResponse = await supabase
+        .from('expansions_staging')
+        .upsert(expansions);
+      if (expResponse.error) {
+        throw new Error(`Failed to upsert expansions: ${expResponse.error.message}`)
+      } else {
+        console.log(`Upserted ${expansionCount} expansions so far...`);
+        expansions = [];
+      }
     }
+  }
+  // Upsert the leftovers
+  if (games.length) {
+    const gamesResponse = await supabase
+      .from('games_staging')
+      .upsert(games);
+    if (gamesResponse.error) {
+      throw new Error(`Failed to upsert games: ${gamesResponse.error.message}`)
+    } else {
+      console.log(`Upserted ${gameCount} games so far...\nSuccessfully upserted all games!`);
+    }
+  } else {
+    console.log('Successfully upserted all games!');
+  }
+  if (expansions.length) {
+    const expResponse = await supabase
+      .from('expansions_staging')
+      .upsert(expansions);
+    if (expResponse.error) {
+      throw new Error(`Failed to upsert expansions: ${expResponse.error.message}`)
+    } else {
+      console.log(`Upserted ${gameCount} expansions so far...\nSuccessfully upserted all expansions!`);
+    }
+  } else {
+    console.log('Successfully upserted all expansions!');
   }
 };
 
