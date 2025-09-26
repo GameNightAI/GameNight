@@ -145,7 +145,7 @@ const parseXml = function* (text) {
     }
     // Don't get expansions of expansions, just of base games
     if (!row.is_expansion) {
-      for (const link of game.link) {
+      for (const link of links) {
         if (link.type === 'boardgameexpansion') {
           expansions.push({
             base_id: row.id,
