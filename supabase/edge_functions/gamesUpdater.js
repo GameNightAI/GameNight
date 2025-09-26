@@ -4,6 +4,7 @@ import { XMLParser } from 'fast-xml-parser';
 import yauzl from 'yauzl'; // "yet another unzip library" for node
 import { parse } from 'csv-parse';
 import { asyncBatch, asyncToArray, asyncMap } from 'iter-tools';
+import { format } from 'date-fns';
 
 const LOGIN_URL = 'https://boardgamegeek.com/login/api/v1';
 const BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks';
@@ -13,11 +14,17 @@ const TAXONOMY_DELIMITER = '|';
 const BGG_API_BATCH_SIZE = 20; // 20 is the maximum number of games allowed by https://boardgamegeek.com/xmlapi2/thing
 const SUPABASE_BATCH_SIZE = 1000; // number of rows per INSERT/UPSERT requests
 
+const timestamp = () => 
+  format(new Date(), 'Pppp');
+
+const log = text =>
+  console.log(`${timestamp()}: ${text}`)
+
 const getZipUrl = async () => {
   
   // Need to be logged in to get the oh-so-secret zipfile link
   const username = process.env.BGG_USERNAME;
-  console.log(`Logging ${username} in to BGG...`);
+  log(`Logging ${username} in to BGG...`);
   const loginResponse = await fetch(
     LOGIN_URL, {
       method: 'POST',
@@ -29,13 +36,13 @@ const getZipUrl = async () => {
     }
   );
   if (loginResponse.ok) {
-    console.log('Successfully logged in.');
+    log('Successfully logged in.');
   } else {
     throw new Error(`Failed to log in: ${loginResponse.status} - ${loginResponse.statusText}`);
   }
   const cookie = loginResponse.headers.getSetCookie();
 
-  console.log(`Fetching BGG zip URL from ${BGG_CSV_URL}...`);
+  log(`Fetching BGG zip URL from ${BGG_CSV_URL}...`);
   const csvResponse = await fetch(
     BGG_CSV_URL, {
       method: 'GET',
@@ -210,11 +217,11 @@ const createSupabaseClient = async () => {
     }}
   );
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.log('Created Supabase client using SUPABASE_SERVICE_ROLE_KEY.');
+    log('Created Supabase client using SUPABASE_SERVICE_ROLE_KEY.');
   } else {
-    console.log('Created Supabase client using SUPABASE_ANON_KEY.');
+    log('Created Supabase client using SUPABASE_ANON_KEY.');
     const email = process.env.SUPABASE_EMAIL;
-    console.log(`Logging ${email} in to Supabase...`);
+    log(`Logging ${email} in to Supabase...`);
     const { error } = await supabase.auth.signInWithPassword({
       email: email,
       password: process.env.SUPABASE_PASSWORD,
@@ -222,7 +229,7 @@ const createSupabaseClient = async () => {
     if (error) {
     throw new Error(`Failed to log in: ${error.message}`);
     } else {
-      console.log('Successfully logged in.')
+      log('Successfully logged in.')
     };
   }
   return supabase;
@@ -246,7 +253,7 @@ const bggApiCaller = async function* (csvParser) {
         || (bggResponse.status >= 500 && bggResponse.status < 600) // Server error
       ) {
         if (bggResponse.status !== 429) { // 429 happen so frequently that it's not worth logging.
-          console.log(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
+          log(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
         }
         await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
       } else {
@@ -265,20 +272,20 @@ const main = async () => {
 
   const supabase = await createSupabaseClient();
 
-  /* console.log('Deleting all rows from games_staging...');
-  response = await supabase
-    .from('games_staging')
+  log('Deleting all rows from expansions_staging...');
+  const deleteResponse = await supabase
+    .from('expansions_staging')
     .delete()
-    .neq('id', -42); // Supabase API requires a WHERE clause to delete records
-  if (response.error) {
-    throw new Error(response.error.message);
+    .not('id', 'is', null); // Supabase API requires a WHERE clause to delete records
+  if (deleteResponse.error) {
+    throw new Error(deleteResponse.error.message);
   } else {
-     console.log('Successfully deleted games_staging.');
-  }; */
+     log('Successfully deleted expansions_staging rows.');
+  };
 
   const [zipUrl, zipFilename] = await getZipUrl();
 
-  console.log(`Downloading ${zipFilename}...`);
+  log(`Downloading ${zipFilename}...`);
   const zipResponse = await fetch(zipUrl);
   if (!zipResponse.ok) {
     throw new Error(`Failed to download ${zipFilename}: ${zipResponse.status} - ${zipResponse.statusText}`);
@@ -288,8 +295,8 @@ const main = async () => {
   const csvParser = parse({ columns: true });
 
   // Unzip boardgames_ranks_YYYY-MM-DD.zip
-  yauzl.fromBuffer(await zipBuffer, { lazyEntries: true }, (err, zipfile) => {
-    console.log(`Extracting ${zipFilename}...`);
+  yauzl.fromBuffer(zipBuffer, { lazyEntries: true }, (err, zipfile) => {
+    log(`Extracting ${zipFilename}...`);
     if (err) throw err;
     zipfile.readEntry();
     zipfile.on('entry', entry => {
@@ -306,7 +313,7 @@ const main = async () => {
   let expansions = [];
   for await (const row of bggApiCaller(csvParser)) {
     if (gameCount === 0) {
-      console.log('Processing boardgames_ranks.csv...');
+      log('Processing boardgames_ranks.csv...');
     }  
     games.push(row.game);
     expansions = expansions.concat(row.expansions);
@@ -315,22 +322,22 @@ const main = async () => {
     if (games.length >= SUPABASE_BATCH_SIZE) {
       const gamesResponse = await supabase
         .from('games_staging')
-        .upsert(games);
+        .upsert(games, { onConflict: 'id' });
       if (gamesResponse.error) {
         throw new Error(`Failed to upsert games: ${gamesResponse.error.message}`)
       } else {
-        console.log(`Upserted ${gameCount} games so far...`);
+        log(`Upserted ${gameCount} games so far...`);
         games = [];
       }
     }
     if (expansions.length >= SUPABASE_BATCH_SIZE) {
       const expResponse = await supabase
         .from('expansions_staging')
-        .upsert(expansions);
+        .insert(expansions);
       if (expResponse.error) {
         throw new Error(`Failed to upsert expansions: ${expResponse.error.message}`)
       } else {
-        console.log(`Upserted ${expansionCount} expansions so far...`);
+        log(`Inserted ${expansionCount} expansions so far...`);
         expansions = [];
       }
     }
@@ -343,22 +350,22 @@ const main = async () => {
     if (gamesResponse.error) {
       throw new Error(`Failed to upsert games: ${gamesResponse.error.message}`)
     } else {
-      console.log(`Upserted ${gameCount} games so far...\nSuccessfully upserted all games!`);
+      log(`Upserted ${gameCount} games so far...\nSuccessfully upserted all games!`);
     }
   } else {
-    console.log('Successfully upserted all games!');
+    log('Successfully upserted all games!');
   }
   if (expansions.length) {
     const expResponse = await supabase
       .from('expansions_staging')
-      .upsert(expansions);
+      .insert(expansions);
     if (expResponse.error) {
       throw new Error(`Failed to upsert expansions: ${expResponse.error.message}`)
     } else {
-      console.log(`Upserted ${gameCount} expansions so far...\nSuccessfully upserted all expansions!`);
+      log(`Inserted ${expansionCount} expansions so far...\nSuccessfully upserted all expansions!`);
     }
   } else {
-    console.log('Successfully upserted all expansions!');
+    log('Successfully upserted all expansions!');
   }
 };
 
