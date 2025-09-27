@@ -288,17 +288,48 @@ const bggApiCaller = async function* (csvParser) {
   }
 };
 
+const updateFromStaging = async (supabase) => {
+  if (!supabase) {
+    supabase = await createSupabaseClient();
+  }
+  log('Updating games from games_staging...');
+  const gamesResponse = await supabase.rpc('update_games_from_games_staging');
+  if (gamesResponse.error) {
+    throw new Error(`Failed to update games: ${gamesResponse.error.message}`);
+  } else {
+    log('Updated games successfully!')
+  }
+  log('Updating expansions from expansions_staging');
+  const expResponse = await supabase.rpc('update_expansions_from_expansions_staging');
+  if (expResponse.error) {
+    throw new Error(`Failed to update expansions: ${expResponse.error.message}`);
+  } else {
+    log('Updated expansions successfully!')
+  }
+}
+
 const main = async () => {
 
   const supabase = await createSupabaseClient();
 
+  log('Deleting all rows from games_staging...');
+  const delGamesResponse = await supabase
+    .from('games_staging')
+    .delete()
+    .not('id', 'is', null); // Supabase API requires a WHERE clause to delete records
+  if (delGamesResponse.error) {
+    throw new Error(delGamesResponse.error.message);
+  } else {
+     log('Successfully deleted games_staging rows.');
+  };
+
   log('Deleting all rows from expansions_staging...');
-  const deleteResponse = await supabase
+  const delExpResponse = await supabase
     .from('expansions_staging')
     .delete()
     .not('id', 'is', null); // Supabase API requires a WHERE clause to delete records
-  if (deleteResponse.error) {
-    throw new Error(deleteResponse.error.message);
+  if (delExpResponse.error) {
+    throw new Error(delExpResponse.error.message);
   } else {
      log('Successfully deleted expansions_staging rows.');
   };
@@ -342,11 +373,11 @@ const main = async () => {
     if (games.length >= SUPABASE_BATCH_SIZE) {
       const gamesResponse = await supabase
         .from('games_staging')
-        .upsert(games, { onConflict: 'id' });
+        .insert(games);
       if (gamesResponse.error) {
-        throw new Error(`Failed to upsert games: ${gamesResponse.error.message}`)
+        throw new Error(`Failed to insert games: ${gamesResponse.error.message}`)
       } else {
-        log(`Upserted ${gameCount} games so far...`);
+        log(`Inserted ${gameCount} games so far...`);
         games = [];
       }
     }
@@ -355,38 +386,39 @@ const main = async () => {
         .from('expansions_staging')
         .insert(expansions);
       if (expResponse.error) {
-        throw new Error(`Failed to upsert expansions: ${expResponse.error.message}`)
+        throw new Error(`Failed to insert expansions: ${expResponse.error.message}`)
       } else {
         log(`Inserted ${expansionCount} expansions so far...`);
         expansions = [];
       }
     }
   }
-  // Upsert the leftovers
+  // Insert the leftovers
   if (games.length) {
     const gamesResponse = await supabase
       .from('games_staging')
-      .upsert(games);
+      .insert(games);
     if (gamesResponse.error) {
-      throw new Error(`Failed to upsert games: ${gamesResponse.error.message}`)
+      throw new Error(`Failed to insert games: ${gamesResponse.error.message}`)
     } else {
-      log(`Upserted ${gameCount} games so far...\nSuccessfully upserted all games!`);
+      log(`Inserted ${gameCount} games so far...\nSuccessfully inserted all games!`);
     }
   } else {
-    log('Successfully upserted all games!');
+    log('Successfully inserted all games!');
   }
   if (expansions.length) {
     const expResponse = await supabase
       .from('expansions_staging')
       .insert(expansions);
     if (expResponse.error) {
-      throw new Error(`Failed to upsert expansions: ${expResponse.error.message}`)
+      throw new Error(`Failed to insert expansions: ${expResponse.error.message}`)
     } else {
       log(`Inserted ${expansionCount} expansions so far...\nSuccessfully inserted all expansions!`);
     }
   } else {
     log('Successfully inserted all expansions!');
   }
+  await updateFromStaging(supabase);  
 };
 
 main();

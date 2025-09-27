@@ -25,8 +25,8 @@ DASH = '–' # NOT the hyphen character on the keyboard
 DESCRIPTION_NCHARS = 0 # number of description characters to store in the output, since we currently have a database size limit
 INCLUDE_BGG_TAXONOMY = True
 TAXONOMY_DELIMITER = '|'
-USERNAME = os.environ.get(BGG_USERNAME)
-PASSWORD = os.environ.get(BGG_PASSWORD)
+USERNAME = os.environ.get('BGG_USERNAME')
+PASSWORD = os.environ.get('BGG_PASSWORD')
 
 def get_private_collection():
   session = requests.Session()

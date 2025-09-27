@@ -1,8 +1,9 @@
-begin transaction;
+begin
 
-truncate expansions;
+delete from public.expansions
+  where id is not null;
 
-insert into expansions
-  select * from expansions_staging;
-
-commit transaction;
+insert into public.expansions
+  select * from public.expansions_staging;
+  
+end
