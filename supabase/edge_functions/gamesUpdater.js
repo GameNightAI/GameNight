@@ -20,6 +20,9 @@ const timestamp = () =>
 const log = text =>
   console.log(`${timestamp()}: ${text}`)
 
+const cError = text =>
+  console.error(`${timestamp()}: ${text}`)
+
 const getZipUrl = async () => {
   
   // Need to be logged in to get the oh-so-secret zipfile link
@@ -43,14 +46,24 @@ const getZipUrl = async () => {
   const cookie = loginResponse.headers.getSetCookie();
 
   log(`Fetching BGG zip URL from ${BGG_CSV_URL}...`);
-  const csvResponse = await fetch(
-    BGG_CSV_URL, {
-      method: 'GET',
-      headers: { cookie: cookie.join(';') },
+  let csvResponse;
+  while (1) {
+    try {
+      csvResponse = await fetch(
+        BGG_CSV_URL, {
+          method: 'GET',
+          headers: { cookie: cookie.join(';') },
+        }
+      );
+    } catch (error) {
+      cError(`Network error: ${error}`);
+      continue;
     }
-  );
-  if (!csvResponse.ok) {
-    throw new Error(`Failed to fetch URL: ${csvResponse.status} - ${csvResponse.statusText}`);
+    if (csvResponse.ok) {
+      break;
+    } else {
+      throw new Error(`Failed to fetch URL: ${csvResponse.status} - ${csvResponse.statusText}`);
+    }
   }
   
   const html = await csvResponse.text();
@@ -163,12 +176,14 @@ const parseXml = function* (text) {
     }
     const ratings = game.statistics.ratings;
     let ranks = ratings.ranks.rank;
-    if (!Array.isArray(ranks)) {
-      ranks = [ranks];
-    }
-    for (const { type, name, value } of ranks) {
-      if (type === 'subtype' && name === 'boardgame') {
-        row.rank = parseInt(value) || null;
+    if (ranks) {
+      if (!Array.isArray(ranks)) {
+        ranks = [ranks];
+      }
+      for (const { type, name, value } of ranks) {
+        if (type === 'subtype' && name === 'boardgame') {
+          row.rank = parseInt(value) || null;
+        }
       }
     }
     // NULL out 0 for filtering purposes (0 means no value)
@@ -244,7 +259,12 @@ const bggApiCaller = async function* (csvParser) {
     
     let bggResponse;
     while (1) {
-      bggResponse = await fetch(url);
+      try {
+        bggResponse = await fetch(url);
+      } catch (error) {
+        cError(`Network error: ${error}`);
+        continue;
+      }
       const status = `${bggResponse.status} - ${bggResponse.statusText}`;
       if (bggResponse.ok) {
         break;
@@ -252,8 +272,8 @@ const bggApiCaller = async function* (csvParser) {
         bggResponse.status === 429 // Too many requests
         || (bggResponse.status >= 500 && bggResponse.status < 600) // Server error
       ) {
-        if (bggResponse.status !== 429) { // 429 happen so frequently that it's not worth logging.
-          log(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
+        if (bggResponse.status !== 429) { // 429 happens so frequently that it's not worth logging.
+          cError(`${status}: Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
         }
         await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
       } else {
@@ -362,10 +382,10 @@ const main = async () => {
     if (expResponse.error) {
       throw new Error(`Failed to upsert expansions: ${expResponse.error.message}`)
     } else {
-      log(`Inserted ${expansionCount} expansions so far...\nSuccessfully upserted all expansions!`);
+      log(`Inserted ${expansionCount} expansions so far...\nSuccessfully inserted all expansions!`);
     }
   } else {
-    log('Successfully upserted all expansions!');
+    log('Successfully inserted all expansions!');
   }
 };
 
