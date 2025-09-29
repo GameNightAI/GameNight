@@ -6,13 +6,14 @@ import { parse } from 'csv-parse';
 import { asyncBatch, asyncToArray, asyncMap } from 'iter-tools';
 import { format } from 'date-fns';
 
-const LOGIN_URL = 'https://boardgamegeek.com/login/api/v1';
+const BGG_LOGIN_URL = 'https://boardgamegeek.com/login/api/v1';
 const BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks';
 const SLEEP_TIME = 5 // seconds to wait before retrying BGG API request
 const DASH = '–' // NOT the hyphen character on the keyboard
 const TAXONOMY_DELIMITER = '|';
 const BGG_API_BATCH_SIZE = 20; // 20 is the maximum number of games allowed by https://boardgamegeek.com/xmlapi2/thing
 const SUPABASE_BATCH_SIZE = 1000; // number of rows per INSERT/UPSERT requests
+  // (expansions will usually be slightly higher since we batch by base game)
 
 const timestamp = () => 
   format(new Date(), 'Pppp');
@@ -23,13 +24,20 @@ const log = text =>
 const cError = text =>
   console.error(`${timestamp()}: ${text}`)
 
+const arrayify = (x) => {
+  if (!Array.isArray(x)) {
+    x = [x];
+  }
+  return x;
+}
+
 const getZipUrl = async () => {
   
-  // Need to be logged in to get the oh-so-secret zipfile link
+  // Need to be logged in to BGG to get the oh-so-secret zipfile link
   const username = process.env.BGG_USERNAME;
   log(`Logging ${username} in to BGG...`);
   const loginResponse = await fetch(
-    LOGIN_URL, {
+    BGG_LOGIN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ credentials: {
@@ -81,12 +89,9 @@ const getZipUrl = async () => {
 }
 
 const hasTaxonomy = (game, type, value) => {
-  let links = game.link;
-  if (!Array.isArray(links)) {
-    links = [links];
-  }
+  let links = arrayify(game.link);
   return links.some(link =>
-    link.type === type && link.value === value
+    link?.type === type && link?.value === value
   );
 };
 
@@ -105,117 +110,109 @@ const xmlParser = new XMLParser({
 
 const parseXml = function* (text) {
   
-  let games = xmlParser.parse(text).items.item;
-  // Handle edge case where the final batch of games is a single item
-  if (!Array.isArray(games)) {
-    games = [games];
-  }
+  let games = arrayify(xmlParser.parse(text).items.item);
   for (const game of games) {
-    const row = { id: game.id };
-    
-    let names = game.name;
-    if (!Array.isArray(names)) {
-      names = [names];
-    }
-    for (const { type, value } of names) {
-      if (type === 'primary') {
-        row.name = value;
-      }
-    }
-    
-    for (const poll of game.poll) {
-      if (poll.name === 'suggested_playerage') {
-        // Avoid division by zero
-        if (poll.totalvotes === '0') {
-          row.suggested_playerage = null;
-        } else {
-          let ageSum = 0;
-          let voteSum = 0;
-          for (const { value, numvotes } of poll.results.result) {
-            const age = parseInt(value);
-            const voteCount = parseInt(numvotes);
-            ageSum += age * voteCount;
-            voteSum += voteCount;
-          }
-          row.suggested_playerage = ageSum / voteSum; // weighted average
+    try {
+      const row = { id: game.id };
+      
+      let names = arrayify(game.name);
+      for (const { type, value } of names) {
+        if (type === 'primary') {
+          row.name = value;
         }
       }
-    }
-    
-    let summaries = game['poll-summary'];
-    if (!Array.isArray(summaries)) {
-      summaries = [summaries];
-    }
-    for (const summary of summaries) {
-      if (summary.name === 'suggested_numplayers') {
-        for (const { name, value } of summary.result) {
-          if (name === 'bestwith') {
-            row.best_players = parseSuggestedPlayers(value);
-          } else if (name === 'recommmendedwith') {
-            row.rec_players = parseSuggestedPlayers(value);
+      
+      for (const poll of arrayify(game.poll)) {
+        if (poll?.name === 'suggested_playerage') {
+          // Avoid division by zero
+          if (poll.totalvotes === '0') {
+            row.suggested_playerage = null;
+          } else {
+            let ageSum = 0;
+            let voteSum = 0;
+            for (const { value, numvotes } of poll.results.result) {
+              const age = parseInt(value);
+              const voteCount = parseInt(numvotes);
+              ageSum += age * voteCount;
+              voteSum += voteCount;
+            }
+            row.suggested_playerage = ageSum / voteSum; // weighted average
           }
         }
       }
-    }
-    row.is_expansion = game.type === 'boardgameexpansion';
-    const expansions = [];
-    let links = game.link;
-    if (!Array.isArray(links)) {
-      links = [links];
-    }
-    // Don't get expansions of expansions, just of base games
-    if (!row.is_expansion) {
-      for (const link of links) {
-        if (link.type === 'boardgameexpansion') {
-          expansions.push({
-            base_id: row.id,
-            expansion_id: link.id,
-          });
+      
+      let summaries = arrayify(game['poll-summary']);
+      for (const summary of summaries) {
+        if (summary?.name === 'suggested_numplayers') {
+          for (const { name, value } of summary.result) {
+            if (name === 'bestwith') {
+              row.best_players = parseSuggestedPlayers(value);
+            } else if (name === 'recommmendedwith') {
+              row.rec_players = parseSuggestedPlayers(value);
+            }
+          }
         }
       }
-    }
-    const ratings = game.statistics.ratings;
-    let ranks = ratings.ranks.rank;
-    if (ranks) {
-      if (!Array.isArray(ranks)) {
-        ranks = [ranks];
-      }
-      for (const { type, name, value } of ranks) {
-        if (type === 'subtype' && name === 'boardgame') {
-          row.rank = parseInt(value) || null;
+      row.is_expansion = game.type === 'boardgameexpansion';
+      const expansions = [];
+      let links = arrayify(game.link);
+      // Don't get expansions of expansions, just of base games
+      if (!row.is_expansion) {
+        for (const link of links) {
+          if (link?.type === 'boardgameexpansion') {
+            expansions.push({
+              base_id: row.id,
+              expansion_id: link.id,
+            });
+          }
         }
       }
+      const ratings = game.statistics?.ratings;
+      let ranks = ratings?.ranks?.rank;
+      if (ranks) {
+        for (const { type, name, value } of arrayify(ranks)) {
+          if (type === 'subtype' && name === 'boardgame') {
+            row.rank = parseInt(value) || null;
+          }
+        }
+      }
+      // NULL out 0 for filtering purposes (0 means no value)
+      row.average = parseFloat(ratings?.average.value) || null;
+      row.bayesaverage = parseFloat(ratings?.bayesaverage.value) || null;
+      row.complexity = parseFloat(ratings?.averageweight.value) || null;
+      row.year_published = parseInt(game.yearpublished?.value) || null;
+      row.minplaytime = parseInt(game.minplaytime?.value) || null;
+      row.maxplaytime = parseInt(game.maxplaytime?.value) || null;
+      row.playing_time = parseInt(game.playingtime?.value) || null;
+      row.min_players = parseInt(game.minplayers?.value) || null;
+      row.max_players = parseInt(game.maxplayers?.value) || null;
+      row.min_age = parseInt(game.minage?.value) || null;
+      row.image_url = game.image;
+      row.thumbnail = game.thumbnail;
+      row.audio_url = null; // We will probably never use this column
+      row.description = null; // Leaving blank until we have more database storage
+      row.is_cooperative = hasTaxonomy(game, 'boardgamemechanic', 'Cooperative Game');
+      row.is_teambased = hasTaxonomy(game, 'boardgamemechanic', 'Team-Based Game');
+      // BGG taxonomy
+      for (const type of ['boardgamecategory', 'boardgamemechanic', 'boardgamefamily']) {
+        row[type] = links
+          .filter(link => link?.type === type)
+          .map(link => link?.value)
+          .join(TAXONOMY_DELIMITER);
+      }
+      yield {
+        game: row,
+        expansions: expansions,
+      };
+    } catch (error) {
+      cError(Error);
+      log('Game:')
+      log(game);
+      log('Full XML response:');
+      log(text);
     }
-    // NULL out 0 for filtering purposes (0 means no value)
-    row.average = parseFloat(ratings.average.value) || null;
-    row.bayesaverage = parseFloat(ratings.bayesaverage.value) || null;
-    row.complexity = parseFloat(ratings.averageweight.value) || null;
-    row.year_published = parseInt(game.yearpublished.value) || null;
-    row.minplaytime = parseInt(game.minplaytime.value) || null;
-    row.maxplaytime = parseInt(game.maxplaytime.value) || null;
-    row.playing_time = parseInt(game.playingtime.value) || null;
-    row.min_players = parseInt(game.minplayers.value) || null;
-    row.max_players = parseInt(game.maxplayers.value) || null;
-    row.min_age = parseInt(game.minage.value) || null;
-    row.image_url = game.image;
-    row.thumbnail = game.thumbnail;
-    row.audio_url = null; // We will probably never use this column
-    row.description = null; // Leaving blank until we have more database storage
-    row.is_cooperative = hasTaxonomy(game, 'boardgamemechanic', 'Cooperative Game');
-    row.is_teambased = hasTaxonomy(game, 'boardgamemechanic', 'Team-Based Game');
-    // BGG taxonomy
-    for (const type of ['boardgamecategory', 'boardgamemechanic', 'boardgamefamily']) {
-      row[type] = links
-        .filter(link => link.type === type)
-        .map(link => link.value)
-        .join(TAXONOMY_DELIMITER);
-    }
-    yield {
-      game: row,
-      expansions: expansions,
-    };
   }
-}
+};
 
 const createSupabaseClient = async () => {
   /* Use the service_role key (which bypasses RLS)
@@ -262,7 +259,8 @@ const bggApiCaller = async function* (csvParser) {
       try {
         bggResponse = await fetch(url);
       } catch (error) {
-        cError(`Network error: ${error}`);
+        cError(`Network error: ${error} - Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
+        await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
         continue;
       }
       const status = `${bggResponse.status} - ${bggResponse.statusText}`;
