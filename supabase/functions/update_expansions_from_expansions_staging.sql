@@ -1,9 +1,14 @@
+create or replace function update_expansions_from_expansions_staging()
+returns void
+language plpgsql
+security definer set search_path = ''
+as $$
 begin
 
-delete from public.expansions
-  where id is not null;
+truncate table public.expansions;
 
 insert into public.expansions
   select * from public.expansions_staging;
   
-end
+end;
+$$
