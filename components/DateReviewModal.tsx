@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Platform, TextInput, Switch } from 'react-native';
 import { format } from 'date-fns';
-import { ScrollableTimePicker } from './ScrollableTimePicker';
 
 interface EventOptions {
   location: string;
