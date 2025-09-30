@@ -14,6 +14,8 @@ const TAXONOMY_DELIMITER = '|';
 const BGG_API_BATCH_SIZE = 20; // 20 is the maximum number of games allowed by https://boardgamegeek.com/xmlapi2/thing
 const SUPABASE_BATCH_SIZE = 1000; // number of rows per INSERT/UPSERT requests
   // (expansions will usually be slightly higher since we batch by base game)
+const STAGING_TO_PROD_RETRIES = 10; // Number of retries for (games_staging -> games)
+  // and (expansions_staging -> expansions) (Games is somewhat likely to timeout, which may need to be adjusted.)
 
 const timestamp = () => 
   format(new Date(), 'Pppp');
@@ -95,13 +97,11 @@ const hasTaxonomy = (game, type, value) => {
   );
 };
 
-const parseSuggestedPlayers = (text) => (
-  text
-    .replaceAll(DASH, '-')
-    .split('')
-    .filter(c => '0123456789,+-'.includes(c))
-    .join('')
-);
+const parseSuggestedPlayers = (text) => text
+  .replaceAll(DASH, '-')
+  .split('')
+  .filter(c => '0123456789,+-'.includes(c))
+  .join('')
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -291,18 +291,44 @@ const updateFromStaging = async (supabase) => {
     supabase = await createSupabaseClient();
   }
   log('Updating games from games_staging...');
-  const gamesResponse = await supabase.rpc('update_games_from_games_staging');
-  if (gamesResponse.error) {
-    throw new Error(`Failed to update games: ${gamesResponse.error.message}`);
-  } else {
-    log('Updated games successfully!')
+  let attempts = 0;
+  while (1) {
+    try {
+      const gamesResponse = await supabase.rpc('update_games_from_games_staging');
+      if (gamesResponse.error) {
+        throw new Error(`Failed to update games: ${gamesResponse.error.message}`);
+      } else {
+        log('Updated games successfully!');
+        break;
+      }
+    } catch (err) {
+      attempts++;
+      if (attempts >= STAGING_TO_PROD_RETRIES) {
+        throw err;
+      } else {
+        log(`${err} - Attempt ${attempts} of ${STAGING_TO_PROD_RETRIES}`);
+      }
+    }
   }
-  log('Updating expansions from expansions_staging');
-  const expResponse = await supabase.rpc('update_expansions_from_expansions_staging');
-  if (expResponse.error) {
-    throw new Error(`Failed to update expansions: ${expResponse.error.message}`);
-  } else {
-    log('Updated expansions successfully!')
+  log('Updating expansions from expansions_staging...');
+  attempts = 0;
+  while (1) {
+    try {
+      const expResponse = await supabase.rpc('update_expansions_from_expansions_staging');
+      if (expResponse.error) {
+        throw new Error(`Failed to update expansions: ${expResponse.error.message}`);
+      } else {
+        log('Updated expansions successfully!');
+        break;
+      }
+    } catch (err) {
+      attempts++;
+      if (attempts >= STAGING_TO_PROD_RETRIES) {
+        throw err;
+      } else {
+        log(`${err} - Attempt ${attempts} of ${STAGING_TO_PROD_RETRIES}`);
+      }
+    }
   }
 }
 
@@ -318,7 +344,7 @@ const main = async () => {
   if (delGamesResponse.error) {
     throw new Error(delGamesResponse.error.message);
   } else {
-     log('Successfully deleted games_staging rows.');
+    log('Successfully deleted games_staging rows.');
   };
 
   log('Deleting all rows from expansions_staging...');
@@ -329,7 +355,7 @@ const main = async () => {
   if (delExpResponse.error) {
     throw new Error(delExpResponse.error.message);
   } else {
-     log('Successfully deleted expansions_staging rows.');
+    log('Successfully deleted expansions_staging rows.');
   };
 
   const [zipUrl, zipFilename] = await getZipUrl();
@@ -419,4 +445,4 @@ const main = async () => {
   await updateFromStaging(supabase);  
 };
 
-main();
+await main();
