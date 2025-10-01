@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Animated, Platform, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { useMemo } from 'react';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth, isSameDay, isBefore, startOfDay, min, max } from 'date-fns';
-import { CreateEventDetails } from './CreateEventDetails';
 import { DateReviewModal } from './DateReviewModal';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
@@ -34,12 +36,13 @@ interface EventOptions {
 }
 
 export default function CreateEventModal({ visible, onClose, onSuccess, pollId }: CreateEventModalProps) {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
   const router = useRouter();
   const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [eventLocation, setEventLocation] = useState('');
   const [defaultEventName, setDefaultEventName] = useState('');
-  const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [showDateReviewModal, setShowDateReviewModal] = useState(false);
   const [eventOptions, setEventOptions] = useState<EventOptions>({
     location: '',
@@ -49,7 +52,6 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [loading, setLoading] = useState(false);
-  const animation = useRef(new Animated.Value(0)).current;
 
   const resetForm = () => {
     setEventName('');
@@ -63,19 +65,13 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     });
     setSelectedDates([]);
     setCurrentMonth(new Date()); // Reset calendar to current month
-    setShowEventDetailsModal(false);
     setShowDateReviewModal(false);
   };
 
   useEffect(() => {
     if (visible) {
-      Animated.timing(animation, {
-        toValue: 1,
-        duration: 120, // Fast animation
-        useNativeDriver: true,
-      }).start();
+      announceForAccessibility?.('Create event modal opened');
     } else {
-      animation.setValue(0);
       // Reset form when modal closes
       resetForm();
     }
@@ -85,22 +81,22 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   useEffect(() => {
     if (selectedDates.length === 0) {
       setDefaultEventName('');
-      if (!eventName || eventName.startsWith('GameNyte - ')) {
+      if (!eventName || eventName.startsWith('GameNyte: ')) {
         setEventName('');
       }
     } else if (selectedDates.length === 1) {
       const date = selectedDates[0];
-      const newDefaultName = `GameNyte - ${format(date, 'MMM/dd')}`;
+      const newDefaultName = `GameNyte: ${format(date, 'MMM/dd')}`;
       setDefaultEventName(newDefaultName);
-      if (!eventName || eventName.startsWith('GameNyte - ')) {
+      if (!eventName || eventName.startsWith('GameNyte: ')) {
         setEventName(newDefaultName);
       }
     } else {
       const minDate = min(selectedDates);
       const maxDate = max(selectedDates);
-      const newDefaultName = `GameNyte - ${format(minDate, 'MMM.dd')} - ${format(maxDate, 'MMM.dd')}`;
+      const newDefaultName = `GameNyte: ${format(minDate, 'MMM.dd')} - ${format(maxDate, 'MMM.dd')}`;
       setDefaultEventName(newDefaultName);
-      if (!eventName || eventName.startsWith('GameNyte - ')) {
+      if (!eventName || eventName.startsWith('GameNyte: ')) {
         setEventName(newDefaultName);
       }
     }
@@ -160,11 +156,6 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     return selectedDates.some(d => isSameDay(d, date));
   };
 
-  const handleEventDetailsSave = (name: string, description: string, location: string) => {
-    setEventName(name);
-    setEventDescription(description);
-    setEventLocation(location);
-  };
 
   const handleCreate = async (finalEventOptions: EventOptions) => {
     if (!eventName) {
@@ -249,168 +240,149 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     }
   };
 
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+
   if (!visible) return null;
 
   const calendarDays = getCalendarDays();
 
   return (
-    <Modal visible={visible} transparent animationType="none">
-      <View style={styles.overlay}>
-        <Animated.View
-          style={[
-            styles.dialog,
-            {
-              opacity: animation,
-              transform: [
-                {
-                  scale: animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.95, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {pollId ? 'Create Event for Poll' : 'Create Event'}
-            </Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={onClose}
-              accessibilityLabel="Close"
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={styles.overlay}>
+      <View
+        style={styles.dialog}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <TouchableOpacity
-              onPress={() => setShowEventDetailsModal(true)}
-              style={styles.input}
-            >
-              <Text style={eventName ? styles.eventNameText : styles.placeholderText}>
-                {eventName || 'Enter Event Details (Optional)'}
+            {/*{pollId ? 'Set for Poll' : 'Create Event'}*/}
+            Select Available Dates
+          </Text>
+          <TouchableOpacity
+            style={[styles.closeButton]}
+            onPress={() => { onClose(); announceForAccessibility?.('Event creation cancelled'); }}
+            accessibilityLabel="Close"
+            accessibilityHint="Closes the create event modal"
+            hitSlop={touchTargets.sizeTwenty}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/*<Text style={styles.availabilityLabel}>Set Available Dates</Text>
+            <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>*/}
+
+          {/* Calendar Container */}
+          <View style={styles.calendarContainer}>
+            {/* Month Navigation */}
+            <View style={styles.monthNavigation}>
+              <TouchableOpacity
+                style={styles.monthNavButton}
+                onPress={() => { navigateMonth('prev'); announceForAccessibility?.(`Month changed to ${format(subMonths(currentMonth, 1), 'MMMM yyyy')}`); }}
+                accessibilityLabel="Previous month"
+                accessibilityHint="Navigates to the previous month"
+                hitSlop={touchTargets.small}
+              >
+                <ChevronLeft size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+              <Text style={styles.monthText} accessibilityRole="header">
+                {format(currentMonth, 'MMMM yyyy')}
               </Text>
-              <View style={styles.eventDetailsPreview}>
-                <Text style={styles.eventDescriptionText} numberOfLines={2}>
-                  {eventDescription || ''}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <Text style={styles.availabilityLabel}>Set Available Dates</Text>
-            <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>
-
-            {/* Calendar Container */}
-            <View style={styles.calendarContainer}>
-              {/* Month Navigation */}
-              <View style={styles.monthNavigation}>
-                <TouchableOpacity
-                  style={styles.monthNavButton}
-                  onPress={() => navigateMonth('prev')}
-                >
-                  <ChevronLeft size={20} color="#666666" />
-                </TouchableOpacity>
-                <Text style={styles.monthText}>
-                  {format(currentMonth, 'MMMM yyyy')}
-                </Text>
-                <TouchableOpacity
-                  style={styles.monthNavButton}
-                  onPress={() => navigateMonth('next')}
-                >
-                  <ChevronRight size={20} color="#666666" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Day Headers */}
-              <View style={styles.dayHeaders}>
-                {days.map((day, index) => (
-                  <Text
-                    key={day}
-                    style={[
-                      styles.dayHeader,
-                      index === days.length - 1 && styles.lastDayHeader // Remove border from last header
-                    ]}
-                  >
-                    {day}
-                  </Text>
-                ))}
-              </View>
-
-              {/* Calendar Grid */}
-              <View style={styles.calendarGrid}>
-                {Array.from({ length: 5 }, (_, rowIndex) => (
-                  <View key={rowIndex} style={styles.calendarRow}>
-                    {Array.from({ length: 7 }, (_, colIndex) => {
-                      const dayIndex = rowIndex * 7 + colIndex;
-                      const dayData = calendarDays[dayIndex];
-                      if (!dayData) return (
-                        <TouchableOpacity
-                          key={colIndex}
-                          style={styles.calendarDay}
-                          disabled={true}
-                        />
-                      );
-
-                      const { date, isCurrentMonth, isPast } = dayData;
-                      const isSelected = isDateSelected(date);
-
-                      return (
-                        <TouchableOpacity
-                          key={colIndex}
-                          style={[
-                            styles.calendarDay,
-                            isSelected && styles.selectedDay,
-                            !isCurrentMonth && styles.otherMonthDay,
-                            isPast && styles.pastDay,
-                          ]}
-                          onPress={() => !isPast && toggleDateSelection(date)}
-                          disabled={isPast}
-                        >
-                          <Text
-                            style={[
-                              styles.dayText,
-                              isSelected && styles.selectedDayText,
-                              !isCurrentMonth && styles.otherMonthDayText,
-                              isPast && styles.pastDayText,
-                            ]}
-                          >
-                            {date.getDate()}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
+              <TouchableOpacity
+                style={styles.monthNavButton}
+                onPress={() => { navigateMonth('next'); announceForAccessibility?.(`Month changed to ${format(addMonths(currentMonth, 1), 'MMMM yyyy')}`); }}
+                accessibilityLabel="Next month"
+                accessibilityHint="Navigates to the next month"
+                hitSlop={touchTargets.small}
+              >
+                <ChevronRight size={20} color={colors.textMuted} />
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={[styles.createButton, selectedDates.length === 0 && styles.createButtonDisabled]}
-              onPress={() => selectedDates.length > 0 && setShowDateReviewModal(true)}
-              disabled={selectedDates.length === 0}
-            >
-              <Text style={styles.createButtonText}>Select Dates</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </Animated.View>
-      </View>
+            {/* Day Headers */}
+            <View style={styles.dayHeaders}>
+              {days.map((day, index) => (
+                <Text
+                  key={day}
+                  style={[
+                    styles.dayHeader,
+                    index === days.length - 1 && styles.lastDayHeader // Remove border from last header
+                  ]}
+                >
+                  {day}
+                </Text>
+              ))}
+            </View>
 
-      {/* Event Details Modal */}
-      <CreateEventDetails
-        isVisible={showEventDetailsModal}
-        onClose={() => setShowEventDetailsModal(false)}
-        onSave={handleEventDetailsSave}
-        currentEventName={eventName}
-        currentDescription={eventDescription}
-        currentLocation={eventLocation}
-      />
+            {/* Calendar Grid */}
+            <View style={styles.calendarGrid}>
+              {Array.from({ length: 5 }, (_, rowIndex) => (
+                <View key={rowIndex} style={styles.calendarRow}>
+                  {Array.from({ length: 7 }, (_, colIndex) => {
+                    const dayIndex = rowIndex * 7 + colIndex;
+                    const dayData = calendarDays[dayIndex];
+                    if (!dayData) return (
+                      <TouchableOpacity
+                        key={colIndex}
+                        style={styles.calendarDay}
+                        disabled={true}
+                      />
+                    );
+
+                    const { date, isCurrentMonth, isPast } = dayData;
+                    const isSelected = isDateSelected(date);
+
+                    return (
+                      <TouchableOpacity
+                        key={colIndex}
+                        style={[
+                          styles.calendarDay,
+                          isSelected && styles.selectedDay,
+                          !isCurrentMonth && styles.otherMonthDay,
+                          isPast && styles.pastDay,
+                        ]}
+                        onPress={() => { if (!isPast) { toggleDateSelection(date); announceForAccessibility?.(`${format(date, 'MMM d')} ${isSelected ? 'deselected' : 'selected'}`); } }}
+                        disabled={isPast}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${format(date, 'EEEE, MMMM d')}${isPast ? ', unavailable' : ''}`}
+                        accessibilityHint={isPast ? undefined : 'Toggles date selection'}
+                        hitSlop={touchTargets.small}
+                      >
+                        <Text
+                          style={[
+                            styles.dayText,
+                            isSelected && styles.selectedDayText,
+                            !isCurrentMonth && styles.otherMonthDayText,
+                            isPast && styles.pastDayText,
+                          ]}
+                        >
+                          {date.getDate()}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          </View>
+
+        </ScrollView>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.createButton, selectedDates.length === 0 && styles.createButtonDisabled]}
+            onPress={() => { if (selectedDates.length > 0) { setShowDateReviewModal(true); announceForAccessibility?.('Review selected dates'); } }}
+            disabled={selectedDates.length === 0}
+            accessibilityLabel="Review selected dates"
+            accessibilityHint="Opens the review screen to finalize event details"
+            hitSlop={touchTargets.small}
+          >
+            <Text style={styles.createButtonText}>Select Dates</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => { onClose(); announceForAccessibility?.('Event creation cancelled'); }} style={styles.cancelButton} accessibilityLabel="Cancel" accessibilityHint="Closes the create event modal" hitSlop={touchTargets.small}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Date Review Modal */}
       <DateReviewModal
@@ -421,23 +393,31 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
         eventOptions={eventOptions}
         defaultLocation={eventLocation}
         pollId={pollId}
+        eventName={eventName}
+        eventDescription={eventDescription}
+        eventLocation={eventLocation}
+        onEventDetailsSave={(name, description, location) => {
+          setEventName(name);
+          setEventDescription(description);
+          setEventLocation(location);
+        }}
       />
-    </Modal>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   overlay: {
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: Platform.OS === 'web' ? 20 : 10,
+    padding: 16,
   },
   dialogContainer: {
     maxWidth: 400,
@@ -450,9 +430,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
     width: '100%',
+    maxWidth: 800,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -462,7 +443,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    maxHeight: '85%',
+    maxHeight: '100%',
   },
   header: {
     flexDirection: 'row',
@@ -470,110 +451,80 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e5ea',
+    borderBottomColor: colors.border,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
   },
   closeButton: {
-    padding: 4,
-    borderRadius: 8,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
+    paddingHorizontal: 4,
   },
   closeButtonText: {
-    fontSize: 16,
-    color: '#666666',
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
+    fontFamily: typography.getFontFamily('semibold'),
   },
   content: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  input: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
+  footer: {
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 16,
+    paddingRight: 16,
+    backgroundColor: colors.card,
   },
-
   createButton: {
-    backgroundColor: '#0070f3',
+    backgroundColor: colors.primary,
     padding: 12,
     borderRadius: 8,
-    marginTop: 16,
     alignItems: 'center'
   },
   createButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.border,
   },
   cancelButton: {
     marginTop: 12,
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
   },
 
-  eventNameText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#888',
-  },
-  eventDetailsPreview: {
-    marginTop: 4,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    minHeight: 0,
-  },
-  eventDescriptionText: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 2,
-  },
   availabilityLabel: {
     marginTop: 16,
     marginBottom: 4,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
+    fontFamily: typography.getFontFamily('semibold'),
   },
   availabilitySublabel: {
     marginBottom: 8,
-    fontSize: 14,
-    color: '#666666',
-    fontFamily: 'Poppins-Regular',
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
+    fontFamily: typography.getFontFamily('normal'),
   },
   createButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
+    color: '#ffffff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
   },
   cancelButtonText: {
-    color: '#ff9654',
-    fontWeight: 'bold',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
+    color: colors.accent,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
   },
   calendarContainer: {
-    marginTop: 16,
-    marginBottom: 16,
     padding: 10,
-    backgroundColor: '#f7f7fa',
+    backgroundColor: colors.background,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e1e5ea',
+    borderColor: colors.border,
     width: '100%',
     maxWidth: 350, // Fixed maximum width
     alignSelf: 'center',
@@ -589,10 +540,9 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   monthText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: typography.fontSize.headline,
+    color: colors.text,
+    fontFamily: typography.getFontFamily('semibold'),
   },
   dayHeaders: {
     flexDirection: 'row',
@@ -604,61 +554,59 @@ const styles = StyleSheet.create({
     height: 30, // Reduced height for headers
     textAlign: 'center',
     lineHeight: 30,
-    backgroundColor: '#e1e5ea',
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
+    backgroundColor: colors.border,
+    fontSize: typography.fontSize.caption1,
+    color: colors.text,
     borderRightWidth: 1,
-    borderRightColor: '#d1d5db',
+    borderRightColor: colors.border,
   },
   dayHeaderText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.caption1,
+    color: colors.text,
   },
   lastDayHeader: {
     borderRightWidth: 0, // Remove border from last header
   },
   calendarGrid: {
     width: '100%', // Use full width of container
-    height: 250, // Fixed height for 5 rows (50 * 5 = 250)
+    height: 220, // Fixed height for 5 rows (44 * 5 = 220)
   },
   calendarRow: {
     flexDirection: 'row',
     width: '100%',
-    height: 50, // Fixed height per row (250 ÷ 5 = 50)
+    height: 44, // Fixed height per row (220 ÷ 5 = 44)
   },
   calendarDay: {
     flex: 1, // Equal width for each day cell
-    height: 50, // Match row height
+    height: 44, // Match row height
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e1e5ea',
+    borderColor: colors.border,
     position: 'relative',
   },
   otherMonthDay: {
     opacity: 0.5,
   },
   pastDay: {
-    backgroundColor: '#f0f0f0',
-    borderColor: '#f0f0f0',
+    backgroundColor: colors.background,
+    borderColor: colors.background,
   },
   selectedDay: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
+    backgroundColor: colors.success,
+    borderColor: colors.success,
   },
   dayText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: typography.fontSize.subheadline,
+    color: colors.text,
   },
   otherMonthDayText: {
-    color: '#888',
+    color: colors.textMuted,
   },
   pastDayText: {
-    color: '#888',
+    color: colors.textMuted,
   },
   selectedDayText: {
-    color: 'white',
+    color: '#ffffff',
   },
 });

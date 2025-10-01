@@ -1,12 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, useColorScheme, Platform } from 'react-native';
 
 interface AccessibilityContextType {
   isScreenReaderEnabled: boolean;
   isReduceMotionEnabled: boolean;
   isBoldTextEnabled: boolean;
   isGrayscaleEnabled: boolean;
+  colorScheme: 'light' | 'dark' | null | undefined;
+  fontScale: number;
   announceForAccessibility: (message: string) => void;
+  getScaledFontSize: (baseSize: number) => number;
+  toggleTheme: () => void;
+  isManualTheme: boolean;
 }
 
 const AccessibilityContext = createContext<AccessibilityContextType | undefined>(undefined);
@@ -16,6 +21,13 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isReduceMotionEnabled, setIsReduceMotionEnabled] = useState(false);
   const [isBoldTextEnabled, setIsBoldTextEnabled] = useState(false);
   const [isGrayscaleEnabled, setIsGrayscaleEnabled] = useState(false);
+  const [fontScale, setFontScale] = useState(1);
+  const [manualTheme, setManualTheme] = useState<'light' | 'dark' | null>(null);
+  const systemColorScheme = useColorScheme();
+
+  // Use manual theme if set, otherwise use system preference
+  const colorScheme = manualTheme || systemColorScheme;
+  const isManualTheme = manualTheme !== null;
 
   useEffect(() => {
     // Check initial accessibility states
@@ -26,10 +38,22 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         const boldText = await AccessibilityInfo.isBoldTextEnabled();
         const grayscale = await AccessibilityInfo.isGrayscaleEnabled();
 
+        // getFontScale is only available on Android
+        let fontScaleValue = 1;
+        if (Platform.OS === 'android') {
+          try {
+            // @ts-ignore - getFontScale is not in TypeScript definitions but exists on Android
+            fontScaleValue = await AccessibilityInfo.getFontScale();
+          } catch (error) {
+            console.warn('getFontScale not available:', error);
+          }
+        }
+
         setIsScreenReaderEnabled(screenReader);
         setIsReduceMotionEnabled(reduceMotion);
         setIsBoldTextEnabled(boldText);
         setIsGrayscaleEnabled(grayscale);
+        setFontScale(fontScaleValue);
       } catch (error) {
         console.warn('Error checking accessibility states:', error);
       }
@@ -58,17 +82,41 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsGrayscaleEnabled
     );
 
+    // fontScaleChanged is only available on Android
+    const fontScaleSubscription = Platform.OS === 'android'
+      ? AccessibilityInfo.addEventListener('fontScaleChanged' as any, (event: any) => setFontScale(event))
+      : null;
+
     return () => {
       screenReaderSubscription?.remove();
       reduceMotionSubscription?.remove();
       boldTextSubscription?.remove();
       grayscaleSubscription?.remove();
+      fontScaleSubscription?.remove();
     };
   }, []);
 
   const announceForAccessibility = (message: string) => {
     if (isScreenReaderEnabled) {
       AccessibilityInfo.announceForAccessibility(message);
+    }
+  };
+
+  const getScaledFontSize = (baseSize: number): number => {
+    return Math.round(baseSize * fontScale);
+  };
+
+  const toggleTheme = () => {
+    try {
+      if (manualTheme === null) {
+        // First manual toggle - use opposite of system preference
+        setManualTheme(systemColorScheme === 'dark' ? 'light' : 'dark');
+      } else {
+        // Toggle between light and dark
+        setManualTheme(manualTheme === 'dark' ? 'light' : 'dark');
+      }
+    } catch (error) {
+      console.error('Error toggling theme:', error);
     }
   };
 
@@ -79,7 +127,12 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         isReduceMotionEnabled,
         isBoldTextEnabled,
         isGrayscaleEnabled,
+        colorScheme,
+        fontScale,
         announceForAccessibility,
+        getScaledFontSize,
+        toggleTheme,
+        isManualTheme,
       }}
     >
       {children}

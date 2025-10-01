@@ -1,7 +1,7 @@
 // event/EventScreen.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/LoadingState';
@@ -12,6 +12,7 @@ import { Poll, PollEvent, VoteEvent } from '@/types/poll';
 import { EventDateCard } from '@/components/EventDateCard';
 import { EventVoteType } from '@/components/eventVotingOptions';
 import Toast from 'react-native-toast-message';
+import { useTheme } from '@/hooks/useTheme';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -44,6 +45,7 @@ interface Event extends Poll {
 export default function EventScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { colors, typography } = useTheme();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [eventDates, setEventDates] = useState<PollEvent[]>([]);
@@ -54,6 +56,8 @@ export default function EventScreen() {
   const [userVotes, setUserVotes] = useState<Record<string, EventVoteType>>({});
   const [voteCounts, setVoteCounts] = useState<Record<string, { yes: number; no: number; maybe: number }>>({});
   const [voting, setVoting] = useState(false);
+
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
 
 
@@ -296,7 +300,12 @@ export default function EventScreen() {
     <ScrollView style={styles.container}>
       {/* Event Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/events')}
+          accessibilityLabel="Back to events"
+          accessibilityRole="button"
+          accessibilityHint="Returns to the events list"
+        >
           <Text style={styles.backLink}>&larr; Back to Events</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{event.title}</Text>
@@ -314,7 +323,12 @@ export default function EventScreen() {
           <Text style={styles.signUpText}>
             Want to create your own events?{' '}
           </Text>
-          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+          <TouchableOpacity
+            onPress={() => router.push('/auth/register')}
+            accessibilityLabel="Sign up for free"
+            accessibilityRole="button"
+            accessibilityHint="Opens the registration screen to create an account"
+          >
             <Text style={styles.signUpLink}>Sign up for free</Text>
           </TouchableOpacity>
         </View>
@@ -353,9 +367,9 @@ export default function EventScreen() {
           };
           let displayTime;
           if (event.use_same_time && (event.start_time || event.end_time)) {
-            displayTime = getDisplayTime(event.start_time, event.end_time);
+            displayTime = getDisplayTime(event.start_time || null, event.end_time || null);
           } else {
-            displayTime = getDisplayTime(eventDate.start_time, eventDate.end_time);
+            displayTime = getDisplayTime(eventDate.start_time || null, eventDate.end_time || null);
           }
 
           return (
@@ -382,6 +396,9 @@ export default function EventScreen() {
       <TouchableOpacity
         style={styles.resultsButton}
         onPress={() => router.push({ pathname: '/event/[id]/results', params: { id: event.id } })}
+        accessibilityLabel="View full results"
+        accessibilityRole="button"
+        accessibilityHint="Shows detailed voting results for this event"
       >
         <Text style={styles.resultsButtonText}>View Full Results</Text>
       </TouchableOpacity>
@@ -389,38 +406,39 @@ export default function EventScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
   },
   header: {
     padding: 20,
-    backgroundColor: '#1a2b5f',
+    backgroundColor: colors.primary,
   },
   title: {
-    fontSize: 24,
-    fontFamily: 'Poppins-Bold',
-    color: '#fff',
+    fontSize: typography.fontSize.title2,
+    fontFamily: typography.getFontFamily('bold'),
+    color: colors.card,
     marginBottom: 8,
+    lineHeight: typography.lineHeight.tight * typography.fontSize.title1,
   },
   description: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#fff',
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.card,
     marginBottom: 12,
-    lineHeight: 22,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   subtitle: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#fff',
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.card,
     opacity: 0.8,
   },
   backLink: {
-    color: '#1d4ed8',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
+    color: colors.accent,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
     marginBottom: 8,
     textDecorationLine: 'underline',
     alignSelf: 'flex-start',
@@ -433,21 +451,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   signUpText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
   },
   signUpLink: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ff9654',
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.accent,
     textDecorationLine: 'underline',
   },
   detailsSection: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e5ea',
+    borderBottomColor: colors.border,
   },
   detailRow: {
     flexDirection: 'row',
@@ -455,50 +473,50 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   detailText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.text,
     marginLeft: 12,
   },
-
   sectionTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.primary,
     marginBottom: 16,
+    lineHeight: typography.lineHeight.tight * typography.fontSize.title3,
   },
-
   datesSection: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e5ea',
+    borderBottomColor: colors.border,
   },
   loginPrompt: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.tints.warningBg,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#f59e0b',
+    borderColor: colors.tints.warningBorder,
   },
   loginPromptText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#92400e',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.warning,
     textAlign: 'center',
   },
-
   resultsButton: {
-    backgroundColor: '#ff9654',
-    borderRadius: 8,
+    backgroundColor: colors.accent,
+    borderRadius: 12,
     padding: 16,
     margin: 20,
     alignItems: 'center',
+    minHeight: 44,
   },
   resultsButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: 'white',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.card,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LoadingState } from '@/components/LoadingState';
@@ -9,10 +9,12 @@ import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useRef } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function PollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { colors, typography, touchTargets } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
   // --- Real-time vote listening ---
@@ -85,14 +87,15 @@ export default function PollResultsScreen() {
     );
   }
 
+  // Ranking Icons are not in use. Can update with them if needed.
   const getRankingIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Trophy size={24} color="#FFC300" />; // Higher-contrast gold
+        return <Trophy size={24} color={colors.warning} />; // Gold for 1st place
       case 2:
-        return <Medal size={24} color="#A6B1C2" />;
+        return <Medal size={24} color={colors.tints.neutral} />; // Silver for 2nd place
       case 3:
-        return <Award size={24} color="#CD7F32" />;
+        return <Award size={24} color={colors.tints.accent} />; // Bronze for 3rd place
       default:
         return null;
     }
@@ -101,13 +104,13 @@ export default function PollResultsScreen() {
   const getRankingColor = (rank: number) => {
     switch (rank) {
       case 1:
-        return '#FFC300'; // Higher-contrast gold
+        return colors.warning; // Gold for 1st place
       case 2:
-        return '#A6B1C2';
+        return colors.textMuted; // Silver for 2nd place
       case 3:
-        return '#CD7F32';
+        return colors.accent; // Bronze for 3rd place
       default:
-        return '#666666';
+        return colors.border; // Muted for other places
     }
   };
 
@@ -115,10 +118,17 @@ export default function PollResultsScreen() {
     router.push({ pathname: '/poll/[id]', params: { id: id as string } });
   };
 
+  const styles = getStyles(colors, typography);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/polls')}>
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/polls')}
+          accessibilityLabel="Back to Polls"
+          accessibilityRole="button"
+          accessibilityHint="Returns to the polls list"
+        >
           <Text style={styles.backLink}>&larr; Back to Polls</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Poll Results</Text>
@@ -126,28 +136,20 @@ export default function PollResultsScreen() {
       </View>
       {/* --- Banner notification for new votes --- */}
       {newVotes && (
-        <View style={{
-          backgroundColor: '#fffbe6',
-          borderBottomWidth: 1,
-          borderBottomColor: '#ffe58f',
-          padding: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
-        }}>
-          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: 15 }}>
+        <View style={styles.newVotesBanner}>
+          <Text style={styles.newVotesText}>
             New votes have been cast! Pull to refresh or tap below.
           </Text>
-          <TouchableOpacity onPress={() => {
-            setNewVotes(false);
-            reload(); // Trigger a refetch of results
-          }}>
-            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: 16 }}>Dismiss</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setNewVotes(false);
+              reload(); // Trigger a refetch of results
+            }}
+            accessibilityLabel="Dismiss notification"
+            accessibilityRole="button"
+            accessibilityHint="Dismisses the new votes notification"
+          >
+            <Text style={styles.dismissButton}>Dismiss</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -157,7 +159,12 @@ export default function PollResultsScreen() {
           <Text style={styles.signUpText}>
             Want to create your own polls?{' '}
           </Text>
-          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+          <TouchableOpacity
+            onPress={() => router.push('/auth/register')}
+            accessibilityLabel="Sign up for free"
+            accessibilityRole="button"
+            accessibilityHint="Opens registration screen to create your own polls"
+          >
             <Text style={styles.signUpLink}>Sign up for free</Text>
           </TouchableOpacity>
         </View>
@@ -219,8 +226,11 @@ export default function PollResultsScreen() {
         <TouchableOpacity
           style={styles.backToVotingButton}
           onPress={navigateToVoting}
+          accessibilityLabel={hasVoted ? 'Back to Voting' : 'Vote Now'}
+          accessibilityRole="button"
+          accessibilityHint={hasVoted ? 'Returns to voting screen' : 'Opens voting screen to cast your vote'}
         >
-          <Vote size={20} color="#ffffff" />
+          <Vote size={20} color={colors.card} />
           <Text style={styles.backToVotingButtonText}>
             {hasVoted ? 'Back to Voting' : 'Vote Now'}
           </Text>
@@ -239,53 +249,53 @@ const getOrdinalSuffix = (num: number) => {
   return 'th';
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#1a2b5f',
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'Poppins-Bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#fff',
-    opacity: 0.8,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   scrollContent: {
-    paddingHorizontal: 8,
-    paddingBottom: 32,
-    width: '100%',
-    alignSelf: 'stretch',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  header: {
+    padding: 20,
+    backgroundColor: colors.primary,
+  },
+  title: {
+    fontSize: typography.fontSize.title2,
+    fontFamily: typography.getFontFamily('bold'),
+    color: colors.card,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.card,
+    opacity: 0.8,
   },
   resultsHeader: {
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 2,
-    borderBottomColor: '#e1e5ea',
+    borderBottomColor: colors.border,
   },
   resultsTitle: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 20,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.primary,
+    marginTop: 6,
     marginBottom: 4,
+    lineHeight: typography.lineHeight.tight * typography.fontSize.title3,
   },
   resultsSubtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.textMuted,
+    //lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   resultItem: {
     marginBottom: 20,
@@ -307,24 +317,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rankingNumber: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 16,
-    color: '#ffffff',
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.body,
+    color: colors.card,
     marginLeft: 4,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   rankingInfo: {
     flex: 1,
   },
   rankingLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.primary,
     marginBottom: 2,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   scoreText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.textMuted,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   emptyState: {
     flex: 1,
@@ -333,10 +346,11 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
     textAlign: 'center',
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   signUpContainer: {
     paddingHorizontal: 20,
@@ -346,71 +360,112 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   signUpText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   signUpLink: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ff9654',
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.accent,
     marginLeft: 4,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   bottomActionsContainer: {
-    padding: 20,
-    paddingTop: 0,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   backToVotingButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    width: '100%',
+    alignSelf: 'stretch',
+    minHeight: 44,
   },
   backToVotingButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.card,
+    marginLeft: 8,
   },
   commentsContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#ff9654',
+    borderColor: colors.accent,
   },
   commentsTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.primary,
     marginBottom: 8,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   commentItem: {
     marginBottom: 10,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.border,
   },
   commentVoter: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.accent,
     marginBottom: 2,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   commentText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   backLink: {
-    color: '#1d4ed8',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
+    color: colors.accent,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
     marginBottom: 8,
     textDecorationLine: 'underline',
     alignSelf: 'flex-start',
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
+  },
+  newVotesBanner: {
+    backgroundColor: colors.tints.warningBg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.tints.warningBorder,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  newVotesText: {
+    color: colors.warning,
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.subheadline,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
+  },
+  dismissButton: {
+    color: colors.primary,
+    fontFamily: typography.getFontFamily('bold'),
+    marginLeft: 16,
+    fontSize: typography.fontSize.subheadline,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
 });
+
+

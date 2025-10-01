@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
-import { VOTING_OPTIONS, ICON_MAP, SCORE_TO_VOTE_TYPE, getVoteTypeKeyFromScore, getIconColor } from './votingOptions';
+import { VOTING_OPTIONS, ICON_MAP, SCORE_TO_VOTE_TYPE, getVoteTypeKeyFromScore, getIconColor, getVoteBgColor } from './votingOptions';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useMemo } from 'react';
 import { Game } from '@/types/game';
 
 interface GameVotes {
@@ -14,14 +17,12 @@ interface PollGame extends Game {
   userVote?: number | null;
 }
 
-// Utility to get background color by score
-const getVoteBgColor = (score: number): string => {
-  if (score > 1) return '#bbf7d0'; // green-200
-  if (score < 0) return '#fecaca'; // red-200
-  return '#fef9c3'; // yellow-100
-};
+// Use centralized helper via votingOptions with theme tokens
 
 export function GameResultCard({ game }: { game: PollGame }) {
+  const { colors, typography } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const [showVoters, setShowVoters] = useState(false);
 
   // Ensure game.votes exists
@@ -74,13 +75,13 @@ export function GameResultCard({ game }: { game: PollGame }) {
 
                   // Check if IconComponent is a valid React component (can be function or object with render method)
                   if (IconComponent && (typeof IconComponent === 'function' || typeof IconComponent === 'object')) {
-                    return <IconComponent size={24} color={getIconColor(option.value)} />;
+                    return <IconComponent size={24} color={getIconColor(option.value, false, colors)} />;
                   }
 
                   // Return null if no icon found
                   return null;
                 })()}
-                <Text style={[styles.voteCount, { backgroundColor: getVoteBgColor(score), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, minWidth: 28, textAlign: 'center' }]}>{voteCount}</Text>
+                <Text style={[styles.voteCount, { backgroundColor: getVoteBgColor(score, true, colors) }]}>{voteCount}</Text>
               </View>
               <Text style={styles.voteLabel}>{option.label}</Text>
             </View>
@@ -91,15 +92,21 @@ export function GameResultCard({ game }: { game: PollGame }) {
         <View style={styles.votersSection}>
           <TouchableOpacity
             style={styles.showVotersButton}
-            onPress={() => setShowVoters(!showVoters)}
+            onPress={() => {
+              setShowVoters(!showVoters);
+              announceForAccessibility(showVoters ? 'Voters list hidden' : 'Voters list shown');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={showVoters ? 'Hide voters list' : 'Show voters list'}
+            accessibilityHint="Toggles display of voter names for each vote type"
           >
             <Text style={styles.showVotersText}>
               {showVoters ? 'Hide Voters' : 'Show Voters'}
             </Text>
             {showVoters ? (
-              <ChevronUp size={16} color="#ff9654" />
+              <ChevronUp size={16} color={colors.accent} />
             ) : (
-              <ChevronDown size={16} color="#ff9654" />
+              <ChevronDown size={16} color={colors.accent} />
             )}
           </TouchableOpacity>
           {showVoters && (
@@ -111,7 +118,7 @@ export function GameResultCard({ game }: { game: PollGame }) {
                       {(() => {
                         const IconComponent = ICON_MAP[option.icon];
                         if (IconComponent && (typeof IconComponent === 'function' || typeof IconComponent === 'object')) {
-                          return <IconComponent size={16} color={getIconColor(option.value)} />;
+                          return <IconComponent size={16} color={getIconColor(option.value, false, colors)} />;
                         }
                         return null;
                       })()}
@@ -133,9 +140,9 @@ export function GameResultCard({ game }: { game: PollGame }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     padding: 16,
     borderRadius: 12,
     shadowColor: '#000',
@@ -151,24 +158,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   name: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
-    lineHeight: 24,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.title3,
+    color: colors.primary,
+    lineHeight: typography.lineHeight.tight * typography.fontSize.title3,
     flex: 1,
   },
   scoreContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff5ef',
+    backgroundColor: colors.tints.accent,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   totalScore: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 16,
-    color: '#ff9654',
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.accent,
     marginLeft: 4,
   },
   votesContainer: {
@@ -187,20 +194,25 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   voteCount: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 16,
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.callout,
     marginTop: 4,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 28,
+    textAlign: 'center',
   },
   voteLabel: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     marginTop: 2,
     textAlign: 'center',
   },
   votersSection: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.border,
     paddingTop: 12,
   },
   showVotersButton: {
@@ -209,15 +221,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#fff5ef',
+    backgroundColor: colors.tints.accent,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ff9654',
+    borderColor: colors.accent,
+    minHeight: 44,
   },
   showVotersText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.accent,
     marginRight: 4,
   },
   votersDetails: {
@@ -232,21 +245,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   voteTypeLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.primary,
     marginLeft: 6,
   },
   votersList: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.subheadline,
     marginLeft: 22,
   },
   errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#ef4444',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.error,
     textAlign: 'center',
     marginTop: 8,
   },

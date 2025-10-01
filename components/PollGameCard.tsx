@@ -1,10 +1,10 @@
-// poll/components/GameCard.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions, Linking } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { SmilePlus, Smile, Laugh, HelpCircle, ThumbsDown, ThumbsUp, Heart, Star, Baby, Brain, ChevronDown, ChevronUp, ChevronRight, Link as LinkIcon } from 'lucide-react-native';
-
-import { VOTING_OPTIONS, ICON_MAP, VoteType, getIconColor } from './votingOptions';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Linking } from 'react-native';
+import { Star, Baby, Brain, ChevronDown, ChevronRight, Link as LinkIcon } from 'lucide-react-native';
+import { VOTING_OPTIONS, ICON_MAP, VoteType, getIconColor, getVoteBgColor, getVoteBorderColor } from './votingOptions';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useMemo } from 'react';
 
 // Helper function to get play time display with proper priority
 function getPlayTimeDisplay(game: Game): string {
@@ -34,14 +34,6 @@ function getPlayTimeDisplay(game: Game): string {
 const getScoreByVoteType = (voteType: string): number => {
   const option = VOTING_OPTIONS.find(opt => opt.value === voteType);
   return option ? option.score : 0;
-};
-
-// Utility to get background color by score
-const getVoteBgColor = (score: number, isSelected: boolean): string => {
-  if (!isSelected) return '#f5f5f5';
-  if (score > 2) return '#bbf7d0'; // green-200
-  if (score < 0) return '#fecaca'; // red-200
-  return '#fef9c3'; // yellow-100
 };
 
 interface Game {
@@ -75,21 +67,21 @@ interface Props {
 }
 
 export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props) => {
-  const { width } = useWindowDimensions();
-  const isMobile = width < 500;
-  const isSmallScreen = width < 400;
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  // Removed width-based responsiveness to rely on flexible layout per HIG
 
   const getButtonStyle = (voteType: string) => {
     const isSelected = selectedVote === voteType;
     const score = getScoreByVoteType(voteType);
     return [
       styles.voteButton,
-      isSmallScreen && styles.voteButtonSmall,
       {
-        backgroundColor: getVoteBgColor(score, isSelected),
-        borderColor: isSelected ? (score > 1 ? '#22c55e' : score < 0 ? '#ef4444' : '#eab308') : 'transparent',
+        backgroundColor: getVoteBgColor(score, isSelected, colors),
+        borderColor: getVoteBorderColor(score, isSelected, colors),
         borderWidth: isSelected ? 3 : 2,
-        shadowColor: isSelected ? (score > 1 ? '#22c55e' : score < 0 ? '#ef4444' : '#eab308') : 'transparent',
+        shadowColor: isSelected ? getVoteBorderColor(score, isSelected, colors) : 'transparent',
         shadowOpacity: isSelected ? 0.25 : 0,
         shadowRadius: isSelected ? 8 : 0,
         elevation: isSelected ? 4 : 0,
@@ -133,53 +125,68 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
   );
 
   return (
-    <Animated.View entering={FadeIn.delay(index * 100)} style={styles.card}>
-      <TouchableOpacity
-        style={styles.expandTouchable}
-        activeOpacity={0.85}
-        onPress={toggleExpanded}
-      >
-        {/* Main content area */}
-        <View style={[styles.mainContent, isMobile && styles.mainContentMobile]}>
-          {/* Game info and thumbnail row */}
-          <View style={[styles.gameInfoRow, isMobile && styles.gameInfoRowMobile]}>
-            <Image
-              source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
-              style={[
-                styles.thumbnail,
-                isMobile && styles.thumbnailMobile,
-                isSmallScreen && styles.thumbnailSmall
-              ]}
-              resizeMode="cover"
-            />
-            <View style={[styles.gameInfo, isMobile && styles.gameInfoMobile]}>
-              <Text style={[styles.name, isSmallScreen && styles.nameSmall]}>{game.name}</Text>
-              <Text style={[styles.details, isSmallScreen && styles.detailsSmall]}>
-                {playerCountText} • {getPlayTimeDisplay(game)}
-              </Text>
-            </View>
-            <View style={styles.chevronContainer}>
-              <Text style={[styles.infoText, isSmallScreen && styles.infoTextSmall]}>Info</Text>
-              {isExpanded ? (
-                <ChevronDown size={isSmallScreen ? 20 : 24} color="#ff9654" />
-              ) : (
-                <ChevronRight size={isSmallScreen ? 20 : 24} color="#ff9654" />
-              )}
-            </View>
+    <View style={styles.card}>
+      {/* Two-column layout */}
+      <View style={styles.mainContent}>
+        {/* Left column: thumbnail, info button */}
+        <View style={styles.leftColumn}>
+          <Image
+            source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/80?text=No+Image' }}
+            style={styles.thumbnail}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+            accessibilityLabel={`${game.name} thumbnail`}
+          />
+          <TouchableOpacity
+            style={styles.leftInfoButton}
+            onPress={toggleExpanded}
+            accessibilityRole="button"
+            accessibilityLabel={`${isExpanded ? 'Hide' : 'Show'} details for ${game.name}`}
+            accessibilityHint={isExpanded ? 'Hides game details' : 'Shows more information about the game'}
+            hitSlop={touchTargets.small}
+          >
+            <Text style={styles.infoText}>Info</Text>
+            {isExpanded ? (
+              <ChevronDown size={20} color={colors.accent} />
+            ) : (
+              <ChevronRight size={20} color={colors.accent} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Right column: name row, detail row, vote buttons row */}
+        <View style={styles.rightColumn}>
+          {/* Row 1: Name */}
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{game.name}</Text>
           </View>
 
-          {/* Voting buttons row - moved below game info for mobile */}
-          <View style={[styles.voteButtonsContainer, isMobile && styles.voteButtonsContainerMobile]}>
+          {/* Row 2: Details */}
+          <View style={styles.detailsInfoRow}>
+            <Text style={styles.details} numberOfLines={1} ellipsizeMode="tail">
+              {playerCountText} • {getPlayTimeDisplay(game)}
+            </Text>
+          </View>
+
+          {/* Row 3: Voting buttons */}
+          <View style={styles.voteButtonsContainer}>
             {VOTING_OPTIONS.map(option => {
               const IconComponent = ICON_MAP[option.icon];
               return (
                 <View key={option.value} style={styles.voteButtonWrapper}>
                   <TouchableOpacity
                     style={getButtonStyle(option.value)}
-                    onPress={() => onVote(game.id, option.value)}
+                    onPress={() => {
+                      onVote(game.id, option.value);
+                      announceForAccessibility(`Voted ${option.label} for ${game.name}`);
+                    }}
                     disabled={disabled}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${option.label} for ${game.name}`}
+                    accessibilityHint={`Vote ${option.label.toLowerCase()} on ${game.name}`}
+                    hitSlop={touchTargets.vote}
                   >
-                    <IconComponent size={isSmallScreen ? 16 : 20} color={getIconColor(option.value, selectedVote === option.value)} />
+                    <IconComponent size={20} color={getIconColor(option.value, selectedVote === option.value, colors)} />
                   </TouchableOpacity>
                   <Text style={styles.voteButtonLabel}>{option.label}</Text>
                 </View>
@@ -187,28 +194,29 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
             })}
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
 
       {isExpanded && (
-        <Animated.View
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(150)}
+        <View
           style={styles.expandedContent}
         >
           <View style={styles.detailsContainer}>
             <View style={styles.detailRow}>
-              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
-                <LinkIcon size={16} color="#1d4ed8" />
+              <View style={styles.detailItem}>
+                <LinkIcon size={16} color={colors.primary} />
                 <Text style={styles.detailLabel}>BGG Link</Text>
                 <Text
-                  style={[styles.detailValue, { color: '#1d4ed8', textDecorationLine: 'underline' }]}
+                  style={[styles.detailValue, { color: colors.primary, textDecorationLine: 'underline' }]}
                   onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}`)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open BoardGameGeek page for ${game.name}`}
+                  accessibilityHint="Opens in browser"
                 >
                   More Info
                 </Text>
               </View>
-              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
-                <Brain size={16} color="#8b5cf6" />
+              <View style={styles.detailItem}>
+                <Brain size={16} color={colors.primary} />
                 <Text style={styles.detailLabel}>Weight</Text>
                 <Text style={styles.detailValue}>
                   {game.complexity ?
@@ -218,15 +226,15 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               </View>
             </View>
             <View style={styles.detailRow}>
-              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
-                <Star size={16} color="#10b981" />
+              <View style={styles.detailItem}>
+                <Star size={16} color={colors.success} />
                 <Text style={styles.detailLabel}>Community Score</Text>
                 <Text style={styles.detailValue}>
                   {game.average ? game.average.toFixed(1) : 'N/A'}
                 </Text>
               </View>
-              <View style={[styles.detailItem, isSmallScreen && styles.detailItemSmall]}>
-                <Baby size={16} color="#e74c3c" />
+              <View style={styles.detailItem}>
+                <Baby size={16} color={colors.error} />
                 <Text style={styles.detailLabel}>Minimum Age</Text>
                 <Text style={styles.detailValue}>
                   {game.minAge ? `${game.minAge}+` : 'N/A'}
@@ -234,18 +242,19 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
               </View>
             </View>
           </View>
-        </Animated.View>
+        </View>
       )}
-    </Animated.View>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     marginBottom: 16,
     padding: 12,
+    position: 'relative',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -254,190 +263,130 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  mainContentMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 12,
-  },
-  gameInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
+    alignItems: 'flex-start',
     justifyContent: 'flex-start',
   },
-  gameInfoRowMobile: {
+  leftColumn: {
+    width: 80,
+    marginRight: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  leftInfoButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    marginTop: 15,
+  },
+  rightColumn: {
+    flex: 1,
+    minWidth: 0,
   },
   gameInfo: {
     flex: 1,
+    minWidth: 0,
   },
-  gameInfoMobile: {
-    flex: 1,
-    marginRight: 0,
+  nameRow: {
+    marginBottom: 2,
+  },
+  detailsInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   thumbnail: {
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.tints.neutral,
     marginRight: 12,
   },
-  thumbnailMobile: {
-    width: 60,
-    height: 60,
-    marginRight: 8,
-  },
-  thumbnailSmall: {
-    width: 48,
-    height: 48,
-    marginRight: 6,
-  },
-  chevronContainer: {
-    marginLeft: 'auto',
-    marginRight: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
   infoText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.caption1,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
+    marginRight: 4,
   },
-  infoTextSmall: {
-    fontSize: 10,
-  },
+
   infoTextEmphasis: {
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.primary,
   },
   name: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.primary,
     marginBottom: 4,
   },
-  nameSmall: {
-    fontSize: 13,
-    marginBottom: 2,
-  },
   details: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-  },
-  detailsSmall: {
-    fontSize: 11,
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
   },
   voteButtonsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginTop: 8,
   },
   voteButtonWrapper: {
     alignItems: 'center',
-    gap: 4,
-  },
-  voteButtonsContainerMobile: {
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    flex: 1,
   },
   voteButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   voteButtonLabel: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 10,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption2,
+    color: colors.textMuted,
     marginTop: 2,
     textAlign: 'center',
   },
-  voteButtonSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  voteButtonSelected: {
-    backgroundColor: '#ffffff',
-    borderWidth: 2,
-  },
-  thumbsUpSelected: {
-    borderColor: '#10b981',
-    backgroundColor: '#ecfdf5',
-  },
-  doubleThumbsUpSelected: {
-    borderColor: '#ec4899',
-    backgroundColor: '#fff7f9',
-  },
-  thumbsDownSelected: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
-  },
-  expandIcon: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    zIndex: 1,
-    backgroundColor: '#fff0f0',
-    borderRadius: 12,
-    padding: 4,
-  },
+
+
+
   expandedContent: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.border,
   },
   detailsContainer: {
-    gap: 16,
+    marginTop: 4,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
+    marginBottom: 16,
   },
   detailItem: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.tints.neutral,
     padding: 12,
     borderRadius: 8,
-  },
-  detailItemSmall: {
-    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: 16,
   },
   detailLabel: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     marginTop: 4,
     textAlign: 'center',
   },
   detailValue: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.primary,
     marginTop: 2,
     textAlign: 'center',
-  },
-  expandTouchable: {
-    borderRadius: 12,
-    overflow: 'hidden',
   },
 });

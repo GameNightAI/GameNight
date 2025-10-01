@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Platform, TextInput } from 'react-native';
-import { WheelPicker, WheelPickerWrapper, type WheelPickerOption } from '@/components/wheel-picker';
+import { WheelPicker, WheelPickerWrapper, type WheelPickerOption } from '@/components/xwheel-picker';
 import { format } from 'date-fns';
 
 interface TimeSelection {
@@ -41,8 +41,8 @@ export function ScrollableTimePicker({
   // const minuteScrollRef = useRef<ScrollView | null>(null);
 
   // Generate time options
-  const hours: WheelPickerOption[] = Array.from({ length: 12 }, (_, i) => ({value: i + 1, label: (i + 1).toString()}));
-  const minutes: WheelPickerOption[] = ([0, 15, 30, 45]).map(_ => ({value: _, label: _.toString().padStart(2, '0')}));
+  const hours: WheelPickerOption[] = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: (i + 1).toString() }));
+  const minutes: WheelPickerOption[] = ([0, 15, 30, 45]).map(_ => ({ value: _, label: _.toString().padStart(2, '0') }));
   const periods: WheelPickerOption[] = [
     { value: 'AM', label: 'AM' },
     { value: 'PM', label: 'PM' },
@@ -162,7 +162,7 @@ export function ScrollableTimePicker({
     } else {
       hour = selectedHour;
     }
-    
+
     return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, selectedMinute);
   };
 
@@ -276,23 +276,23 @@ export function ScrollableTimePicker({
     setIsManualInputFocused(false);
   }; */
 
-/*   const toggleManualInput = () => {
-    if (!isManualInputFocused) {
-      // Switching to manual input mode
-      setManualHourInput(selectedHour.toString());
-      setManualMinuteInput(selectedMinute.toString().padStart(2, '0'));
-      setManualPeriodInput(selectedPeriod);
-      setLastValidTime({
-        hour: selectedHour,
-        minute: selectedMinute,
-        period: selectedPeriod
-      });
-      setIsManualInputFocused(true);
-    } else {
-      // Switching to scroll wheel mode
-      setIsManualInputFocused(false);
-    }
-  }; */
+  /*   const toggleManualInput = () => {
+      if (!isManualInputFocused) {
+        // Switching to manual input mode
+        setManualHourInput(selectedHour.toString());
+        setManualMinuteInput(selectedMinute.toString().padStart(2, '0'));
+        setManualPeriodInput(selectedPeriod);
+        setLastValidTime({
+          hour: selectedHour,
+          minute: selectedMinute,
+          period: selectedPeriod
+        });
+        setIsManualInputFocused(true);
+      } else {
+        // Switching to scroll wheel mode
+        setIsManualInputFocused(false);
+      }
+    }; */
 
   /* const TimePickerColumn = ({
     items,
@@ -513,7 +513,7 @@ export function ScrollableTimePicker({
               </TouchableOpacity>
             )}
           </View> */}
-         
+
           <WheelPickerWrapper className={/*"time-wheel-picker-wrapper"*/null}>
             <WheelPicker
               options={hours}
@@ -558,9 +558,9 @@ export function ScrollableTimePicker({
               }}
             />
           </WheelPickerWrapper>
-          
+
           <label htmlFor="native-time">Sample time input:</label>
-          <input id="native-time" type="time" defaultValue="18:00"/>
+          <input id="native-time" type="time" defaultValue="18:00" />
 
           {/* Time Picker */}
           {/* <View style={styles.timePickerContainer}>

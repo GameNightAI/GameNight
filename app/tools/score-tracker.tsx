@@ -1,8 +1,11 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Alert } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Alert, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Plus, Minus, Trophy, Users, RotateCcw, X, Pen, Check } from 'lucide-react-native';
 import Animated, { FadeIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
-
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import ToolsFooter from '@/components/ToolsFooter';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
 interface Player {
@@ -20,6 +23,10 @@ interface Round {
 type GamePhase = 'setup' | 'playing' | 'finished';
 
 export default function ScoreTrackerScreen() {
+  const router = useRouter();
+  const { colors, typography, touchTargets } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets), [colors, typography, touchTargets]);
+  const { announceForAccessibility } = useAccessibility();
   const [gamePhase, setGamePhase] = useState<GamePhase>('setup');
   const [players, setPlayers] = useState<Player[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -29,6 +36,15 @@ export default function ScoreTrackerScreen() {
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingPlayerName, setEditingPlayerName] = useState('');
   const [confirmationVisible, setConfirmationVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
 
   const addPlayer = useCallback(() => {
     if (newPlayerName.trim() && !players.some(p => p.name.toLowerCase() === newPlayerName.trim().toLowerCase())) {
@@ -71,14 +87,16 @@ export default function ScoreTrackerScreen() {
 
   const submitRound = useCallback(() => {
     // Validate all scores are entered
-    const allScoresEntered = players.every(player => 
-      roundScores[player.id] !== undefined && 
-      roundScores[player.id].trim() !== '' &&
-      roundScores[player.id] !== '-'
+    const missingPlayers = players.filter(player =>
+      !roundScores[player.id] ||
+      roundScores[player.id].trim() === '' ||
+      roundScores[player.id] === '-'
     );
 
-    if (!allScoresEntered) {
-      Alert.alert('Incomplete Scores', 'Please enter scores for all players before continuing.');
+    if (missingPlayers.length > 0) {
+      const playerNames = missingPlayers.map(p => p.name).join(', ');
+      setToastMessage(`Please enter scores for: ${playerNames}`);
+      announceForAccessibility(`Missing scores. Please enter scores for: ${playerNames}`);
       return;
     }
 
@@ -91,7 +109,7 @@ export default function ScoreTrackerScreen() {
     const updatedPlayers = players.map(player => {
       const score = parseInt(roundScores[player.id]) || 0;
       roundData.scores[player.id] = score;
-      
+
       return {
         ...player,
         scores: [...player.scores, score],
@@ -135,8 +153,8 @@ export default function ScoreTrackerScreen() {
 
   const savePlayerName = useCallback(() => {
     if (editingPlayerName.trim() && editingPlayerId) {
-      setPlayers(prev => prev.map(player => 
-        player.id === editingPlayerId 
+      setPlayers(prev => prev.map(player =>
+        player.id === editingPlayerId
           ? { ...player, name: editingPlayerName.trim() }
           : player
       ));
@@ -163,30 +181,30 @@ export default function ScoreTrackerScreen() {
         <View style={styles.overlay} />
 
         <View style={styles.header}>
-          <Text style={styles.title}>Score Tracker</Text>
-          <Text style={styles.subtitle}>Add players to start tracking scores</Text>
+          <Text style={styles.title}>Add players to start tracking scores</Text>
         </View>
 
         <View style={styles.content}>
           <View style={styles.setupSection}>
-            <Text style={styles.sectionTitle}>Add Players</Text>
-            
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
                 value={newPlayerName}
                 onChangeText={setNewPlayerName}
                 placeholder="Enter player name"
-                placeholderTextColor="#666666"
+                placeholderTextColor={colors.textMuted}
                 onSubmitEditing={addPlayer}
                 maxLength={20}
+                accessibilityLabel="Enter player name"
               />
               <TouchableOpacity
                 style={[styles.addButton, !newPlayerName.trim() && styles.addButtonDisabled]}
                 onPress={addPlayer}
                 disabled={!newPlayerName.trim()}
+                accessibilityLabel="Add player"
+                accessibilityRole="button"
               >
-                <Plus color="#fff" size={20} />
+                <Plus color={colors.card} size={20} />
               </TouchableOpacity>
             </View>
 
@@ -206,16 +224,23 @@ export default function ScoreTrackerScreen() {
                         onSubmitEditing={savePlayerName}
                         autoFocus
                         maxLength={20}
+                        accessibilityLabel="Edit player name"
                       />
                       <TouchableOpacity
                         style={styles.saveButton}
                         onPress={savePlayerName}
+                        hitSlop={touchTargets.small}
+                        accessibilityLabel="Save player name"
+                        accessibilityRole="button"
                       >
                         <Check size={16} color="#10b981" />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.cancelButton}
                         onPress={cancelEditingPlayer}
+                        hitSlop={touchTargets.small}
+                        accessibilityLabel="Cancel editing"
+                        accessibilityRole="button"
                       >
                         <X size={16} color="#e74c3c" />
                       </TouchableOpacity>
@@ -229,12 +254,18 @@ export default function ScoreTrackerScreen() {
                         <TouchableOpacity
                           style={styles.editPlayerButton}
                           onPress={() => startEditingPlayer(player)}
+                          hitSlop={touchTargets.small}
+                          accessibilityLabel={`Edit ${player.name}`}
+                          accessibilityRole="button"
                         >
                           <Pen size={16} color="#ff9654" />
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.removeButton}
                           onPress={() => removePlayer(player.id)}
+                          hitSlop={touchTargets.small}
+                          accessibilityLabel={`Remove ${player.name}`}
+                          accessibilityRole="button"
                         >
                           <X size={16} color="#e74c3c" />
                         </TouchableOpacity>
@@ -256,12 +287,15 @@ export default function ScoreTrackerScreen() {
             <TouchableOpacity
               style={styles.startButton}
               onPress={startGame}
+              accessibilityLabel="Start game"
+              accessibilityRole="button"
             >
-              <Trophy size={24} color="#ffffff" />
+              <Trophy size={24} color={colors.card} />
               <Text style={styles.startButtonText}>Start Game</Text>
             </TouchableOpacity>
           )}
         </View>
+        <ToolsFooter currentScreen="tools" />
       </View>
     );
   }
@@ -269,34 +303,32 @@ export default function ScoreTrackerScreen() {
   if (gamePhase === 'playing') {
     return (
       <View style={styles.container}>
-        <View style={styles.gameHeader}>
-          <Text style={styles.gameTitle}>Round {currentRound}</Text>
-          <Text style={styles.gameSubtitle}>Enter scores for this round</Text>
+        <View style={[styles.header, styles.gameHeader]}>
+          <Text style={styles.title}>Round {currentRound}</Text>
+          <Text style={styles.subtitle}>Enter scores for this round</Text>
         </View>
 
         <ScrollView style={styles.gameContent} showsVerticalScrollIndicator={false}>
           {/* Current Round Score Entry */}
           <View style={styles.roundSection}>
-            <Text style={styles.roundTitle}>Round {currentRound} Scores</Text>
-            
             {players.map((player, index) => (
               <Animated.View
                 key={player.id}
                 entering={SlideInRight.delay(index * 100)}
-                style={styles.scoreInputRow}
+                style={styles.roundInputRow}
               >
-                <View style={styles.playerScoreInfo}>
-                  <Text style={styles.scorePlayerName}>{player.name}</Text>
-                  <Text style={styles.scorePlayerTotal}>Total: {player.total}</Text>
+                <View style={styles.roundPlayerInfo}>
+                  <Text style={styles.roundPlayerName}>{player.name}</Text>
+                  <Text style={styles.roundPlayerTotal}>Total: {player.total}</Text>
                 </View>
                 <TextInput
-                  style={styles.scoreInput}
+                  style={styles.roundScoreInput}
                   value={roundScores[player.id] || ''}
                   onChangeText={(text) => updateRoundScore(player.id, text)}
-                  placeholder="0"
-                  placeholderTextColor="#999999"
+                  placeholder=""
                   keyboardType="numeric"
                   maxLength={6}
+                  accessibilityLabel={`Enter score for ${player.name}`}
                 />
               </Animated.View>
             ))}
@@ -305,14 +337,18 @@ export default function ScoreTrackerScreen() {
               <TouchableOpacity
                 style={styles.submitRoundButton}
                 onPress={submitRound}
+                accessibilityLabel="Submit round scores"
+                accessibilityRole="button"
               >
                 <Text style={styles.submitRoundText}>Submit Round</Text>
               </TouchableOpacity>
-              
+
               {rounds.length > 0 && (
                 <TouchableOpacity
                   style={styles.finishGameButton}
                   onPress={() => setConfirmationVisible(true)}
+                  accessibilityLabel="Finish game"
+                  accessibilityRole="button"
                 >
                   <Text style={styles.finishGameText}>Finish Game</Text>
                 </TouchableOpacity>
@@ -322,18 +358,18 @@ export default function ScoreTrackerScreen() {
 
           {/* Score History */}
           {rounds.length > 0 && (
-            <View style={styles.historySection}>
-              <Text style={styles.historyTitle}>Score History</Text>
-              
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.historyScroll}>
-                <View style={styles.historyTable}>
+            <View style={styles.scoreSection}>
+              <Text style={styles.scoreTitle}>Score History</Text>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                <View style={styles.scoreTable}>
                   {/* Header Row */}
-                  <View style={styles.historyHeaderRow}>
-                    <Text style={styles.historyHeaderCellPlayer}>Player</Text>
-                    <Text style={styles.historyHeaderCellTotal}>Total</Text>
+                  <View style={styles.scoreHeaderRow}>
+                    <Text style={styles.scoreHeaderPlayer}>Player</Text>
+                    <Text style={styles.scoreHeaderTotal}>Total</Text>
                     {/* Show rounds in reverse order (latest first) */}
                     {[...rounds].reverse().map(round => (
-                      <Text key={round.roundNumber} style={styles.historyHeaderCell}>
+                      <Text key={round.roundNumber} style={styles.scoreHeaderRound}>
                         R{round.roundNumber}
                       </Text>
                     ))}
@@ -342,30 +378,26 @@ export default function ScoreTrackerScreen() {
                   {/* Player Rows */}
                   {sortedPlayers.map((player, index) => (
                     <View key={player.id} style={[
-                      styles.historyPlayerRow,
-                      index === 0 && styles.historyLeaderRow
+                      styles.scoreRow,
+                      index === 0 && styles.scoreLeaderRow
                     ]}>
-                      <Text style={[
-                        styles.historyPlayerName,
-                        index === 0 && styles.historyLeaderText
-                      ]}>
-                        {player.name}
-                        {index === 0 && ' 👑'}
-                      </Text>
-                      <Text style={[
-                        styles.historyTotalCell,
-                        index === 0 && styles.historyLeaderText
-                      ]}>
-                        {player.total}
-                      </Text>
+                      <View style={styles.scoreNameCell}>
+                        <Text style={styles.scoreNameText}>
+                          {player.name}
+                        </Text>
+                      </View>
+                      <View style={styles.scoreTotalCell}>
+                        <Text style={styles.scoreTotalText}>
+                          {player.total}
+                        </Text>
+                      </View>
                       {/* Show scores in reverse order (latest first) */}
                       {[...player.scores].reverse().map((score, scoreIndex) => (
-                        <Text key={scoreIndex} style={[
-                          styles.historyScoreCell,
-                          index === 0 && styles.historyLeaderText
-                        ]}>
-                          {score}
-                        </Text>
+                        <View key={scoreIndex} style={styles.scoreRoundCell}>
+                          <Text style={styles.scoreRoundText}>
+                            {score}
+                          </Text>
+                        </View>
                       ))}
                     </View>
                   ))}
@@ -374,7 +406,13 @@ export default function ScoreTrackerScreen() {
             </View>
           )}
         </ScrollView>
-        
+        {toastMessage && (
+          <Animated.View entering={FadeIn} exiting={SlideOutLeft} style={styles.toastContainer} accessibilityRole="alert">
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </Animated.View>
+        )}
+        <ToolsFooter currentScreen="tools" />
+
         <ConfirmationDialog
           isVisible={confirmationVisible}
           title="Finish Game"
@@ -382,7 +420,7 @@ export default function ScoreTrackerScreen() {
           onConfirm={finishGame}
           onCancel={() => setConfirmationVisible(false)}
           confirmButtonText="Finish"
-        />        
+        />
       </View>
     );
   }
@@ -390,37 +428,57 @@ export default function ScoreTrackerScreen() {
   // Finished game phase
   return (
     <View style={styles.container}>
-      <View style={styles.finishedHeader}>
-        <Text style={styles.finishedTitle}>Game Complete!</Text>
-        <Text style={styles.finishedSubtitle}>Final Scores</Text>
+      <View style={[styles.header, styles.resultsHeader]}>
+        <Text style={[styles.title, styles.resultsTitle]}>Game Complete!</Text>
+        <Text style={[styles.subtitle, styles.resultsSubtitle]}>Final Scores</Text>
       </View>
 
       <ScrollView style={styles.finishedContent} showsVerticalScrollIndicator={false}>
         <View style={styles.podiumSection}>
-          {sortedPlayers.slice(0, 3).map((player, index) => (
+          {/* 2nd Place - Left */}
+          {sortedPlayers[1] && (
             <Animated.View
-              key={player.id}
-              entering={FadeIn.delay(index * 200)}
-              style={[
-                styles.podiumItem,
-                index === 0 && styles.podiumFirst,
-                index === 1 && styles.podiumSecond,
-                index === 2 && styles.podiumThird,
-              ]}
+              key={sortedPlayers[1].id}
+              entering={FadeIn.delay(200)}
+              style={[styles.podiumItem, styles.podiumSecond]}
             >
-              <Text style={styles.podiumPosition}>
-                {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-              </Text>
-              <Text style={styles.podiumName}>{player.name}</Text>
-              <Text style={styles.podiumScore}>{player.total}</Text>
+              <Text style={styles.podiumPositionSecond}>🥈</Text>
+              <Text style={styles.podiumNameSecond}>{sortedPlayers[1].name}</Text>
+              <Text style={styles.podiumScoreSecond}>{sortedPlayers[1].total}</Text>
             </Animated.View>
-          ))}
+          )}
+
+          {/* 1st Place - Center */}
+          {sortedPlayers[0] && (
+            <Animated.View
+              key={sortedPlayers[0].id}
+              entering={FadeIn.delay(0)}
+              style={[styles.podiumItem, styles.podiumFirst]}
+            >
+              <Text style={styles.podiumPositionFirst}>🥇</Text>
+              <Text style={styles.podiumNameFirst}>{sortedPlayers[0].name}</Text>
+              <Text style={styles.podiumScoreFirst}>{sortedPlayers[0].total}</Text>
+            </Animated.View>
+          )}
+
+          {/* 3rd Place - Right */}
+          {sortedPlayers[2] && (
+            <Animated.View
+              key={sortedPlayers[2].id}
+              entering={FadeIn.delay(400)}
+              style={[styles.podiumItem, styles.podiumThird]}
+            >
+              <Text style={styles.podiumPositionThird}>🥉</Text>
+              <Text style={styles.podiumNameThird}>{sortedPlayers[2].name}</Text>
+              <Text style={styles.podiumScoreThird}>{sortedPlayers[2].total}</Text>
+            </Animated.View>
+          )}
         </View>
 
         {/* Complete Results Table */}
         <View style={styles.finalResultsSection}>
           <Text style={styles.finalResultsTitle}>Complete Results</Text>
-          
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.finalTable}>
               {/* Header */}
@@ -458,11 +516,15 @@ export default function ScoreTrackerScreen() {
       <TouchableOpacity
         style={styles.newGameButton}
         onPress={() => setConfirmationVisible(true)}
+        accessibilityLabel="Start new game"
+        accessibilityRole="button"
       >
-        <RotateCcw size={24} color="#ffffff" />
+        <RotateCcw size={24} color={colors.card} />
         <Text style={styles.newGameButtonText}>New Game</Text>
       </TouchableOpacity>
-      
+
+      <ToolsFooter currentScreen="tools" />
+
       <ConfirmationDialog
         isVisible={confirmationVisible}
         title="New Game"
@@ -471,577 +533,720 @@ export default function ScoreTrackerScreen() {
         onCancel={() => setConfirmationVisible(false)}
         confirmButtonText="Reset"
       />
-      
+
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-  },
-  backgroundImage: {
-    position: 'absolute',
-    width: '100%',
-    height: 200,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
-    backgroundColor: 'rgba(26, 43, 95, 0.85)',
-  },
-  header: {
-    paddingTop: 40,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 32,
-    color: '#ffffff',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#ffffff',
-    marginTop: 8,
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: 20,
-    padding: 20,
-  },
-  setupSection: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  addButton: {
-    width: 56,
-    height: 56,
-    backgroundColor: '#8b5cf6',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonDisabled: {
-    opacity: 0.7,
-  },
-  playersList: {
-    flex: 1,
-    maxHeight: 300,
-  },
-  playerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  editingContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  editInput: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
-  saveButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#ecfdf5',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#fef2f2',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playerInfo: {
-    flex: 1,
-  },
-  playerName: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#333333',
-  },
-  playerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editPlayerButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#fff5ef',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#fff0f0',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    textAlign: 'center',
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
-    marginTop: 32,
-  },
-  startButton: {
-    backgroundColor: '#8b5cf6',
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  startButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#ffffff',
-    marginLeft: 8,
-  },
-  gameHeader: {
-    backgroundColor: '#8b5cf6',
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  gameTitle: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 28,
-    color: '#ffffff',
-    textAlign: 'center',
-  },
-  gameSubtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#ffffff',
-    marginTop: 8,
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  gameContent: {
-    flex: 1,
-    padding: 20,
-  },
-  roundSection: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  roundTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  scoreInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  playerScoreInfo: {
-    flex: 1,
-  },
-  scorePlayerName: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#333333',
-  },
-  scorePlayerTotal: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginTop: 2,
-  },
-  scoreInput: {
-    width: 80,
-    backgroundColor: '#f7f9fc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#333333',
-    textAlign: 'center',
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
-  roundActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-  },
-  submitRoundButton: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  submitRoundText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-  },
-  finishGameButton: {
-    backgroundColor: '#ff9654',
-    borderRadius: 12,
-    padding: 16,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  finishGameText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-  },
-  historySection: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  historyTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  historyScroll: {
-    maxHeight: 300,
-  },
-  historyTable: {
-    minWidth: 300,
-  },
-  historyHeaderRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 2,
-    borderBottomColor: '#e1e5ea',
-    paddingBottom: 8,
-    marginBottom: 8,
-  },
-  historyHeaderCellPlayer: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    width: 80,
-    textAlign: 'center',
-  },
-  historyHeaderCellTotal: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    width: 60,
-    textAlign: 'center',
-  },
-  historyHeaderCell: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    width: 50,
-    textAlign: 'center',
-  },
-  historyPlayerRow: {
-    flexDirection: 'row',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  historyLeaderRow: {
-    backgroundColor: '#fff7ed',
-    borderRadius: 8,
-    marginHorizontal: -8,
-    paddingHorizontal: 8,
-  },
-  historyPlayerName: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#333333',
-    width: 80,
-    textAlign: 'center',
-  },
-  historyScoreCell: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#333333',
-    width: 50,
-    textAlign: 'center',
-  },
-  historyTotalCell: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 14,
-    color: '#333333',
-    width: 60,
-    textAlign: 'center',
-  },
-  historyLeaderText: {
-    color: '#ff9654',
-  },
-  gameFooter: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  resetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff0f0',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e74c3c',
-  },
-  resetButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#e74c3c',
-    marginLeft: 8,
-  },
-  finishedHeader: {
-    backgroundColor: '#10b981',
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  finishedTitle: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 32,
-    color: '#ffffff',
-    textAlign: 'center',
-  },
-  finishedSubtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 18,
-    color: '#ffffff',
-    marginTop: 8,
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  finishedContent: {
-    flex: 1,
-    padding: 20,
-  },
-  podiumSection: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    marginBottom: 32,
-    gap: 16,
-  },
-  podiumItem: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    minWidth: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  podiumFirst: {
-    backgroundColor: '#fff7ed',
-    borderWidth: 2,
-    borderColor: '#ff9654',
-    transform: [{ scale: 1.1 }],
-  },
-  podiumSecond: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 2,
-    borderColor: '#94a3b8',
-  },
-  podiumThird: {
-    backgroundColor: '#fef3c7',
-    borderWidth: 2,
-    borderColor: '#f59e0b',
-  },
-  podiumPosition: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  podiumName: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  podiumScore: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 20,
-    color: '#10b981',
-  },
-  finalResultsSection: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  finalResultsTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  finalTable: {
-    minWidth: 400,
-  },
-  finalHeaderRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 2,
-    borderBottomColor: '#e1e5ea',
-    paddingBottom: 12,
-    marginBottom: 12,
-  },
-  finalHeaderCell: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    width: 50,
-    textAlign: 'center',
-  },
-  finalHeaderCellPlayer: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    width: 80,
-    textAlign: 'center',
-  },
-  finalHeaderCellTotal: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    width: 60,
-    textAlign: 'center',
-  },
-  finalPlayerRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  finalRankCell: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 14,
-    color: '#8b5cf6',
-    width: 50,
-    textAlign: 'center',
-  },
-  finalPlayerNameCell: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#333333',
-    width: 80,
-    textAlign: 'center',
-  },
-  finalScoreCell: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#333333',
-    width: 50,
-    textAlign: 'center',
-  },
-  finalTotalCell: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 14,
-    color: '#10b981',
-    width: 60,
-    textAlign: 'center',
-  },
-  newGameButton: {
-    backgroundColor: '#8b5cf6',
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 20,
-  },
-  newGameButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#ffffff',
-    marginLeft: 8,
-  },
-});
+
+function getStyles(colors: any, typography: any, touchTargets: any) {
+  return StyleSheet.create({
+    // === TOAST ===
+    toastContainer: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      bottom: 80,
+      backgroundColor: colors.error,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    toastText: {
+      color: colors.card,
+      textAlign: 'center',
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+    },
+    // === CONTAINER & LAYOUT ===
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    backgroundImage: {
+      position: 'absolute',
+      width: '100%',
+      height: 200,
+    },
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 200,
+      backgroundColor: colors.primary + 'D9',
+    },
+
+    // === HEADER ===
+
+    header: {
+      paddingTop: 10,
+      paddingHorizontal: 20,
+      paddingBottom: 10,
+      minHeight: 60,
+      justifyContent: 'center',
+    },
+    title: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.headline,
+      color: colors.card,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.card,
+      textAlign: 'center',
+      opacity: 0.9,
+    },
+
+    // === MAIN CONTENT ===
+    content: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+      padding: 20,
+    },
+
+    // === SETUP SECTION ===
+    setupSection: {
+      flex: 1,
+    },
+    sectionTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.text,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+
+    // === INPUT CONTAINER ===
+    inputContainer: {
+      flexDirection: 'row',
+      marginBottom: 24,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.text,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      marginRight: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 44,
+    },
+    addButton: {
+      width: 56,
+      height: 56,
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    addButtonDisabled: {
+      opacity: 0.7,
+    },
+
+    // === PLAYERS LIST ===
+    playersList: {
+      flex: 1,
+      maxHeight: 300,
+    },
+    playerItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      marginBottom: 8,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 44,
+    },
+    editingContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    editInput: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: 8,
+      minHeight: 44,
+    },
+    playerName: {
+      flex: 1,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.text,
+    },
+    playerActions: {
+      flexDirection: 'row',
+    },
+    deleteButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+      backgroundColor: colors.tints.error,
+    },
+    saveButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+      backgroundColor: colors.tints.success,
+    },
+    cancelButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+      backgroundColor: colors.tints.neutral,
+    },
+    playerInfo: {
+      flex: 1,
+    },
+    editPlayerButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+      backgroundColor: colors.tints.neutral,
+    },
+    removeButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+      backgroundColor: colors.tints.error,
+    },
+    emptyText: {
+      textAlign: 'center',
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.textMuted,
+      marginTop: 32,
+    },
+
+    // === START BUTTON ===
+    startButton: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 20,
+      minHeight: 44,
+    },
+    startButtonText: {
+      color: colors.card,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      marginLeft: 8,
+    },
+
+    // === GAME HEADER ===
+    gameHeader: {
+      backgroundColor: colors.accent,
+    },
+    gameContent: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+
+    // === ROUND SECTION ===
+    roundSection: {
+      padding: 20,
+    },
+    roundInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingVertical: 4,
+      paddingHorizontal: 16,
+      marginBottom: 12,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 44,
+    },
+    roundPlayerInfo: {
+      flex: 1,
+    },
+    roundPlayerName: {
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.text,
+    },
+    roundPlayerTotal: {
+      fontSize: typography.fontSize.footnote,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    roundScoreInput: {
+      width: 80,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.text,
+      textAlign: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 44,
+    },
+
+    // === SUBMIT ROUND / FINISH GAME BUTTONS ===
+    roundActions: {
+      flexDirection: 'row',
+      marginTop: 6,
+    },
+    submitRoundButton: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+      marginRight: 12,
+    },
+    submitRoundText: {
+      color: colors.card,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      marginLeft: 8,
+    },
+    finishGameButton: {
+      backgroundColor: colors.error,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+    },
+    finishGameText: {
+      color: colors.card,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      marginLeft: 8,
+    },
+
+    // === SCORE HISTORY ===
+    scoreSection: {
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    scoreTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.text,
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    scoreTable: {
+    },
+
+    // === SCORE HISTORY ROW LAYOUT ===
+
+    scoreHeaderRow: {
+      flexDirection: 'row',
+      backgroundColor: colors.tints.neutral,
+      borderTopLeftRadius: 8,
+      borderTopRightRadius: 8,
+    },
+    scoreRow: {
+      flexDirection: 'row',
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    scoreLeaderRow: {
+      backgroundColor: colors.tints.success,
+    },
+
+    // === SCORE HISTORY PLAYER COLUMN ===
+
+    scoreHeaderPlayer: {
+      width: 120,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+
+    scoreNameCell: {
+      width: 120,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    scoreNameText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+    },
+
+    // === SCORE HISTORY TOTAL COLUMN ===
+    scoreHeaderTotal: {
+      width: 100,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    scoreTotalCell: {
+      width: 100,
+      padding: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    scoreTotalText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+    },
+
+    // === SCORE HISTORY ROUND COLUMN ===
+    scoreHeaderRound: {
+      width: 50,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    scoreRoundCell: {
+      width: 50,
+      padding: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    scoreRoundText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+    },
+
+    // === FINISH BUTTON ===
+    finishButton: {
+      backgroundColor: colors.error,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: 20,
+      minHeight: 44,
+    },
+    finishButtonText: {
+      color: colors.card,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      marginLeft: 8,
+    },
+
+
+    // === GAME RESULTS ===
+    resultsHeader: {
+      backgroundColor: colors.tints.success,
+    },
+    resultsTitle: {
+      color: colors.success,
+    },
+    resultsSubtitle: {
+      color: colors.success,
+      opacity: 0.8,
+    },
+    finishedContent: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+
+    // === PODIUM SECTION ===
+    podiumSection: {
+      padding: 20,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'flex-end',
+      minHeight: 200,
+      gap: 0,
+      flex: 1,
+    },
+    podiumItem: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 4,
+      borderTopRightRadius: 4,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 4,
+      minHeight: 160,
+    },
+    // 1st Place - Center (Largest)
+    podiumFirst: {
+      flex: 1.2,
+      padding: 24,
+      borderWidth: 3,
+      borderColor: colors.warning,
+      zIndex: 3,
+      marginHorizontal: 2,
+      maxWidth: 140,
+      minHeight: 180,
+      flexGrow: 1.2,
+    },
+    podiumPositionFirst: {
+      fontSize: 48,
+      marginBottom: 12,
+    },
+    podiumNameFirst: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title2,
+      color: colors.text,
+      marginBottom: 6,
+      textAlign: 'center',
+    },
+    podiumScoreFirst: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title1,
+      color: colors.warning,
+    },
+    // 2nd Place - Left (Medium)
+    podiumSecond: {
+      flex: 1,
+      padding: 18,
+      borderWidth: 2,
+      borderColor: colors.border,
+      zIndex: 2,
+      marginRight: 1,
+      maxWidth: 120,
+      minHeight: 160,
+      flexGrow: 1,
+    },
+    podiumPositionSecond: {
+      fontSize: 36,
+      marginBottom: 8,
+    },
+    podiumNameSecond: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.text,
+      marginBottom: 4,
+      textAlign: 'center',
+    },
+    podiumScoreSecond: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title2,
+      color: colors.textMuted,
+    },
+    // 3rd Place - Right (Smallest)
+    podiumThird: {
+      flex: 0.8,
+      padding: 14,
+      borderWidth: 2,
+      borderColor: colors.accent,
+      zIndex: 1,
+      marginLeft: 1,
+      maxWidth: 100,
+      minHeight: 140,
+      flexGrow: 0.8,
+    },
+    podiumPositionThird: {
+      fontSize: 28,
+      marginBottom: 6,
+    },
+    podiumNameThird: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.text,
+      marginBottom: 3,
+      textAlign: 'center',
+    },
+    podiumScoreThird: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.accent,
+    },
+
+    // === FINAL RESULTS ===
+    finalResultsSection: {
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    finalResultsTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.text,
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    finalTable: {
+    },
+    finalHeaderRow: {
+      flexDirection: 'row',
+      backgroundColor: colors.tints.neutral,
+      borderTopLeftRadius: 8,
+      borderTopRightRadius: 8,
+    },
+    finalHeaderCell: {
+      flex: 1,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    finalHeaderCellPlayer: {
+      flex: 2,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    finalHeaderCellTotal: {
+      flex: 1,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    finalPlayerRow: {
+      flexDirection: 'row',
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    finalRankCell: {
+      flex: 1,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    finalPlayerNameCell: {
+      flex: 2,
+      padding: 12,
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    finalTotalCell: {
+      flex: 1,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.accent,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    finalScoreCell: {
+      flex: 1,
+      padding: 12,
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+
+    // === NEW GAME BUTTON ===
+    newGameButton: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: 20,
+      minHeight: 44,
+    },
+    newGameButtonText: {
+      color: colors.card,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      marginLeft: 8,
+    },
+  });
+}

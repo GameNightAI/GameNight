@@ -1,19 +1,41 @@
 import { useCallback } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, Platform } from 'react-native';
+import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
 
 export interface AccessibilityConfig {
   label: string;
   hint?: string;
-  role?: 'button' | 'text' | 'image' | 'header' | 'link' | 'search' | 'none';
+  role?: 'button' | 'text' | 'image' | 'header' | 'link' | 'search' | 'none' | 'tab' | 'tablist' | 'list' | 'listitem' | 'grid' | 'gridcell' | 'menu' | 'menuitem' | 'dialog' | 'alert' | 'status' | 'progressbar' | 'slider' | 'switch' | 'checkbox' | 'radio' | 'combobox' | 'textbox' | 'spinbutton' | 'scrollbar' | 'toolbar' | 'menubar' | 'tree' | 'treeitem' | 'tabpanel' | 'group' | 'region' | 'banner' | 'complementary' | 'contentinfo' | 'form' | 'main' | 'navigation' | 'search';
   state?: {
     disabled?: boolean;
     selected?: boolean;
     checked?: boolean;
     expanded?: boolean;
+    busy?: boolean;
+    required?: boolean;
+    invalid?: boolean;
   };
+  value?: {
+    min?: number;
+    max?: number;
+    now?: number;
+    text?: string;
+  };
+  actions?: string[];
 }
 
 export const useAccessibility = () => {
+  const {
+    isScreenReaderEnabled: contextScreenReaderEnabled,
+    isReduceMotionEnabled,
+    isBoldTextEnabled,
+    isGrayscaleEnabled,
+    colorScheme,
+    fontScale,
+    getScaledFontSize,
+    announceForAccessibility: contextAnnounceForAccessibility
+  } = useAccessibilityContext();
+
   const isScreenReaderEnabled = useCallback(async () => {
     try {
       return await AccessibilityInfo.isScreenReaderEnabled();
@@ -23,17 +45,97 @@ export const useAccessibility = () => {
   }, []);
 
   const announceForAccessibility = useCallback((message: string) => {
-    AccessibilityInfo.announceForAccessibility(message);
-  }, []);
+    if (contextScreenReaderEnabled) {
+      AccessibilityInfo.announceForAccessibility(message);
+    }
+  }, [contextScreenReaderEnabled]);
 
   const setAccessibilityFocus = useCallback((reactTag: number) => {
     AccessibilityInfo.setAccessibilityFocus(reactTag);
   }, []);
 
+  // Font scaling utilities - use the context function directly
+
+  const getScaledLineHeight = useCallback((baseSize: number, lineHeightMultiplier: number = 1.4): number => {
+    return Math.round(getScaledFontSize(baseSize) * lineHeightMultiplier);
+  }, [getScaledFontSize]);
+
+  // Accessibility-aware styling
+  const getAccessibilityStyles = useCallback((baseStyles: any) => {
+    const scaledStyles = { ...baseStyles };
+
+    // Scale font sizes
+    if (scaledStyles.fontSize) {
+      scaledStyles.fontSize = getScaledFontSize(scaledStyles.fontSize);
+    }
+
+    // Scale line heights
+    if (scaledStyles.lineHeight) {
+      scaledStyles.lineHeight = getScaledLineHeight(scaledStyles.fontSize || 16, scaledStyles.lineHeight / (scaledStyles.fontSize || 16));
+    }
+
+    // Apply bold text if enabled
+    if (isBoldTextEnabled && scaledStyles.fontWeight) {
+      scaledStyles.fontWeight = 'bold';
+    }
+
+    // Apply grayscale if enabled
+    if (isGrayscaleEnabled) {
+      scaledStyles.filter = 'grayscale(100%)';
+    }
+
+    return scaledStyles;
+  }, [getScaledFontSize, getScaledLineHeight, isBoldTextEnabled, isGrayscaleEnabled]);
+
+  // Touch target utilities
+  const getMinimumTouchTarget = useCallback((size: number = 44): number => {
+    return Math.max(size, 44); // 44pt minimum as per Apple HIG
+  }, []);
+
+  const getAccessibleTouchTarget = useCallback((baseSize: number, padding: number = 8) => {
+    const minSize = getMinimumTouchTarget();
+    const totalSize = baseSize + (padding * 2);
+    return Math.max(totalSize, minSize);
+  }, [getMinimumTouchTarget]);
+
+  // High contrast utilities
+  const getHighContrastColor = useCallback((lightColor: string, darkColor: string) => {
+    // In high contrast mode, use more contrasting colors
+    return isGrayscaleEnabled ? darkColor : lightColor;
+  }, [isGrayscaleEnabled]);
+
+  // Motion reduction utilities
+  const getReducedMotionStyle = useCallback((normalStyle: any, reducedStyle: any) => {
+    return isReduceMotionEnabled ? reducedStyle : normalStyle;
+  }, [isReduceMotionEnabled]);
+
   return {
-    isScreenReaderEnabled,
+    // Core accessibility state
+    isScreenReaderEnabled: contextScreenReaderEnabled,
+    isReduceMotionEnabled,
+    isBoldTextEnabled,
+    isGrayscaleEnabled,
+    colorScheme,
+    fontScale,
+
+    // Core accessibility functions
     announceForAccessibility,
     setAccessibilityFocus,
+
+    // Font scaling utilities
+    getScaledFontSize: getScaledFontSize,
+    getScaledLineHeight,
+    getAccessibilityStyles,
+
+    // Touch target utilities
+    getMinimumTouchTarget,
+    getAccessibleTouchTarget,
+
+    // Color and contrast utilities
+    getHighContrastColor,
+
+    // Motion utilities
+    getReducedMotionStyle,
   };
 };
 
@@ -54,23 +156,34 @@ export const accessibilityConfigs = {
     collection: {
       label: 'Collection tab',
       hint: 'View and manage your board game collection',
-      role: 'button' as const,
+      role: 'tab' as const,
     },
     polls: {
       label: 'Polls tab',
       hint: 'View and create voting polls for game nights',
-      role: 'button' as const,
+      role: 'tab' as const,
     },
     events: {
       label: 'Events tab',
       hint: 'View and manage game night events',
-      role: 'button' as const,
+      role: 'tab' as const,
     },
     profile: {
       label: 'Profile tab',
       hint: 'View and manage your account settings',
-      role: 'button' as const,
+      role: 'tab' as const,
     },
+    tools: {
+      label: 'Tools tab',
+      hint: 'Access game tools like dice and score tracking',
+      role: 'tab' as const,
+    },
+  },
+
+  // Tab bar container
+  tabBarContainer: {
+    label: 'Main navigation',
+    role: 'tablist' as const,
   },
 
   // Game-related
@@ -85,11 +198,36 @@ export const accessibilityConfigs = {
     role: 'image' as const,
   }),
 
+  gameList: {
+    label: 'Game collection',
+    role: 'list' as const,
+  },
+
+  gameListItem: (gameName: string, playerCount: string, playTime: string) => ({
+    label: `${gameName}, ${playerCount} players, ${playTime}`,
+    role: 'listitem' as const,
+  }),
+
+  gameDetails: (gameName: string) => ({
+    label: `Details for ${gameName}`,
+    role: 'region' as const,
+  }),
+
   // Poll-related
   pollCard: (title: string, gameCount: number, voteCount: number) => ({
     label: `Poll: ${title}, ${gameCount} games, ${voteCount} votes`,
     hint: 'Tap to view poll details and vote',
     role: 'button' as const,
+  }),
+
+  pollList: {
+    label: 'Game polls',
+    role: 'list' as const,
+  },
+
+  pollListItem: (title: string, gameCount: number, voteCount: number) => ({
+    label: `Poll: ${title}, ${gameCount} games, ${voteCount} votes`,
+    role: 'listitem' as const,
   }),
 
   voteButton: (gameName: string, isVoted: boolean) => ({
@@ -99,11 +237,56 @@ export const accessibilityConfigs = {
     state: { selected: isVoted },
   }),
 
+  voteGrid: {
+    label: 'Voting options',
+    role: 'grid' as const,
+  },
+
+  voteGridCell: (gameName: string, isVoted: boolean) => ({
+    label: `${gameName} vote option`,
+    role: 'gridcell' as const,
+    state: { selected: isVoted },
+  }),
+
+  pollResults: {
+    label: 'Poll results',
+    role: 'region' as const,
+  },
+
   // Form elements
   textInput: (label: string, placeholder?: string) => ({
     label,
     hint: placeholder ? `Enter ${placeholder.toLowerCase()}` : undefined,
-    role: 'text' as const,
+    role: 'textbox' as const,
+  }),
+
+  form: {
+    label: 'Form',
+    role: 'form' as const,
+  },
+
+  formField: (label: string, required: boolean = false) => ({
+    label,
+    role: 'textbox' as const,
+    state: { required },
+  }),
+
+  switch: (label: string, isOn: boolean) => ({
+    label,
+    role: 'switch' as const,
+    state: { checked: isOn },
+  }),
+
+  checkbox: (label: string, isChecked: boolean) => ({
+    label,
+    role: 'checkbox' as const,
+    state: { checked: isChecked },
+  }),
+
+  radio: (label: string, isSelected: boolean) => ({
+    label,
+    role: 'radio' as const,
+    state: { checked: isSelected },
   }),
 
   // Action buttons
@@ -119,13 +302,24 @@ export const accessibilityConfigs = {
     role: 'button' as const,
   }),
 
+  destructiveButton: (action: string) => ({
+    label: action,
+    hint: 'Tap to perform this destructive action',
+    role: 'button' as const,
+  }),
+
   // Loading states
   loadingButton: (action: string) => ({
     label: `${action} in progress`,
     hint: 'Please wait while this action completes',
     role: 'button' as const,
-    state: { disabled: true },
+    state: { disabled: true, busy: true },
   }),
+
+  loadingSpinner: {
+    label: 'Loading',
+    role: 'progressbar' as const,
+  },
 
   // Camera and image
   cameraButton: {
@@ -177,5 +371,55 @@ export const accessibilityConfigs = {
   sectionHeader: (title: string) => ({
     label: title,
     role: 'header' as const,
+  }),
+
+  // Modal and dialog
+  modal: (title: string) => ({
+    label: title,
+    role: 'dialog' as const,
+  }),
+
+  modalOverlay: {
+    label: 'Modal background',
+    role: 'none' as const,
+  },
+
+  // Status and feedback
+  statusMessage: (message: string) => ({
+    label: message,
+    role: 'status' as const,
+  }),
+
+  alertMessage: (message: string) => ({
+    label: message,
+    role: 'alert' as const,
+  }),
+
+  // Tools and utilities
+  diceButton: (sides: number) => ({
+    label: `Roll ${sides}-sided die`,
+    hint: 'Tap to roll the dice',
+    role: 'button' as const,
+  }),
+
+  scoreTracker: {
+    label: 'Score tracker',
+    role: 'region' as const,
+  },
+
+  firstPlayerSelector: {
+    label: 'First player selector',
+    role: 'button' as const,
+  },
+
+  // Empty states
+  emptyState: (message: string) => ({
+    label: message,
+    role: 'status' as const,
+  }),
+
+  errorState: (message: string) => ({
+    label: `Error: ${message}`,
+    role: 'alert' as const,
   }),
 };

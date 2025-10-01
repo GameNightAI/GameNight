@@ -37,15 +37,30 @@ export const getVoteTypeKeyFromScore = (score: number): string => {
 };
 
 // Utility function to get icon color based on vote type and selection state
-export const getIconColor = (voteType: string, isSelected: boolean = false): string => {
+export const getIconColor = (voteType: string, isSelected: boolean = false, colors?: any): string => {
   if (isSelected) {
     switch (voteType) {
-      case 'voteType1': return '#10b981'; // Excited - green smiley green background
-      case 'voteType2': return '#10b981'; // Like - green smiley yellow background
-      case 'voteType3': return '#fbbf24'; // Would Play - yellow smiley yellow background
-      // case 'voteType4': return '#fbbf24'; // Don't Know - yellow
-      case 'voteType5': return '#ef4444'; // Veto - red thumbsdown red background
+      case 'voteType1': return colors?.success || '#10b981';
+      case 'voteType2': return colors?.success || '#10b981';
+      case 'voteType3': return colors?.warning || '#fbbf24';
+      // case 'voteType4': return colors?.warning || '#fbbf24';
+      case 'voteType5': return colors?.error || '#ef4444';
     }
   }
-  return '#666666'; // Default gray for unselected
-}; 
+  return colors?.textMuted || '#666666';
+};
+
+// Helpers to keep vote color logic consistent across components
+export const getVoteBgColor = (score: number, isSelected: boolean, colors: any): string => {
+  if (!isSelected) return colors.tints.neutral;
+  if (score > 2) return colors.tints.success;
+  if (score < 0) return colors.tints.error;
+  return colors.tints.warningBg;
+};
+
+export const getVoteBorderColor = (score: number, isSelected: boolean, colors: any): string => {
+  if (!isSelected) return 'transparent';
+  if (score > 2) return colors.success;
+  if (score < 0) return colors.error;
+  return colors.warning;
+};

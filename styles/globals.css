@@ -1,7 +1,4 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
+/* Dark mode support for web platform */
 
 :root {
   --background: oklch(1 0 0);
@@ -37,6 +34,79 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* GameNyte-specific colors */
+  --gamenyte-primary: #1a2b5f;
+  --gamenyte-accent: #ff9654;
+  --gamenyte-background: #f7f9fc;
+  --gamenyte-card: #ffffff;
+  --gamenyte-text: #1a2b5f;
+  --gamenyte-text-muted: #666666;
+  --gamenyte-border: #e1e5ea;
+  --gamenyte-success: #10b981;
+  --gamenyte-error: #ef4444;
+  --gamenyte-warning: #f59e0b;
+
+  /* Tint variables to mirror useTheme colors.tints (light) */
+  --tint-accent: rgba(255, 150, 84, 0.12);
+  --tint-primary: rgba(26, 43, 95, 0.10);
+  --tint-success: rgba(16, 185, 129, 0.12);
+  --tint-error: rgba(239, 68, 68, 0.10);
+  --tint-neutral: rgba(26, 43, 95, 0.18);
+  --tint-warning-bg: #fffbe6;
+  --tint-warning-border: #ffe58f;
+
+  /* Typography variables */
+  --font-family-primary: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+
+  /* Font sizes - following HIG standards */
+  /* Smallest */
+  --font-size-caption2: 11px;
+  /* Small */
+  --font-size-caption1: 12px;
+  /* Footnote */
+  --font-size-footnote: 13px;
+  /* Subheadline */
+  --font-size-subheadline: 15px;
+  /* Callout */
+  --font-size-callout: 16px;
+  /* Body */
+  --font-size-body: 17px;
+  /* Headline */
+  --font-size-headline: 17px;
+  /* Title 3 */
+  --font-size-title3: 20px;
+  /* Title 2 */
+  --font-size-title2: 22px;
+  /* Title 1 (largest) */
+  --font-size-title1: 28px;
+
+  /* Legacy sizes for backward compatibility */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 28px;
+  --font-size-4xl: 36px;
+
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Line heights */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.6;
+
+  /* Letter spacing */
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
 }
 
 .dark {
@@ -72,52 +142,189 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  /* GameNyte-specific dark mode colors */
+  --gamenyte-primary: #3b82f6;
+  --gamenyte-accent: #ff9654;
+  --gamenyte-background: #0f172a;
+  --gamenyte-card: #1e293b;
+  --gamenyte-text: #f1f5f9;
+  --gamenyte-text-muted: #94a3b8;
+  --gamenyte-border: #334155;
+  --gamenyte-success: #22c55e;
+  --gamenyte-error: #ef4444;
+  --gamenyte-warning: #f59e0b;
+
+  /* Tint variables to mirror useTheme colors.tints (dark) */
+  --tint-accent: rgba(255, 150, 84, 0.18);
+  --tint-primary: rgba(59, 130, 246, 0.18);
+  --tint-success: rgba(16, 185, 129, 0.18);
+  --tint-error: rgba(239, 68, 68, 0.18);
+  --tint-neutral: rgba(75, 85, 99, 0.22);
+  --tint-warning-bg: rgba(255, 243, 205, 0.15);
+  --tint-warning-border: rgba(255, 229, 143, 0.25);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+/* Interactive elements - cursor and transitions only work on web */
+@media (hover: hover) {
+
+  /* General rule for clickable elements */
+  [data-clickable="true"] {
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  [data-clickable="true"]:hover {
+    opacity: 0.8;
+  }
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+/* Typography utility classes for web platform */
+
+/* HIG-compliant classes */
+.text-caption2 {
+  font-size: var(--font-size-caption2);
+}
+
+.text-caption1 {
+  font-size: var(--font-size-caption1);
+}
+
+.text-footnote {
+  font-size: var(--font-size-footnote);
+}
+
+.text-subheadline {
+  font-size: var(--font-size-subheadline);
+}
+
+.text-callout {
+  font-size: var(--font-size-callout);
+}
+
+.text-body {
+  font-size: var(--font-size-body);
+}
+
+.text-headline {
+  font-size: var(--font-size-headline);
+}
+
+.text-title3 {
+  font-size: var(--font-size-title3);
+}
+
+.text-title2 {
+  font-size: var(--font-size-title2);
+}
+
+.text-title1 {
+  font-size: var(--font-size-title1);
+}
+
+/* Legacy classes for backward compatibility */
+.text-xs {
+  font-size: var(--font-size-xs);
+}
+
+.text-sm {
+  font-size: var(--font-size-sm);
+}
+
+.text-base {
+  font-size: var(--font-size-base);
+}
+
+.text-lg {
+  font-size: var(--font-size-lg);
+}
+
+.text-xl {
+  font-size: var(--font-size-xl);
+}
+
+.text-2xl {
+  font-size: var(--font-size-2xl);
+}
+
+.text-3xl {
+  font-size: var(--font-size-3xl);
+}
+
+.text-4xl {
+  font-size: var(--font-size-4xl);
+}
+
+.font-normal {
+  font-weight: var(--font-weight-normal);
+}
+
+.font-medium {
+  font-weight: var(--font-weight-medium);
+}
+
+.font-semibold {
+  font-weight: var(--font-weight-semibold);
+}
+
+.font-bold {
+  font-weight: var(--font-weight-bold);
+}
+
+.leading-tight {
+  line-height: var(--line-height-tight);
+}
+
+.leading-normal {
+  line-height: var(--line-height-normal);
+}
+
+.leading-relaxed {
+  line-height: var(--line-height-relaxed);
+}
+
+.tracking-tight {
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.tracking-normal {
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.tracking-wide {
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* Font family classes */
+.font-primary {
+  font-family: var(--font-family-primary);
+}
+
+.font-mono {
+  font-family: var(--font-family-mono);
+}
+
+/* Text color classes using theme variables */
+.text-primary {
+  color: var(--gamenyte-primary);
+}
+
+.text-accent {
+  color: var(--gamenyte-accent);
+}
+
+.text-muted {
+  color: var(--gamenyte-text-muted);
+}
+
+.text-success {
+  color: var(--gamenyte-success);
+}
+
+.text-error {
+  color: var(--gamenyte-error);
+}
+
+.text-warning {
+  color: var(--gamenyte-warning);
 }

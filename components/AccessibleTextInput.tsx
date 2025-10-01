@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TextInput, TextInputProps, Text, View, StyleSheet } from 'react-native';
 import { accessibilityConfigs, AccessibilityConfig } from '@/hooks/useAccessibility';
+import { useTheme } from '@/hooks/useTheme';
 
 interface AccessibleTextInputProps extends TextInputProps {
   label: string;
@@ -16,10 +17,13 @@ export const AccessibleTextInput: React.FC<AccessibleTextInputProps> = ({
   required = false,
   ...props
 }) => {
+  const { colors, typography } = useTheme();
   const config = accessibilityConfig || accessibilityConfigs.textInput(
     label,
     props.placeholder
   );
+
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   return (
     <View style={styles.container}>
@@ -31,8 +35,6 @@ export const AccessibleTextInput: React.FC<AccessibleTextInputProps> = ({
         style={[styles.input, error && styles.inputError]}
         accessibilityLabel={config.label}
         accessibilityHint={config.hint}
-        accessibilityRole={config.role}
-        accessibilityState={config.state}
         {...props}
       />
       {error && (
@@ -44,33 +46,37 @@ export const AccessibleTextInput: React.FC<AccessibleTextInputProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
     marginBottom: 16,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('semibold'),
     marginBottom: 8,
-    color: '#1a2b5f',
+    color: colors.text,
   },
   required: {
-    color: '#e74c3c',
+    color: colors.error,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e1e5ea',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
-    backgroundColor: '#ffffff',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('normal'),
+    backgroundColor: colors.card,
+    color: colors.text,
+    minHeight: 44, // HIG touch target requirement
   },
   inputError: {
-    borderColor: '#e74c3c',
+    borderColor: colors.error,
   },
   errorText: {
-    color: '#e74c3c',
-    fontSize: 14,
+    color: colors.error,
+    fontSize: typography.fontSize.caption1,
+    fontFamily: typography.getFontFamily('normal'),
     marginTop: 4,
   },
 });

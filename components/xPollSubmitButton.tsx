@@ -2,6 +2,8 @@
 // poll/components/SubmitButton.tsx
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
+import { useMemo } from 'react';
 
 interface Props {
   onPress: () => void;
@@ -18,14 +20,20 @@ export const SubmitButton = ({
   label = 'Submit',
   style,
 }: Props) => {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
       style={[styles.button, style, disabled && styles.disabled]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={disabled ? "Button is disabled" : "Tap to submit"}
     >
       {loading ? (
-        <ActivityIndicator color="#ffffff" />
+        <ActivityIndicator color={colors.card} />
       ) : (
         <Text style={styles.text}>{label}</Text>
       )}
@@ -33,20 +41,21 @@ export const SubmitButton = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   button: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
+    minHeight: 44,
   },
   disabled: {
     opacity: 0.6,
   },
   text: {
-    color: '#ffffff',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
+    color: colors.card,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
   },
 });

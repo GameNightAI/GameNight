@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 interface ConfirmationDialogProps {
   isVisible: boolean;
@@ -7,6 +9,7 @@ interface ConfirmationDialogProps {
   onCancel: () => void;
   title: string;
   message: string;
+  confirmButtonText?: string;
 }
 
 export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -17,7 +20,22 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   message,
   confirmButtonText = 'Delete'
 }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets), [colors, typography, touchTargets]);
+
   if (!isVisible) return null;
+
+  const handleCancel = () => {
+    announceForAccessibility('Dialog cancelled');
+    onCancel();
+  };
+
+  const handleConfirm = () => {
+    announceForAccessibility('Action confirmed');
+    onConfirm();
+  };
 
   // On web, we'll use a positioned div instead of Modal
   if (Platform.OS === 'web') {
@@ -27,10 +45,22 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              accessibilityLabel="Cancel action"
+              accessibilityRole="button"
+              hitSlop={touchTargets.standard}
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmButton} onPress={onConfirm}>
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleConfirm}
+              accessibilityLabel={`Confirm ${confirmButtonText.toLowerCase()}`}
+              accessibilityRole="button"
+              hitSlop={touchTargets.standard}
+            >
               <Text style={styles.confirmButtonText}>{confirmButtonText}</Text>
             </TouchableOpacity>
           </View>
@@ -44,17 +74,31 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       visible={isVisible}
       transparent
       animationType="fade"
-      onRequestClose={onCancel}
+      onRequestClose={handleCancel}
+      accessibilityViewIsModal={true}
+      accessibilityLabel={`${title} dialog`}
     >
       <View style={styles.overlay}>
         <View style={styles.dialog}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              accessibilityLabel="Cancel action"
+              accessibilityRole="button"
+              hitSlop={touchTargets.standard}
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmButton} onPress={onConfirm}>
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleConfirm}
+              accessibilityLabel={`Confirm ${confirmButtonText.toLowerCase()}`}
+              accessibilityRole="button"
+              hitSlop={touchTargets.standard}
+            >
               <Text style={styles.confirmButtonText}>{confirmButtonText}</Text>
             </TouchableOpacity>
           </View>
@@ -64,10 +108,10 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any, touchTargets: any) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -77,69 +121,80 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
   },
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 24,
     width: '90%',
     maxWidth: 320,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   webDialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 24,
     width: '90%',
     maxWidth: 320,
-    boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    boxShadow: `0px 4px 16px ${colors.shadow}30`,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.text,
     marginBottom: 8,
   },
   message: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
     marginBottom: 24,
-    lineHeight: 20,
+    lineHeight: typography.lineHeight.body,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
+    marginTop: 8,
   },
   cancelButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.tints.neutral,
+    marginRight: 12,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   confirmButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: '#ffe5e5',
+    backgroundColor: colors.tints.error,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cancelButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
   },
   confirmButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#e74c3c',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.error,
   },
 });
