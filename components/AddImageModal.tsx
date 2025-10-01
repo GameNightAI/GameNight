@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,12 @@ import {
   Platform,
   Modal,
   ScrollView,
-  Dimensions,
+  Alert,
 } from 'react-native';
-
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768;
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, Upload, X } from 'lucide-react-native';
-import { Alert } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 // Sample images
 const sampleImage2 = require('@/assets/images/sample-game-2.png');
@@ -34,6 +32,8 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   onNext,
   onBack,
 }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
   const [image, setImage] = useState<{
     uri: string;
     name: string;
@@ -45,6 +45,8 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
   const [instructionsModalVisible, setInstructionsModalVisible] = useState(false);
+
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   // Reset picker visibility when modal becomes visible
   useEffect(() => {
@@ -129,6 +131,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
     }
   };
 
+  // THIS IS NOT IN USE. LEAVING HERE FOR REFERENCE, TO BE UPDATED FOR JPG TO PNG CONVERSION
   const selectSampleImage = (sampleNumber: number) => {
     const imageData = {
       uri: Image.resolveAssetSource(sampleImage2).uri,
@@ -251,12 +254,32 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   const content = (
     <View style={styles.dialog}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <ArrowLeft size={20} color="#666666" />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            onBack();
+            announceForAccessibility('Returning to add game options');
+          }}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          accessibilityHint="Returns to the previous step"
+          hitSlop={touchTargets.sizeTwenty}
+        >
+          <ArrowLeft size={20} color={colors.textMuted} />
         </TouchableOpacity>
         <Text style={styles.title}>Add Games With A Photo</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={20} color="#666666" />
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            announceForAccessibility('Photo analysis modal closed');
+          }}
+          accessibilityLabel="Close modal"
+          accessibilityRole="button"
+          accessibilityHint="Closes the photo analysis modal"
+          hitSlop={touchTargets.sizeTwenty}
+        >
+          <X size={20} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -276,7 +299,13 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                 <View style={styles.sampleButton}>
                   <TouchableOpacity
                     style={styles.sampleImageContainer}
-                    onPress={() => showFullSizeImage(sampleImage2)}
+                    onPress={() => {
+                      showFullSizeImage(sampleImage2);
+                      announceForAccessibility('Opening sample image in full size');
+                    }}
+                    accessibilityLabel="View sample image"
+                    accessibilityRole="button"
+                    accessibilityHint="Opens the sample image in full size view"
                   >
                     <Image source={sampleImage2} style={styles.sampleImage} />
                   </TouchableOpacity>
@@ -285,7 +314,14 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
 
               <TouchableOpacity
                 style={styles.instructionsButton}
-                onPress={() => setInstructionsModalVisible(true)}
+                onPress={() => {
+                  setInstructionsModalVisible(true);
+                  announceForAccessibility('Opening instructions modal');
+                }}
+                accessibilityLabel="View instructions"
+                accessibilityRole="button"
+                accessibilityHint="Opens instructions for taking good photos"
+                hitSlop={touchTargets.standard}
               >
                 <Text style={styles.instructionsButtonText}>📋 View Instructions</Text>
               </TouchableOpacity>
@@ -294,13 +330,18 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
 
             <View style={styles.uploadSection}>
               <View style={styles.uploadButtons}>
-                {isMobile && (
+                {Platform.OS !== 'web' && (
                   <TouchableOpacity
                     style={styles.uploadButton}
                     onPress={() => {
                       console.log('Take Photo button pressed');
                       pickImage(true);
+                      announceForAccessibility('Opening camera to take photo');
                     }}
+                    accessibilityLabel="Take photo"
+                    accessibilityRole="button"
+                    accessibilityHint="Opens camera to take a photo of board games"
+                    hitSlop={touchTargets.tiny}
                   >
                     <Camera size={24} color="#fff" />
                     <Text style={styles.uploadButtonText}>Take Photo</Text>
@@ -311,11 +352,16 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                   onPress={() => {
                     console.log('Choose from Library button pressed');
                     pickImage(false);
+                    announceForAccessibility('Opening image library');
                   }}
+                  accessibilityLabel={Platform.OS !== 'web' ? 'Upload image' : 'Choose from library'}
+                  accessibilityRole="button"
+                  accessibilityHint="Opens image library to select a photo"
+                  hitSlop={touchTargets.tiny}
                 >
                   <Upload size={24} color="#fff" />
                   <Text style={styles.uploadButtonText}>
-                    {isMobile ? 'Upload Image' : 'Choose from Library'}
+                    {Platform.OS !== 'web' ? 'Upload Image' : 'Choose from Library'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -337,8 +383,15 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                 styles.analyzeButton,
                 loading && styles.analyzeButtonDisabled
               ]}
-              onPress={handleAnalyze}
+              onPress={() => {
+                handleAnalyze();
+                announceForAccessibility('Starting image analysis');
+              }}
               disabled={loading}
+              accessibilityLabel="Analyze image"
+              accessibilityRole="button"
+              accessibilityHint="Analyzes the selected image to detect board games"
+              hitSlop={touchTargets.standard}
             >
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -356,7 +409,12 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                 onPress={() => {
                   setImage(null);
                   setError(null);
+                  announceForAccessibility('Photo cleared, ready to select new image');
                 }}
+                accessibilityLabel="Change photo"
+                accessibilityRole="button"
+                accessibilityHint="Clears current photo to select a different one"
+                hitSlop={touchTargets.standard}
               >
                 <Text style={styles.retakeButtonText}>Change Photo</Text>
               </TouchableOpacity>
@@ -395,7 +453,14 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
           />
           <TouchableOpacity
             style={styles.fullSizeCloseButton}
-            onPress={hideFullSizeImage}
+            onPress={() => {
+              hideFullSizeImage();
+              announceForAccessibility('Sample image closed');
+            }}
+            accessibilityLabel="Close full size image"
+            accessibilityRole="button"
+            accessibilityHint="Closes the full size image view"
+            hitSlop={touchTargets.tiny}
           >
             <X size={24} color="#fff" />
           </TouchableOpacity>
@@ -426,9 +491,16 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
             <Text style={styles.instructionsTitle}>Instructions</Text>
             <TouchableOpacity
               style={styles.instructionsCloseButton}
-              onPress={() => setInstructionsModalVisible(false)}
+              onPress={() => {
+                setInstructionsModalVisible(false);
+                announceForAccessibility('Instructions modal closed');
+              }}
+              accessibilityLabel="Close instructions"
+              accessibilityRole="button"
+              accessibilityHint="Closes the instructions modal"
+              hitSlop={touchTargets.sizeTwenty}
             >
-              <X size={20} color="#666666" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
           <View style={styles.instructionsContent}>
@@ -490,13 +562,13 @@ async function convertToBase64(blob: Blob): Promise<string> {
   });
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Platform.OS === 'ios' ? 20 : 10,
+    padding: 20,
   },
   webOverlay: {
     position: 'fixed',
@@ -504,16 +576,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
     padding: 20,
   },
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
-    padding: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     width: '100%',
     maxWidth: 500,
     maxHeight: '85%',
@@ -527,30 +600,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   backButton: {
     padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeButton: {
     padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.text,
   },
   description: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
     marginBottom: 20,
   },
   imagePreview: {
     alignItems: 'center',
-    marginBottom: 20,
-    padding: 0,
-    backgroundColor: '#f7f9fc',
+    marginBottom: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 0,
+    backgroundColor: colors.background,
     borderRadius: 8,
   },
   previewImage: {
@@ -564,43 +642,44 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   imageName: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
   },
   sectionTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
     marginBottom: 12,
   },
   uploadSection: {
     marginBottom: 0,
   },
   uploadButtons: {
-    gap: 12,
+    marginBottom: 8,
   },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ff9654',
-    gap: 8,
+    borderColor: colors.accent,
+    marginBottom: 8,
   },
   uploadButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.card,
+    marginLeft: 8,
   },
   errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#e74c3c',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.error,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -608,20 +687,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ff9654',
-    paddingVertical: 14,
+    backgroundColor: colors.accent,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    gap: 8,
-    marginBottom: 10, // Added margin bottom for spacing
+    marginTop: 10,
+    marginBottom: 10,
   },
   analyzeButtonDisabled: {
     opacity: 0.5,
   },
   analyzeButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: isMobile ? 12 : 16,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.card,
+    marginLeft: 8,
   },
   scrollContent: {
     flex: 1,
@@ -639,17 +719,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6c757d',
-    paddingVertical: 14,
+    backgroundColor: colors.textMuted,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    gap: 8,
     width: '100%',
   },
   retakeButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: isMobile ? 12 : 16,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.card,
     textAlign: 'center',
   },
   sampleSection: {
@@ -658,12 +737,12 @@ const styles = StyleSheet.create({
   sampleButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    marginBottom: 12,
   },
   sampleButton: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     padding: 0,
     borderRadius: 8,
     borderWidth: 1,
@@ -675,7 +754,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 0,
     borderWidth: 0,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   sampleImage: {
     width: '100%',
@@ -687,14 +766,14 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   bulletPoint: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
     marginBottom: 5,
   },
   fullSizeOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -702,7 +781,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '90%',
     height: '80%',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -715,36 +794,36 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     borderRadius: 20,
     padding: 8,
   },
   // Instructions button styles
   instructionsButton: {
-    backgroundColor: '#f1f3f4',
+    backgroundColor: colors.background,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#6c757d',
+    borderColor: colors.textMuted,
   },
   instructionsButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#495057',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.text,
   },
   // Instructions modal styles
   instructionsOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Platform.OS === 'ios' ? 20 : 10,
+    padding: 20,
   },
   instructionsDialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 24,
     width: '100%',
@@ -763,20 +842,22 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   instructionsTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.text,
   },
   instructionsCloseButton: {
     padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   instructionsContent: {
     alignItems: 'flex-start',
   },
   instructionsBulletPoint: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.textMuted,
     marginBottom: 8,
     lineHeight: 20,
   },
@@ -786,9 +867,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   orText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
     textAlign: 'center',
   },
 });

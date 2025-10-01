@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator, Animated } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator } from 'react-native';
 import { Search, X, Info, CheckCircle } from 'lucide-react-native';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 interface SyncModalProps {
   isVisible: boolean;
@@ -23,39 +25,33 @@ export const SyncModal: React.FC<SyncModalProps> = ({
 }) => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
-  const [pulseAnim] = useState(new Animated.Value(1));
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   useEffect(() => {
-    if (loading && syncProgress?.stage !== 'complete') {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 0.7,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
+    if (!loading) return;
+    if (!syncProgress) return;
+    if (syncProgress.stage === 'complete') {
+      announceForAccessibility('Collection imported successfully');
+    } else if (syncProgress.message) {
+      announceForAccessibility(syncProgress.message);
     }
-  }, [loading, syncProgress?.stage, pulseAnim]);
+  }, [loading, syncProgress?.stage, syncProgress?.message, announceForAccessibility]);
 
   const handleSync = async () => {
     if (!username.trim()) {
       setError('Please enter a BoardGameGeek username');
+      announceForAccessibility('Please enter a BoardGameGeek username');
       return;
     }
     setError('');
     try {
       await onSync(username.trim());
+      announceForAccessibility('Starting collection import');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sync collection');
+      announceForAccessibility('Failed to sync collection');
     }
   };
 
@@ -66,7 +62,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
 
   const getProgressIcon = () => {
     if (syncProgress?.stage === 'complete') {
-      return <CheckCircle size={20} color="#10b981" />;
+      return <CheckCircle size={20} color={colors.success} />;
     }
     return <ActivityIndicator color="#ffffff" size="small" />;
   };
@@ -75,8 +71,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     <View style={styles.dialog}>
       <View style={styles.header}>
         <Text style={styles.title}>Connect to BoardGameGeek</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={20} color="#666666" />
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => { onClose(); announceForAccessibility('Sync modal closed'); }}
+          accessibilityLabel="Close"
+          accessibilityRole="button"
+          accessibilityHint="Closes the sync modal"
+          hitSlop={touchTargets.sizeTwenty}
+        >
+          <X size={20} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -93,6 +96,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           autoCapitalize="none"
           autoCorrect={false}
           editable={!loading}
+          accessibilityLabel="BoardGameGeek username"
+          accessibilityHint="Enter your BoardGameGeek username"
         />
       </View>
 
@@ -102,15 +107,19 @@ export const SyncModal: React.FC<SyncModalProps> = ({
         style={[styles.syncButton, loading && styles.syncButtonDisabled]}
         onPress={handleSync}
         disabled={loading}
+        accessibilityLabel="Import collection"
+        accessibilityRole="button"
+        accessibilityHint="Starts importing your collection from BoardGameGeek"
+        hitSlop={touchTargets.small}
       >
         {loading ? (
-          <Animated.View style={[styles.loadingContainer, { opacity: pulseAnim }]}>
+          <View style={styles.loadingContainer}>
             {getProgressIcon()}
             <Text style={styles.syncButtonText}>{getProgressMessage()}</Text>
-          </Animated.View>
+          </View>
         ) : (
           <>
-            <Search color="#fff" size={20} />
+            <Search color="#ffffff" size={20} />
             <Text style={styles.syncButtonText}>Import Collection</Text>
           </>
         )}
@@ -134,17 +143,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    if (!isVisible) return null;
-    return (
-      <View style={styles.webOverlay}>
-        <View style={styles.webModalContainer}>
-          {content}
-        </View>
-      </View>
-    );
-  }
-
   return (
     <Modal
       visible={isVisible}
@@ -159,33 +157,16 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  webOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  webModalContainer: {
-    position: 'relative',
-    width: '100%',
-    maxWidth: 400,
-    margin: 20,
-  },
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 24,
     width: '100%',
@@ -206,38 +187,38 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.text,
   },
   description: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.textMuted,
     marginBottom: 20,
   },
   inputContainer: {
     marginBottom: 20,
   },
   input: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#e1e5ea',
+    borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
   },
   errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#e74c3c',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.error,
     marginBottom: 16,
   },
   syncButton: {
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -249,8 +230,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   syncButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
     color: '#ffffff',
     marginLeft: 8,
   },
@@ -264,34 +245,20 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#e1e5ea',
+    backgroundColor: colors.border,
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     borderRadius: 2,
   },
   progressText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
     textAlign: 'center',
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f7f9fc',
-    padding: 12,
-    borderRadius: 8,
-  },
-  infoText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginLeft: 8,
-    flex: 1,
   },
 });

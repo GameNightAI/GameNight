@@ -35,37 +35,37 @@ export const getEventVoteTypeFromScore = (score: number): EventVoteType => {
 };
 
 // Utility function to get icon color based on vote type and selection state
-export const getEventIconColor = (voteType: EventVoteType, isSelected: boolean = false): string => {
+export const getEventIconColor = (voteType: EventVoteType, isSelected: boolean = false, colors?: any): string => {
   if (isSelected) {
     switch (voteType) {
-      case 2: return '#10b981'; // Ideal - green
-      case 1: return '#f59e0b'; // Doable - orange
-      case -2: return '#ef4444'; // No - red
+      case 2: return colors?.success || '#10b981'; // Ideal - green
+      case 1: return colors?.warning || '#f59e0b'; // Doable - orange
+      case -2: return colors?.error || '#ef4444'; // No - red
     }
   }
-  return '#666666'; // Default gray for unselected
+  return colors?.textMuted || '#666666'; // Default gray for unselected
 };
 
 // Utility function to get background color based on vote type and selection state
-export const getEventVoteBgColor = (voteType: EventVoteType, isSelected: boolean): string => {
-  if (!isSelected) return '#f5f5f5';
+export const getEventVoteBgColor = (voteType: EventVoteType, isSelected: boolean, colors?: any): string => {
+  if (!isSelected) return colors?.tints?.neutral || '#f5f5f5';
 
   switch (voteType) {
-    case 2: return '#bbf7d0'; // Ideal - light green
-    case 1: return '#fef3c7'; // Doable - light orange
-    case -2: return '#fecaca'; // No - light red
-    default: return '#f5f5f5';
+    case 2: return colors?.tints?.success || '#bbf7d0'; // Ideal - light green
+    case 1: return colors?.tints?.warningBg || '#fef3c7'; // Doable - light orange
+    case -2: return colors?.tints?.error || '#fecaca'; // No - light red
+    default: return colors?.tints?.neutral || '#f5f5f5';
   }
 };
 
 // Utility function to get border color based on vote type and selection state
-export const getEventVoteBorderColor = (voteType: EventVoteType, isSelected: boolean): string => {
+export const getEventVoteBorderColor = (voteType: EventVoteType, isSelected: boolean, colors?: any): string => {
   if (!isSelected) return 'transparent';
 
   switch (voteType) {
-    case 2: return '#10b981'; // Ideal - green
-    case 1: return '#f59e0b'; // Doable - orange
-    case -2: return '#ef4444'; // No - red
+    case 2: return colors?.success || '#10b981'; // Ideal - green
+    case 1: return colors?.warning || '#f59e0b'; // Doable - orange
+    case -2: return colors?.error || '#ef4444'; // No - red
     default: return 'transparent';
   }
 };

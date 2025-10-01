@@ -1,9 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform, Modal, Dimensions } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform, Modal } from 'react-native';
 import { ArrowLeft, Check, X } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { ThumbnailModal } from './ThumbnailModal';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 interface AddResultsModalProps {
   isVisible: boolean;
@@ -29,26 +31,8 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   analysisResults,
   onGamesAdded,
 }) => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const updateScreenSize = () => {
-      const { width } = Dimensions.get('window');
-      setIsMobile(width < 768);
-    };
-
-    updateScreenSize();
-
-    // Use a simpler approach for screen size changes
-    const handleResize = () => {
-      updateScreenSize();
-    };
-
-    if (Platform.OS === 'web') {
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-  }, []);
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
   const [selectedGames, setSelectedGames] = useState<Set<number>>(new Set());
   const [databaseResults, setDatabaseResults] = useState<any[] | null>(null);
   const [loadingDatabase, setLoadingDatabase] = useState(false);
@@ -61,23 +45,58 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+
   // Parse board games from analysis results
   const parsedBoardGames = analysisResults?.boardGames || [];
 
-  // Initialize selectedGames with all detected games
+  // Only include games that have valid database matches
+  const validDetectedGames = useMemo(() => {
+    if (!databaseResults || !parsedBoardGames) return [] as any[];
+    return parsedBoardGames.filter((game: any) => {
+      const comparison = databaseResults.find(
+        (comp: any) => comp.detected.bgg_id === game.bgg_id
+      );
+      return !!(comparison && comparison.inDatabase && comparison.gameData);
+    });
+  }, [parsedBoardGames, databaseResults]);
+
+  // Initialize selectedGames with games not in collection (from valid results only)
   useEffect(() => {
-    if (parsedBoardGames && parsedBoardGames.length > 0) {
-      const allGameIds = new Set(parsedBoardGames.map((game: any) => game.bgg_id));
-      setSelectedGames(allGameIds);
+    if (validDetectedGames && validDetectedGames.length > 0 && databaseResults) {
+      const gamesNotInCollection = validDetectedGames
+        .filter((game: any) => {
+          const comparison = databaseResults.find(
+            (comp: any) => comp.detected.bgg_id === game.bgg_id
+          );
+          return !comparison?.inCollection;
+        })
+        .map((game: any) => game.bgg_id);
+
+      setSelectedGames(new Set(gamesNotInCollection));
     }
-  }, [parsedBoardGames]);
+  }, [validDetectedGames, databaseResults]);
 
   const handleGameSelection = (bggId: number) => {
     const newSelected = new Set(selectedGames);
+
+    // Check if this game is in the user's collection
+    const comparison = databaseResults?.find(
+      (comp: any) => comp.detected.bgg_id === bggId
+    );
+    const isInCollection = comparison?.inCollection || false;
+
+    // Don't allow selection of games already in collection
+    if (isInCollection) {
+      return;
+    }
+
     if (newSelected.has(bggId)) {
       newSelected.delete(bggId);
+      announceForAccessibility('Game deselected');
     } else {
       newSelected.add(bggId);
+      announceForAccessibility('Game selected');
     }
     setSelectedGames(newSelected);
   };
@@ -85,22 +104,9 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   const handleThumbnailPress = (imageUrl: string) => {
     setSelectedImageUrl(imageUrl);
     setImageModalVisible(true);
+    announceForAccessibility('Opening game thumbnail in full size');
   };
 
-  // Computed styles based on screen size
-  const responsiveStyles = {
-    dialog: {
-      ...styles.dialog,
-      padding: isMobile ? 16 : 24,
-      maxWidth: isMobile ? '95%' : 500 as any,
-    },
-    buttonRow: {
-      ...styles.buttonRow,
-      flexDirection: (isMobile ? 'column' : 'row') as 'row' | 'column',
-      gap: isMobile ? 8 : 12,
-      width: '100%' as any,
-    },
-  };
 
 
 
@@ -404,14 +410,34 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
 
 
   const content = (
-    <View style={responsiveStyles.dialog}>
+    <View style={styles.dialog}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <ArrowLeft size={20} color="#666666" />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            onBack();
+            announceForAccessibility('Returning to image analysis');
+          }}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          accessibilityHint="Returns to the image analysis step"
+          hitSlop={touchTargets.sizeTwenty}
+        >
+          <ArrowLeft size={20} color={colors.textMuted} />
         </TouchableOpacity>
         <Text style={styles.title}>Analysis Results</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={20} color="#666666" />
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            onClose();
+            announceForAccessibility('Analysis results modal closed');
+          }}
+          accessibilityLabel="Close modal"
+          accessibilityRole="button"
+          accessibilityHint="Closes the analysis results modal"
+          hitSlop={touchTargets.sizeTwenty}
+        >
+          <X size={20} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -429,7 +455,12 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
               setShowSuccessView(false);
               setSuccessMessage(null);
               onClose();
+              announceForAccessibility('Games successfully added to collection');
             }}
+            accessibilityLabel="OK"
+            accessibilityRole="button"
+            accessibilityHint="Confirms successful addition and closes modal"
+            hitSlop={touchTargets.standard}
           >
             <Text style={styles.okButtonText}>OK</Text>
           </TouchableOpacity>
@@ -439,111 +470,67 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
         <View style={styles.contentContainer}>
           {loadingDatabase && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#1a2b5f" />
+              <ActivityIndicator size="large" color={colors.text} />
               <Text style={styles.loadingText}>Searching database for matches...</Text>
             </View>
           )}
 
-          {!loadingDatabase && parsedBoardGames && parsedBoardGames.length > 0 && (
+          {!loadingDatabase && validDetectedGames && validDetectedGames.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Detected Games ({parsedBoardGames.length} found)</Text>
+              <Text style={styles.sectionTitle}>Detected Games ({validDetectedGames.length} found)</Text>
 
               <ScrollView style={styles.gamesScrollView} showsVerticalScrollIndicator={true}>
-                {isMobile ? (
-                  // Mobile card layout
-                  <View style={styles.mobileGameList}>
-                    {parsedBoardGames.map((game: any, index: number) => {
-                      const comparison = databaseResults?.find(
-                        (comp: any) => comp.detected.bgg_id === game.bgg_id
-                      );
-                      const isSelected = selectedGames.has(game.bgg_id);
-                      const isInCollection = comparison?.inCollection || false;
-
-                      return (
-                        <View key={index} style={[styles.mobileGameCard, isInCollection && styles.gameAlreadyInCollection]}>
-                          <View style={styles.mobileCardContent}>
-                            <TouchableOpacity
-                              style={[styles.mobileCheckbox, isSelected && styles.checkboxSelected]}
-                              onPress={() => handleGameSelection(game.bgg_id)}
-                              disabled={isInCollection}
-                            >
-                              {isSelected && <Check size={12} color="#fff" />}
-                            </TouchableOpacity>
-
-                            <View style={styles.mobileThumbnailSection}>
-                              {comparison && comparison.gameData && comparison.gameData.image_url ? (
-                                <TouchableOpacity
-                                  onPress={() => handleThumbnailPress(comparison.gameData.image_url)}
-                                  style={styles.mobileThumbnailContainer}
-                                >
-                                  <Image
-                                    source={{ uri: comparison.gameData.image_url }}
-                                    style={[styles.mobileGameThumbnail, isInCollection && styles.greyedOutImage]}
-                                    resizeMode="cover"
-                                  />
-                                </TouchableOpacity>
-                              ) : (
-                                <View style={styles.mobileNoThumbnail}>
-                                  <Text style={styles.mobileNoThumbnailText}>No image</Text>
-                                </View>
-                              )}
-                            </View>
-
-                            <View style={styles.mobileGameInfo}>
-                              {comparison && comparison.gameData ? (
-                                <Text style={[styles.mobileDatabaseTitle, isInCollection && styles.greyedOutText]}>
-                                  {comparison.gameData.name}
-                                </Text>
-                              ) : (
-                                <Text style={styles.mobileStatusText}>Not in database</Text>
-                              )}
-                              {isInCollection && (
-                                <Text style={styles.alreadyInCollectionText}>Already in collection</Text>
-                              )}
-                            </View>
-                          </View>
-                        </View>
-                      );
-                    })}
+                <View style={styles.gamesContainer}>
+                  {/* Header */}
+                  <View style={styles.tableHeader}>
+                    <Text style={styles.headerText}>Select to Add Game(s)</Text>
+                    {/*<Text style={styles.headerText}>Thumbnail</Text>*/}
+                    {/*<Text style={styles.headerText}>Game</Text>*/}
                   </View>
-                ) : (
-                  // Desktop table layout
-                  <View style={styles.comparisonTable}>
-                    <View style={styles.tableHeader}>
-                      <View style={styles.checkboxCell}>
-                        <Text style={styles.tableHeaderText}>Select</Text>
-                      </View>
-                      <View style={styles.bggIdCell}>
-                        <Text style={styles.tableHeaderText}>Thumbnail</Text>
-                      </View>
-                      <View style={styles.gameInfo}>
-                        <Text style={styles.tableHeaderText}>Detected Game</Text>
-                      </View>
-                    </View>
 
-                    {parsedBoardGames.map((game: any, index: number) => {
+                  {/* Games List */}
+                  <View style={styles.gamesList}>
+                    {validDetectedGames.map((game: any, index: number) => {
                       const comparison = databaseResults?.find(
                         (comp: any) => comp.detected.bgg_id === game.bgg_id
                       );
-                      const isSelected = selectedGames.has(game.bgg_id);
                       const isInCollection = comparison?.inCollection || false;
+                      // For games not in collection, default to selected unless explicitly deselected
+                      // For games in collection, they can't be selected anyway
+                      const isSelected = isInCollection ? false : selectedGames.has(game.bgg_id);
 
                       return (
-                        <View key={index} style={[styles.tableRow, isInCollection && styles.gameAlreadyInCollection]}>
-                          <View style={styles.checkboxCell}>
-                            <TouchableOpacity
-                              style={[styles.checkbox, isSelected && styles.checkboxSelected]}
-                              onPress={() => handleGameSelection(game.bgg_id)}
-                              disabled={isInCollection}
-                            >
-                              {isSelected && <Check size={12} color="#fff" />}
-                            </TouchableOpacity>
-                          </View>
-                          <View style={styles.bggIdCell}>
+                        <View
+                          key={index}
+                          style={[
+                            styles.gameItem,
+                            isInCollection && styles.gameAlreadyInCollection
+                          ]}
+                        >
+                          {/* Checkbox */}
+                          <TouchableOpacity
+                            style={[styles.checkbox, isSelected && styles.checkboxSelected]}
+                            onPress={() => handleGameSelection(game.bgg_id)}
+                            disabled={isInCollection}
+                            accessibilityLabel={isSelected ? 'Deselect game' : 'Select game'}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: isSelected }}
+                            accessibilityHint={isInCollection ? 'Game already in collection' : 'Toggle game selection'}
+                            hitSlop={touchTargets.standard}
+                          >
+                            {isSelected && <Check size={12} color="#fff" />}
+                          </TouchableOpacity>
+
+                          {/* Thumbnail */}
+                          <View style={styles.thumbnailSection}>
                             {comparison && comparison.gameData && comparison.gameData.image_url ? (
                               <TouchableOpacity
                                 onPress={() => handleThumbnailPress(comparison.gameData.image_url)}
                                 style={styles.thumbnailContainer}
+                                accessibilityLabel="View game thumbnail"
+                                accessibilityRole="button"
+                                accessibilityHint="Opens game thumbnail in full size"
+                                hitSlop={touchTargets.standard}
                               >
                                 <Image
                                   source={{ uri: comparison.gameData.image_url }}
@@ -557,13 +544,15 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
                               </View>
                             )}
                           </View>
-                          <View style={styles.databaseGameCell}>
+
+                          {/* Game Info */}
+                          <View style={styles.gameInfoSection}>
                             {comparison && comparison.gameData ? (
-                              <Text style={[styles.databaseGameTitle, isInCollection && styles.greyedOutText]}>
+                              <Text style={[styles.gameTitle, isInCollection && styles.greyedOutText]}>
                                 {comparison.gameData.name}
                               </Text>
                             ) : (
-                              <Text style={styles.statusTextUnknown}>Not in database</Text>
+                              <Text style={styles.statusText}>Not in database</Text>
                             )}
                             {isInCollection && (
                               <Text style={styles.alreadyInCollectionText}>Already in collection</Text>
@@ -573,7 +562,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
                       );
                     })}
                   </View>
-                )}
+                </View>
               </ScrollView>
             </>
           )}
@@ -587,24 +576,38 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
           {/* Sticky action buttons at bottom */}
           {!loadingDatabase && parsedBoardGames && parsedBoardGames.length > 0 && (
             <View style={styles.stickyActionButtons}>
-              <View style={responsiveStyles.buttonRow}>
+              <View style={styles.buttonRow}>
                 <TouchableOpacity
                   style={[styles.addToCollectionButton, addingToCollection && { opacity: 0.7 }]}
-                  onPress={handleAddSelectedToCollection}
+                  onPress={() => {
+                    handleAddSelectedToCollection();
+                    announceForAccessibility('Adding selected games to collection');
+                  }}
                   disabled={addingToCollection}
+                  accessibilityLabel={`Add ${selectedGames.size} game${selectedGames.size !== 1 ? 's' : ''} to collection`}
+                  accessibilityRole="button"
+                  accessibilityHint="Adds the selected games to your collection"
+                  hitSlop={touchTargets.standard}
                 >
                   {addingToCollection ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <Text style={styles.addToCollectionButtonText}>
-                      Add Game{selectedGames.size !== 1 ? 's' : ''} to Collection
+                      Add to Collection
                     </Text>
                   )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.cancelButton}
-                  onPress={onBack}
+                  onPress={() => {
+                    onBack();
+                    announceForAccessibility('Canceling image upload');
+                  }}
+                  accessibilityLabel="Cancel upload"
+                  accessibilityRole="button"
+                  accessibilityHint="Cancels the image upload process"
+                  hitSlop={touchTargets.standard}
                 >
                   <Text style={styles.cancelButtonText}>Cancel Upload</Text>
                 </TouchableOpacity>
@@ -674,13 +677,13 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Platform.OS === 'ios' ? 20 : 10,
+    padding: 20,
   },
   webOverlay: {
     position: 'fixed',
@@ -688,16 +691,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
     padding: 20,
   },
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
-    padding: 24,
+    padding: 20,
     width: '100%',
     maxWidth: 500,
     maxHeight: '90%',
@@ -715,14 +718,18 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeButton: {
     padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.text,
   },
   contentContainer: {
     flex: 1,
@@ -752,97 +759,81 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.text,
     marginBottom: 12,
   },
   resultCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#ff9654',
+    borderLeftColor: colors.accent,
   },
   resultText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#333333',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.text,
     lineHeight: 20,
   },
   boardGamesSection: {
     marginTop: 16,
   },
-  comparisonTable: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
+  gamesContainer: {
+    flex: 1,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
-  tableHeaderText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
+  headerText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.text,
     flex: 1,
   },
-  tableRow: {
+  gamesList: {
+    flex: 1,
+  },
+  gameItem: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    alignItems: 'center',
+    borderBottomColor: colors.border,
   },
-  checkboxCell: {
-    flex: 0.3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
+  thumbnailSection: {
+    marginRight: 12,
   },
-  gameInfo: {
-    flex: 2.5,
-    alignItems: 'flex-start',
+  gameInfoSection: {
+    flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  bggIdCell: {
-    flex: 0.8,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  databaseGameCell: {
-    flex: 2,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#1a2b5f',
-    backgroundColor: '#fff',
+    borderColor: colors.text,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   checkboxSelected: {
-    backgroundColor: '#1a2b5f',
-    borderColor: '#1a2b5f',
+    backgroundColor: colors.text,
+    borderColor: colors.text,
   },
   gameTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.text,
   },
   thumbnailContainer: {
     alignItems: 'center',
@@ -857,25 +848,20 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   noThumbnailText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 8,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption2,
+    color: colors.textMuted,
     textAlign: 'center',
   },
-  databaseGameTitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#1a2b5f',
-  },
-  statusTextUnknown: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+  statusText: {
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
   },
   addToCollectionSection: {
     marginTop: 16,
@@ -883,11 +869,10 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 12,
     alignItems: 'center',
   },
   addToCollectionButton: {
-    backgroundColor: '#1a2b5f',
+    backgroundColor: colors.text,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -897,13 +882,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   addToCollectionButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.card,
     textAlign: 'center',
   },
   cancelButton: {
-    backgroundColor: '#6c757d',
+    backgroundColor: colors.textMuted,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -911,118 +896,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
     minWidth: 0,
+    marginLeft: 12,
   },
   cancelButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.card,
     textAlign: 'center',
-  },
-  // Mobile styles
-  mobileGameList: {
-    gap: 12,
-  },
-  mobileGameCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  mobileCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
-  mobileCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#1a2b5f',
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mobileGameTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-    flex: 1,
-  },
-  mobileCardContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  mobileThumbnailSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  mobileThumbnailContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  mobileGameThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    flexShrink: 0,
-  },
-  mobileNoThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  mobileNoThumbnailText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 10,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  mobileGameInfo: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    minWidth: 0,
-  },
-  mobileDatabaseTitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#1a2b5f',
-    marginBottom: 4,
-  },
-  mobileStatusText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
   },
   summaryCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#3b82f6',
+    borderLeftColor: colors.accent,
     marginTop: 16,
   },
   summaryTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.text,
     marginBottom: 4,
   },
   summaryText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
   },
   loadingContainer: {
     justifyContent: 'center',
@@ -1030,38 +929,38 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.textMuted,
     marginTop: 16,
     textAlign: 'center',
   },
   errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#ef4444',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.error,
     marginTop: 8,
     textAlign: 'center',
   },
   warningText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#f59e0b',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.warning,
     marginTop: 8,
     textAlign: 'center',
   },
   successText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#10b981',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.success,
     marginTop: 8,
     textAlign: 'center',
   },
   stickyActionButtons: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     padding: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -1075,12 +974,12 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   greyedOutText: {
-    color: '#999999',
+    color: colors.textMuted,
   },
   alreadyInCollectionText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 10,
-    color: '#999999',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption2,
+    color: colors.textMuted,
     marginTop: 4,
   },
   successView: {
@@ -1093,32 +992,32 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   successIcon: {
     fontSize: 40,
-    color: '#fff',
-    fontFamily: 'Poppins-SemiBold',
+    color: colors.card,
+    fontFamily: typography.getFontFamily('semibold'),
   },
   successTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.title3,
+    color: colors.text,
     marginBottom: 8,
   },
   successMessage: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
   },
   okButton: {
-    backgroundColor: '#1a2b5f',
+    backgroundColor: colors.text,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -1126,8 +1025,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   okButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.card,
   },
 });

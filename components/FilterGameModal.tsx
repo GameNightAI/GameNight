@@ -1,9 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, ScrollView } from 'react-native';
+import React, { useState, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import Select, { components as selectComponents } from 'react-select';
 import { isSafari } from '@/utils/safari-polyfill';
 import { Game } from '@/types/game';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 interface FilterOption {
   value: any;
@@ -40,6 +42,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   applyButtonText = "Apply Filters",
   filterConfigs,
 }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+
   const CustomValueContainer = (props: any) => {
     const {
       selectProps,
@@ -57,9 +62,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     return (
       <selectComponents.ValueContainer {...props}>
         <Text style={{
-          fontFamily: 'Poppins-Regular',
-          fontSize: 14,
-          color: '#333',
+          fontFamily: typography.getFontFamily('normal'),
+          fontSize: typography.fontSize.subheadline,
+          color: colors.text,
           position: 'absolute', // Position it absolutely
           top: '50%', // Center vertically
           left: 10, // Align to left
@@ -110,8 +115,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
         // Also try scrolling the modal container if available
         if (modalContainerRef.current) {
-          // For web, we can use window.scrollTo as a fallback
-          if (Platform.OS === 'web') {
+          // Use window.scrollTo as a fallback for web
+          if (typeof window !== 'undefined') {
             window.scrollTo({
               top: scrollOffset,
               behavior: 'smooth'
@@ -122,55 +127,16 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     }
   };
 
-  const playerOptions = Array.from({ length: 14 }, (_, i) => String(i + 1)).concat(['15+'])
-    .map(_ => ({ value: parseInt(_), label: _ }));
-  const timeOptions = [
-    { value: 1, min: 1, max: 30, label: '30 min or less' },
-    { value: 31, min: 31, max: 60, label: '31-60 min' },
-    { value: 61, min: 61, max: 90, label: '61-90 min' },
-    { value: 91, min: 91, max: 120, label: '91-120 min' },
-    { value: 121, min: 121, max: Infinity, label: 'More than 120 min' },
-  ];
-  const ageOptions = [
-    { value: 1, min: 1, max: 5, label: '5 and under' },
-    { value: 6, min: 6, max: 7, label: '6-7' },
-    { value: 8, min: 8, max: 9, label: '8-9' },
-    { value: 10, min: 10, max: 11, label: '10-11' },
-    { value: 12, min: 12, max: 13, label: '12-13' },
-    { value: 14, min: 14, max: 15, label: '14-15' },
-    { value: 16, min: 16, max: Infinity, label: '16 and up' },
-  ];
-  const typeOptions = ['Competitive', 'Cooperative', 'Team-based']
-    .map(_ => ({ value: _, label: _ }));
-  const complexityOptions = ['Light', 'Medium Light', 'Medium', 'Medium Heavy', 'Heavy']
-    .map((_, i) => ({ value: i + 1, label: _ }));
-
-  const handleFilter = () => {
-    //onApplyFilter()
-    //onSearch(players, time, playTime === '120+');
-    onClose();
-  };
-
-  const toggleFilterOption = (
-    option: FilterOption,
-    currentValues: FilterOption[],
-    setter: (value: FilterOption[]) => void
-  ) => {
-    const isSelected = currentValues.some(v => v.value === option.value);
-    if (isSelected) {
-      setter(currentValues.filter(v => v.value !== option.value));
-    } else {
-      setter([...currentValues, option]);
-    }
-  };
 
   const clearAllFilters = () => {
     filterConfigs.forEach(config => {
       config.onChange([]);
     });
+    announceForAccessibility('All filters cleared');
   }
 
   const handleApplyFilters = () => {
+    announceForAccessibility('Filters applied successfully');
     onApplyFilters();
   };
 
@@ -179,14 +145,15 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     const baseSelectStyles = {
       control: (baseStyles: any) => ({
         ...baseStyles,
-        fontFamily: 'Poppins-Regular',
-        fontSize: 14,
-        borderColor: '#e1e5ea',
+        fontFamily: typography.getFontFamily('normal'),
+        fontSize: typography.fontSize.subheadline,
+        backgroundColor: colors.card,
+        borderColor: colors.border,
         borderRadius: 8,
-        minHeight: 40,
+        minHeight: 44,
         boxShadow: 'none',
         '&:hover': {
-          borderColor: '#ff9654',
+          borderColor: colors.accent,
         },
         ...(isSafari?.() && {
           WebkitAppearance: 'none',
@@ -201,10 +168,10 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       }),
       menu: (baseStyles: any) => ({
         ...baseStyles,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.card,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#e1e5ea',
+        borderColor: colors.border,
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         zIndex: getFilterSectionZIndex(index),
         position: 'absolute',
@@ -218,43 +185,37 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         ...baseStyles,
         maxHeight: 200, // Increased to accommodate all 5 complexity options
         overflow: 'auto',
+        backgroundColor: colors.card,
       }),
       option: (baseStyles: any, state: any) => ({
         ...baseStyles,
-        backgroundColor: state.isFocused ? '#fff5ef' : 'transparent',
-        color: '#333333',
+        backgroundColor: state.isFocused ? colors.tints.accent : 'transparent',
+        color: colors.text,
       }),
       placeholder: (baseStyles: any) => ({
         ...baseStyles,
-        fontFamily: 'Poppins-Regular',
-        fontSize: 14,
-        color: '#999999',
+        fontFamily: typography.getFontFamily('normal'),
+        fontSize: typography.fontSize.body,
+        color: colors.textMuted,
       }),
-      // clearIndicator: (baseStyles: any) => ({
-      //   ...baseStyles,
-      //   color: '#666666',
-      //   fontSize: 11,
-      //   fontFamily: 'Poppins-SemiBold',
-      //   padding: '2px 6px',
-      //   cursor: 'pointer',
-      //   '&:hover': { color: '#ff9654' },
-      //   '& svg': { display: 'none' },
-      //   '&::after': { content: '"CLR"', display: 'block' },
-      // }),
       multiValueLabel: (baseStyles: any) => ({
         ...baseStyles,
-        fontFamily: 'Poppins-Regular',
-        fontSize: 12,
+        fontFamily: typography.getFontFamily('normal'),
+        fontSize: typography.fontSize.caption1,
+        color: colors.text,
       }),
       noOptionsMessage: (baseStyles: any) => ({
         ...baseStyles,
-        fontFamily: 'Poppins-Regular',
-        fontSize: 13,
+        fontFamily: typography.getFontFamily('normal'),
+        fontSize: typography.fontSize.caption1,
+        color: colors.textMuted,
       }),
     };
 
     return baseSelectStyles;
   };
+
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   if (!isVisible) return null;
 
@@ -262,8 +223,14 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     <>
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={18} color="#666666" />
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={onClose}
+          accessibilityLabel="Close"
+          accessibilityHint="Closes the filter modal"
+          hitSlop={touchTargets.small}
+        >
+          <X size={16} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -273,8 +240,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
       <ScrollView
         ref={scrollViewRef}
-        style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={{ paddingBottom: 4, paddingTop: 2 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={true}
       >
         {filterConfigs.map((config, index) => (
@@ -299,7 +266,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
                 return (
                   <View style={styles.optionRow}>
                     <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                      {isSelected && <Check size={12} color="#ffffff" />}
+                      {isSelected && <Check size={12} color={colors.card} />}
                     </View>
                     <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
                       {option.label}
@@ -318,7 +285,13 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         ))}
 
         {/* Clear All Button */}
-        <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+        <TouchableOpacity
+          style={styles.clearAllButton}
+          onPress={clearAllFilters}
+          accessibilityLabel="Clear all filters"
+          accessibilityHint="Removes all applied filters"
+          hitSlop={touchTargets.small}
+        >
           <Text style={styles.clearAllButtonText}>Clear All Filters</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -326,48 +299,24 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       <TouchableOpacity
         style={styles.applyButton}
         onPress={handleApplyFilters}
+        accessibilityLabel="Apply filters"
+        accessibilityHint="Applies the selected filters to the collection"
+        hitSlop={touchTargets.small}
       >
         <Text style={styles.applyButtonText}>{applyButtonText}</Text>
       </TouchableOpacity>
     </>
   );
 
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.overlay}>
-        <View
-          ref={modalContainerRef}
-          style={{
-            maxWidth: '100%',
-            maxHeight: '100%',
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 20,
-            overflow: 'visible',
-          }}
-        >
-          <View style={styles.dialog}>
-            {content}
-          </View>
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <Modal
-      visible={isVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
+    <View style={styles.overlay}>
+      <View
+        ref={modalContainerRef}
+        style={styles.dialog}
+      >
         {content}
       </View>
-    </Modal>
+    </View>
   );
 };
 
@@ -432,37 +381,32 @@ export const filterGames = (
   });
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   overlay: {
-    position: 'fixed',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999999,
-    padding: Platform.OS === 'web' ? 20 : 10,
-    overflow: 'visible',
+    padding: 20,
   },
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 8,
     width: '100%',
+    maxWidth: '100%',
+    maxHeight: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    position: 'relative',
-    overflow: 'visible',
-    display: 'flex',
-    flexDirection: 'column',
     paddingHorizontal: 12,
-    zIndex: 999999,
-    height: 'auto',
-    maxWidth: '100%',
+    paddingVertical: 16,
   },
   header: {
     flexDirection: 'row',
@@ -470,23 +414,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e5ea',
+    borderBottomColor: colors.border,
     paddingBottom: 6,
-    paddingTop: 12,
+
   },
   closeButton: {
     padding: 4,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
   },
   description: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     marginBottom: 8,
+    paddingTop: 2,
+  },
+  scrollView: {
+    flex: 1,
+    minHeight: 0,
+  },
+  scrollViewContent: {
+    paddingBottom: 4,
     paddingTop: 2,
   },
   filterSection: {
@@ -498,66 +450,65 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#666666',
+    borderColor: colors.textMuted,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
   },
   checkboxSelected: {
-    backgroundColor: '#ff9654',
-    borderColor: '#ff9654',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    marginLeft: 10,
   },
   optionText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#333333',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.text,
   },
   optionTextSelected: {
-    color: '#ff9654',
-    fontFamily: 'Poppins-SemiBold',
+    color: colors.accent,
+    fontFamily: typography.getFontFamily('semibold'),
   },
   applyButton: {
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 0,
   },
   applyButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
     color: '#ffffff',
   },
   clearAllButton: {
-    backgroundColor: '#e1e5ea',
+    backgroundColor: colors.border,
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 8,
   },
   clearAllButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#333333',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.text,
   },
   debugText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 12,
-    color: '#ff9654',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.accent,
     textAlign: 'center',
-    backgroundColor: '#fff5ef',
+    backgroundColor: colors.tints.accent,
     padding: 8,
     borderRadius: 4,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#ff9654',
+    borderColor: colors.accent,
   },
 });
