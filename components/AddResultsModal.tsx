@@ -160,7 +160,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
           user_id: user.id,
           bgg_game_id: databaseGame?.id,
           name: databaseGame?.name || detectedGame.title,
-          thumbnail: databaseGame?.image_url || null,
+          thumbnail: databaseGame?.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
           min_players: databaseGame?.min_players || 1,
           max_players: databaseGame?.max_players || 4,
           playing_time: databaseGame?.playing_time || 60,

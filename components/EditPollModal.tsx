@@ -138,8 +138,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
           const currentGames = gamesData.map(game => ({
             id: game.id,
             name: game.name || 'Unknown Game',
-            thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
-            image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+            thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+            image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
             min_players: game.min_players || 1,
             max_players: game.max_players || 1,
             min_exp_players: game.min_players || 1,
@@ -153,7 +153,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
             complexity: game.complexity || 1,
             minPlaytime: game.minplaytime || 0,
             maxPlaytime: game.maxplaytime || 0,
-            complexity_tier: game.complexity_tier || 1,
+            complexity_tier: game.complexity_tier || 0,
             complexity_desc: game.complexity_desc || '',
             bayesaverage: game.bayesaverage ?? null,
           }));
@@ -439,7 +439,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                       onPress={() => toggleGameSelection(game)}
                     >
                       <Image
-                        source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
+                        source={{ uri: game.thumbnail || game.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
                         style={styles.gameThumbnail}
                         resizeMode="cover"
                       />

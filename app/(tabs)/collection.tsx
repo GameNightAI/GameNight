@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { X, ListFilter, Plus, Camera } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,7 +27,6 @@ export default function CollectionScreen() {
 
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
-  // const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +80,7 @@ export default function CollectionScreen() {
       if (error) throw error;
 
       const gameGroups = Map.groupBy(data || [], (game => game.bgg_game_id))
-      const mappedGames = gameGroups.values().map((gameGroup) => {
+      const mappedGames = gameGroups.values().map(gameGroup => {
         let game = gameGroup[0];
 
         let expansions = gameGroup
@@ -112,8 +111,9 @@ export default function CollectionScreen() {
           id: game.bgg_game_id,
           name: game.name,
           yearPublished: game.year_published,
-          thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
-          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+          // Use BGG's "NO IMAGE AVAILABLE" as a fallback
+          thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
           min_players: game.min_players,
           max_players: game.max_players,
           playing_time: game.playing_time,
@@ -133,7 +133,6 @@ export default function CollectionScreen() {
           max_exp_players: max_exp_players,
         }
       }).toArray();
-      console.log(mappedGames);
 
       // Sort games alphabetically by title, ignoring articles
       const sortedGames = sortGamesByTitle(mappedGames);

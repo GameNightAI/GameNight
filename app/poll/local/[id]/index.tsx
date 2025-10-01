@@ -129,8 +129,9 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
           id: game.id,
           name: game.name || 'Unknown Game',
           yearPublished: game.year_published || null,
-          thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
-          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+          // Use BGG's "NO IMAGE AVAILABLE" as a fallback
+          thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
           min_players: game.min_players || 1,
           max_players: game.max_players || 1,
           playing_time: game.playing_time || 0,

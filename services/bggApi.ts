@@ -18,7 +18,6 @@ export async function fetchGames(username: string): Promise<Game[]> {
       await new Promise(resolve => setTimeout(resolve, 2000));
     } else if (!response.ok) {
       throw new Error(`Failed to fetch collection: ${response.status} - ${response.statusText}`);
-      break;
     } else {
       break;
     }
@@ -77,8 +76,8 @@ export async function fetchGames(username: string): Promise<Game[]> {
       id: parseInt(item.objectid),
       name: name || 'Unknown Game',
       yearPublished: item.yearpublished ? parseInt(item.yearpublished) : null,
-      thumbnail: item.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
-      image: item.image || 'https://via.placeholder.com/300?text=No+Image',
+      thumbnail: item.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+      image: item.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
       min_players: parseInt(stats.minplayers),
       max_players: parseInt(stats.maxplayers),
       playing_time: parseInt(stats.playingtime || '0'),
@@ -86,8 +85,7 @@ export async function fetchGames(username: string): Promise<Game[]> {
       maxPlaytime: parseInt(stats.maxplaytime || '0'),
       description: '',
     };
-
-    // console.log('Processed game:', game);
+    
     return game;
   });
 }

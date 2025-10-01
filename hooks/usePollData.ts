@@ -46,7 +46,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       setLoading(true);
       setError(null);
 
-      console.log('Loading poll with ID:', id);
+      // console.log('Loading poll with ID:', id);
 
       // Get the poll details
       const { data: pollData, error: pollError } = await supabase
@@ -64,7 +64,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         throw new Error('Poll not found');
       }
 
-      console.log('Poll data loaded:', pollData);
+      // console.log('Poll data loaded:', pollData);
       setPoll(pollData);
 
       // Get current user (may be null for anonymous users)
@@ -87,7 +87,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         throw gamesError;
       }
 
-      console.log('Poll games:', pollGames);
+      // console.log('Poll games:', pollGames);
 
       if (!pollGames || pollGames.length === 0) {
         console.log('No games found in poll');
@@ -97,7 +97,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       }
 
       const gameIds = pollGames.map(pg => pg.game_id);
-      console.log('Game IDs to fetch:', gameIds);
+      // console.log('Game IDs to fetch:', gameIds);
 
       // Get the actual game details from games table
       const { data: gamesData, error: gameDetailsError } = await supabase
@@ -110,7 +110,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         throw gameDetailsError;
       }
 
-      console.log('Games data loaded:', gamesData);
+      // console.log('Games data loaded:', gamesData);
 
       if (!gamesData || gamesData.length === 0) {
         console.log('No game details found');
@@ -198,8 +198,8 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           id: game.id,
           name: game.name || 'Unknown Game',
           yearPublished: game.year_published || null,
-          thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
-          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+          thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
           min_players: game.min_players || 1,
           max_players: game.max_players || 1,
           min_exp_players: game.min_exp_players || game.min_players || 1,
@@ -220,8 +220,6 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           userVote,
         };
       });
-
-      console.log('Formatted games:', formattedGames);
 
       // Set initial pending votes from user's existing votes
       const initialVotes: Record<number, number> = {};
