@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Switch } from 'react-native';
 import { format } from 'date-fns';
+
 import { SquarePen } from 'lucide-react-native';
 import { CreateEventDetails } from './CreateEventDetails';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+
 
 interface EventOptions {
   location: string;

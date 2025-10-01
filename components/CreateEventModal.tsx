@@ -366,7 +366,8 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
             </View>
           </View>
 
-        </ScrollView>
+        </ScrollView>        
+        
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.createButton, selectedDates.length === 0 && styles.createButtonDisabled]}
@@ -495,6 +496,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 12,
   },
+
 
   availabilityLabel: {
     marginTop: 16,
