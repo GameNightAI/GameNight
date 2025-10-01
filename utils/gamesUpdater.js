@@ -6,10 +6,23 @@ import { parse } from 'csv-parse';
 import { asyncBatch, asyncToArray, asyncMap } from 'iter-tools';
 import { format } from 'date-fns';
 
+// Environment variables
+const {
+  BGG_USERNAME,
+  BGG_PASSWORD,
+  BGG_API_AUTH_TOKEN,
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY, // Optional, probably shouldn't be used anyway since it ignores all RLS.
+  SUPABASE_ANON_KEY, // Used for normal login if SUPABASE_SERVICE_ROLE_KEY env var doesn't exist
+  SUPABASE_EMAIL,
+  SUPABASE_PASSWORD,
+} = process.env;
+
 const BGG_LOGIN_URL = 'https://boardgamegeek.com/login/api/v1';
 const BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks';
-const SLEEP_TIME = 5 // seconds to wait before retrying BGG API request
-const DASH = '–' // NOT the hyphen character on the keyboard
+const BGG_API_URL = 'https://boardgamegeek.com/xmlapi2/thing?stats=1&id=';
+const SLEEP_TIME = 5; // seconds to wait before retrying BGG API & other fetch requests
+const DASH = '–'; // NOT the hyphen character on the keyboard
 const TAXONOMY_DELIMITER = '|';
 const BGG_API_BATCH_SIZE = 20; // 20 is the maximum number of games allowed by https://boardgamegeek.com/xmlapi2/thing
 const SUPABASE_BATCH_SIZE = 1000; // number of rows per INSERT/UPSERT requests
@@ -27,16 +40,14 @@ const cError = text =>
   console.error(`${timestamp()}: ${text}`)
 
 const arrayify = (x) => {
-  if (!Array.isArray(x)) {
-    x = [x];
-  }
+  if (!Array.isArray(x)) {x = [x];}
   return x;
-}
+};
 
 const getZipUrl = async () => {
   
   // Need to be logged in to BGG to get the oh-so-secret zipfile link
-  const username = process.env.BGG_USERNAME;
+  const username = BGG_USERNAME;
   log(`Logging ${username} in to BGG...`);
   const loginResponse = await fetch(
     BGG_LOGIN_URL, {
@@ -44,7 +55,7 @@ const getZipUrl = async () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ credentials: {
         username: username,
-        password: process.env.BGG_PASSWORD,
+        password: BGG_PASSWORD,
       }}),
     }
   );
@@ -218,9 +229,9 @@ const createSupabaseClient = async () => {
   /* Use the service_role key (which bypasses RLS)
   if we're running this in a Supabase edge function.
   Otherwise, login as a normal user */
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
   const supabase = createClient(
-    process.env.SUPABASE_URL,
+    SUPABASE_URL,
     supabaseKey,
     { auth: {
       autoRefreshToken: true,
@@ -228,18 +239,18 @@ const createSupabaseClient = async () => {
       detectSessionInUrl: true,
     }}
   );
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (SUPABASE_SERVICE_ROLE_KEY) {
     log('Created Supabase client using SUPABASE_SERVICE_ROLE_KEY.');
   } else {
     log('Created Supabase client using SUPABASE_ANON_KEY.');
-    const email = process.env.SUPABASE_EMAIL;
+    const email = SUPABASE_EMAIL;
     log(`Logging ${email} in to Supabase...`);
     const { error } = await supabase.auth.signInWithPassword({
       email: email,
-      password: process.env.SUPABASE_PASSWORD,
+      password: SUPABASE_PASSWORD,
     });
     if (error) {
-    throw new Error(`Failed to log in: ${error.message}`);
+      throw new Error(`Failed to log in: ${error.message}`);
     } else {
       log('Successfully logged in.')
     };
@@ -252,12 +263,14 @@ const bggApiCaller = async function* (csvParser) {
   for await (const bggBatch of asyncBatch(BGG_API_BATCH_SIZE, csvParser)) {
     
     const ids = await asyncToArray(asyncMap((game => game.id), bggBatch));
-    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join()}&stats=1`;
+    const url = `${BGG_API_URL}${ids.join(',')}`;
     
     let bggResponse;
     while (1) {
       try {
-        bggResponse = await fetch(url);
+        bggResponse = await fetch(url,
+          { headers: { Authorization: `Bearer ${BGG_API_AUTH_TOKEN}` }}
+        );
       } catch (error) {
         cError(`Network error: ${error} - Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
         await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
