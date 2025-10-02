@@ -282,7 +282,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       renderItem={({ item }) => (
         <View style={styles.resultItem}>
           <Image
-            source={{ uri: item.thumbnail || item.image }}
+            source={{ uri: item.thumbnail || item.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
             style={styles.thumbnail}
             resizeMode="contain"
           />
