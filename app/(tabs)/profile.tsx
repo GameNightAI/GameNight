@@ -1,27 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
-import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { LogOut, CreditCard as Edit2, ExternalLink, Mail } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 import { supabase } from '@/services/supabase';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string | null>(null);
+  const { colors, typography } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': Poppins_400Regular,
-    'Poppins-SemiBold': Poppins_600SemiBold,
-    'Poppins-Bold': Poppins_700Bold,
-  });
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -40,6 +37,7 @@ export default function ProfileScreen() {
     try {
       setLoading(true);
       await supabase.auth.signOut();
+      announceForAccessibility('Successfully signed out');
       router.replace('/auth/login');
     } catch (error) {
       console.error('Error logging out:', error);
@@ -52,7 +50,7 @@ export default function ProfileScreen() {
     Linking.openURL('https://boardgamegeek.com');
   };
 
-  if (!fontsLoaded || !email) {
+  if (!email) {
     return null;
   }
 
@@ -62,18 +60,14 @@ export default function ProfileScreen() {
       contentContainerStyle={[styles.contentContainer, { paddingBottom: 80 + safeAreaBottom }]}
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View
-        style={styles.profileHeader}
-      >
+      <View style={styles.profileHeader}>
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarLetter}>{email.charAt(0).toUpperCase()}</Text>
         </View>
         <Text style={styles.username}>{email}</Text>
-      </Animated.View>
+      </View>
 
-      <Animated.View
-        style={styles.statsContainer}
-      >
+      <View style={styles.statsContainer}>
         <Text style={styles.sectionTitle}>App Information</Text>
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>About this app</Text>
@@ -89,49 +83,68 @@ export default function ProfileScreen() {
               Questions, issues, or feature requests?{'\n'}
               Email us or join our Discord server!
             </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('mailto:GameNyteApp@gmail.com')}>
-              <Mail size={64} color="#666666" />
+            <TouchableOpacity
+              accessibilityLabel="Email support"
+              accessibilityRole="button"
+              accessibilityHint="Opens your email app to contact support"
+              onPress={() => Linking.openURL('mailto:GameNyteApp@gmail.com')}
+              style={styles.iconButton}
+            >
+              <Mail size={28} color={colors.textMuted} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => Linking.openURL('https://discord.gg/FPX4hatRK2')}>
+            <TouchableOpacity
+              accessibilityLabel="Open Discord server"
+              accessibilityRole="button"
+              accessibilityHint="Opens the GameNyte Discord invite link"
+              onPress={() => Linking.openURL('https://discord.gg/FPX4hatRK2')}
+              style={[styles.iconButton, styles.iconButtonSpacing]}
+            >
               <Image
                 source={require('@/assets/images/discord_symbol.svg')}
                 resizeMode="contain"
+                style={styles.discordIcon}
               />
             </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity onPress={handleViewOnBGG}>
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            accessibilityLabel="Log out"
+            accessibilityRole="button"
+            accessibilityHint="Logs you out and returns to the login screen"
+            onPress={handleLogout}
+            disabled={loading}
+          >
+            <LogOut size={20} color={colors.error} />
+            <Text style={[styles.actionButtonText, styles.logoutButtonText]}>
+              {loading ? 'Logging out...' : 'Log Out'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          accessibilityLabel="View BoardGameGeek website"
+          accessibilityRole="button"
+          accessibilityHint="Opens boardgamegeek.com in your browser"
+          onPress={handleViewOnBGG}
+        >
           <Image
             source={require('@/assets/images/Powered by BGG.webp')}
             style={styles.bggLogo}
             resizeMode="contain"
           />
         </TouchableOpacity>
-      </Animated.View>
-
-      <Animated.View
-        style={styles.actionsContainer}
-      >
-        <TouchableOpacity
-          style={[styles.actionButton, styles.logoutButton]}
-          onPress={handleLogout}
-          disabled={loading}
-        >
-          <LogOut size={20} color="#e74c3c" />
-          <Text style={[styles.actionButtonText, styles.logoutButtonText]}>
-            {loading ? 'Logging out...' : 'Log Out'}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
+      </View>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
   },
   contentContainer: {
     padding: 20,
@@ -145,7 +158,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#1a2b5f',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -156,14 +169,14 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   avatarLetter: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 40,
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.title1 * 1.25,
     color: '#ffffff',
   },
   username: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.title3,
+    color: colors.primary,
     marginBottom: 8,
   },
   bggLink: {
@@ -172,22 +185,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   bggLinkText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.accent,
     marginRight: 4,
   },
   statsContainer: {
     marginBottom: 32,
   },
   sectionTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#4CAF50',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.success,
     marginBottom: 16,
   },
   infoCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -198,41 +211,50 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   infoLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.primary,
     marginBottom: 8,
   },
   infoText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
     lineHeight: 22,
   },
   contactContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
   },
   contactText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
     lineHeight: 22,
     flex: 1,
+  },
+  iconButton: {
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconButtonSpacing: {
+    marginLeft: 12,
+  },
+  discordIcon: {
+    width: 28,
+    height: 28,
   },
   bggLogo: {
     width: '100%',
     height: 60,
     marginTop: 16,
   },
-  actionsContainer: {
-    marginTop: 16,
-  },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -241,18 +263,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    minHeight: 44,
   },
   actionButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.primary,
     marginLeft: 12,
   },
-  logoutButton: {
-    borderWidth: 1,
-    borderColor: '#ffeeee',
-  },
   logoutButtonText: {
-    color: '#e74c3c',
+    color: colors.error,
   },
 });

@@ -3,12 +3,15 @@ import { useRouter } from 'expo-router';
 import { Shuffle, Dice6, Trophy } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
+import { useMemo } from 'react';
 
 const { height: screenHeight } = Dimensions.get('window');
 
 export default function ToolsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors, typography, touchTargets } = useTheme();
 
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
@@ -19,29 +22,31 @@ export default function ToolsScreen() {
       title: 'First Player Select',
       description: 'Randomly select who goes first',
       icon: Shuffle,
-      color: '#ff9654',
-      backgroundColor: '#fff5ef',
-      onPress: () => router.push('/tools/first-player'),
+      color: colors.warning,
+      backgroundColor: colors.tints.warningBg,
+      onPress: () => router.navigate('/tools/first-player'),
     },
     {
       id: 'digital-dice',
       title: 'Digital Dice',
       description: 'Roll virtual dice for your games',
       icon: Dice6,
-      color: '#10b981',
-      backgroundColor: '#ecfdf5',
-      onPress: () => router.push('/tools/digital-dice'),
+      color: colors.success,
+      backgroundColor: colors.tints.success,
+      onPress: () => router.navigate('/tools/digital-dice'),
     },
     {
       id: 'score-tracker',
       title: 'Score Tracker',
       description: 'Keep track of player scores',
       icon: Trophy,
-      color: '#8b5cf6',
-      backgroundColor: '#f3f4f6',
-      onPress: () => router.push('/tools/score-tracker'),
+      color: colors.accent,
+      backgroundColor: colors.tints.accent,
+      onPress: () => router.navigate('/tools/score-tracker'),
     },
   ];
+
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   return (
     <ScrollView
@@ -78,9 +83,12 @@ export default function ToolsScreen() {
                 style={[styles.toolButton, { backgroundColor: tool.backgroundColor }]}
                 onPress={tool.onPress}
                 activeOpacity={0.7}
+                accessibilityLabel={`Open ${tool.title}`}
+                accessibilityRole="button"
+                accessibilityHint={`Opens the ${tool.title} tool`}
               >
                 <View style={styles.toolIconContainer}>
-                  <IconComponent size={32} color={tool.color} />
+                  <IconComponent size={24} color={tool.color} />
                 </View>
 
                 <View style={styles.toolContent}>
@@ -100,19 +108,19 @@ export default function ToolsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     minHeight: screenHeight,
   },
   headerSection: {
-    height: Math.max(110, screenHeight * 0.1), // Reduced height slightly
+    height: Math.max(110, screenHeight * 0.1),
     position: 'relative',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'flex-start',
   },
   backgroundImage: {
@@ -131,37 +139,27 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     paddingHorizontal: 20,
-    paddingTop: 0, // Reduced from 40 to 20
+    paddingTop: 0,
     alignItems: 'flex-start',
     zIndex: 1,
   },
-  /*title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: Math.min(32, screenHeight * 0.04), // Responsive font size
-    color: '#ffffff',
-    textAlign: 'center',
-    marginBottom: 8,
-  },*/
   subtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: Math.min(16, screenHeight * 0.02), // Responsive font size
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
     color: '#ffffff',
     textAlign: 'left',
-    paddingTop: 0,
     opacity: 0.9,
-    lineHeight: 22,
-    // maxWidth: 300,
-    marginTop: 30, // Shift up by about 20 units
+    marginTop: -25,
   },
   toolsSection: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     marginTop: -30,
     paddingTop: 30,
     paddingHorizontal: 20,
-    minHeight: screenHeight * 0.6, // Ensure minimum height for content
+    minHeight: screenHeight * 0.6,
   },
   toolCard: {
     marginBottom: 16,
@@ -169,23 +167,24 @@ const styles = StyleSheet.create({
   toolButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
-    minHeight: 80, // Ensure consistent height
+    minHeight: 60,
+    flexShrink: 1,
   },
   toolIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#ffffff',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -197,17 +196,15 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   toolTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.title3,
+    color: colors.primary,
     marginBottom: 4,
-    lineHeight: 22,
   },
   toolDescription: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.textMuted,
     flexWrap: 'wrap',
   },
   toolArrow: {

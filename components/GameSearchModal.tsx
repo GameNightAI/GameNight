@@ -6,7 +6,8 @@ import { debounce } from 'lodash';
 import { Game } from '@/types/game';
 import { XMLParser } from 'fast-xml-parser';
 import Toast from 'react-native-toast-message';
-import { sortGamesByTitle } from '@/utils/sortingUtils';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 
 interface GameSearchModalProps {
@@ -32,6 +33,9 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   existingGameIds = [],
   userCollectionIds = [],
 }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -87,10 +91,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
           .in('id', ids)
           .order('rank');
 
-        // Sort games alphabetically by title, ignoring articles
-        const sortedGames = sortGamesByTitle(games || []);
-
-        setSearchResults(sortedGames);
+        setSearchResults(games || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -104,9 +105,14 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
 
 
 
-  const debouncedSearch = useMemo(() => {
-    return debounce(fetchSearchResults, 500);
-  }, []); // No dependencies to ensure stable reference
+  const debouncedSearch = useMemo(() => debounce(fetchSearchResults, 500), [fetchSearchResults]);
+
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel?.();
+    };
+  }, [debouncedSearch]);
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
@@ -183,6 +189,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       if (insertError) throw insertError;
 
       onGameAdded?.(game);
+      announceForAccessibility(`${game.name} added to your collection`);
 
       // Show success toast
       Toast.show({
@@ -197,6 +204,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
     } catch (err) {
       console.error('Add game error:', err);
       setError('Failed to add game to collection');
+      announceForAccessibility('Failed to add game to collection');
     } finally {
       setAdding(false);
     }
@@ -206,12 +214,14 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
     // Check if game is already in the poll
     if (existingGameIds.includes(game.id.toString())) {
       setError(`${game.name} is already in the poll`);
+      announceForAccessibility(`${game.name} is already in the poll`);
       return;
     }
 
     // Check if game is in user's collection
     if (userCollectionIds.includes(game.id.toString())) {
       setError(`${game.name} is already in your collection`);
+      announceForAccessibility(`${game.name} is already in your collection`);
       return;
     }
 
@@ -221,6 +231,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
 
     // Show success message
     setSuccessMessage(`${game.name} added successfully!`);
+    announceForAccessibility(`${game.name} added successfully`);
     setError('');
 
     // Clear search state after game is selected but keep modal open
@@ -292,6 +303,10 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
             style={getActionButtonStyle(item)}
             onPress={() => handleAction(item)}
             disabled={isActionDisabled(item)}
+            accessibilityLabel={mode === 'collection' ? `Add ${item.name} to collection` : `Add ${item.name} to poll`}
+            accessibilityRole="button"
+            accessibilityHint={mode === 'collection' ? 'Adds game to your collection' : 'Adds game to the current poll'}
+            hitSlop={touchTargets.sizeTwenty}
           >
             <Plus size={20} color="#ffffff" />
           </TouchableOpacity>
@@ -315,11 +330,18 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.dialog, Platform.OS === 'web' && styles.webDialog]}>
+        <View style={styles.dialog}>
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <X size={20} color="#666666" />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => { onClose(); announceForAccessibility('Search modal closed'); }}
+              accessibilityLabel="Close search"
+              accessibilityRole="button"
+              accessibilityHint="Closes the game search modal"
+              hitSlop={touchTargets.sizeTwenty}
+            >
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -341,13 +363,19 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
                 onChangeText={handleSearch}
                 autoCapitalize="none"
                 autoCorrect={false}
+                accessibilityLabel="Search games"
+                accessibilityHint="Type to search for games by name"
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   style={styles.clearButton}
                   onPress={handleClearSearch}
+                  accessibilityLabel="Clear search"
+                  accessibilityRole="button"
+                  accessibilityHint="Clears the current search text"
+                  hitSlop={touchTargets.small}
                 >
-                  <X size={16} color="#666666" />
+                  <X size={16} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
@@ -370,16 +398,16 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Platform.OS === 'ios' ? 20 : 10,
+    padding: 20,
   },
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 24,
     width: '100%',
@@ -391,10 +419,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  webDialog: {
-    maxWidth: 600,
-    maxHeight: '90%',
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -405,14 +429,14 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.text,
   },
   description: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.textMuted,
     marginBottom: 20,
   },
   searchContainer: {
@@ -424,16 +448,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   input: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingRight: 40, // Make room for clear button
     borderWidth: 1,
-    borderColor: '#e1e5ea',
+    borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     textAlign: 'left',
     width: '100%',
   },
@@ -441,13 +465,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     padding: 4,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
     borderRadius: 12,
   },
   errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#e74c3c',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.error,
     marginBottom: 16,
   },
   resultsList: {
@@ -457,7 +481,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
     padding: 12,
     paddingLeft: 8,
     borderRadius: 12,
@@ -468,32 +492,32 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   resultTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
   },
   resultDetails: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     marginTop: 4,
   },
   alreadyInCollection: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     marginTop: 4,
     fontStyle: 'italic',
   },
   alreadyInPoll: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     marginTop: 4,
     fontStyle: 'italic',
   },
   actionButton: {
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     width: 40,
     height: 40,
     borderRadius: 8,
@@ -502,12 +526,12 @@ const styles = StyleSheet.create({
   },
   actionButtonDisabled: {
     opacity: 0.5,
-    backgroundColor: '#cccccc',
+    backgroundColor: colors.textMuted,
   },
   emptyText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 20,
   },
@@ -517,35 +541,35 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginLeft: 0,
     marginRight: 6,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
   },
   warningContainer: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#ffeaa7',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   warningText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
-    color: '#856404',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.text,
     textAlign: 'center',
     lineHeight: 18,
   },
   successContainer: {
-    backgroundColor: '#d1fae5',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#a7f3d0',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   successText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#065f46',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
     textAlign: 'center',
     lineHeight: 20,
   },

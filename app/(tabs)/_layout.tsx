@@ -1,18 +1,41 @@
 import { Tabs } from 'expo-router';
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, View, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Calendar, Library, User, Vote, Wrench } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { Calendar, Library, User, Vote, Wrench, Sun, Moon } from 'lucide-react-native';
+import { useEffect, useState, useMemo } from 'react';
 import { saveLastVisitedTab, getLastVisitedTab } from '@/utils/storage';
+import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
+import { useTheme } from '@/hooks/useTheme';
 
 const EVENTS_SCREEN = false; // Set to true to show events screen
+
+const getHeaderTitle = (routeName: string): string => {
+  switch (routeName) {
+    case 'collection':
+      return 'My Collection';
+    case 'index':
+      return 'Game Tools';
+    case 'events':
+      return 'Schedule Events';
+    case 'polls':
+      return 'Game Polls';
+    case 'profile':
+      return 'User Profile';
+    default:
+      return 'GameNyte';
+  }
+};
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const [initialTab, setInitialTab] = useState<string | null>(null);
+  const { colorScheme, toggleTheme } = useAccessibilityContext();
+  const { colors, isDark, typography, touchTargets } = useTheme();
 
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
+
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets, safeAreaBottom), [colors, typography, touchTargets, safeAreaBottom]);
 
   useEffect(() => {
     // Load the last visited tab on component mount
@@ -34,13 +57,34 @@ export default function TabLayout() {
     saveLastVisitedTab(tabName);
   };
 
+  // Simple header component with dark mode toggle
+  const CustomHeader = ({ title }: { title: string }) => (
+    <View style={styles.customHeader}>
+      <Text style={styles.customHeaderTitle}>{title}</Text>
+      <TouchableOpacity
+        style={styles.darkModeToggle}
+        onPress={toggleTheme}
+        accessibilityLabel={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        accessibilityRole="button"
+        accessibilityHint="Toggle between light and dark theme"
+        data-clickable="true"
+      >
+        {isDark ? (
+          <Sun size={20} color={colors.text} />
+        ) : (
+          <Moon size={20} color={colors.text} />
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <Tabs
       initialRouteName="index"
       screenOptions={{
         headerShown: true,
-        tabBarActiveTintColor: '#ff9654',
-        tabBarInactiveTintColor: '#8d8d8d',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: [
           styles.tabBar,
           {
@@ -54,8 +98,7 @@ export default function TabLayout() {
           }
         ],
         tabBarLabelStyle: styles.tabBarLabel,
-        headerStyle: styles.header,
-        headerTitleStyle: styles.headerTitle,
+        header: ({ route }) => <CustomHeader title={getHeaderTitle(route.name)} />,
       }}
       screenListeners={{
         tabPress: (e) => {
@@ -92,7 +135,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Library color={color} size={size} />
           ),
-          headerTitle: 'My Collection',
         }}
       />
       <Tabs.Screen
@@ -102,7 +144,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Wrench color={color} size={size} />
           ),
-          headerTitle: 'Game Tools',
         }}
       />
       <Tabs.Screen
@@ -112,7 +153,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Calendar color={color} size={size} />
           ),
-          headerTitle: 'Schedule Events',
         }}
       />
       <Tabs.Screen
@@ -122,7 +162,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Vote color={color} size={size} />
           ),
-          headerTitle: 'Game Polls',
         }}
       />
       <Tabs.Screen
@@ -132,32 +171,48 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <User color={color} size={size} />
           ),
-          headerTitle: 'User Profile',
         }}
       />
     </Tabs>
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: '#1a2b5f',
-    borderTopWidth: 0,
-    elevation: 0,
-    paddingTop: 8,
-  },
-  tabBarLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  header: {
-    backgroundColor: '#1a2b5f',
-    shadowColor: 'transparent',
-    elevation: 0,
-  },
-  headerTitle: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});
+function getStyles(colors: any, typography: any, touchTargets: any, safeAreaBottom: number) {
+  return StyleSheet.create({
+    tabBar: {
+      backgroundColor: '#1a2b5f', // Keep exact same color
+      borderTopWidth: 0,
+      elevation: 0,
+      paddingTop: 8,
+    },
+    tabBarLabel: {
+      fontFamily: typography.getFontFamily('medium'),
+      fontSize: typography.fontSize.caption2,
+    },
+    customHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: '#1a2b5f', // Keep exact same color
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      paddingTop: Platform.OS === 'ios' ? 44 : 12, // Account for status bar on iOS
+      minHeight: touchTargets.standard.height,
+    },
+    customHeaderTitle: {
+      color: '#ffffff', // Keep exact same color
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title2,
+      flex: 1,
+    },
+    darkModeToggle: {
+      width: touchTargets.standard.height,
+      height: touchTargets.standard.height,
+      borderRadius: touchTargets.standard.height / 2,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.1)', // Keep exact same color
+      marginLeft: 12,
+    },
+  });
+}

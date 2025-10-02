@@ -3,7 +3,7 @@ import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
 import { VOTING_OPTIONS, getVoteTypeKeyFromScore } from '@/components/votingOptions';
-import { getVotedFlag, getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
+import { getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
 
 interface GameVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
@@ -46,12 +46,47 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
       setLoading(true);
       setError(null);
 
-      // Check if user has voted
+      // Check if user has voted by querying the database
       try {
-        const votedFlag = await getVotedFlag(id);
-        setHasVoted(votedFlag);
-      } catch (storageError) {
-        console.warn('Error checking voted flag:', storageError);
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // Get user identifier using the same logic as usePollData
+        let identifier = null;
+        if (user?.email) {
+          identifier = user.email;
+        } else {
+          // Try to get saved username from storage
+          const { getUsername } = await import('@/utils/storage');
+          const savedUsername = await getUsername();
+          if (savedUsername) {
+            identifier = savedUsername;
+          } else {
+            // Fallback to anonymous ID
+            const { getOrCreateAnonId } = await import('@/utils/anon');
+            const anonId = await getOrCreateAnonId();
+            identifier = anonId;
+          }
+        }
+
+        if (identifier) {
+          const { data: userVotes, error: votesError } = await supabase
+            .from('votes')
+            .select('id')
+            .eq('poll_id', id)
+            .eq('voter_name', identifier)
+            .limit(1);
+
+          if (votesError) {
+            console.warn('Error checking user votes:', votesError);
+            setHasVoted(false);
+          } else {
+            setHasVoted(userVotes && userVotes.length > 0);
+          }
+        } else {
+          setHasVoted(false);
+        }
+      } catch (error) {
+        console.warn('Error checking if user has voted:', error);
         setHasVoted(false);
       }
 

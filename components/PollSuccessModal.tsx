@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Platform } from 'react-native';
 import { X, Share2, Users, Copy } from 'lucide-react-native';
-import { useDeviceType } from '@/hooks/useDeviceType';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 
@@ -20,34 +21,13 @@ export const PollSuccessModal: React.FC<PollSuccessModalProps> = ({
   pollUrl,
   onStartInPersonVoting,
 }) => {
-  const deviceType = useDeviceType();
-  const [isMobile, setIsMobile] = React.useState(false);
-  const [isSmallMobile, setIsSmallMobile] = React.useState(false);
-  const [isReady, setIsReady] = React.useState(false);
-
-  React.useEffect(() => {
-    const updateScreenSize = () => {
-      const { width, height } = Dimensions.get('window');
-      setIsMobile(width < 768);
-      setIsSmallMobile(width < 380 || height < 700);
-    };
-
-    updateScreenSize();
-    setIsReady(true);
-
-    const handleResize = () => {
-      updateScreenSize();
-    };
-
-    if (Platform.OS === 'web') {
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-  }, []);
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
 
   const handleCopyLink = async () => {
     try {
       await Clipboard.setStringAsync(pollUrl);
+      announceForAccessibility('Poll link copied to clipboard');
       Toast.show({ type: 'success', text1: 'Poll link copied to clipboard!' });
     } catch (err) {
       console.error('Failed to copy link:', err);
@@ -58,42 +38,40 @@ export const PollSuccessModal: React.FC<PollSuccessModalProps> = ({
   const handleStartInPersonVoting = () => {
     // Close the modal first
     onClose();
+    announceForAccessibility('Starting in-person voting');
     // Call the callback if provided, otherwise the parent will handle navigation
     if (onStartInPersonVoting) {
       onStartInPersonVoting();
     }
   };
 
-  if (!isVisible || !isReady) return null;
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+
+  if (!isVisible) return null;
 
   return (
     <View style={styles.overlay}>
-      <View style={[styles.dialog, {
-        maxWidth: isMobile ? '90%' : 500,
-        width: '100%',
-      }]}>
+      <View style={styles.dialog}>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={onDone}
           accessibilityLabel="Close"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityHint="Closes the poll success modal"
+          hitSlop={touchTargets.small}
         >
-          <X size={isMobile ? 20 : 24} color="#666666" />
+          <X size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
         <View style={styles.content}>
           {/* Success Header */}
           <View style={styles.successHeader}>
             <Text style={styles.title}>Poll Created!</Text>
-            <View style={styles.checkmarkContainer}>
-              <Text style={styles.checkmark}>✓</Text>
-            </View>
           </View>
 
           {/* Share Link Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Share2 size={24} color="#ff9654" />
+              <Share2 size={20} color={colors.accent} />
               <Text style={styles.sectionTitle}>Share the Link</Text>
             </View>
             <Text style={styles.sectionDescription}>
@@ -107,6 +85,8 @@ export const PollSuccessModal: React.FC<PollSuccessModalProps> = ({
                 style={styles.copyButton}
                 onPress={handleCopyLink}
                 accessibilityLabel="Copy poll link"
+                accessibilityHint="Copies the poll link to your clipboard"
+                hitSlop={touchTargets.small}
               >
                 <Copy size={16} color="#ffffff" />
               </TouchableOpacity>
@@ -116,7 +96,7 @@ export const PollSuccessModal: React.FC<PollSuccessModalProps> = ({
           {/* In-Person Voting Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Users size={24} color="#3b82f6" />
+              <Users size={20} color={colors.primary} />
               <Text style={styles.sectionTitle}>Vote In-Person</Text>
             </View>
             <Text style={styles.sectionDescription}>
@@ -126,6 +106,8 @@ export const PollSuccessModal: React.FC<PollSuccessModalProps> = ({
               style={styles.startVotingButton}
               onPress={handleStartInPersonVoting}
               accessibilityLabel="Start in-person voting"
+              accessibilityHint="Opens the poll for in-person voting on this device"
+              hitSlop={touchTargets.small}
             >
               <Users size={20} color="#ffffff" />
               <Text style={styles.startVotingButtonText}>Start In-Person Voting</Text>
@@ -135,8 +117,13 @@ export const PollSuccessModal: React.FC<PollSuccessModalProps> = ({
           {/* Done Button */}
           <TouchableOpacity
             style={styles.doneButton}
-            onPress={onDone}
+            onPress={() => {
+              announceForAccessibility('Poll creation completed');
+              onDone();
+            }}
             accessibilityLabel="Done - close all modals"
+            accessibilityHint="Completes the poll creation process and closes all modals"
+            hitSlop={touchTargets.small}
           >
             <Text style={styles.doneButtonText}>Done</Text>
           </TouchableOpacity>
@@ -152,8 +139,6 @@ type Styles = {
   closeButton: ViewStyle;
   content: ViewStyle;
   successHeader: ViewStyle;
-  checkmarkContainer: ViewStyle;
-  checkmark: TextStyle;
   title: TextStyle;
   section: ViewStyle;
   sectionHeader: ViewStyle;
@@ -168,22 +153,22 @@ type Styles = {
   doneButtonText: TextStyle;
 };
 
-const styles = StyleSheet.create<Styles>({
+const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
   overlay: {
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: Platform.OS === 'web' ? 20 : 10,
+    padding: 20,
   },
 
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -192,18 +177,18 @@ const styles = StyleSheet.create<Styles>({
     elevation: 5,
     position: 'relative',
     overflow: 'hidden',
+    maxWidth: 500,
+    width: '100%',
   },
   closeButton: {
     position: 'absolute',
     top: 16,
     right: 16,
     zIndex: 100,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: colors.tints.neutral,
     borderRadius: 12,
     padding: 4,
     elevation: 2,
-    borderWidth: 1,
-    borderColor: '#e74c3c',
   },
   content: {
     padding: 24,
@@ -214,35 +199,20 @@ const styles = StyleSheet.create<Styles>({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    gap: 12,
-  },
-  checkmarkContainer: {
-    marginTop: 12,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#16a34a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkmark: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   title: {
     marginTop: 12,
-    fontSize: 18,
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.title3,
+    color: colors.text,
     fontWeight: 'bold',
   },
   section: {
     marginBottom: 24,
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e1e5ea',
+    borderColor: colors.border,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -250,36 +220,35 @@ const styles = StyleSheet.create<Styles>({
     marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 14
-    ,
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.body,
+    color: colors.text,
     marginLeft: 12,
     fontWeight: 'bold',
   },
   sectionDescription: {
-    fontSize: 12,
-    color: '#666666',
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     marginBottom: 16,
     lineHeight: 15,
   },
   linkContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e1e5ea',
+    borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   linkText: {
     flex: 1,
-    fontSize: 10,
-    color: '#666666',
+    fontSize: typography.fontSize.caption2,
+    color: colors.textMuted,
     marginRight: 8,
   },
   copyButton: {
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     borderRadius: 6,
     padding: 8,
     justifyContent: 'center',
@@ -289,18 +258,18 @@ const styles = StyleSheet.create<Styles>({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.success,
     borderRadius: 8,
     padding: 12,
-    gap: 10,
   },
   startVotingButtonText: {
-    fontSize: 12,
+    fontSize: typography.fontSize.caption1,
     color: '#ffffff',
     fontWeight: 'bold',
+    marginLeft: 10,
   },
   doneButton: {
-    backgroundColor: '#1a2b5f',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
@@ -308,7 +277,7 @@ const styles = StyleSheet.create<Styles>({
     marginTop: 8,
   },
   doneButtonText: {
-    fontSize: 14,
+    fontSize: typography.fontSize.body,
     color: '#ffffff',
     fontWeight: '600',
   },

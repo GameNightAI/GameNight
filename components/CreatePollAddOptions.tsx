@@ -1,3 +1,5 @@
+// currently not used. for purpose of future development.
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Platform } from 'react-native';
 import { X } from 'lucide-react-native';

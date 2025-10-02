@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated from 'react-native-reanimated';
 import { X, ListFilter, Plus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 import { supabase } from '@/services/supabase';
 import { GameItem } from '@/components/GameItem';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
-import { EmptyState } from '@/components/EmptyState';
+import { EmptyStateCollection } from '@/components/EmptyStateCollection';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
@@ -22,6 +23,8 @@ import { fetchGames } from '@/services/bggApi';
 
 export default function CollectionScreen() {
   const insets = useSafeAreaInsets();
+  const { colors, typography } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
   const [allGames, setAllGames] = useState<Game[]>([]);
   const [games, setGames] = useState<Game[]>([]);
 
@@ -79,13 +82,22 @@ export default function CollectionScreen() {
 
       if (error) throw error;
 
-      const gameGroups = Map.groupBy(data || [], (game => game.bgg_game_id))
-      const mappedGames = gameGroups.values().map(gameGroup => {
+      // Group games by bgg_game_id using a compatible approach
+      const gameGroups = new Map();
+      (data || []).forEach(game => {
+        const key = game.bgg_game_id;
+        if (!gameGroups.has(key)) {
+          gameGroups.set(key, []);
+        }
+        gameGroups.get(key).push(game);
+      });
+
+      const mappedGames = Array.from(gameGroups.values()).map((gameGroup) => {
         let game = gameGroup[0];
 
         let expansions = gameGroup
-          .filter(row => row.expansion_id)
-          .map(row => ({
+          .filter((row: any) => row.expansion_id)
+          .map((row: any) => ({
             id: row.expansion_id,
             name: row.expansion_name,
             min_players: row.expansion_min_players,
@@ -95,16 +107,15 @@ export default function CollectionScreen() {
           }));
 
         let mins = gameGroup
-          .filter(row => row.is_expansion_owned)
-          .map(row => row.expansion_min_players)
-          .toSorted();
+          .filter((row: any) => row.is_expansion_owned)
+          .map((row: any) => row.expansion_min_players)
+          .sort((a: number, b: number) => a - b);
         let min_exp_players = mins.length ? mins[0] : null;
 
         let maxs = gameGroup
-          .filter(row => row.is_expansion_owned)
-          .map(row => row.expansion_max_players)
-          .toSorted()
-          .toReversed();
+          .filter((row: any) => row.is_expansion_owned)
+          .map((row: any) => row.expansion_max_players)
+          .sort((a: number, b: number) => b - a);
         let max_exp_players = maxs.length ? maxs[0] : null;
 
         return {
@@ -132,7 +143,7 @@ export default function CollectionScreen() {
           min_exp_players: min_exp_players,
           max_exp_players: max_exp_players,
         }
-      }).toArray();
+      });
 
       // Sort games alphabetically by title, ignoring articles
       const sortedGames = sortGamesByTitle(mappedGames);
@@ -177,7 +188,8 @@ export default function CollectionScreen() {
   const applyFilters = useCallback(() => {
     const filteredGames = filterGames(allGames, playerCount, playTime, age, gameType, complexity);
     setGames(filteredGames);
-  }, [allGames, playerCount, playTime, age, gameType, complexity]);
+    announceForAccessibility(`Filters applied. Showing ${filteredGames.length} games.`);
+  }, [allGames, playerCount, playTime, age, gameType, complexity, announceForAccessibility]);
 
   const clearFilters = () => {
     setPlayerCount([]);
@@ -189,6 +201,7 @@ export default function CollectionScreen() {
     if (allGames.length > 0) {
       setGames(allGames);
     }
+    announceForAccessibility('All filters cleared. Showing all games.');
   };
 
   const onRefresh = useCallback(() => {
@@ -327,7 +340,7 @@ export default function CollectionScreen() {
 
   if ((!filterModalVisible) && games.length === 0 && !loading) {
     return (
-      <EmptyState
+      <EmptyStateCollection
         username={null}
         onRefresh={loadGames}
         loadGames={loadGames}
@@ -335,16 +348,19 @@ export default function CollectionScreen() {
         buttonText={isFiltered ? "Clear Filters" : undefined}
         showSyncButton={!isFiltered}
         handleClearFilters={clearFilters}
-        onSyncClick={() => setSyncModalVisible(true)}
       />
     );
   }
 
+  const styles = getStyles(colors, typography);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.titleSection}>
-          <Text style={styles.countText}>{games.length} games</Text>
+        <View>
+          <Text style={styles.countText}>
+            {games.length} {games.length === 1 ? 'game' : 'games'}
+          </Text>
         </View>
 
         <ScrollView
@@ -355,20 +371,29 @@ export default function CollectionScreen() {
           <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setFilterModalVisible(true)}
+            accessibilityLabel="Filter games"
+            accessibilityRole="button"
+            accessibilityHint="Open filter options to narrow down your game collection"
           >
-            <ListFilter size={20} color="#ff9654" />
+            <ListFilter size={20} color={colors.accent} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setAddGameModalVisible(true)}
+            accessibilityLabel="Add game"
+            accessibilityRole="button"
+            accessibilityHint="Add a new game to your collection"
           >
-            <Plus size={20} color="#ff9654" />
+            <Plus size={20} color={colors.accent} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.createPollButton}
             onPress={() => setCreatePollModalVisible(true)}
+            accessibilityLabel="Create poll"
+            accessibilityRole="button"
+            accessibilityHint="Create a new voting poll with selected games"
           >
-            <Plus size={20} color="#ffffff" />
+            <Plus size={20} color={colors.card} />
             <Text style={styles.createPollButtonText}>Create Poll</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -378,10 +403,13 @@ export default function CollectionScreen() {
         <View style={styles.filterBanner}>
           <View style={styles.filterBannerContent}>
             <TouchableOpacity
-              style={styles.clearButton}
+              style={styles.editButton}
               onPress={() => setFilterModalVisible(true)}
+              accessibilityLabel="Edit filters"
+              accessibilityRole="button"
+              accessibilityHint="Modify or clear current filter settings"
             >
-              <Text style={styles.clearButtonText}>Edit Filters</Text>
+              <Text style={styles.editButtonText}>Edit Filters</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -391,13 +419,13 @@ export default function CollectionScreen() {
         data={games}
         keyExtractor={item => item.id.toString()}
         renderItem={({ item, index }) => (
-          <Animated.View>
+          <View>
             <GameItem
               game={item}
               onDelete={() => setGameToDelete(item)}
               onExpansionUpdate={loadGames}
             />
-          </Animated.View>
+          </View>
         )}
         contentContainerStyle={[styles.listContent, { paddingBottom: 80 + safeAreaBottom }]}
         showsVerticalScrollIndicator={false}
@@ -405,8 +433,8 @@ export default function CollectionScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#ff9654']}
-            tintColor="#ff9654"
+            colors={[colors.accent]}
+            tintColor={colors.accent}
           />
         }
       />
@@ -503,89 +531,118 @@ export default function CollectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#f7f9fc',
+    paddingVertical: 20,
+    backgroundColor: colors.background,
   },
   titleSection: {
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  titleColumn: {
+    flex: 1,
   },
   title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#1a2b5f',
-    marginBottom: 4,
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.title1,
+    color: colors.primary,
+    marginBottom: 6,
+    lineHeight: typography.lineHeight.tight * typography.fontSize.title1,
   },
   countText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
+    marginBottom: 20,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   actionsSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   filterButton: {
-    backgroundColor: '#fff',
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    backgroundColor: colors.card,
+    minWidth: 44,
+    minHeight: 44,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ff9654',
+    borderColor: colors.accent,
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   filterBanner: {
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 8,
+    backgroundColor: colors.border,
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   filterBannerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-
-  clearButton: {
+  editButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 44,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  clearButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#666666',
-    marginLeft: 4,
+  editButtonText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
+    marginLeft: 6,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   createPollButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 8,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    minHeight: 44,
+    borderRadius: 12,
     marginRight: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   createPollButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ffffff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption,
+    color: colors.card,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.caption,
+    marginLeft: 10,
   },
-
   listContent: {
-    padding: 16,
+    padding: 20,
   },
-
 });

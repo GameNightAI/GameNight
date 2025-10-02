@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { RefreshCw, Search, Star, Filter, Users, Plus } from 'lucide-react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { RefreshCw, Star, Filter, Users, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { AddGameModal } from '@/components/AddGameModal';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
-interface EmptyStateProps {
+interface EmptyStateCollectionProps {
   username: string | null;
   onRefresh: (username?: string) => void | Promise<void>;
   loadGames: () => void;
@@ -13,38 +14,29 @@ interface EmptyStateProps {
   buttonText?: string;
   showSyncButton?: boolean;
   handleClearFilters: any;
-  onSyncClick?: () => void;
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({
+export const EmptyStateCollection: React.FC<EmptyStateCollectionProps> = ({
   username,
   onRefresh,
   loadGames,
   message,
   buttonText = "Refresh",
   showSyncButton = false,
-  handleClearFilters,
-  onSyncClick
+  handleClearFilters
 }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
   const [addGameModalVisible, setAddGameModalVisible] = useState(false);
   const router = useRouter();
 
-  const handleImportCollection = () => {
-    if (onSyncClick) {
-      onSyncClick();
-    } else {
-      // Fallback to old behavior if onSyncClick is not provided
-      onRefresh();
-    }
-  };
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets), [colors, typography, touchTargets]);
+
 
 
   if (showSyncButton) {
     return (
-      <Animated.View
-        entering={FadeIn.duration(500)}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         {/* Main heading */}
         <Text style={styles.title}>Add games to your collection!</Text>
 
@@ -56,17 +48,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {/* Benefits list */}
         <View style={styles.benefitsList}>
           <View style={styles.benefitItem}>
-            <Star size={20} color="#ff9654" />
+            <Star size={20} color={colors.accent} />
             <Text style={styles.benefitText}>Track your collection</Text>
           </View>
 
           <View style={styles.benefitItem}>
-            <Filter size={20} color="#ff9654" />
+            <Filter size={20} color={colors.accent} />
             <Text style={styles.benefitText}>Easily filter to find the right game</Text>
           </View>
 
           <View style={styles.benefitItem}>
-            <Users size={20} color="#ff9654" />
+            <Users size={20} color={colors.accent} />
             <Text style={styles.benefitText}>Let your friends vote on what they want to play</Text>
           </View>
         </View>
@@ -74,41 +66,32 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {/* Add Game Button */}
         <TouchableOpacity
           style={styles.addGameButton}
-          onPress={() => setAddGameModalVisible(true)}
+          onPress={() => {
+            setAddGameModalVisible(true);
+            announceForAccessibility('Opening add game modal');
+          }}
           activeOpacity={0.8}
+          accessibilityLabel="Add games to your collection"
+          accessibilityRole="button"
+          accessibilityHint="Opens a modal to add games manually"
         >
-          <Plus size={20} color="#ffffff" />
+          <Plus size={20} color={colors.card} />
           <Text style={styles.addGameButtonText}>Add Games</Text>
         </TouchableOpacity>
 
-        {/* Or divider */}
-        <Text style={styles.orText}>or</Text>
-
-        {/* Import BGG Collection Button */}
-        <TouchableOpacity
-          style={styles.importButton}
-          onPress={handleImportCollection}
-          activeOpacity={0.8}
-        >
-          <Search size={20} color="#ffffff" />
-          <Text style={styles.importButtonText}>Import BGG Collection</Text>
-        </TouchableOpacity>
 
         <AddGameModal
           isVisible={addGameModalVisible}
           onClose={() => setAddGameModalVisible(false)}
           onGameAdded={loadGames}
         />
-      </Animated.View>
+      </View>
     );
   }
 
   // Fallback for non-sync scenarios
   return (
-    <Animated.View
-      entering={FadeIn.duration(500)}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <Text style={styles.emptyTitle}>No Games Found</Text>
       <Text style={styles.emptyMessage}>
         {message || (username ?
@@ -119,42 +102,48 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       <TouchableOpacity
         style={styles.refreshButton}
-        onPress={handleClearFilters}
+        onPress={() => {
+          handleClearFilters();
+          announceForAccessibility('Filters cleared, showing all games');
+        }}
+        accessibilityLabel={buttonText}
+        accessibilityRole="button"
+        accessibilityHint="Clears current filters to show all games"
       >
-        <RefreshCw size={18} color="#ffffff" />
+        <RefreshCw size={18} color={colors.card} />
         <Text style={styles.refreshText}>{buttonText}</Text>
       </TouchableOpacity>
 
       <Text style={styles.helpText}>
         Make sure your BoardGameGeek collection contains board games.
       </Text>
-    </Animated.View>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any, touchTargets: any) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
     padding: 20,
   },
   title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.title2,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 12,
   },
   subtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 16,
     maxWidth: 300,
-    lineHeight: 24,
+    lineHeight: typography.lineHeight.body,
   },
   benefitsList: {
     width: '100%',
@@ -170,102 +159,76 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   benefitText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.text,
     marginLeft: 12,
     flex: 1,
-    lineHeight: 22,
+    lineHeight: typography.lineHeight.body,
   },
   addGameButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
     width: '100%',
     maxWidth: 320,
     marginBottom: 16,
-    shadowColor: '#000',
+    minHeight: touchTargets.standard.height,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
   addGameButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-    marginLeft: 8,
-  },
-  orText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#8d8d8d',
-    marginBottom: 16,
-  },
-  importButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 320,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  importButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.card,
     marginLeft: 8,
   },
   helpText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
-    color: '#8d8d8d',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption2,
+    color: colors.textMuted,
     textAlign: 'center',
     maxWidth: 280,
-    lineHeight: 18,
+    lineHeight: typography.lineHeight.caption2,
   },
   // Legacy styles for non-sync scenarios
   emptyTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.title3,
+    color: colors.text,
     marginTop: 20,
     marginBottom: 8,
   },
   emptyMessage: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 24,
     maxWidth: 300,
+    lineHeight: typography.lineHeight.caption1,
   },
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
     marginBottom: 24,
+    minHeight: touchTargets.standard.height,
   },
   refreshText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.card,
     marginLeft: 8,
   },
 });

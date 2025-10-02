@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Alert, Image } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, AlertTriangle, SquarePen } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
@@ -7,6 +7,8 @@ import Toast from 'react-native-toast-message';
 import { CreatePollModal } from './CreatePollModal';
 import { CreatePollDetails } from './CreatePollDetails';
 import { sortGamesByTitle } from '@/utils/sortingUtils';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 
 interface EditPollModalProps {
@@ -26,6 +28,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   pollTitle,
   pollDescription,
 }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [originalPollGames, setOriginalPollGames] = useState<Game[]>([]);
@@ -156,6 +160,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
             complexity_tier: game.complexity_tier || 0,
             complexity_desc: game.complexity_desc || '',
             bayesaverage: game.bayesaverage ?? null,
+            expansions: [],
           }));
 
           setOriginalPollGames(currentGames);
@@ -199,6 +204,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc,
         bayesaverage: game.bayesaverage ?? null,
+        expansions: [],
       }));
 
       // Sort games alphabetically by title, ignoring articles
@@ -304,6 +310,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         }
       }
 
+      announceForAccessibility('Poll changes saved successfully');
       Toast.show({
         type: 'success',
         text1: 'Poll updated successfully!',
@@ -324,6 +331,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const toggleGameSelection = (game: Game) => {
     setSelectedGames(current => {
       const isSelected = current.some(g => g.id === game.id);
+      announceForAccessibility(isSelected ? `${game.name} deselected` : `${game.name} selected`);
       if (isSelected) {
         return current.filter(g => g.id !== game.id);
       } else {
@@ -331,6 +339,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
       }
     });
   };
+
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   if (!isVisible) return null;
 
@@ -340,23 +350,32 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>Edit Poll</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color="#666666" />
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityLabel="Close"
+              accessibilityHint="Closes the edit poll modal"
+              hitSlop={touchTargets.small}
+            >
+              <X size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           {/* Warning about existing votes */}
           {hasExistingVotes && !warningDismissed && (
-            <View style={styles.warningHeader}>
-              <AlertTriangle size={20} color="#f59e0b" />
+            <View style={styles.warningHeader} accessibilityRole="alert">
+              <AlertTriangle size={20} color={colors.warning} />
               <Text style={styles.warningHeaderText}>
                 This poll already has {voterCount} voter{voterCount !== 1 ? 's' : ''}
               </Text>
               <TouchableOpacity
                 style={styles.warningDismissButton}
                 onPress={() => setWarningDismissed(true)}
+                accessibilityLabel="Dismiss warning"
+                accessibilityHint="Dismisses the existing votes warning"
+                hitSlop={touchTargets.small}
               >
-                <X size={16} color="#92400e" />
+                <X size={16} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
           )}
@@ -378,6 +397,9 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                     onPress={() => {
                       setShowConfirmation(false);
                     }}
+                    accessibilityLabel="Cancel"
+                    accessibilityHint="Cancels the current action and closes the confirmation dialog"
+                    hitSlop={touchTargets.small}
                   >
                     <Text style={styles.confirmationButtonTextCancel}>Cancel</Text>
                   </TouchableOpacity>
@@ -388,9 +410,13 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                       if (confirmationAction === 'save') {
                         performSave();
                       } else {
+                        announceForAccessibility('Opening add games modal');
                         setShowCreatePollModal(true);
                       }
                     }}
+                    accessibilityLabel={confirmationAction === 'save' ? 'Continue' : 'Add Games'}
+                    accessibilityHint={confirmationAction === 'save' ? 'Continues with saving poll changes' : 'Opens the add games modal'}
+                    hitSlop={touchTargets.small}
                   >
                     <Text style={styles.confirmationButtonTextContinue}>
                       {confirmationAction === 'save' ? 'Continue' : 'Add Games'}
@@ -405,7 +431,13 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
             <View style={styles.descriptionSection}>
               <TouchableOpacity
                 style={[styles.descriptionButton, (dynamicPollDescription || isTitleManuallyChanged) && styles.descriptionButtonActive]}
-                onPress={() => setIsDetailsModalVisible(true)}
+                onPress={() => {
+                  announceForAccessibility('Opening poll details editor');
+                  setIsDetailsModalVisible(true);
+                }}
+                accessibilityLabel="Edit Title & Description"
+                accessibilityHint="Opens the poll title and description editor"
+                hitSlop={touchTargets.small}
               >
                 <View style={styles.descriptionButtonContent}>
                   <View style={styles.descriptionButtonLeft}>
@@ -415,7 +447,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                     <View style={[styles.descriptionButtonIndicator, { opacity: (dynamicPollDescription || isTitleManuallyChanged) ? 1 : 0 }]}>
                       <Text style={styles.descriptionButtonIndicatorText}>✓</Text>
                     </View>
-                    <SquarePen size={20} color="#666666" />
+                    <SquarePen size={20} color={colors.textMuted} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -437,11 +469,17 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                         isSelected && styles.gameItemSelected
                       ]}
                       onPress={() => toggleGameSelection(game)}
+                      accessibilityLabel={`${game.name}, ${game.min_players}-${game.max_players} players`}
+                      accessibilityHint={isSelected ? "Tap to remove from poll" : "Tap to keep in poll"}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isSelected }}
+                      hitSlop={touchTargets.small}
                     >
                       <Image
                         source={{ uri: game.thumbnail || game.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
                         style={styles.gameThumbnail}
                         resizeMode="cover"
+                        accessibilityLabel={`${game.name} thumbnail`}
                       />
                       <View style={styles.gameInfo}>
                         <Text style={styles.gameName}>{game.name}</Text>
@@ -470,11 +508,15 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                   setConfirmationAction('addGames');
                   setShowConfirmation(true);
                 } else {
+                  announceForAccessibility('Opening add games modal');
                   setShowCreatePollModal(true);
                 }
               }}
+              accessibilityLabel={originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
+              accessibilityHint="Opens the add games modal to select additional games"
+              hitSlop={touchTargets.small}
             >
-              <Plus size={20} color="#1d4ed8" />
+              <Plus size={20} color={colors.primary} />
               <Text style={styles.addGamesButtonText}>
                 {originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
               </Text>
@@ -487,6 +529,9 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
               style={[styles.saveButton, loading || selectedGames.length === 0 ? styles.saveButtonDisabled : undefined]}
               onPress={handleSaveChanges}
               disabled={loading || selectedGames.length === 0}
+              accessibilityLabel={loading ? 'Saving...' : 'Save Changes'}
+              accessibilityHint="Saves the poll changes and closes the editor"
+              hitSlop={touchTargets.small}
             >
               <Text style={styles.saveButtonText}>
                 {loading ? 'Saving...' : 'Save Changes'}
@@ -532,20 +577,20 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
   },
   modal: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     width: '90%',
     maxWidth: 600,
@@ -563,12 +608,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.border,
   },
   title: {
-    fontSize: 20,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.headline,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.text,
+    marginLeft: 12,
   },
   closeButton: {
     padding: 4,
@@ -576,25 +622,25 @@ const styles = StyleSheet.create({
   warningHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.tints.warning,
     borderTopWidth: 1,
-    borderTopColor: '#f59e0b',
+    borderTopColor: colors.warning,
     borderBottomWidth: 1,
-    borderBottomColor: '#f59e0b',
+    borderBottomColor: colors.warning,
     padding: 16,
     margin: 0,
-    gap: 12,
   },
   warningHeaderText: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#92400e',
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.textMuted,
+    marginLeft: 12,
   },
   warningDismissButton: {
     padding: 4,
     borderRadius: 4,
-    backgroundColor: 'rgba(146, 64, 14, 0.1)',
+    backgroundColor: colors.tints.warning,
   },
   content: {
     flex: 1,
@@ -607,16 +653,16 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   descriptionButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#e1e5ea',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 10,
     marginTop: 8,
   },
   descriptionButtonActive: {
-    borderColor: '#ff9654',
-    backgroundColor: '#fff5ef',
+    borderColor: colors.accent,
+    backgroundColor: colors.tints.accent,
   },
   descriptionButtonContent: {
     flexDirection: 'row',
@@ -631,60 +677,60 @@ const styles = StyleSheet.create({
   descriptionButtonRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   descriptionButtonLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.text,
   },
   descriptionButtonIndicator: {
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.success,
     borderRadius: 10,
     width: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+    marginRight: 6,
   },
   descriptionButtonIndicatorText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: typography.fontSize.caption1,
+    fontFamily: typography.getFontFamily('semibold'),
   },
   currentGamesSection: {
     marginBottom: 0,
     marginTop: 0,
   },
   sublabel: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
     marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.text,
     marginBottom: 12,
   },
   addGamesButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     borderWidth: 2,
-    borderColor: '#1d4ed8',
+    borderColor: colors.primary,
     borderStyle: 'dashed',
     borderRadius: 8,
     padding: 16,
     marginTop: 8,
-    gap: 8,
   },
   addGamesButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1d4ed8',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.primary,
+    marginLeft: 8,
   },
   gameItem: {
     flexDirection: 'row',
@@ -692,73 +738,73 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
   },
   gameThumbnail: {
     width: 60,
     height: 60,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
     marginRight: 12,
   },
   gameItemSelected: {
-    borderColor: '#1d4ed8',
-    backgroundColor: '#eff6ff',
+    borderColor: colors.primary,
+    backgroundColor: colors.tints.primary,
   },
   gameInfo: {
     flex: 1,
   },
   gameName: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.text,
     marginBottom: 2,
   },
   playerCount: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.caption1,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#1d4ed8',
-    borderColor: '#1d4ed8',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   footer: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.border,
   },
   errorText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#ef4444',
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.error,
     marginBottom: 12,
     textAlign: 'center',
   },
   saveButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#9ca3af',
+    backgroundColor: colors.textMuted,
   },
   saveButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('semibold'),
     color: '#ffffff',
   },
   confirmationOverlay: {
@@ -767,13 +813,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2000,
   },
   confirmationDialog: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 24,
     margin: 20,
@@ -785,43 +831,43 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   confirmationTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.title3,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.text,
     marginBottom: 12,
   },
   confirmationMessage: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
     marginBottom: 20,
     lineHeight: 20,
   },
   confirmationButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
   },
   confirmationButtonCancel: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.background,
   },
   confirmationButtonTextCancel: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#6b7280',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.textMuted,
   },
   confirmationButtonContinue: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#1d4ed8',
+    backgroundColor: colors.primary,
+    marginLeft: 12,
   },
   confirmationButtonTextContinue: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('semibold'),
     color: '#ffffff',
   },
 });
