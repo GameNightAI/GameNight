@@ -344,26 +344,20 @@ const main = async () => {
 
   const supabase = await createSupabaseClient();
 
-  log('Deleting all rows from games_staging...');
-  const delGamesResponse = await supabase
-    .from('games_staging')
-    .delete()
-    .not('id', 'is', null); // Supabase requires a WHERE clause to delete rows
+  log('Truncating games_staging...');
+  const delGamesResponse = await supabase.rpc('truncate_games_staging')
   if (delGamesResponse.error) {
     throw new Error(delGamesResponse.error.message);
   } else {
-    log('Successfully deleted games_staging rows.');
+    log('Successfully truncated games_staging rows.');
   };
 
-  log('Deleting all rows from expansions_staging...');
-  const delExpResponse = await supabase
-    .from('expansions_staging')
-    .delete()
-    .not('id', 'is', null); // Supabase requires a WHERE clause to delete rows
+  log('Truncating expansions_staging...');
+  const delExpResponse = await supabase.rpc('truncate_expansions_staging')
   if (delExpResponse.error) {
     throw new Error(delExpResponse.error.message);
   } else {
-    log('Successfully deleted expansions_staging rows.');
+    log('Successfully truncated expansions_staging rows.');
   };
 
   const [zipUrl, zipFilename] = await getZipUrl();
