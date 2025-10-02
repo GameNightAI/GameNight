@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, Image } from 'react-native';
 import { X, Camera, RefreshCw, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
