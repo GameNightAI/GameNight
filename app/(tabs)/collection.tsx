@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated from 'react-native-reanimated';
-import { X, ListFilter, Plus, Camera } from 'lucide-react-native';
+import { X, ListFilter, Plus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
@@ -119,13 +119,13 @@ export default function CollectionScreen() {
           playing_time: game.playing_time,
           minPlaytime: game.minplaytime,
           maxPlaytime: game.maxplaytime,
-          description: game.description || '',
+          description: game.description,
           minAge: game.min_age,
-          is_cooperative: game.is_cooperative || false,
-          is_teambased: game.is_teambased || false,
+          is_cooperative: game.is_cooperative,
+          is_teambased: game.is_teambased,
           complexity: game.complexity,
           complexity_tier: game.complexity_tier,
-          complexity_desc: game.complexity_desc || '',
+          complexity_desc: game.complexity_desc,
           average: game.average,
           bayesaverage: game.bayesaverage,
           expansions: expansions,

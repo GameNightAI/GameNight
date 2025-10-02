@@ -8,15 +8,6 @@ import { Game } from '@/types/game';
 import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE, getVoteTypeKeyFromScore } from '@/components/votingOptions';
 import { getUsername } from '@/utils/storage';
 
-// Helper function to get complexity description
-function getComplexityDescription(complexity: number): string {
-  if (complexity < 1.5) return 'Light';
-  if (complexity < 2.5) return 'Medium Light';
-  if (complexity < 3.5) return 'Medium';
-  if (complexity < 4.5) return 'Medium Heavy';
-  return 'Heavy';
-}
-
 interface GameVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
   voters: { name: string; vote_type: number }[];
@@ -101,7 +92,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       // Get the actual game details from games table
       const { data: gamesData, error: gameDetailsError } = await supabase
-        .from('games')
+        .from('games_view')
         .select('*')
         .in('id', gameIds);
 
@@ -200,22 +191,22 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           yearPublished: game.year_published || null,
           thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
           image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
-          min_players: game.min_players || 1,
-          max_players: game.max_players || 1,
-          min_exp_players: game.min_exp_players || game.min_players || 1,
-          max_exp_players: game.max_exp_players || game.max_players || 1,
-          playing_time: game.playing_time || 0,
-          minPlaytime: game.minplaytime || 0,
-          maxPlaytime: game.maxplaytime || 0,
-          description: game.description || '',
-          minAge: game.min_age || 0,
-          is_cooperative: game.is_cooperative || false,
-          is_teambased: game.is_teambased || false,
-          complexity: game.complexity || 1,
-          complexity_tier: game.complexity_tier || 1,
-          complexity_desc: game.complexity ? getComplexityDescription(game.complexity) : '',
-          average: game.average ?? null,
-          bayesaverage: game.bayesaverage ?? null,
+          min_players: game.min_players,
+          max_players: game.max_players,
+          min_exp_players: game.min_exp_players,
+          max_exp_players: game.max_exp_players,
+          playing_time: game.playing_time,
+          minPlaytime: game.minplaytime,
+          maxPlaytime: game.maxplaytime,
+          description: game.description,
+          minAge: game.min_age,
+          is_cooperative: game.is_cooperative,
+          is_teambased: game.is_teambased,
+          complexity: game.complexity,
+          complexity_tier: game.complexity_tier,
+          complexity_desc: game.complexity_desc,
+          average: game.average,
+          bayesaverage: game.bayesaverage,
           votes: voteData,
           userVote,
         };
