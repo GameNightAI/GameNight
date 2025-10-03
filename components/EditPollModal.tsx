@@ -141,25 +141,25 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
           // Map games data to the expected format (same as usePollData.ts)
           const currentGames = gamesData.map(game => ({
             id: game.id,
-            name: game.name || 'Unknown Game',
-            thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
-            image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
-            min_players: game.min_players || 1,
-            max_players: game.max_players || 1,
-            min_exp_players: game.min_players || 1,
-            max_exp_players: game.max_players || 1,
-            playing_time: game.playing_time || 0,
-            yearPublished: game.year_published || null,
-            description: game.description || '',
-            minAge: game.min_age || 0,
-            is_cooperative: game.is_cooperative || false,
-            is_teambased: game.is_teambased || false,
-            complexity: game.complexity || 1,
-            minPlaytime: game.minplaytime || 0,
-            maxPlaytime: game.maxplaytime || 0,
-            complexity_tier: game.complexity_tier || 1,
-            complexity_desc: game.complexity_desc || '',
-            bayesaverage: game.bayesaverage ?? null,
+            name: game.name,
+            thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+            image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+            min_players: game.min_players,
+            max_players: game.max_players,
+            min_exp_players: game.min_players,
+            max_exp_players: game.max_players,
+            playing_time: game.playing_time,
+            yearPublished: game.year_published,
+            description: game.description,
+            minAge: game.min_age,
+            is_cooperative: game.is_cooperative,
+            is_teambased: game.is_teambased,
+            complexity: game.complexity,
+            minPlaytime: game.minplaytime,
+            maxPlaytime: game.maxplaytime,
+            complexity_tier: game.complexity_tier,
+            complexity_desc: game.complexity_desc,
+            bayesaverage: game.bayesaverage,
             expansions: [],
           }));
 
@@ -189,8 +189,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         thumbnail: game.thumbnail,
         min_players: game.min_players,
         max_players: game.max_players,
-        min_exp_players: game.min_players || 0,
-        max_exp_players: game.max_players || 0,
+        min_exp_players: game.min_players,
+        max_exp_players: game.max_players,
         playing_time: game.playing_time,
         yearPublished: game.year_published,
         description: game.description,
@@ -203,7 +203,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         maxPlaytime: game.maxplaytime,
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc,
-        bayesaverage: game.bayesaverage ?? null,
+        bayesaverage: game.bayesaverage,
         expansions: [],
       }));
 
@@ -476,7 +476,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                       hitSlop={touchTargets.small}
                     >
                       <Image
-                        source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
+                        source={{ uri: game.thumbnail || game.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
                         style={styles.gameThumbnail}
                         resizeMode="cover"
                         accessibilityLabel={`${game.name} thumbnail`}

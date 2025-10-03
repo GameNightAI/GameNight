@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, ListFilter, Plus, Camera } from 'lucide-react-native';
+import { X, ListFilter, Plus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -30,7 +30,6 @@ export default function CollectionScreen() {
 
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
-  // const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,20 +122,21 @@ export default function CollectionScreen() {
           id: game.bgg_game_id,
           name: game.name,
           yearPublished: game.year_published,
-          thumbnail: game.thumbnail || 'https://via.placeholder.com/150?text=No+Image',
-          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
+          // Use BGG's "NO IMAGE AVAILABLE" as a fallback
+          thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
           min_players: game.min_players,
           max_players: game.max_players,
           playing_time: game.playing_time,
           minPlaytime: game.minplaytime,
           maxPlaytime: game.maxplaytime,
-          description: game.description || '',
+          description: game.description,
           minAge: game.min_age,
-          is_cooperative: game.is_cooperative || false,
-          is_teambased: game.is_teambased || false,
+          is_cooperative: game.is_cooperative,
+          is_teambased: game.is_teambased,
           complexity: game.complexity,
           complexity_tier: game.complexity_tier,
-          complexity_desc: game.complexity_desc || '',
+          complexity_desc: game.complexity_desc,
           average: game.average,
           bayesaverage: game.bayesaverage,
           expansions: expansions,
@@ -144,7 +144,6 @@ export default function CollectionScreen() {
           max_exp_players: max_exp_players,
         }
       });
-      // console.log(mappedGames);
 
       // Sort games alphabetically by title, ignoring articles
       const sortedGames = sortGamesByTitle(mappedGames);

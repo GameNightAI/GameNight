@@ -6,10 +6,23 @@ import { parse } from 'csv-parse';
 import { asyncBatch, asyncToArray, asyncMap } from 'iter-tools';
 import { format } from 'date-fns';
 
+// Environment variables
+const {
+  BGG_USERNAME,
+  BGG_PASSWORD,
+  BGG_API_AUTH_TOKEN,
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY, // Optional, probably shouldn't be used anyway since it ignores all RLS.
+  SUPABASE_ANON_KEY, // Used for normal login if SUPABASE_SERVICE_ROLE_KEY env var doesn't exist
+  SUPABASE_EMAIL,
+  SUPABASE_PASSWORD,
+} = process.env;
+
 const BGG_LOGIN_URL = 'https://boardgamegeek.com/login/api/v1';
 const BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks';
-const SLEEP_TIME = 5 // seconds to wait before retrying BGG API request
-const DASH = '–' // NOT the hyphen character on the keyboard
+const BGG_API_URL = 'https://boardgamegeek.com/xmlapi2/thing?stats=1&id=';
+const SLEEP_TIME = 5; // seconds to wait before retrying BGG API & other fetch requests
+const DASH = '–'; // NOT the hyphen character on the keyboard
 const TAXONOMY_DELIMITER = '|';
 const BGG_API_BATCH_SIZE = 20; // 20 is the maximum number of games allowed by https://boardgamegeek.com/xmlapi2/thing
 const SUPABASE_BATCH_SIZE = 1000; // number of rows per INSERT/UPSERT requests
@@ -27,24 +40,21 @@ const cError = text =>
   console.error(`${timestamp()}: ${text}`)
 
 const arrayify = (x) => {
-  if (!Array.isArray(x)) {
-    x = [x];
-  }
+  if (!Array.isArray(x)) {x = [x];}
   return x;
-}
+};
 
 const getZipUrl = async () => {
   
   // Need to be logged in to BGG to get the oh-so-secret zipfile link
-  const username = process.env.BGG_USERNAME;
-  log(`Logging ${username} in to BGG...`);
+  log(`Logging ${BGG_USERNAME} in to BGG...`);
   const loginResponse = await fetch(
     BGG_LOGIN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ credentials: {
-        username: username,
-        password: process.env.BGG_PASSWORD,
+        username: BGG_USERNAME,
+        password: BGG_PASSWORD,
       }}),
     }
   );
@@ -75,11 +85,9 @@ const getZipUrl = async () => {
       throw new Error(`Failed to fetch URL: ${csvResponse.status} - ${csvResponse.statusText}`);
     }
   }
-  
   const html = await csvResponse.text();
-
   const parser = new DOMParser();
-  const doc = parser.parseFromString( html, 'text/html');
+  const doc = parser.parseFromString(html, 'text/html');
   const hyperlink = doc
     .getElementById('maincontent')
     .getElementsByTagName('a')[0];
@@ -205,7 +213,7 @@ const parseXml = function* (text) {
         expansions: expansions,
       };
     } catch (error) {
-      cError(Error);
+      cError(error);
       log('Game:')
       log(game);
       log('Full XML response:');
@@ -216,11 +224,11 @@ const parseXml = function* (text) {
 
 const createSupabaseClient = async () => {
   /* Use the service_role key (which bypasses RLS)
-  if we're running this in a Supabase edge function.
+  if we're running this as a Supabase edge function.
   Otherwise, login as a normal user */
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
   const supabase = createClient(
-    process.env.SUPABASE_URL,
+    SUPABASE_URL,
     supabaseKey,
     { auth: {
       autoRefreshToken: true,
@@ -228,18 +236,17 @@ const createSupabaseClient = async () => {
       detectSessionInUrl: true,
     }}
   );
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (SUPABASE_SERVICE_ROLE_KEY) {
     log('Created Supabase client using SUPABASE_SERVICE_ROLE_KEY.');
   } else {
     log('Created Supabase client using SUPABASE_ANON_KEY.');
-    const email = process.env.SUPABASE_EMAIL;
-    log(`Logging ${email} in to Supabase...`);
+    log(`Logging ${SUPABASE_EMAIL} in to Supabase...`);
     const { error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: process.env.SUPABASE_PASSWORD,
+      email: SUPABASE_EMAIL,
+      password: SUPABASE_PASSWORD,
     });
     if (error) {
-    throw new Error(`Failed to log in: ${error.message}`);
+      throw new Error(`Failed to log in: ${error.message}`);
     } else {
       log('Successfully logged in.')
     };
@@ -252,12 +259,13 @@ const bggApiCaller = async function* (csvParser) {
   for await (const bggBatch of asyncBatch(BGG_API_BATCH_SIZE, csvParser)) {
     
     const ids = await asyncToArray(asyncMap((game => game.id), bggBatch));
-    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join()}&stats=1`;
-    
     let bggResponse;
     while (1) {
       try {
-        bggResponse = await fetch(url);
+        bggResponse = await fetch(
+          `${BGG_API_URL}${ids.join(',')}`,
+          { headers: { Authorization: `Bearer ${BGG_API_AUTH_TOKEN}` }},
+        );
       } catch (error) {
         cError(`Network error: ${error} - Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
         await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
@@ -303,7 +311,7 @@ const updateFromStaging = async (supabase) => {
       }
     } catch (err) {
       attempts++;
-      if (attempts >= STAGING_TO_PROD_RETRIES) {
+      if (attempts > STAGING_TO_PROD_RETRIES) {
         throw err;
       } else {
         log(`${err} - Attempt ${attempts} of ${STAGING_TO_PROD_RETRIES}`);
@@ -323,7 +331,7 @@ const updateFromStaging = async (supabase) => {
       }
     } catch (err) {
       attempts++;
-      if (attempts >= STAGING_TO_PROD_RETRIES) {
+      if (attempts > STAGING_TO_PROD_RETRIES) {
         throw err;
       } else {
         log(`${err} - Attempt ${attempts} of ${STAGING_TO_PROD_RETRIES}`);
@@ -336,26 +344,20 @@ const main = async () => {
 
   const supabase = await createSupabaseClient();
 
-  log('Deleting all rows from games_staging...');
-  const delGamesResponse = await supabase
-    .from('games_staging')
-    .delete()
-    .not('id', 'is', null); // Supabase API requires a WHERE clause to delete records
+  log('Truncating games_staging...');
+  const delGamesResponse = await supabase.rpc('truncate_games_staging')
   if (delGamesResponse.error) {
     throw new Error(delGamesResponse.error.message);
   } else {
-    log('Successfully deleted games_staging rows.');
+    log('Successfully truncated games_staging rows.');
   };
 
-  log('Deleting all rows from expansions_staging...');
-  const delExpResponse = await supabase
-    .from('expansions_staging')
-    .delete()
-    .not('id', 'is', null); // Supabase API requires a WHERE clause to delete records
+  log('Truncating expansions_staging...');
+  const delExpResponse = await supabase.rpc('truncate_expansions_staging')
   if (delExpResponse.error) {
     throw new Error(delExpResponse.error.message);
   } else {
-    log('Successfully deleted expansions_staging rows.');
+    log('Successfully truncated expansions_staging rows.');
   };
 
   const [zipUrl, zipFilename] = await getZipUrl();
@@ -391,8 +393,8 @@ const main = async () => {
       log('Processing boardgames_ranks.csv...');
     }  
     games.push(row.game);
-    expansions = expansions.concat(row.expansions);
     gameCount++;
+    expansions = expansions.concat(row.expansions);
     expansionCount += row.expansions.length;
     if (games.length >= SUPABASE_BATCH_SIZE) {
       const gamesResponse = await supabase

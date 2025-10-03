@@ -659,7 +659,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   accessibilityState={{ checked: selectedGamesForPoll.some(g => g.id === game.id) }}
                 >
                   <Image
-                    source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
+                    source={{ uri: game.thumbnail || game.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
                     style={[
                       {
                         width: 48,
@@ -768,7 +768,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   accessibilityState={{ checked: isSelected }}
                 >
                   <Image
-                    source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
+                    source={{ uri: game.thumbnail || game.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
                     style={[
                       {
                         width: 48,
