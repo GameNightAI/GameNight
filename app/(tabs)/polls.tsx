@@ -28,6 +28,14 @@ interface PollWithVoteCount extends Poll {
   voteCount: number;
 }
 
+// Profile type for creator information
+interface Profile {
+  id: string;
+  username: string;
+  firstname?: string;
+  lastname?: string;
+}
+
 export default function PollsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -39,7 +47,7 @@ export default function PollsScreen() {
   // Use fallback values for web platform
   const [allPolls, setAllPolls] = useState<PollWithVoteCount[]>([]);
   const [otherUsersPolls, setOtherUsersPolls] = useState<PollWithVoteCount[]>([]);
-  const [creatorMap, setCreatorMap] = useState<Record<string, string>>({});
+  const [creatorMap, setCreatorMap] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -103,17 +111,17 @@ export default function PollsScreen() {
         }
       }
 
-      // Fetch creator usernames/emails for all unique user_ids
+      // Fetch creator profiles for all unique user_ids
       const userIds = Array.from(new Set((allPollsData || []).map(p => p.user_id)));
-      let creatorMap: Record<string, string> = {};
+      let creatorMap: Record<string, Profile> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, username, email')
+          .select('id, username, firstname, lastname')
           .in('id', userIds);
         if (profiles) {
           profiles.forEach((profile: any) => {
-            creatorMap[profile.id] = profile.email || profile.username || profile.id;
+            creatorMap[profile.id] = profile;
           });
         }
       }
