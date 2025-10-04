@@ -1,16 +1,23 @@
 import { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LogOut, CreditCard as Edit2, ExternalLink, Mail } from 'lucide-react-native';
+import { LogOut, CreditCard as Edit2, ExternalLink, Mail, Edit3 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 
 import { supabase } from '@/services/supabase';
+import EditProfileModal from '@/components/EditProfileModal';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{
+    username: string;
+    firstname: string | null;
+    lastname: string | null;
+  } | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const { colors, typography } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -25,6 +32,19 @@ export default function ProfileScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setEmail(user.email ?? null);
+
+        // Load profile data
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('username, firstname, lastname')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error loading profile:', error);
+        } else if (profileData) {
+          setProfile(profileData);
+        }
       } else {
         router.replace('/auth/login');
       }
@@ -50,6 +70,43 @@ export default function ProfileScreen() {
     Linking.openURL('https://boardgamegeek.com');
   };
 
+  const handleProfileUpdate = async (updatedProfile: {
+    username: string;
+    firstname: string | null;
+    lastname: string | null;
+  }) => {
+    try {
+      setLoading(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: updatedProfile.username,
+          firstname: updatedProfile.firstname,
+          lastname: updatedProfile.lastname,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setProfile(updatedProfile);
+      setShowEditModal(false);
+      announceForAccessibility('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      announceForAccessibility('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!email) {
     return null;
   }
@@ -62,9 +119,33 @@ export default function ProfileScreen() {
     >
       <View style={styles.profileHeader}>
         <View style={styles.avatarContainer}>
-          <Text style={styles.avatarLetter}>{email.charAt(0).toUpperCase()}</Text>
+          <Text style={styles.avatarLetter}>
+            {profile?.username?.charAt(0).toUpperCase() || email.charAt(0).toUpperCase()}
+          </Text>
         </View>
-        <Text style={styles.username}>{email}</Text>
+        <Text style={styles.username}>
+          {profile?.username || email}
+        </Text>
+        {profile?.firstname || profile?.lastname ? (
+          <Text style={styles.fullName}>
+            {[profile.firstname, profile.lastname].filter(Boolean).join(' ')}
+          </Text>
+        ) : null}
+        {profile?.username && (
+          <Text style={styles.email}>
+            {email}
+          </Text>
+        )}
+        <TouchableOpacity
+          style={styles.editButton}
+          accessibilityLabel="Edit profile"
+          accessibilityRole="button"
+          accessibilityHint="Opens the edit profile form"
+          onPress={() => setShowEditModal(true)}
+        >
+          <Edit3 size={16} color={colors.primary} />
+          <Text style={styles.editButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.statsContainer}>
@@ -137,6 +218,16 @@ export default function ProfileScreen() {
           />
         </TouchableOpacity>
       </View>
+
+      {showEditModal && profile && (
+        <EditProfileModal
+          visible={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleProfileUpdate}
+          initialData={profile}
+          loading={loading}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -177,7 +268,39 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     fontFamily: typography.getFontFamily('bold'),
     fontSize: typography.fontSize.title3,
     color: colors.primary,
+    marginBottom: 4,
+  },
+  fullName: {
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
     marginBottom: 8,
+  },
+  email: {
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
+    marginBottom: 16,
+    opacity: 0.8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  editButtonText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.primary,
+    marginLeft: 6,
   },
   bggLink: {
     flexDirection: 'row',

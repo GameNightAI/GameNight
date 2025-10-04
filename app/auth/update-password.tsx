@@ -1,27 +1,31 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useFonts, Poppins_400Regular, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
+import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import * as Linking from 'expo-linking';
 import * as Haptics from 'expo-haptics';
+
 import { supabase } from '@/services/supabase';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function UpdatePasswordScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { colors, typography, touchTargets, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': Poppins_400Regular,
-    'Poppins-SemiBold': Poppins_600SemiBold,
-  });
+  const styles = getStyles(colors, typography, isDark);
 
   // Check authentication status on mount
   useEffect(() => {
@@ -115,47 +119,96 @@ export default function UpdatePasswordScreen() {
     };
   }, []);
 
-  if (!fontsLoaded) {
-    return null;
-  }
-
   if (checkingAuth) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Verifying Reset Link</Text>
-        <Text style={styles.subtitle}>
-          Please wait while we verify your password reset link...
-        </Text>
-      </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <Text style={styles.logoText}>👥</Text>
+              </View>
+              <Text style={styles.title}>GameNyte</Text>
+            </View>
+            <Text style={styles.subtitle}>
+              The ultimate tool for organizing your next game night
+            </Text>
+          </View>
+
+          <View style={styles.cardContainer}>
+            <View style={styles.formContainer}>
+              <Text style={styles.formTitle}>Verifying Reset Link</Text>
+              <Text style={styles.formSubtitle}>
+                Please wait while we verify your password reset link...
+              </Text>
+
+              <View style={styles.statusContainer}>
+                <ActivityIndicator size="large" color={colors.accent} />
+                <Text style={styles.statusText}>Verifying...</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Reset Link Required</Text>
-        <Text style={styles.errorText}>
-          {error || 'Please use the password reset link from your email to access this page.'}
-        </Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.replace('/auth/reset-password')}
-        >
-          <Text style={styles.buttonText}>Request New Reset Link</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.backLink}
-          onPress={() => router.replace('/auth/login')}
-        >
-          <Text style={styles.backText}>Back to Login</Text>
-        </TouchableOpacity>
-      </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <Text style={styles.logoText}>👥</Text>
+              </View>
+              <Text style={styles.title}>GameNyte</Text>
+            </View>
+            <Text style={styles.subtitle}>
+              The ultimate tool for organizing your next game night
+            </Text>
+          </View>
+
+          <View style={styles.cardContainer}>
+            <View style={styles.formContainer}>
+              <Text style={styles.formTitle}>Reset Link Required</Text>
+              <Text style={styles.formSubtitle}>
+                {error || 'Please use the password reset link from your email to access this page.'}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.button}
+                hitSlop={touchTargets.standard}
+                onPress={() => router.replace('/auth/reset-password')}
+                accessibilityLabel="Request new reset link"
+                accessibilityRole="button"
+              >
+                <Text style={styles.buttonText}>Request New Reset Link</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.backButton}
+                hitSlop={touchTargets.standard}
+                onPress={() => router.replace('/auth/login')}
+                accessibilityLabel="Back to login"
+                accessibilityRole="button"
+              >
+                <ArrowLeft color={colors.textMuted} size={20} />
+                <Text style={styles.backText}>Back to Login</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     );
   }
 
   const validatePassword = (pwd: string) => {
     if (pwd.length < 6) {
       return 'Password must be at least 6 characters long';
+    }
+    if (pwd.length > 72) {
+      return 'Password must be less than 72 characters';
     }
     return null;
   };
@@ -237,117 +290,311 @@ export default function UpdatePasswordScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Set New Password</Text>
-      <Text style={styles.subtitle}>Enter your new password below.</Text>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoIcon}>
+              <Text style={styles.logoText}>👥</Text>
+            </View>
+            <Text style={styles.title}>GameNyte</Text>
+          </View>
+          <Text style={styles.subtitle}>
+            The ultimate tool for organizing your next game night
+          </Text>
+        </View>
 
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        placeholder="New password"
-        secureTextEntry
-        autoComplete="new-password"
-      />
+        <View style={styles.cardContainer}>
+          <View style={styles.formContainer}>
+            <Text style={styles.formTitle}>Set New Password</Text>
+            <Text style={styles.formSubtitle}>Enter your new password below</Text>
 
-      <TextInput
-        style={styles.input}
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        placeholder="Confirm new password"
-        secureTextEntry
-        autoComplete="new-password"
-      />
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>New Password</Text>
+              <View style={styles.inputWrapper}>
+                <Lock color={colors.textMuted} size={20} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter new password"
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry={!showPassword}
+                  autoComplete="new-password"
+                  accessibilityLabel="New password"
+                  accessibilityHint="Enter your new password"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                  hitSlop={touchTargets.standard}
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                  accessibilityRole="button"
+                >
+                  {showPassword ? (
+                    <EyeOff color={colors.textMuted} size={20} />
+                  ) : (
+                    <Eye color={colors.textMuted} size={20} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
-      {success && <Text style={styles.successText}>Password updated! Redirecting to login...</Text>}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={styles.inputWrapper}>
+                <Lock color={colors.textMuted} size={20} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirm new password"
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry={!showConfirmPassword}
+                  autoComplete="new-password"
+                  accessibilityLabel="Confirm password"
+                  accessibilityHint="Confirm your new password"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeIcon}
+                  hitSlop={touchTargets.standard}
+                  accessibilityLabel={showConfirmPassword ? "Hide password" : "Show password"}
+                  accessibilityRole="button"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff color={colors.textMuted} size={20} />
+                  ) : (
+                    <Eye color={colors.textMuted} size={20} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleUpdatePassword}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>{loading ? 'Updating...' : 'Update Password'}</Text>
-      </TouchableOpacity>
+            {error && (
+              <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
+            )}
 
-      <TouchableOpacity
-        style={styles.backLink}
-        onPress={() => router.replace('/auth/login')}
-      >
-        <Text style={styles.backText}>Back to Login</Text>
-      </TouchableOpacity>
-    </View>
+            {success && (
+              <View style={styles.successContainer}>
+                <CheckCircle color={colors.success} size={20} style={styles.successIcon} />
+                <Text style={styles.successText}>Password updated! Redirecting to login...</Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              hitSlop={touchTargets.standard}
+              onPress={handleUpdatePassword}
+              disabled={loading}
+              accessibilityLabel={loading ? "Updating password" : "Update password"}
+              accessibilityRole="button"
+            >
+              <Lock color={colors.card} size={20} />
+              <Text style={styles.buttonText}>
+                {loading ? 'Updating...' : 'Update Password'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.backButton}
+              hitSlop={touchTargets.standard}
+              onPress={() => router.replace('/auth/login')}
+              accessibilityLabel="Back to login"
+              accessibilityRole="button"
+            >
+              <ArrowLeft color={colors.textMuted} size={20} />
+              <Text style={styles.backText}>Back to Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
-    padding: 24,
+    backgroundColor: isDark ? colors.background : colors.tints.neutral,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: colors.card,
+  },
+  logoText: {
+    fontSize: 20,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 24,
-    color: '#1a2b5f',
-    marginBottom: 12,
+    fontFamily: 'Poppins-Bold',
     textAlign: 'center',
+    color: colors.text,
+    fontSize: typography.fontSize.title1,
   },
   subtitle: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#1a2b5f',
-    marginBottom: 24,
     textAlign: 'center',
+    opacity: 0.9,
+    lineHeight: 22,
+    maxWidth: 280,
+    color: colors.text,
+    fontSize: typography.fontSize.body,
+  },
+  cardContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  formTitle: {
+    fontFamily: typography.getFontFamily('bold'),
+    textAlign: 'center',
+    marginBottom: 8,
+    color: colors.text,
+    fontSize: typography.fontSize.title2,
+  },
+  formSubtitle: {
+    fontFamily: typography.getFontFamily('normal'),
+    textAlign: 'center',
+    marginBottom: 32,
+    color: colors.textMuted,
+    fontSize: typography.fontSize.body,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontFamily: typography.getFontFamily('semibold'),
+    marginBottom: 8,
+    color: colors.text,
+    fontSize: typography.fontSize.caption1,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    minHeight: 48,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    fontFamily: 'Poppins-Regular',
-    marginBottom: 16,
+    flex: 1,
+    fontFamily: typography.getFontFamily('normal'),
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    color: colors.text,
+    fontSize: typography.fontSize.footnote,
+    backgroundColor: 'transparent',
+  },
+  eyeIcon: {
+    padding: 8,
+    marginLeft: 8,
   },
   button: {
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 12,
+    minHeight: 44,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: typography.getFontFamily('semibold'),
+    marginLeft: 8,
+    color: colors.card,
+    fontSize: typography.fontSize.callout,
   },
   errorText: {
-    color: '#e74c3c',
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    marginBottom: 8,
+    fontFamily: typography.getFontFamily('normal'),
+    marginBottom: 12,
     textAlign: 'center',
+    color: colors.error,
+    fontSize: typography.fontSize.caption1,
+  },
+  successContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.tints.success,
+    borderWidth: 1,
+    borderColor: colors.success,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  successIcon: {
+    marginRight: 8,
   },
   successText: {
-    color: '#27ae60',
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    marginBottom: 8,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.success,
+    fontSize: typography.fontSize.caption1,
     textAlign: 'center',
   },
-  backLink: {
-    marginTop: 24,
+  statusContainer: {
     alignItems: 'center',
+    marginBottom: 24,
+  },
+  statusText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  backButton: {
+    backgroundColor: colors.tints.neutral,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 8,
+    minHeight: 44,
   },
   backText: {
-    color: '#1a2b5f',
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    textDecorationLine: 'underline',
+    fontFamily: typography.getFontFamily('semibold'),
+    marginLeft: 8,
+    color: colors.textMuted,
+    fontSize: typography.fontSize.callout,
   },
 });
