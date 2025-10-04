@@ -328,3 +328,44 @@
 .text-warning {
   color: var(--gamenyte-warning);
 }
+
+/* Fix for browser autofill - force transparent background so React Native theme shows through */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+input:-webkit-autofill:valid,
+input:-webkit-autofill:invalid {
+  -webkit-text-fill-color: var(--gamenyte-text) !important;
+  color: var(--gamenyte-text) !important;
+  background-color: transparent !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  -webkit-transition: background-color 5000s ease-in-out 0s !important;
+}
+
+/* Additional specificity for React Native TextInput */
+[data-testid="text-input"]:-webkit-autofill,
+[data-testid="text-input"]:-webkit-autofill:hover,
+[data-testid="text-input"]:-webkit-autofill:focus,
+[data-testid="text-input"]:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--gamenyte-text) !important;
+  color: var(--gamenyte-text) !important;
+  background-color: transparent !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+}
+
+/* Force override with maximum specificity */
+input[type="email"]:-webkit-autofill,
+input[type="password"]:-webkit-autofill,
+input[type="text"]:-webkit-autofill {
+  -webkit-text-fill-color: var(--gamenyte-text) !important;
+  color: var(--gamenyte-text) !important;
+  background-color: transparent !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  -webkit-transition: background-color 5000s ease-in-out 0s !important;
+}

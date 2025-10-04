@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useFonts, Poppins_400Regular, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
+import { ArrowLeft, Mail, MailCheck } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+
 import { supabase } from '@/services/supabase';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function ResetPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -12,11 +15,10 @@ export default function ResetPasswordScreen() {
   const [success, setSuccess] = useState(false);
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { colors, typography, touchTargets, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': Poppins_400Regular,
-    'Poppins-SemiBold': Poppins_600SemiBold,
-  });
+  const styles = getStyles(colors, typography, isDark);
 
   const getBaseUrl = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -50,28 +52,29 @@ export default function ResetPasswordScreen() {
     }
   }, [params.error]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
-
   const handleResetPassword = async () => {
-    if (!email.trim()) {
-      setError('Please enter your email address.');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-
     try {
+      setLoading(true);
+      setError(null);
+      setSuccess(false);
+
+      // Basic validation
+      if (!email.trim()) {
+        setError('Please enter your email address.');
+        return;
+      }
+
+      // Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setError('Please enter a valid email address.');
+        return;
+      }
+
       // Clear any existing session before sending reset email
       await supabase.auth.signOut();
 
       const redirectUrl = `${getBaseUrl()}/auth/reset-password-handler`;
-      console.log('Current window.location.origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
-      console.log('Platform.OS:', Platform.OS);
-      console.log('getBaseUrl() result:', getBaseUrl());
       console.log('Sending reset email with redirect URL:', redirectUrl);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
@@ -80,12 +83,24 @@ export default function ResetPasswordScreen() {
 
       if (error) {
         console.error('Reset password error:', error);
-        setError(error.message);
-        Toast.show({
-          type: 'error',
-          text1: 'Reset Failed',
-          text2: error.message
-        });
+
+        // Handle specific error cases
+        if (error.status === 400) {
+          setError('Invalid email address. Please check your input.');
+          return;
+        } else if (error.status === 429) {
+          setError('Too many attempts. Please wait a moment and try again.');
+          return;
+        } else if (error.status && typeof error.status === 'number' && error.status >= 500) {
+          setError('Server error. Please try again later.');
+          return;
+        } else if (error.message.includes('Invalid email')) {
+          setError('Please enter a valid email address.');
+          return;
+        } else {
+          setError(error.message || 'Failed to send reset email. Please try again.');
+          return;
+        }
       } else {
         setSuccess(true);
         Toast.show({
@@ -96,7 +111,7 @@ export default function ResetPasswordScreen() {
       }
     } catch (err) {
       console.error('Unexpected error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send reset email';
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
       setError(errorMessage);
       Toast.show({
         type: 'error',
@@ -109,102 +124,253 @@ export default function ResetPasswordScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Reset Password</Text>
-      <Text style={styles.subtitle}>Enter your email to receive a password reset link.</Text>
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Enter your email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        autoComplete="email"
-      />
-      {error && <Text style={styles.errorText}>{error}</Text>}
-      {success && <Text style={styles.successText}>Reset email sent! Check your inbox.</Text>}
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleResetPassword}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>{loading ? 'Sending...' : 'Send Reset Link'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.backLink} onPress={() => router.replace('/auth/login')}>
-        <Text style={styles.backText}>Back to Login</Text>
-      </TouchableOpacity>
-    </View>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoIcon}>
+              <Text style={styles.logoText}>👥</Text>
+            </View>
+            <Text style={styles.title}>GameNyte</Text>
+          </View>
+          <Text style={styles.subtitle}>
+            The ultimate tool for organizing your next game night
+          </Text>
+        </View>
+
+        <View style={styles.cardContainer}>
+          <View style={styles.formContainer}>
+            <Text style={styles.formTitle}>Reset Password</Text>
+            <Text style={styles.formSubtitle}>Enter your email to receive a password reset link</Text>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <View style={styles.inputWrapper}>
+                <Mail color={colors.textMuted} size={20} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email address"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  accessibilityLabel="Email address"
+                  accessibilityHint="Enter your email address to receive reset link"
+                />
+              </View>
+            </View>
+
+            {error && (
+              <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
+            )}
+
+            {success && (
+              <View style={styles.successContainer}>
+                <MailCheck color={colors.success} size={20} style={styles.successIcon} />
+                <Text style={styles.successText}>Reset email sent! Check your inbox.</Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              hitSlop={touchTargets.standard}
+              onPress={handleResetPassword}
+              disabled={loading}
+              accessibilityLabel={loading ? "Sending reset email" : "Send reset link"}
+              accessibilityRole="button"
+            >
+              <MailCheck color={colors.card} size={20} />
+              <Text style={styles.buttonText}>
+                {loading ? 'Sending...' : 'Send Reset Link'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.backButton}
+              hitSlop={touchTargets.standard}
+              onPress={() => router.replace('/auth/login')}
+              accessibilityLabel="Back to login"
+              accessibilityRole="button"
+            >
+              <ArrowLeft color={colors.textMuted} size={20} />
+              <Text style={styles.backText}>Back to Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
-    padding: 24,
+    backgroundColor: isDark ? colors.background : colors.tints.neutral,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: colors.card,
+  },
+  logoText: {
+    fontSize: 20,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 24,
-    color: '#1a2b5f',
-    marginBottom: 12,
+    fontFamily: 'Poppins-Bold',
     textAlign: 'center',
+    color: colors.text,
+    fontSize: typography.fontSize.title1,
   },
   subtitle: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#1a2b5f',
-    marginBottom: 24,
     textAlign: 'center',
+    opacity: 0.9,
+    lineHeight: 22,
+    maxWidth: 280,
+    color: colors.text,
+    fontSize: typography.fontSize.body,
+  },
+  cardContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  formTitle: {
+    fontFamily: typography.getFontFamily('bold'),
+    textAlign: 'center',
+    marginBottom: 8,
+    color: colors.text,
+    fontSize: typography.fontSize.title2,
+  },
+  formSubtitle: {
+    fontFamily: typography.getFontFamily('normal'),
+    textAlign: 'center',
+    marginBottom: 32,
+    color: colors.textMuted,
+    fontSize: typography.fontSize.body,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontFamily: typography.getFontFamily('semibold'),
+    marginBottom: 8,
+    color: colors.text,
+    fontSize: typography.fontSize.caption1,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    minHeight: 48,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    fontFamily: 'Poppins-Regular',
-    marginBottom: 16,
+    flex: 1,
+    fontFamily: typography.getFontFamily('normal'),
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    color: colors.text,
+    fontSize: typography.fontSize.footnote,
+    backgroundColor: 'transparent',
   },
   button: {
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 12,
+    minHeight: 44,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: typography.getFontFamily('semibold'),
+    marginLeft: 8,
+    color: colors.card,
+    fontSize: typography.fontSize.callout,
   },
   errorText: {
-    color: '#e74c3c',
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    marginBottom: 8,
+    fontFamily: typography.getFontFamily('normal'),
+    marginBottom: 12,
     textAlign: 'center',
+    color: colors.error,
+    fontSize: typography.fontSize.caption1,
+  },
+  successContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.tints.success,
+    borderWidth: 1,
+    borderColor: colors.success,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  successIcon: {
+    marginRight: 8,
   },
   successText: {
-    color: '#27ae60',
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    marginBottom: 8,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.success,
+    fontSize: typography.fontSize.caption1,
     textAlign: 'center',
   },
-  backLink: {
-    marginTop: 24,
+  backButton: {
+    backgroundColor: colors.tints.neutral,
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 8,
+    minHeight: 44,
   },
   backText: {
-    color: '#1a2b5f',
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    textDecorationLine: 'underline',
+    fontFamily: typography.getFontFamily('semibold'),
+    marginLeft: 8,
+    color: colors.textMuted,
+    fontSize: typography.fontSize.callout,
   },
 });
