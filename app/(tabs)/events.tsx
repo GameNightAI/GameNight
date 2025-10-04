@@ -42,6 +42,14 @@ interface EventWithVoteCount extends Poll {
   eventOptions: PollEvent[];
 }
 
+// Profile type for creator information
+interface Profile {
+  id: string;
+  username: string;
+  firstname?: string;
+  lastname?: string;
+}
+
 export default function EventsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -50,7 +58,7 @@ export default function EventsScreen() {
   const [events, setEvents] = useState<EventWithVoteCount[]>([]);
   const [allEvents, setAllEvents] = useState<EventWithVoteCount[]>([]);
   const [otherUsersEvents, setOtherUsersEvents] = useState<EventWithVoteCount[]>([]);
-  const [creatorMap, setCreatorMap] = useState<Record<string, string>>({});
+  const [creatorMap, setCreatorMap] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('all');
@@ -94,17 +102,17 @@ export default function EventsScreen() {
 
 
       // Not created yet. Future feature.
-      // Fetch creator usernames/emails for all unique user_ids
+      // Fetch creator profiles for all unique user_ids
       const userIds = Array.from(new Set((allEventsData || []).map(e => e.user_id)));
-      let creatorMap: Record<string, string> = {};
+      let creatorMap: Record<string, Profile> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, username, email')
+          .select('id, username, firstname, lastname')
           .in('id', userIds);
         if (profiles) {
           profiles.forEach((profile: any) => {
-            creatorMap[profile.id] = profile.email || profile.username || profile.id;
+            creatorMap[profile.id] = profile;
           });
         }
       }

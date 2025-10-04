@@ -77,11 +77,11 @@ export default function PollScreen() {
         try {
           const { data, error } = await supabase
             .from('profiles') // Try profiles table first
-            .select('username, email')
+            .select('username, firstname, lastname')
             .eq('id', poll.user_id)
             .maybeSingle();
           if (data) {
-            setCreatorName(data.username || data.email || null);
+            setCreatorName(data.username || null);
           } else {
             // Fallback: try auth.users
             const { data: userData, error: userError } = await supabase.auth.admin.getUserById(poll.user_id);
