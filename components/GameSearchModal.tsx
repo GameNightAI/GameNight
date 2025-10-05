@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, F
 import { X, Plus } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { debounce } from 'lodash';
-import { Game } from '@/types/game';
 import { XMLParser } from 'fast-xml-parser';
 import Toast from 'react-native-toast-message';
+import { decode } from 'html-entities';
+
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 
+import { Game } from '@/types/game';
 
 interface GameSearchModalProps {
   isVisible: boolean;
@@ -85,6 +87,8 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
           .filter((item: any) => item.name.type === 'primary')
           .map((item: any) => item.id);
 
+        /* We are intentionally sorting by rank in the hopes that
+           more relevant results will be displayed first */
         const { data: games } = await supabase
           .from('games')
           .select()
@@ -100,10 +104,6 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       setSearching(false);
     }
   }, []);
-
-
-
-
 
   const debouncedSearch = useMemo(() => debounce(fetchSearchResults, 500), [fetchSearchResults]);
 
@@ -137,6 +137,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   };
 
   const handleAddGameToCollection = async (game: Game) => {
+    const decodedName = decode(game.name);
     try {
       setAdding(true);
       setError('');
@@ -155,7 +156,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
         .eq('bgg_game_id', game.id);
 
       if (existingGames && existingGames.length > 0) {
-        setError(`${game.name} is already in your collection`);
+        setError(`${decodedName} is already in your collection`);
         return;
       }
 
@@ -176,9 +177,9 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
         bgg_game_id: game.id,
         name: game.name,
         thumbnail: gameInfo.thumbnail,
-        min_players: parseInt(gameInfo.minplayers?.value || '0'),
-        max_players: parseInt(gameInfo.maxplayers?.value || '0'),
-        playing_time: parseInt(gameInfo.playingtime?.value || '0'),
+        min_players: parseInt(gameInfo.minplayers?.value),
+        max_players: parseInt(gameInfo.maxplayers?.value),
+        playing_time: parseInt(gameInfo.playingtime?.value),
         year_published: game.yearPublished,
       };
 
@@ -189,13 +190,13 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       if (insertError) throw insertError;
 
       onGameAdded?.(game);
-      announceForAccessibility(`${game.name} added to your collection`);
+      announceForAccessibility(`${decodedName} added to your collection`);
 
       // Show success toast
       Toast.show({
         type: 'success',
         text1: 'Game Added!',
-        text2: `${game.name} has been added to your collection`,
+        text2: `${decodedName} has been added to your collection`,
         visibilityTime: 2000,
         autoHide: true,
       });
@@ -213,15 +214,15 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   const handleSelectGameForPoll = (game: Game) => {
     // Check if game is already in the poll
     if (existingGameIds.includes(game.id.toString())) {
-      setError(`${game.name} is already in the poll`);
-      announceForAccessibility(`${game.name} is already in the poll`);
+      setError(`${decodedName} is already in the poll`);
+      announceForAccessibility(`${decodedName} is already in the poll`);
       return;
     }
 
     // Check if game is in user's collection
     if (userCollectionIds.includes(game.id.toString())) {
-      setError(`${game.name} is already in your collection`);
-      announceForAccessibility(`${game.name} is already in your collection`);
+      setError(`${decodedName} is already in your collection`);
+      announceForAccessibility(`${decodedName} is already in your collection`);
       return;
     }
 
@@ -230,8 +231,8 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
     onGameSelected?.(game);
 
     // Show success message
-    setSuccessMessage(`${game.name} added successfully!`);
-    announceForAccessibility(`${game.name} added successfully`);
+    setSuccessMessage(`${decodedName} added successfully!`);
+    announceForAccessibility(`${decodedName} added successfully`);
     setError('');
 
     // Clear search state after game is selected but keep modal open
@@ -287,7 +288,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
             resizeMode="contain"
           />
           <View style={styles.resultInfo}>
-            <Text style={styles.resultTitle}>{item.name}</Text>
+            <Text style={styles.resultTitle}>{decode(item.name)}</Text>
             <Text style={styles.resultDetails}>
               {item.min_players}-{item.max_players} players • {item.playing_time} min
               {item.yearPublished && ` • ${item.yearPublished}`}
@@ -303,7 +304,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
             style={getActionButtonStyle(item)}
             onPress={() => handleAction(item)}
             disabled={isActionDisabled(item)}
-            accessibilityLabel={mode === 'collection' ? `Add ${item.name} to collection` : `Add ${item.name} to poll`}
+            accessibilityLabel={mode === 'collection' ? `Add ${(decode(item.name)} to collection` : `Add ${decode(item.name)} to poll`}
             accessibilityRole="button"
             accessibilityHint={mode === 'collection' ? 'Adds game to your collection' : 'Adds game to the current poll'}
             hitSlop={touchTargets.sizeTwenty}
