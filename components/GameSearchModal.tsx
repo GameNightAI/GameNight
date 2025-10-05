@@ -212,6 +212,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   };
 
   const handleSelectGameForPoll = (game: Game) => {
+    const decodedName = decode(game.name);
     // Check if game is already in the poll
     if (existingGameIds.includes(game.id.toString())) {
       setError(`${decodedName} is already in the poll`);
@@ -304,7 +305,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
             style={getActionButtonStyle(item)}
             onPress={() => handleAction(item)}
             disabled={isActionDisabled(item)}
-            accessibilityLabel={mode === 'collection' ? `Add ${(decode(item.name)} to collection` : `Add ${decode(item.name)} to poll`}
+            accessibilityLabel={mode === 'collection' ? `Add ${decode(item.name)} to collection` : `Add ${decode(item.name)} to poll`}
             accessibilityRole="button"
             accessibilityHint={mode === 'collection' ? 'Adds game to your collection' : 'Adds game to the current poll'}
             hitSlop={touchTargets.sizeTwenty}
