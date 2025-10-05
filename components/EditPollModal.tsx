@@ -2,14 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Alert, Image } from 'react-native';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, AlertTriangle, SquarePen } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
-import { Game } from '@/types/game';
 import Toast from 'react-native-toast-message';
+import { decode } from 'html-entities';
+
 import { CreatePollModal } from './CreatePollModal';
 import { CreatePollDetails } from './CreatePollDetails';
 import { sortGamesByTitle } from '@/utils/sortingUtils';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 
+import { Game } from '@/types/game';
 
 interface EditPollModalProps {
   isVisible: boolean;
@@ -331,7 +333,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const toggleGameSelection = (game: Game) => {
     setSelectedGames(current => {
       const isSelected = current.some(g => g.id === game.id);
-      announceForAccessibility(isSelected ? `${game.name} deselected` : `${game.name} selected`);
+      announceForAccessibility(`${decode(game.name)} ${isSelected ? 'deselected' : 'selected'}`);
       if (isSelected) {
         return current.filter(g => g.id !== game.id);
       } else {
@@ -460,6 +462,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                 </Text>
 
                 {originalPollGames.map(game => {
+                  const decodedName = decode(game.name);
                   const isSelected = selectedGames.some(g => g.id === game.id);
                   return (
                     <TouchableOpacity
@@ -469,7 +472,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                         isSelected && styles.gameItemSelected
                       ]}
                       onPress={() => toggleGameSelection(game)}
-                      accessibilityLabel={`${game.name}, ${game.min_players}-${game.max_players} players`}
+                      accessibilityLabel={`${decodedName}, ${game.min_players}-${game.max_players} players`}
                       accessibilityHint={isSelected ? "Tap to remove from poll" : "Tap to keep in poll"}
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: isSelected }}
@@ -479,10 +482,10 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
                         source={{ uri: game.thumbnail || game.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
                         style={styles.gameThumbnail}
                         resizeMode="cover"
-                        accessibilityLabel={`${game.name} thumbnail`}
+                        accessibilityLabel={`${decodedName} thumbnail`}
                       />
                       <View style={styles.gameInfo}>
-                        <Text style={styles.gameName}>{game.name}</Text>
+                        <Text style={styles.gameName}>{decodedName}</Text>
                         <Text style={styles.playerCount}>
                           {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
                         </Text>

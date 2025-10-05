@@ -5,6 +5,7 @@ import { VOTING_OPTIONS, ICON_MAP, VoteType, getIconColor, getVoteBgColor, getVo
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useMemo } from 'react';
+import { decode } from 'html-entities';
 
 // Helper function to get play time display with proper priority
 function getPlayTimeDisplay(game: Game): string {
@@ -67,6 +68,7 @@ interface Props {
 }
 
 export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props) => {
+  const decodedName = decode(game.name);
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -135,13 +137,13 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
             style={styles.thumbnail}
             resizeMode="cover"
             accessibilityIgnoresInvertColors
-            accessibilityLabel={`${game.name} thumbnail`}
+            accessibilityLabel={`${decodedName} thumbnail`}
           />
           <TouchableOpacity
             style={styles.leftInfoButton}
             onPress={toggleExpanded}
             accessibilityRole="button"
-            accessibilityLabel={`${isExpanded ? 'Hide' : 'Show'} details for ${game.name}`}
+            accessibilityLabel={`${isExpanded ? 'Hide' : 'Show'} details for ${decodedName}`}
             accessibilityHint={isExpanded ? 'Hides game details' : 'Shows more information about the game'}
             hitSlop={touchTargets.small}
           >
@@ -158,7 +160,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
         <View style={styles.rightColumn}>
           {/* Row 1: Name */}
           <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{game.name}</Text>
+            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{decodedName}</Text>
           </View>
 
           {/* Row 2: Details */}
@@ -178,12 +180,12 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
                     style={getButtonStyle(option.value)}
                     onPress={() => {
                       onVote(game.id, option.value);
-                      announceForAccessibility(`Voted ${option.label} for ${game.name}`);
+                      announceForAccessibility(`Voted ${option.label} for ${decodedName}`);
                     }}
                     disabled={disabled}
                     accessibilityRole="button"
-                    accessibilityLabel={`${option.label} for ${game.name}`}
-                    accessibilityHint={`Vote ${option.label.toLowerCase()} on ${game.name}`}
+                    accessibilityLabel={`${option.label} for ${decodedName}`}
+                    accessibilityHint={`Vote ${option.label.toLowerCase()} on ${decodedName}`}
                     hitSlop={touchTargets.vote}
                   >
                     <IconComponent size={20} color={getIconColor(option.value, selectedVote === option.value, colors)} />
@@ -209,7 +211,7 @@ export const GameCard = ({ game, index, selectedVote, onVote, disabled }: Props)
                   style={[styles.detailValue, { color: colors.primary, textDecorationLine: 'underline' }]}
                   onPress={() => Linking.openURL(`https://boardgamegeek.com/boardgame/${game.id}`)}
                   accessibilityRole="link"
-                  accessibilityLabel={`Open BoardGameGeek page for ${game.name}`}
+                  accessibilityLabel={`Open BoardGameGeek page for ${decodedName}`}
                   accessibilityHint="Opens in browser"
                 >
                   More Info

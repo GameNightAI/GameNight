@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollV
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen, ListFilter, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
-import { Game } from '@/types/game';
-import { useTheme } from '@/hooks/useTheme';
-import { useAccessibility } from '@/hooks/useAccessibility';
+import { useCallback } from 'react';
+import { decode } from 'html-entities';
+
 import { CreatePollDetails } from './CreatePollDetails';
 import { CreatePollAddOptions } from './CreatePollAddOptions';
 import { FilterGameModal } from './FilterGameModal';
@@ -13,7 +13,10 @@ import { GameSearchModal } from './GameSearchModal';
 import { PollSuccessModal } from './PollSuccessModal';
 import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 import { sortGamesByTitle } from '@/utils/sortingUtils';
-import { useCallback } from 'react';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+
+import { Game } from '@/types/game';
 
 interface CreatePollModalProps {
   isVisible: boolean;
@@ -364,13 +367,14 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   };
 
   const toggleGameSelection = (game: Game) => {
+    const decodedName = decode(game.name);
     setSelectedGamesForPoll(current => {
       const isSelected = current.some(g => g.id === game.id);
       if (isSelected) {
-        announceForAccessibility(`${game.name} removed from poll`);
+        announceForAccessibility(`${decodedName} removed from poll`);
         return current.filter(g => g.id !== game.id);
       } else {
-        announceForAccessibility(`${game.name} added to poll`);
+        announceForAccessibility(`${decodedName} added to poll`);
         return [...current, game];
       }
     });
@@ -615,6 +619,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         {searchAddedGames.length > 0 && (
           <View style={styles.searchAddedSection}>
             {searchAddedGames.map(game => {
+              const decodedName = decode(game.name);
               const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
               const useMaxExpPlayers = game.max_exp_players > game.max_players;
               const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
@@ -653,7 +658,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   onPress={() => !isAlreadyInPoll && toggleGameSelection(game)}
                   disabled={isAlreadyInPoll}
                   hitSlop={touchTargets.small}
-                  accessibilityLabel={`${game.name}${isAlreadyInPoll ? ' (already in poll)' : ''}`}
+                  accessibilityLabel={`${decodedName}${isAlreadyInPoll ? ' (already in poll)' : ''}`}
                   accessibilityHint={isAlreadyInPoll ? 'This game is already in the poll' : 'Tap to select or deselect this game'}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: selectedGamesForPoll.some(g => g.id === game.id) }}
@@ -676,7 +681,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                     <Text style={[
                       styles.gameName,
                       isAlreadyInPoll && styles.gameNameDisabled
-                    ]}>{game.name}</Text>
+                    ]}>{decodedName}</Text>
                     <Text style={[
                       styles.playerCount,
                       isAlreadyInPoll && styles.playerCountDisabled
@@ -722,6 +727,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             </Text>
           ) : (
             filteredGames.map(game => {
+              const decodedName = decode(game.name);
               const isSelected = selectedGamesForPoll.some(g => g.id === game.id);
               const isAlreadyInPoll = preselectedGames?.some(pg => pg.id === game.id);
               const useMinExpPlayers = game.min_exp_players && game.min_exp_players < game.min_players;
@@ -762,7 +768,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   onPress={() => !isAlreadyInPoll && toggleGameSelection(game)}
                   disabled={isAlreadyInPoll}
                   hitSlop={touchTargets.small}
-                  accessibilityLabel={`${game.name}${isAlreadyInPoll ? ' (already in poll)' : ''}`}
+                  accessibilityLabel={`${decodedName}${isAlreadyInPoll ? ' (already in poll)' : ''}`}
                   accessibilityHint={isAlreadyInPoll ? 'This game is already in the poll' : 'Tap to select or deselect this game'}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: isSelected }}
@@ -785,7 +791,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
                     <Text style={[
                       styles.gameName,
                       isAlreadyInPoll && styles.gameNameDisabled
-                    ]}>{game.name}</Text>
+                    ]}>{decodedName}</Text>
                     <Text style={[
                       styles.playerCount,
                       isAlreadyInPoll && styles.playerCountDisabled

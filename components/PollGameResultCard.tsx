@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useMemo } from 'react';
 import { Game } from '@/types/game';
+import { decode } from 'html-entities';
 
 interface GameVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
@@ -20,6 +21,7 @@ interface PollGame extends Game {
 // Use centralized helper via votingOptions with theme tokens
 
 export function GameResultCard({ game }: { game: PollGame }) {
+  const decodedName = decode(game.name);
   const { colors, typography } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -30,7 +32,7 @@ export function GameResultCard({ game }: { game: PollGame }) {
     console.warn('Game votes is undefined for game:', game.id);
     return (
       <View style={styles.card}>
-        <Text style={styles.name}>{game.name}</Text>
+        <Text style={styles.name}>{decodedName}</Text>
         <Text style={styles.errorText}>Vote data unavailable</Text>
       </View>
     );
@@ -59,7 +61,7 @@ export function GameResultCard({ game }: { game: PollGame }) {
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.name}>{game.name}</Text>
+        <Text style={styles.name}>{decodedName}</Text>
       </View>
       <View style={styles.votesContainer}>
         {VOTING_OPTIONS.map(function (option: typeof VOTING_OPTIONS[number]) {
