@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { DOMParser } from 'xmldom';
+import { DOMParser } from '@xmldom/xmldom';
 import { XMLParser } from 'fast-xml-parser';
 import yauzl from 'yauzl'; // "yet another unzip library" for node
 import { parse } from 'csv-parse';
@@ -314,7 +314,7 @@ const updateFromStaging = async (supabase) => {
       if (attempts > STAGING_TO_PROD_RETRIES) {
         throw err;
       } else {
-        log(`${err} - Attempt ${attempts} of ${STAGING_TO_PROD_RETRIES}`);
+        cError(`${err} - Attempt ${attempts} of ${STAGING_TO_PROD_RETRIES}`);
       }
     }
   }
@@ -334,7 +334,7 @@ const updateFromStaging = async (supabase) => {
       if (attempts > STAGING_TO_PROD_RETRIES) {
         throw err;
       } else {
-        log(`${err} - Attempt ${attempts} of ${STAGING_TO_PROD_RETRIES}`);
+        cError(`${err} - Attempt ${attempts} of ${STAGING_TO_PROD_RETRIES}`);
       }
     }
   }
