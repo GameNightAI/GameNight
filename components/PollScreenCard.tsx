@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { VOTING_OPTIONS, ICON_MAP, getIconColor } from './votingOptions';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { decode } from 'html-entities';
 
 interface GameVoteSummary {
   name: string;
@@ -87,7 +88,7 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
           <View key={idx} style={rowStyle}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <Text style={styles.rankNumber}>{game.rank}.</Text>
-              <Text style={styles.gameName}>{game.name}</Text>
+              <Text style={styles.gameName}>{decode(game.name)}</Text>
               {game.tie && (
                 <Text style={styles.tieLabel}>(tie)</Text>
               )}

@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView, A
 import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus } from 'lucide-react-native';
 import Animated, { FadeOut, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { supabase } from '@/services/supabase';
+import { decode } from 'html-entities';
+
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 
@@ -37,21 +39,6 @@ interface GameItemProps {
   onDelete: (id: number) => void;
   onExpansionUpdate?: () => void;
 }
-
-function decodeHTML(html: string): string {
-  // Simple HTML entity decoding for React Native
-  return html
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, ''); // Remove any remaining HTML tags
-}
-
-
 
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionUpdate }) => {
   const { colors, typography, touchTargets } = useTheme();
@@ -201,7 +188,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
             : styles.infoText
           }
         >
-          {exp.name}
+          {decode(exp.name)}
         </Text>
       </View>
     );
@@ -270,7 +257,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
         <View style={styles.contentContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={2}>
-              {decodeHTML(game.name)}
+              {decode(game.name)}
             </Text>
           </View>
 

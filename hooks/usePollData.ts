@@ -187,8 +187,8 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
         return {
           id: game.id,
-          name: game.name || 'Unknown Game',
-          yearPublished: game.year_published || null,
+          name: game.name,
+          yearPublished: game.year_published,
           thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
           image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
           min_players: game.min_players,
