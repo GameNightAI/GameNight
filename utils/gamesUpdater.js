@@ -349,7 +349,7 @@ const main = async () => {
   if (delGamesResponse.error) {
     throw new Error(delGamesResponse.error.message);
   } else {
-    log('Successfully truncated games_staging rows.');
+    log('Successfully truncated games_staging.');
   };
 
   log('Truncating expansions_staging...');
@@ -357,7 +357,7 @@ const main = async () => {
   if (delExpResponse.error) {
     throw new Error(delExpResponse.error.message);
   } else {
-    log('Successfully truncated expansions_staging rows.');
+    log('Successfully truncated expansions_staging.');
   };
 
   const [zipUrl, zipFilename] = await getZipUrl();

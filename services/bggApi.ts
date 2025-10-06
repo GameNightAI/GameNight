@@ -3,28 +3,29 @@ import { Game } from '@/types/game';
 
 export async function fetchGames(username: string): Promise<Game[]> {
   
-  var response;
+  let response;
   
   while (1) {  
     // Request to trigger collection fetch
     response = await fetch(`https://boardgamegeek.com/xmlapi2/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
+    const status = response.status;
 
     if ([
-      202, // "BGG has queued your request and you need to keep retrying (hopefully w/some delay between tries) until the status is not 202."
-      429, // Too many requests
-      502, // Bad gateway
-    ].includes(response.status)) {
-      console.log(`Received ${response.status} status, retrying in 2 seconds...`);
+        202, // "BGG has queued your request and you need to keep retrying (hopefully w/some delay between tries) until the status is not 202."
+        429, // Too many requests
+      ].includes(status) ||
+      (status >= 500 && status < 600) // Server error
+    ) {
+      console.log(`Received ${status} status, retrying in 2 seconds...`);
       await new Promise(resolve => setTimeout(resolve, 2000));
     } else if (!response.ok) {
-      throw new Error(`Failed to fetch collection: ${response.status} - ${response.statusText}`);
+      throw new Error(`Failed to fetch collection: ${status} - ${response.statusText}`);
     } else {
       break;
     }
   }
 
   let xmlText = await response.text();
-  // console.log('Initial XML response:', xmlText.substring(0, 200) + '...');
 
   // Parse the XML response
   const parser = new XMLParser({
@@ -34,24 +35,19 @@ export async function fetchGames(username: string): Promise<Game[]> {
   });
 
   const result = parser.parse(xmlText);
-  // console.log('Parsed result structure:', JSON.stringify(result, null, 2).substring(0, 200) + '...');
-  // console.log(result);
 
   // Check if the collection exists and has items
   if (!result.items) {
-    // console.log('No items found in response');
     return [];
   }
 
   // Handle empty collection
   if (!result.items.item) {
-    // console.log('Collection is empty');
     return [];
   }
 
   // Ensure we have an array even if there's only one item
   const items = Array.isArray(result.items.item) ? result.items.item : [result.items.item];
-  // console.log(`Found ${items.length} items in collection`);
 
   // Map the raw data to our Game type
   return items.map((item: any) => {
@@ -70,19 +66,18 @@ export async function fetchGames(username: string): Promise<Game[]> {
 
     // Extract stats from the XML
     const stats = item.stats || {};
-    // console.log(item);
 
     const game = {
       id: parseInt(item.objectid),
-      name: name || 'Unknown Game',
-      yearPublished: item.yearpublished ? parseInt(item.yearpublished) : null,
-      thumbnail: item.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
-      image: item.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
-      min_players: parseInt(stats.minplayers),
-      max_players: parseInt(stats.maxplayers),
-      playing_time: parseInt(stats.playingtime || '0'),
-      minPlaytime: parseInt(stats.minplaytime || '0'),
-      maxPlaytime: parseInt(stats.maxplaytime || '0'),
+      name: name,
+      yearPublished: parseInt(item.yearpublished) || null,
+      thumbnail: item.thumbnail,
+      image: item.image,
+      min_players: parseInt(stats.minplayers) || null,
+      max_players: parseInt(stats.maxplayers) || null,
+      playing_time: parseInt(stats.playingtime) || null,
+      minPlaytime: parseInt(stats.minplaytime) || null,
+      maxPlaytime: parseInt(stats.maxplaytime) || null,
       description: '',
     };
     
