@@ -103,7 +103,7 @@ export default function LoginScreen() {
 
         <View style={styles.cardContainer}>
           <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>Welcome Back</Text>
+            <Text style={styles.formTitle}>Log In</Text>
             <Text style={styles.formSubtitle}>Sign in to your account</Text>
 
             <View style={styles.inputContainer}>
