@@ -109,6 +109,28 @@
   --letter-spacing-wide: 0.025em;
 }
 
+/* App-wide mobile web scroll containment
+   - Prevents the page (document) from rubber-banding on iOS/Android browsers
+   - Keeps scrolling inside React Native scroll containers only
+*/
+html,
+body,
+#root,
+#__next,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  /* Block page-level scroll/bounce; inner RN web ScrollViews still scroll */
+  overflow: hidden;
+  overscroll-behavior-y: none;
+  /* Improve touch handling without disabling inner scroll areas */
+  touch-action: manipulation;
+  background: var(--gamenyte-background);
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
