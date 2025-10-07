@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Switch, Dimensions } from 'react-native';
 import { format } from 'date-fns';
 
 import { SquarePen } from 'lucide-react-native';
@@ -498,8 +498,11 @@ export function DateReviewModal({
   );
 }
 
-const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: ReturnType<typeof useTheme>['typography']) =>
-  StyleSheet.create({
+const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: ReturnType<typeof useTheme>['typography']) => {
+  const { height: screenHeight } = Dimensions.get('window');
+  const responsiveMinHeight = Math.max(400, Math.min(600, screenHeight * 0.5));
+
+  return StyleSheet.create({
     overlay: {
       position: 'absolute',
       top: 0,
@@ -517,7 +520,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       borderRadius: 12,
       width: '90%',
       maxWidth: 600,
-      maxHeight: '100%',
+      minHeight: responsiveMinHeight,
+      maxHeight: '85%',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.25,
@@ -930,3 +934,4 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       borderTopColor: colors.border,
     },
   });
+};

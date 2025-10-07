@@ -10,6 +10,7 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Dimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, Upload, X } from 'lucide-react-native';
@@ -330,7 +331,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
 
             <View style={styles.uploadSection}>
               <View style={styles.uploadButtons}>
-                {Platform.OS !== 'web' && (
+                {Platform.OS === 'web' ? null : (
                   <TouchableOpacity
                     style={styles.uploadButton}
                     onPress={() => {
@@ -354,14 +355,14 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                     pickImage(false);
                     announceForAccessibility('Opening image library');
                   }}
-                  accessibilityLabel={Platform.OS !== 'web' ? 'Upload image' : 'Choose from library'}
+                  accessibilityLabel={Platform.OS === 'web' ? 'Choose from library' : 'Upload image'}
                   accessibilityRole="button"
                   accessibilityHint="Opens image library to select a photo"
                   hitSlop={touchTargets.tiny}
                 >
                   <Upload size={24} color="#fff" />
                   <Text style={styles.uploadButtonText}>
-                    {Platform.OS !== 'web' ? 'Upload Image' : 'Choose from Library'}
+                    {Platform.OS === 'web' ? 'Choose from Library' : 'Upload Image'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -562,314 +563,320 @@ async function convertToBase64(blob: Blob): Promise<string> {
   });
 }
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  webOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: 20,
-  },
-  dialog: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '85%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  backButton: {
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButton: {
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.headline,
-    color: colors.text,
-  },
-  description: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.textMuted,
-    marginBottom: 20,
-  },
-  imagePreview: {
-    alignItems: 'center',
-    marginBottom: 0,
-    paddingVertical: 10,
-    paddingHorizontal: 0,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-  },
-  previewImage: {
-    width: '100%',
-    height: undefined,
-    aspectRatio: 1,
-    minHeight: 200,
-    maxHeight: 300,
-    borderRadius: 0,
-    marginBottom: 8,
-    resizeMode: 'contain',
-  },
-  imageName: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption1,
-    color: colors.textMuted,
-  },
-  sectionTitle: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.callout,
-    color: colors.text,
-    marginBottom: 12,
-  },
-  uploadSection: {
-    marginBottom: 0,
-  },
-  uploadButtons: {
-    marginBottom: 8,
-  },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    marginBottom: 8,
-  },
-  uploadButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.card,
-    marginLeft: 8,
-  },
-  errorText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.error,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  analyzeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  analyzeButtonDisabled: {
-    opacity: 0.5,
-  },
-  analyzeButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.card,
-    marginLeft: 8,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-  scrollContentContainer: {
-    paddingBottom: 20,
-  },
-  previewSection: {
-    marginBottom: 20,
-  },
-  previewButtons: {
-    width: '100%',
-  },
-  retakeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.textMuted,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    width: '100%',
-  },
-  retakeButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.card,
-    textAlign: 'center',
-  },
-  sampleSection: {
-    marginBottom: 12,
-  },
-  sampleButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  sampleButton: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    padding: 0,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'transparent'
-  },
-  sampleImageContainer: {
-    width: 260,
-    height: 260,
-    overflow: 'hidden',
-    borderRadius: 0,
-    borderWidth: 0,
-    borderColor: colors.border,
-  },
-  sampleImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  bulletPoints: {
-    marginTop: 20,
-    marginBottom: 0,
-  },
-  bulletPoint: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.textMuted,
-    marginBottom: 5,
-  },
-  fullSizeOverlay: {
-    flex: 1,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullSizeImageContainer: {
-    position: 'relative',
-    width: '90%',
-    height: '80%',
-    backgroundColor: colors.card,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  fullSizeImage: {
-    width: '100%',
-    height: '100%',
-  },
-  fullSizeCloseButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: colors.tints.neutral,
-    borderRadius: 20,
-    padding: 8,
-  },
-  // Instructions button styles
-  instructionsButton: {
-    backgroundColor: colors.background,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: colors.textMuted,
-  },
-  instructionsButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.text,
-  },
-  // Instructions modal styles
-  instructionsOverlay: {
-    flex: 1,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  instructionsDialog: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  instructionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  instructionsTitle: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.headline,
-    color: colors.text,
-  },
-  instructionsCloseButton: {
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  instructionsContent: {
-    alignItems: 'flex-start',
-  },
-  instructionsBulletPoint: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.footnote,
-    color: colors.textMuted,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  orContainer: {
-    alignItems: 'center',
-    marginVertical: 15,
-    width: '100%',
-  },
-  orText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-});
+const getStyles = (colors: any, typography: any) => {
+  const { height: screenHeight } = Dimensions.get('window');
+  const responsiveMinHeight = Math.max(300, Math.min(500, screenHeight * 0.4));
+
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    webOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      padding: 20,
+    },
+    dialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      width: '100%',
+      maxWidth: 500,
+      minHeight: responsiveMinHeight,
+      maxHeight: '85%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    backButton: {
+      padding: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    closeButton: {
+      padding: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    title: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.headline,
+      color: colors.text,
+    },
+    description: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+      marginBottom: 20,
+    },
+    imagePreview: {
+      alignItems: 'center',
+      marginBottom: 0,
+      paddingVertical: 10,
+      paddingHorizontal: 0,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+    },
+    previewImage: {
+      width: '100%',
+      height: undefined,
+      aspectRatio: 1,
+      minHeight: 200,
+      maxHeight: 300,
+      borderRadius: 0,
+      marginBottom: 8,
+      resizeMode: 'contain',
+    },
+    imageName: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+    },
+    sectionTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+      marginBottom: 12,
+    },
+    uploadSection: {
+      marginBottom: 0,
+    },
+    uploadButtons: {
+      marginBottom: 8,
+    },
+    uploadButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.accent,
+      marginBottom: 8,
+    },
+    uploadButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.card,
+      marginLeft: 8,
+    },
+    errorText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.error,
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    analyzeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.accent,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      marginTop: 10,
+      marginBottom: 10,
+    },
+    analyzeButtonDisabled: {
+      opacity: 0.5,
+    },
+    analyzeButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.card,
+      marginLeft: 8,
+    },
+    scrollContent: {
+      flex: 1,
+    },
+    scrollContentContainer: {
+      paddingBottom: 20,
+    },
+    previewSection: {
+      marginBottom: 20,
+    },
+    previewButtons: {
+      width: '100%',
+    },
+    retakeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.textMuted,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      width: '100%',
+    },
+    retakeButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.card,
+      textAlign: 'center',
+    },
+    sampleSection: {
+      marginBottom: 12,
+    },
+    sampleButtons: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginBottom: 12,
+    },
+    sampleButton: {
+      flex: 1,
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      padding: 0,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: 'transparent'
+    },
+    sampleImageContainer: {
+      width: 260,
+      height: 260,
+      overflow: 'hidden',
+      borderRadius: 0,
+      borderWidth: 0,
+      borderColor: colors.border,
+    },
+    sampleImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'contain',
+    },
+    bulletPoints: {
+      marginTop: 20,
+      marginBottom: 0,
+    },
+    bulletPoint: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+      marginBottom: 5,
+    },
+    fullSizeOverlay: {
+      flex: 1,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    fullSizeImageContainer: {
+      position: 'relative',
+      width: '90%',
+      height: '80%',
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    fullSizeImage: {
+      width: '100%',
+      height: '100%',
+    },
+    fullSizeCloseButton: {
+      position: 'absolute',
+      top: 20,
+      right: 20,
+      backgroundColor: colors.tints.neutral,
+      borderRadius: 20,
+      padding: 8,
+    },
+    // Instructions button styles
+    instructionsButton: {
+      backgroundColor: colors.background,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignItems: 'center',
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: colors.textMuted,
+    },
+    instructionsButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+    },
+    // Instructions modal styles
+    instructionsOverlay: {
+      flex: 1,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    instructionsDialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+      maxHeight: '80%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    instructionsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    instructionsTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.headline,
+      color: colors.text,
+    },
+    instructionsCloseButton: {
+      padding: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    instructionsContent: {
+      alignItems: 'flex-start',
+    },
+    instructionsBulletPoint: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+      marginBottom: 8,
+      lineHeight: 20,
+    },
+    orContainer: {
+      alignItems: 'center',
+      marginVertical: 15,
+      width: '100%',
+    },
+    orText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
+  });
+};
