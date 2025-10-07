@@ -1,11 +1,10 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { X, Check } from 'lucide-react-native';
-import Select, { components as selectComponents } from 'react-select';
-import { isSafari } from '@/utils/safari-polyfill';
+import { X } from 'lucide-react-native';
 import { Game } from '@/types/game';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { FilterField } from './DropdownFilterMenu';
 
 interface FilterOption {
   value: any;
@@ -45,87 +44,6 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
 
-  const CustomValueContainer = (props: any) => {
-    const {
-      selectProps,
-      getValue,
-      children,
-    } = props;
-
-    const selectedValues = getValue();
-
-    let displayText = selectProps.placeholder;
-    if (selectedValues.length > 0) {
-      displayText = `${selectProps.placeholder} (${selectedValues.length} selected)`;
-    }
-
-    return (
-      <selectComponents.ValueContainer {...props}>
-        <Text style={{
-          fontFamily: typography.getFontFamily('normal'),
-          fontSize: typography.fontSize.subheadline,
-          color: colors.text,
-          position: 'absolute', // Position it absolutely
-          top: '50%', // Center vertically
-          left: 10, // Align to left
-          transform: 'translateY(-50%)', // Perfect vertical centering
-          zIndex: 1, // Ensure it's above other elements
-        }}>
-          {displayText}
-        </Text>
-
-        {children}
-      </selectComponents.ValueContainer>
-    );
-  };
-  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const modalContainerRef = useRef<View>(null);
-
-  const getFilterSectionZIndex = (index: number) => {
-    if (openDropdownIndex === null) return 1000;
-    if (openDropdownIndex === index) {
-      // Give the last dropdown (complexity) an even higher z-index
-      return index === filterConfigs.length - 1 ? 9999999 : 99999;
-    }
-    return 1000;
-  };
-
-  const handleDropdownChange = (index: number, isOpen: boolean) => {
-    setOpenDropdownIndex(isOpen ? index : null);
-
-    // Check if this is the last dropdown (complexity) opening
-    const isLastDropdown = index === filterConfigs.length - 1;
-
-    // Auto-scroll when the last dropdown (complexity) opens
-    if (isOpen && isLastDropdown) {
-
-      // Small delay to ensure the dropdown is rendered before scrolling
-      setTimeout(() => {
-        // Scroll to show the last dropdown with enough space for the dropdown menu
-        const dropdownHeight = 200; // maxHeight from menuList styles
-        const extraPadding = 30; // Extra padding for better visibility
-        const scrollOffset = dropdownHeight + extraPadding;
-
-        // Try scrolling the ScrollView first
-        scrollViewRef.current?.scrollTo({
-          y: scrollOffset,
-          animated: true
-        });
-
-        // Also try scrolling the modal container if available
-        if (modalContainerRef.current) {
-          // Use window.scrollTo as a fallback for web
-          if (typeof window !== 'undefined') {
-            window.scrollTo({
-              top: scrollOffset,
-              behavior: 'smooth'
-            });
-          }
-        }
-      }, 100);
-    }
-  };
 
 
   const clearAllFilters = () => {
@@ -140,80 +58,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
     onApplyFilters();
   };
 
-  // Select styles with Safari-friendly tweaks and dynamic z-index support
-  const getSelectStyles = (index: number) => {
-    const baseSelectStyles = {
-      control: (baseStyles: any) => ({
-        ...baseStyles,
-        fontFamily: typography.getFontFamily('normal'),
-        fontSize: typography.fontSize.subheadline,
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        borderRadius: 8,
-        minHeight: 44,
-        boxShadow: 'none',
-        '&:hover': {
-          borderColor: colors.accent,
-        },
-        ...(isSafari?.() && {
-          WebkitAppearance: 'none',
-          WebkitBorderRadius: 8,
-        }),
-      }),
-      container: (baseStyles: any) => ({
-        ...baseStyles,
-        marginBottom: 6,
-        position: 'relative',
-        zIndex: getFilterSectionZIndex(index),
-      }),
-      menu: (baseStyles: any) => ({
-        ...baseStyles,
-        backgroundColor: colors.card,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: colors.border,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        zIndex: getFilterSectionZIndex(index),
-        position: 'absolute',
-        maxHeight: 'none',
-        overflow: 'visible',
-        ...(isSafari?.() && {
-          WebkitBorderRadius: 8,
-        }),
-      }),
-      menuList: (baseStyles: any) => ({
-        ...baseStyles,
-        maxHeight: 200, // Increased to accommodate all 5 complexity options
-        overflow: 'auto',
-        backgroundColor: colors.card,
-      }),
-      option: (baseStyles: any, state: any) => ({
-        ...baseStyles,
-        backgroundColor: state.isFocused ? colors.tints.accent : 'transparent',
-        color: colors.text,
-      }),
-      placeholder: (baseStyles: any) => ({
-        ...baseStyles,
-        fontFamily: typography.getFontFamily('normal'),
-        fontSize: typography.fontSize.body,
-        color: colors.textMuted,
-      }),
-      multiValueLabel: (baseStyles: any) => ({
-        ...baseStyles,
-        fontFamily: typography.getFontFamily('normal'),
-        fontSize: typography.fontSize.caption1,
-        color: colors.text,
-      }),
-      noOptionsMessage: (baseStyles: any) => ({
-        ...baseStyles,
-        fontFamily: typography.getFontFamily('normal'),
-        fontSize: typography.fontSize.caption1,
-        color: colors.textMuted,
-      }),
-    };
 
-    return baseSelectStyles;
-  };
 
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
@@ -239,50 +84,40 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       </Text>
 
       <ScrollView
-        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={true}
       >
-        {filterConfigs.map((config, index) => (
-          <View key={config.key} style={[styles.filterSection, { zIndex: getFilterSectionZIndex(index) }]}>
-            <Select
-              placeholder={config.placeholder}
-              value={config.value}
-              onChange={(value) => config.onChange(Array.from(value || []))}
-              options={config.options}
-              defaultValue={[]}
-              isMulti
-              isClearable
-              isSearchable={false}
-              closeMenuOnSelect={false}
-              blurInputOnSelect={false}
-              hideSelectedOptions={false}
-              styles={getSelectStyles(index)}
-              onMenuOpen={() => handleDropdownChange(index, true)}
-              onMenuClose={() => handleDropdownChange(index, false)}
-              formatOptionLabel={(option: any) => {
-                const isSelected = config.value.some(v => v.value === option.value);
-                return (
-                  <View style={styles.optionRow}>
-                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                      {isSelected && <Check size={12} color={colors.card} />}
-                    </View>
-                    <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                      {option.label}
-                    </Text>
-                  </View>
-                );
-              }}
-              components={{
-                ...selectComponents,
-                ValueContainer: CustomValueContainer,
-                MultiValue: () => null, // Hides default multi-value pills
-                Placeholder: () => null,
-              }}
-            />
-          </View>
-        ))}
+        {filterConfigs.map((config) => {
+          const isPlayerCount = config.key === 'playerCount';
+          const isAge = config.key === 'age';
+          const isPlayTime = config.key === 'playTime';
+
+          return (
+            <View key={config.key} style={styles.filterSection}>
+              <FilterField
+                type={isPlayerCount || isAge ? 'number' : 'dropdown'}
+                range={isPlayerCount || isAge}
+                label={config.label}
+                placeholder={config.placeholder}
+                options={config.options}
+                value={config.value}
+                onChange={(value) => config.onChange(Array.from(value || []))}
+                maxPlaceholder={
+                  isPlayerCount ? 'max players' : isAge ? 'max age limit' : undefined
+                }
+                minPlaceholder={
+                  isPlayerCount ? 'min players' : isAge ? 'min age limit' : undefined
+                }
+                clamp={
+                  isPlayerCount ? { min: 0, max: 120 }
+                    : isAge ? { min: 0, max: 100 }
+                      : undefined
+                }
+              />
+            </View>
+          );
+        })}
 
         {/* Clear All Button */}
         <TouchableOpacity
@@ -311,7 +146,6 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   return (
     <View style={styles.overlay}>
       <View
-        ref={modalContainerRef}
         style={styles.dialog}
       >
         {content}
@@ -332,12 +166,30 @@ export const filterGames = (
     let is_match = true;
 
     if (playerCount.length) {
-      is_match &&= playerCount.some(({ value }) => (
-        // Ignore game.min_players when 15+ is selected,
-        // since the number of actual players could be arbitrarily large.
-        (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
-        && value <= (Math.max(game.max_players, game.max_exp_players))
-      ));
+      // Support either dropdown options OR a single range object with {min?, max?}
+      const hasRange = playerCount.length === 1 && playerCount[0].value === 'range';
+      if (hasRange) {
+        const r = playerCount[0];
+        const minVal = r.min != null ? r.min : undefined;
+        const maxVal = r.max != null ? r.max : undefined;
+        const gameMin = Math.min(game.min_players, game.min_exp_players || Infinity);
+        const gameMax = Math.max(game.max_players, game.max_exp_players);
+        // If only max is provided: include 0 and all up to max
+        if (maxVal != null && minVal == null) {
+          is_match &&= (gameMin <= maxVal) || gameMin === 0;
+        } else {
+          // Intersect [min,max] with [gameMin,gameMax], inclusive
+          const lo = minVal != null ? minVal : -Infinity;
+          const hi = maxVal != null ? maxVal : Infinity;
+          is_match &&= !(gameMax < lo || gameMin > hi);
+        }
+      } else {
+        // Dropdown chips behavior (legacy): exact player count in [min,max]
+        is_match &&= playerCount.some(({ value }) => (
+          (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
+          && value <= (Math.max(game.max_players, game.max_exp_players))
+        ));
+      }
     }
 
     if (playTime.length) {
@@ -352,10 +204,21 @@ export const filterGames = (
     }
 
     if (age.length) {
-      is_match &&= age.some((a: FilterOption) => (
-        a.min! <= game.minAge
-        && game.minAge <= a.max!
-      ));
+      const hasRange = age.length === 1 && age[0].value === 'range';
+      if (hasRange) {
+        const r = age[0];
+        const minVal = r.min != null ? r.min : undefined;
+        const maxVal = r.max != null ? r.max : undefined;
+        const v = game.minAge;
+        const lo = minVal != null ? minVal : -Infinity;
+        const hi = maxVal != null ? maxVal : Infinity;
+        is_match &&= (lo <= v && v <= hi);
+      } else {
+        is_match &&= age.some((a: FilterOption) => (
+          a.min! <= game.minAge
+          && game.minAge <= a.max!
+        ));
+      }
     }
 
     if (gameType.length) {
@@ -400,6 +263,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     width: '100%',
     maxWidth: '100%',
     maxHeight: '100%',
+    minHeight: 500,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -445,35 +309,6 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     marginBottom: 6,
     position: 'relative',
   },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.textMuted,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    backgroundColor: colors.card,
-  },
-  checkboxSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  optionText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.footnote,
-    color: colors.text,
-  },
-  optionTextSelected: {
-    color: colors.accent,
-    fontFamily: typography.getFontFamily('semibold'),
-  },
   applyButton: {
     backgroundColor: colors.accent,
     borderRadius: 12,
@@ -498,17 +333,5 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     fontFamily: typography.getFontFamily('semibold'),
     fontSize: typography.fontSize.subheadline,
     color: colors.text,
-  },
-  debugText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.caption1,
-    color: colors.accent,
-    textAlign: 'center',
-    backgroundColor: colors.tints.accent,
-    padding: 8,
-    borderRadius: 4,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.accent,
   },
 });

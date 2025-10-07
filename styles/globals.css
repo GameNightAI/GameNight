@@ -124,11 +124,13 @@ body,
 body {
   margin: 0;
   /* Block page-level scroll/bounce; inner RN web ScrollViews still scroll */
-  overflow: hidden;
   overscroll-behavior-y: none;
   /* Improve touch handling without disabling inner scroll areas */
   touch-action: manipulation;
   background: var(--gamenyte-background);
+  /* Allow modals to expand naturally while preventing page scroll */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .dark {

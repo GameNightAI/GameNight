@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, Dimensions } from 'react-native';
 import { useMemo } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -366,8 +366,8 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
             </View>
           </View>
 
-        </ScrollView>        
-        
+        </ScrollView>
+
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.createButton, selectedDates.length === 0 && styles.createButtonDisabled]}
@@ -407,208 +407,214 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   );
 }
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: 16,
-  },
-  dialogContainer: {
-    maxWidth: 400,
-    maxHeight: '85%',
-    width: '100%',
-    height: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dialog: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 800,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    position: 'relative',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    maxHeight: '100%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.headline,
-    color: colors.text,
-    flex: 1,
-    textAlign: 'center',
-  },
-  closeButton: {
-    paddingHorizontal: 4,
-  },
-  closeButtonText: {
-    fontSize: typography.fontSize.body,
-    color: colors.textMuted,
-    fontFamily: typography.getFontFamily('semibold'),
-  },
-  content: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  footer: {
-    paddingTop: 8,
-    paddingBottom: 8,
-    paddingLeft: 16,
-    paddingRight: 16,
-    backgroundColor: colors.card,
-  },
-  createButton: {
-    backgroundColor: colors.primary,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  createButtonDisabled: {
-    backgroundColor: colors.border,
-  },
-  cancelButton: {
-    marginTop: 12,
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
+const getStyles = (colors: any, typography: any) => {
+  const { height: screenHeight } = Dimensions.get('window');
+  const responsiveMinHeight = Math.max(300, Math.min(500, screenHeight * 0.4));
+
+  return StyleSheet.create({
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      padding: 16,
+    },
+    dialogContainer: {
+      maxWidth: 300,
+      maxHeight: '95%',
+      width: '100%',
+      height: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    dialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      width: '100%',
+      maxWidth: 800,
+      minHeight: responsiveMinHeight,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      maxHeight: '100%',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    title: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.headline,
+      color: colors.text,
+      flex: 1,
+      textAlign: 'center',
+    },
+    closeButton: {
+      paddingHorizontal: 4,
+    },
+    closeButtonText: {
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    content: {
+      flex: 1,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    footer: {
+      paddingTop: 8,
+      paddingBottom: 8,
+      paddingLeft: 16,
+      paddingRight: 16,
+      backgroundColor: colors.card,
+    },
+    createButton: {
+      backgroundColor: colors.primary,
+      padding: 12,
+      borderRadius: 8,
+      alignItems: 'center'
+    },
+    createButtonDisabled: {
+      backgroundColor: colors.border,
+    },
+    cancelButton: {
+      marginTop: 12,
+      alignItems: 'center',
+      paddingVertical: 4,
+      paddingHorizontal: 12,
+    },
 
 
-  availabilityLabel: {
-    marginTop: 16,
-    marginBottom: 4,
-    fontSize: typography.fontSize.callout,
-    color: colors.text,
-    fontFamily: typography.getFontFamily('semibold'),
-  },
-  availabilitySublabel: {
-    marginBottom: 8,
-    fontSize: typography.fontSize.body,
-    color: colors.textMuted,
-    fontFamily: typography.getFontFamily('normal'),
-  },
-  createButtonText: {
-    color: '#ffffff',
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.callout,
-  },
-  cancelButtonText: {
-    color: colors.accent,
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.callout,
-  },
-  calendarContainer: {
-    padding: 10,
-    backgroundColor: colors.background,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    width: '100%',
-    maxWidth: 350, // Fixed maximum width
-    alignSelf: 'center',
-    overflow: 'hidden', // Prevent overflow
-  },
-  monthNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  monthNavButton: {
-    padding: 5,
-  },
-  monthText: {
-    fontSize: typography.fontSize.headline,
-    color: colors.text,
-    fontFamily: typography.getFontFamily('semibold'),
-  },
-  dayHeaders: {
-    flexDirection: 'row',
-    marginBottom: 5,
-    width: '100%',
-  },
-  dayHeader: {
-    flex: 1, // Equal width for each header
-    height: 30, // Reduced height for headers
-    textAlign: 'center',
-    lineHeight: 30,
-    backgroundColor: colors.border,
-    fontSize: typography.fontSize.caption1,
-    color: colors.text,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-  },
-  dayHeaderText: {
-    fontSize: typography.fontSize.caption1,
-    color: colors.text,
-  },
-  lastDayHeader: {
-    borderRightWidth: 0, // Remove border from last header
-  },
-  calendarGrid: {
-    width: '100%', // Use full width of container
-    height: 220, // Fixed height for 5 rows (44 * 5 = 220)
-  },
-  calendarRow: {
-    flexDirection: 'row',
-    width: '100%',
-    height: 44, // Fixed height per row (220 ÷ 5 = 44)
-  },
-  calendarDay: {
-    flex: 1, // Equal width for each day cell
-    height: 44, // Match row height
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    position: 'relative',
-  },
-  otherMonthDay: {
-    opacity: 0.5,
-  },
-  pastDay: {
-    backgroundColor: colors.background,
-    borderColor: colors.background,
-  },
-  selectedDay: {
-    backgroundColor: colors.success,
-    borderColor: colors.success,
-  },
-  dayText: {
-    fontSize: typography.fontSize.subheadline,
-    color: colors.text,
-  },
-  otherMonthDayText: {
-    color: colors.textMuted,
-  },
-  pastDayText: {
-    color: colors.textMuted,
-  },
-  selectedDayText: {
-    color: '#ffffff',
-  },
-});
+    availabilityLabel: {
+      marginTop: 16,
+      marginBottom: 4,
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    availabilitySublabel: {
+      marginBottom: 8,
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+      fontFamily: typography.getFontFamily('normal'),
+    },
+    createButtonText: {
+      color: '#ffffff',
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+    },
+    cancelButtonText: {
+      color: colors.accent,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+    },
+    calendarContainer: {
+      padding: 10,
+      backgroundColor: colors.background,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      width: '100%',
+      maxWidth: 350, // Fixed maximum width
+      alignSelf: 'center',
+      overflow: 'hidden', // Prevent overflow
+    },
+    monthNavigation: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    monthNavButton: {
+      padding: 5,
+    },
+    monthText: {
+      fontSize: typography.fontSize.headline,
+      color: colors.text,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    dayHeaders: {
+      flexDirection: 'row',
+      marginBottom: 5,
+      width: '100%',
+    },
+    dayHeader: {
+      flex: 1, // Equal width for each header
+      height: 30, // Reduced height for headers
+      textAlign: 'center',
+      lineHeight: 30,
+      backgroundColor: colors.border,
+      fontSize: typography.fontSize.caption1,
+      color: colors.text,
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    dayHeaderText: {
+      fontSize: typography.fontSize.caption1,
+      color: colors.text,
+    },
+    lastDayHeader: {
+      borderRightWidth: 0, // Remove border from last header
+    },
+    calendarGrid: {
+      width: '100%', // Use full width of container
+      height: 220, // Fixed height for 5 rows (44 * 5 = 220)
+    },
+    calendarRow: {
+      flexDirection: 'row',
+      width: '100%',
+      height: 44, // Fixed height per row (220 ÷ 5 = 44)
+    },
+    calendarDay: {
+      flex: 1, // Equal width for each day cell
+      height: 44, // Match row height
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      position: 'relative',
+    },
+    otherMonthDay: {
+      opacity: 0.5,
+    },
+    pastDay: {
+      backgroundColor: colors.background,
+      borderColor: colors.background,
+    },
+    selectedDay: {
+      backgroundColor: colors.success,
+      borderColor: colors.success,
+    },
+    dayText: {
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+    },
+    otherMonthDayText: {
+      color: colors.textMuted,
+    },
+    pastDayText: {
+      color: colors.textMuted,
+    },
+    selectedDayText: {
+      color: '#ffffff',
+    },
+  });
+};
