@@ -33,7 +33,7 @@ export default function AuthLayout() {
       <Stack.Screen
         name="login"
         options={{
-          title: 'Welcome Back',
+          title: 'Log In',
           headerShown: false,
         }}
       />
