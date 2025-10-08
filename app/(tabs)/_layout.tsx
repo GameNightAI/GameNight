@@ -1,3 +1,4 @@
+import 'react-native-reanimated';
 import { Tabs } from 'expo-router';
 import { StyleSheet, Platform, View, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
