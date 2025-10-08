@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.2.3",
@@ -33,10 +35,9 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.4",
-    "react-native-reanimated": "~4.1.1",
+    "react-native-reanimated": "^3.6.2",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-sfsymbols": "^1.2.2",
-    "react-native-svg": "15.12.1",
     "react-native-toast-message": "^2.3.0",
     "react-native-web": "^0.21.0",
     "uuid": "^11.1.0"
@@ -44,7 +45,7 @@
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@types/lodash": "^4.17.20",
-    "@types/react": "~19.1.9",
+    "@types/react": "^19.1.9",
     "@types/uuid": "^10.0.0",
     "@xmldom/xmldom": "^0.8.11",
     "csv-parse": "^6.1.0",
