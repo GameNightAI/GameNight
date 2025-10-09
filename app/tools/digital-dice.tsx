@@ -32,7 +32,7 @@ interface DiceResult {
   sides: number;
 }
 
-const STANDARD_DICE_SIDES = [6, 12, 20];
+const STANDARD_DICE_SIDES = [4, 6, 8, 10, 12, 20];
 
 export default function DigitalDiceScreen() {
   const router = useRouter();
@@ -477,26 +477,24 @@ export default function DigitalDiceScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Haptic Feedback</Text>
-                <Text style={styles.settingDescription}>
-                  {Platform.OS === 'web'
-                    ? 'Haptic feedback is not available on web'
-                    : 'Feel vibrations when rolling dice'
-                  }
-                </Text>
+            {Platform.OS !== 'web' && (
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Haptic Feedback</Text>
+                  <Text style={styles.settingDescription}>
+                    Feel vibrations when rolling dice
+                  </Text>
+                </View>
+                <Switch
+                  value={hapticEnabled}
+                  onValueChange={toggleHaptic}
+                  trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
+                  thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
+                  accessibilityLabel="Toggle haptic feedback"
+                  accessibilityRole="switch"
+                />
               </View>
-              <Switch
-                value={hapticEnabled}
-                onValueChange={toggleHaptic}
-                disabled={Platform.OS === 'web'}
-                trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
-                thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
-                accessibilityLabel="Toggle haptic feedback"
-                accessibilityRole="switch"
-              />
-            </View>
+            )}
           </View>
         </View>
       </Modal>
