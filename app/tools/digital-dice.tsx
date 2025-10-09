@@ -446,38 +446,40 @@ export default function DigitalDiceScreen() {
           </TouchableOpacity>
 
           {/* Settings Button */}
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => setShowSettings(true)}
-            accessibilityLabel="Open settings"
-            accessibilityRole="button"
-          >
-            <Settings size={20} color="#666666" />
-            <Text style={styles.settingsButtonText}>Settings</Text>
-          </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => setShowSettings(true)}
+              accessibilityLabel="Open settings"
+              accessibilityRole="button"
+            >
+              <Settings size={20} color="#666666" />
+              <Text style={styles.settingsButtonText}>Settings</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
       {/* Settings Modal */}
-      <Modal
-        visible={showSettings}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSettings(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Dice Settings</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowSettings(false)}
-              >
-                <X size={20} color="#666666" />
-              </TouchableOpacity>
-            </View>
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={showSettings}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSettings(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Dice Settings</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowSettings(false)}
+                >
+                  <X size={20} color="#666666" />
+                </TouchableOpacity>
+              </View>
 
-            {Platform.OS !== 'web' && (
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
                   <Text style={styles.settingTitle}>Haptic Feedback</Text>
@@ -494,10 +496,10 @@ export default function DigitalDiceScreen() {
                   accessibilityRole="switch"
                 />
               </View>
-            )}
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
       <ToolsFooter currentScreen="tools" />
     </View>
   );
