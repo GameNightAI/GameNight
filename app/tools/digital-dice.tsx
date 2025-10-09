@@ -136,40 +136,40 @@ export default function DigitalDiceScreen() {
 
   // Rolling Animation Component - now only shows one die
   const RollingDice = useCallback(() => {
-    const rotation = useSharedValue(0);
-    const scale = useSharedValue(1);
+    // const rotation = useSharedValue(0);
+    // const scale = useSharedValue(1);
 
-    const animatedStyle = useAnimatedStyle(() => {
-      return {
-        transform: [
-          { rotate: `${rotation.value}deg` },
-          { scale: scale.value },
-        ],
-      };
-    });
+    // const animatedStyle = useAnimatedStyle(() => {
+    //   return {
+    //     transform: [
+    //       { rotate: `${rotation.value}deg` },
+    //       { scale: scale.value },
+    //     ],
+    //   };
+    // });
 
-    useEffect(() => {
-      // Start rotation animation
-      rotation.value = withRepeat(
-        withTiming(360, { duration: 1000, easing: Easing.linear }),
-        -1,
-        false
-      );
+    // useEffect(() => {
+    //   // Start rotation animation
+    //   rotation.value = withRepeat(
+    //     withTiming(360, { duration: 1000, easing: Easing.linear }),
+    //     -1,
+    //     false
+    //   );
 
-      // Start scale animation
-      scale.value = withSequence(
-        withTiming(1.2, { duration: 200 }),
-        withRepeat(
-          withTiming(0.8, { duration: 300, easing: Easing.inOut(Easing.ease) }),
-          2,
-          true
-        ),
-        withTiming(1, { duration: 200 })
-      );
-    }, []);
+    //   // Start scale animation
+    //   scale.value = withSequence(
+    //     withTiming(1.2, { duration: 200 }),
+    //     withRepeat(
+    //       withTiming(0.8, { duration: 300, easing: Easing.inOut(Easing.ease) }),
+    //       2,
+    //       true
+    //     ),
+    //     withTiming(1, { duration: 200 })
+    //   );
+    // }, []);
 
     return (
-      <Animated.View style={[styles.rollingDice, animatedStyle]}>
+      <Animated.View style={[styles.rollingDice]}>
         <Dice6 size={48} color="#10b981" />
       </Animated.View>
     );

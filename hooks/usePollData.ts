@@ -207,6 +207,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           complexity_desc: game.complexity_desc,
           average: game.average,
           bayesaverage: game.bayesaverage,
+          expansions: game.expansions || [],
           votes: voteData,
           userVote,
         };

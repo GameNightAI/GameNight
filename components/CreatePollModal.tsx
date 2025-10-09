@@ -838,24 +838,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   return (
     <View style={styles.overlay}>
-      <View style={{
-        maxWidth: 800,
-        maxHeight: '85%',
-        width: '100%',
-        height: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 16,
-      }}>
-        <View style={[styles.dialog, {
-          height: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          maxWidth: '100%',
-          maxHeight: '100%'
-        }]}>
+      <View style={styles.modalContainer}>
+        <View style={[styles.dialog, styles.dialogResponsive]}>
           {content}
         </View>
       </View>
@@ -1069,6 +1053,8 @@ type Styles = {
   alreadyInPollText: TextStyle;
   checkboxDisabled: ViewStyle;
   infoTextEmphasis: TextStyle;
+  modalContainer: ViewStyle;
+  dialogResponsive: ViewStyle;
 };
 
 const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
@@ -1099,6 +1085,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
     flexDirection: 'column',
     paddingHorizontal: 12,
     maxHeight: '85%',
+    minHeight: 550,
   },
   header: {
     flexDirection: 'row',
@@ -1686,6 +1673,24 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
   infoTextEmphasis: {
     fontFamily: typography.getFontFamily('semibold'),
     color: colors.text,
+  },
+  modalContainer: {
+    maxWidth: 800,
+    maxHeight: '85%',
+    width: '100%',
+    height: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  dialogResponsive: {
+    height: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
 });
 

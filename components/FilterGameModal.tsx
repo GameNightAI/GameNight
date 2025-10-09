@@ -96,7 +96,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           return (
             <View key={config.key} style={styles.filterSection}>
               <FilterField
-                type={isPlayerCount || isAge ? 'number' : 'dropdown'}
+                type={isPlayerCount ? 'number' : 'dropdown'}
                 range={isPlayerCount || isAge}
                 label={config.label}
                 placeholder={config.placeholder}
@@ -104,15 +104,13 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
                 value={config.value}
                 onChange={(value) => config.onChange(Array.from(value || []))}
                 maxPlaceholder={
-                  isPlayerCount ? 'max players' : isAge ? 'max age limit' : undefined
+                  isPlayerCount ? 'Max Players' : !isPlayerCount ? 'Age Limit' : undefined
                 }
                 minPlaceholder={
-                  isPlayerCount ? 'min players' : isAge ? 'min age limit' : undefined
+                  isPlayerCount ? 'Min Players' : !isPlayerCount ? 'Min Age' : undefined
                 }
-                clamp={
-                  isPlayerCount ? { min: 0, max: 120 }
-                    : isAge ? { min: 0, max: 100 }
-                      : undefined
+                rangeType={
+                  isPlayerCount ? 'playerCount' : !isPlayerCount ? 'age' : undefined
                 }
               />
             </View>
