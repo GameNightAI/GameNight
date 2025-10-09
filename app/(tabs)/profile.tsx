@@ -5,6 +5,7 @@ import { LogOut, CreditCard as Edit2, ExternalLink, Mail, Edit3 } from 'lucide-r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
 
 import { supabase } from '@/services/supabase';
 import EditProfileModal from '@/components/EditProfileModal';
@@ -18,8 +19,9 @@ export default function ProfileScreen() {
     lastname: string | null;
   } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const { colors, typography } = useTheme();
+  const { colors, typography, isDark } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
+  const { toggleTheme } = useAccessibilityContext();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   // Use fallback values for web platform
@@ -145,6 +147,22 @@ export default function ProfileScreen() {
         >
           <Edit3 size={16} color={colors.primary} />
           <Text style={styles.editButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.themeToggleButton}
+          activeOpacity={1}
+          accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+          accessibilityRole="button"
+          accessibilityHint={`Switches to ${isDark ? 'light' : 'dark'} mode`}
+          onPress={() => {
+            toggleTheme();
+            announceForAccessibility(`Switched to ${isDark ? 'light' : 'dark'} mode`);
+          }}
+        >
+          <Text style={styles.themeToggleText}>
+            {isDark ? 'Light Mode' : 'Dark Mode'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -301,6 +319,24 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     fontSize: typography.fontSize.caption1,
     color: colors.primary,
     marginLeft: 6,
+  },
+  themeToggleButton: {
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  themeToggleText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.primary,
+    textAlign: 'center',
   },
   bggLink: {
     flexDirection: 'row',
