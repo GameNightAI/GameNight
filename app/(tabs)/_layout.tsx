@@ -36,7 +36,7 @@ export default function TabLayout() {
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
 
-  const styles = useMemo(() => getStyles(colors, typography, touchTargets, safeAreaBottom), [colors, typography, touchTargets, safeAreaBottom]);
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets, safeAreaBottom, insets), [colors, typography, touchTargets, safeAreaBottom, insets]);
 
   useEffect(() => {
     // Load the last visited tab on component mount
@@ -164,7 +164,7 @@ export default function TabLayout() {
   );
 }
 
-function getStyles(colors: any, typography: any, touchTargets: any, safeAreaBottom: number) {
+function getStyles(colors: any, typography: any, touchTargets: any, safeAreaBottom: number, insets: any) {
   return StyleSheet.create({
     tabBar: {
       backgroundColor: '#1a2b5f', // Keep exact same color
@@ -183,7 +183,7 @@ function getStyles(colors: any, typography: any, touchTargets: any, safeAreaBott
       backgroundColor: '#1a2b5f', // Keep exact same color
       paddingHorizontal: 16,
       paddingVertical: 12,
-      paddingTop: Platform.OS === 'ios' ? 44 : 12, // Account for status bar on iOS
+      paddingTop: Math.max(12, insets.top), // Use safe area insets instead of hardcoded iOS value
       minHeight: touchTargets.standard.height,
     },
     customHeaderTitle: {

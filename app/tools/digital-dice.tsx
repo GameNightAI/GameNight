@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Dimensions, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Platform, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Dice6, RotateCcw, Plus, Minus, X, Settings } from 'lucide-react-native';
 import ToolsFooter from '@/components/ToolsFooter';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
@@ -24,7 +25,6 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-const { height: screenHeight } = Dimensions.get('window');
 
 interface DiceResult {
   id: number;
@@ -39,9 +39,10 @@ export default function DigitalDiceScreen() {
   const insets = useSafeAreaInsets();
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const { screenHeight } = useDeviceType();
 
-  const styles = useMemo(() => getStyles(colors, typography, touchTargets), [colors, typography, touchTargets]);
-
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets, screenHeight, insets), [colors, typography, touchTargets, screenHeight, insets]);
+  const footerHeight = 60 + Math.max(8, Platform.OS === 'web' ? 0 : insets.bottom);
   const [sides, setSides] = useState(6);
   const [numberOfDice, setNumberOfDice] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
@@ -183,8 +184,9 @@ export default function DigitalDiceScreen() {
     );
   }, [styles, RollingDice]);
 
+
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       {/* Background Image */}
       <Image
         source={{ uri: 'https://images.pexels.com/photos/278918/pexels-photo-278918.jpeg' }}
@@ -503,7 +505,7 @@ export default function DigitalDiceScreen() {
   );
 }
 
-function getStyles(colors: any, typography: any, touchTargets: any) {
+function getStyles(colors: any, typography: any, touchTargets: any, screenHeight: number, insets: any) {
   return StyleSheet.create({
     // === CONTAINER & LAYOUT ===
     container: {

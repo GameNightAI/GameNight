@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import React, { useState, useEffect, useMemo } from 'react';
 import Toast from 'react-native-toast-message';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
 import { VoteType, VOTE_TYPE_TO_SCORE, SCORE_TO_VOTE_TYPE, getVoteTypeKeyFromScore, VOTING_OPTIONS } from '@/components/votingOptions';
@@ -167,6 +168,7 @@ export default function LocalPollScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colors, typography, touchTargets } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const {
     poll,
@@ -303,7 +305,7 @@ export default function LocalPollScreen() {
     router.push({ pathname: '/poll/local/[id]/results', params: { id: id as string } });
   };
 
-  const styles = getStyles(colors, typography);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
@@ -405,7 +407,7 @@ export default function LocalPollScreen() {
   );
 }
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background
@@ -417,7 +419,9 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     paddingBottom: 20, // Add padding to prevent content from being hidden behind fixed buttons
   },
   header: {
-    padding: 20,
+    paddingTop: Math.max(40, insets.top),
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     backgroundColor: colors.primary
   },
   title: {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRef } from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { usePollResults } from '@/hooks/usePollResults';
@@ -15,11 +16,15 @@ export default function LocalPollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { colors, typography, touchTargets } = useTheme();
+  const insets = useSafeAreaInsets();
   const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
 
   const { poll, results, hasVoted, loading, error } = usePollResults(id as string | undefined);
+
+  // Move useMemo before any early returns to follow Rules of Hooks
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   useEffect(() => {
     // Fetch poll comments
@@ -107,8 +112,6 @@ export default function LocalPollResultsScreen() {
   const navigateToVoting = () => {
     router.push({ pathname: '/poll/local/[id]', params: { id: id as string } });
   };
-
-  const styles = getStyles(colors, typography);
 
   return (
     <View style={styles.container}>
@@ -223,7 +226,7 @@ const getOrdinalSuffix = (num: number) => {
   return 'th';
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -236,7 +239,9 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
-    padding: 20,
+    paddingTop: Math.max(40, insets.top),
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     backgroundColor: colors.primary,
   },
   title: {

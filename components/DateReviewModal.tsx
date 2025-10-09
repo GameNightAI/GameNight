@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Switch, Dimensions } from 'react-native';
 import { format } from 'date-fns';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SquarePen } from 'lucide-react-native';
 import { CreateEventDetails } from './CreateEventDetails';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 
 interface EventOptions {
@@ -32,6 +34,7 @@ interface DateReviewModalProps {
   eventName: string;
   eventDescription: string;
   eventLocation: string;
+  defaultEventName: string;
   onEventDetailsSave: (name: string, description: string, location: string) => void;
 }
 
@@ -45,11 +48,13 @@ export function DateReviewModal({
   eventName,
   eventDescription,
   eventLocation,
+  defaultEventName,
   onEventDetailsSave
 }: DateReviewModalProps) {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   const [localEventOptions, setLocalEventOptions] = useState(eventOptions);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -60,6 +65,13 @@ export function DateReviewModal({
   const [customTimeDates, setCustomTimeDates] = useState<Set<string>>(new Set());
   const [customLocationDates, setCustomLocationDates] = useState<Set<string>>(new Set());
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
+
+  // Determine if the user has manually provided any details
+  const hasManualDetails = !!(
+    (eventName && eventName !== defaultEventName) ||
+    eventDescription?.trim() ||
+    eventLocation?.trim()
+  );
 
   const formatTime = (date: Date | null): string => {
     if (!date) return '';
@@ -218,11 +230,15 @@ export function DateReviewModal({
 
         </View>
 
-        <ScrollView style={styles.dateReviewContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.dateReviewContent}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Event Details Section */}
           <View style={styles.eventDetailsSection}>
             <TouchableOpacity
-              style={[styles.eventDetailsButton, (eventName || eventDescription || eventLocation) && styles.eventDetailsButtonActive]}
+              style={[styles.eventDetailsButton, hasManualDetails && styles.eventDetailsButtonActive]}
               onPress={() => {
                 announceForAccessibility('Opening event details');
                 setShowEventDetailsModal(true);
@@ -236,7 +252,7 @@ export function DateReviewModal({
                   <Text style={styles.eventDetailsButtonLabel}>Event Details</Text>
                 </View>
                 <View style={styles.eventDetailsButtonRight}>
-                  <View style={[styles.eventDetailsButtonIndicator, { opacity: (eventName || eventDescription || eventLocation) ? 1 : 0, marginRight: 8 }]}>
+                  <View style={[styles.eventDetailsButtonIndicator, { opacity: hasManualDetails ? 1 : 0, marginRight: 8 }]}>
                     <Text style={styles.eventDetailsButtonIndicatorText}>✓</Text>
                   </View>
                   <SquarePen size={20} color={colors.textMuted} />
@@ -510,9 +526,9 @@ export function DateReviewModal({
   );
 }
 
-const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: ReturnType<typeof useTheme>['typography']) => {
+const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: ReturnType<typeof useTheme>['typography'], insets: any) => {
   const { height: screenHeight } = Dimensions.get('window');
-  const responsiveMinHeight = Math.max(400, Math.min(600, screenHeight * 0.5));
+  const responsiveMinHeight = Math.max(500, Math.min(600, screenHeight * 0.8));
 
   return StyleSheet.create({
     overlay: {
@@ -525,7 +541,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000,
-      padding: 20,
+      paddingTop: Math.max(20, insets.top),
+      paddingBottom: Math.max(20, insets.bottom),
+      paddingHorizontal: 20,
     },
     dateReviewDialog: {
       backgroundColor: colors.card,

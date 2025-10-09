@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, Info, CheckCircle } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -27,7 +28,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   const [error, setError] = useState('');
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   useEffect(() => {
     if (!loading) return;
@@ -157,13 +159,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   );
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingTop: Math.max(20, insets.top),
+    paddingBottom: Math.max(20, insets.bottom),
+    paddingHorizontal: 20,
   },
   dialog: {
     backgroundColor: colors.card,

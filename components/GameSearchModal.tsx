@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, FlatList, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Plus } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { debounce } from 'lodash';
@@ -37,7 +38,8 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
 }) => {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -400,13 +402,15 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   );
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingTop: Math.max(20, insets.top),
+    paddingBottom: Math.max(20, insets.bottom),
+    paddingHorizontal: 20,
   },
   dialog: {
     backgroundColor: colors.card,
