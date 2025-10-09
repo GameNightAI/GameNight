@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Check, X } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { ThumbnailModal } from './ThumbnailModal';
@@ -33,6 +34,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
 }) => {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
   const [selectedGames, setSelectedGames] = useState<Set<number>>(new Set());
   const [databaseResults, setDatabaseResults] = useState<any[] | null>(null);
   const [loadingDatabase, setLoadingDatabase] = useState(false);
@@ -45,7 +47,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   // Parse board games from analysis results
   const parsedBoardGames = analysisResults?.boardGames || [];
@@ -479,7 +481,11 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
             <>
               <Text style={styles.sectionTitle}>Detected Games ({validDetectedGames.length} found)</Text>
 
-              <ScrollView style={styles.gamesScrollView} showsVerticalScrollIndicator={true}>
+              <ScrollView
+                style={styles.gamesScrollView}
+                contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+                showsVerticalScrollIndicator={true}
+              >
                 <View style={styles.gamesContainer}>
                   {/* Header */}
                   <View style={styles.tableHeader}>
@@ -677,13 +683,15 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   );
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingTop: Math.max(20, insets.top),
+    paddingBottom: Math.max(20, insets.bottom),
+    paddingHorizontal: 20,
   },
   webOverlay: {
     position: 'fixed',

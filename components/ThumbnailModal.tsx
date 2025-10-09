@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Image, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -17,7 +18,8 @@ export const ThumbnailModal: React.FC<ThumbnailModalProps> = ({
 }) => {
   const { colors, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(colors, insets), [colors, insets]);
 
   if (!imageUrl) return null;
 
@@ -60,12 +62,15 @@ export const ThumbnailModal: React.FC<ThumbnailModalProps> = ({
   );
 };
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, insets: any) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: Math.max(16, insets.top),
+    paddingBottom: Math.max(16, insets.bottom),
+    paddingHorizontal: 16,
   },
   content: {
     width: '90%',

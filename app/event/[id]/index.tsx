@@ -2,6 +2,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/LoadingState';
@@ -46,6 +47,7 @@ export default function EventScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colors, typography } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [eventDates, setEventDates] = useState<PollEvent[]>([]);
@@ -57,7 +59,7 @@ export default function EventScreen() {
   const [voteCounts, setVoteCounts] = useState<Record<string, { yes: number; no: number; maybe: number }>>({});
   const [voting, setVoting] = useState(false);
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
 
 
@@ -297,7 +299,10 @@ export default function EventScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+    >
       {/* Event Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -406,13 +411,15 @@ export default function EventScreen() {
   );
 }
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
   header: {
-    padding: 20,
+    paddingTop: Math.max(40, insets.top),
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     backgroundColor: colors.primary,
   },
   title: {
@@ -510,6 +517,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     margin: 20,
+    marginBottom: Math.max(20, insets.bottom),
     alignItems: 'center',
     minHeight: 44,
   },
