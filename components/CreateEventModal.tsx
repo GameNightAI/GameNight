@@ -409,7 +409,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
 
 const getStyles = (colors: any, typography: any) => {
   const { height: screenHeight } = Dimensions.get('window');
-  const responsiveMinHeight = Math.max(300, Math.min(500, screenHeight * 0.4));
+  const responsiveMinHeight = Math.max(550, Math.min(550, screenHeight * 0.85));
 
   return StyleSheet.create({
     overlay: {

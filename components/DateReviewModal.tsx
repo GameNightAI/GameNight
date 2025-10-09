@@ -252,14 +252,16 @@ export function DateReviewModal({
               <View style={styles.timeForm}>
                 <View style={styles.timeInputRow}>
                   <Text style={styles.timeFormLabel}>Start</Text>
-                  <input
-                    type="time"
+                  <TextInput
                     style={styles.timeInput}
                     value={formatTimeForInput(localEventOptions.startTime)}
-                    onChange={(e) => setLocalEventOptions(prevOptions => ({
+                    onChangeText={(text) => setLocalEventOptions(prevOptions => ({
                       ...prevOptions,
-                      startTime: convertTimeInputToDate(e.target.value, new Date()) || null,
+                      startTime: convertTimeInputToDate(text, new Date()) || null,
                     }))}
+                    placeholder="HH:MM"
+                    keyboardType="numeric"
+                    maxLength={5}
                   />
                   <TouchableOpacity
                     style={[styles.timeResetButton, { marginLeft: 8 }]}
@@ -283,14 +285,16 @@ export function DateReviewModal({
               <View style={styles.timeForm}>
                 <View style={styles.timeInputRow}>
                   <Text style={styles.timeFormLabel}>End</Text>
-                  <input
-                    type="time"
+                  <TextInput
                     style={styles.timeInput}
                     value={formatTimeForInput(localEventOptions.endTime)}
-                    onChange={(e) => setLocalEventOptions(prevOptions => ({
+                    onChangeText={(text) => setLocalEventOptions(prevOptions => ({
                       ...prevOptions,
-                      endTime: convertTimeInputToDate(e.target.value, new Date()) || null,
+                      endTime: convertTimeInputToDate(text, new Date()) || null,
                     }))}
+                    placeholder="HH:MM"
+                    keyboardType="numeric"
+                    maxLength={5}
                   />
                   <TouchableOpacity
                     style={[styles.timeResetButton, { marginLeft: 8 }]}
@@ -359,49 +363,57 @@ export function DateReviewModal({
                       <View style={styles.customTimeInputs}>
                         <View style={styles.timeInputRow}>
                           <Text style={styles.timeFormLabel}>Start</Text>
-                          <input type="time"
+                          <TextInput
                             style={styles.customTimeInput}
                             value={formatTimeForInput(dateOptions.startTime)}
-                            onChange={(e) => updateDateSpecificOptions(
+                            onChangeText={(text) => updateDateSpecificOptions(
                               date,
-                              { startTime: convertTimeInputToDate(e.target.value, date) }
+                              { startTime: convertTimeInputToDate(text, date) }
                             )}
+                            placeholder="HH:MM"
+                            keyboardType="numeric"
+                            maxLength={5}
                           />
-                          <button type="button"
+                          <TouchableOpacity
                             style={styles.customTimeResetButton}
-                            onClick={(e) => {
-                              e.preventDefault();
+                            onPress={() => {
                               updateDateSpecificOptions(
                                 date,
                                 { startTime: null }
                               );
                             }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Clear start time"
                           >
-                            ✕
-                          </button>
+                            <Text style={styles.clearTimeButtonText}>✕</Text>
+                          </TouchableOpacity>
                         </View>
                         <View style={styles.timeInputRow}>
                           <Text style={styles.timeFormLabel}>End</Text>
-                          <input type="time"
+                          <TextInput
                             style={styles.customTimeInput}
                             value={formatTimeForInput(dateOptions.endTime)}
-                            onChange={(e) => updateDateSpecificOptions(
+                            onChangeText={(text) => updateDateSpecificOptions(
                               date,
-                              { endTime: convertTimeInputToDate(e.target.value, date) }
+                              { endTime: convertTimeInputToDate(text, date) }
                             )}
+                            placeholder="HH:MM"
+                            keyboardType="numeric"
+                            maxLength={5}
                           />
-                          <button type="button"
+                          <TouchableOpacity
                             style={styles.customTimeResetButton}
-                            onClick={(e) => {
-                              e.preventDefault();
+                            onPress={() => {
                               updateDateSpecificOptions(
                                 date,
                                 { endTime: null }
                               );
                             }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Clear end time"
                           >
-                            ✕
-                          </button>
+                            <Text style={styles.clearTimeButtonText}>✕</Text>
+                          </TouchableOpacity>
                         </View>
 
                       </View>
