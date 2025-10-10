@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Camera, RefreshCw, Search } from 'lucide-react-native';
@@ -40,6 +40,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [savedBggUsername, setSavedBggUsername] = useState<string | null>(null);
 
   const {
     modalState,
@@ -47,6 +48,30 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   } = useAddGameModalFlow();
 
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+
+  // Load saved BGG username from profile
+  useEffect(() => {
+    const loadBggUsername = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('bgg_username')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          setSavedBggUsername(profileData?.bgg_username || null);
+        }
+      } catch (err) {
+        console.error('Error loading BGG username:', err);
+      }
+    };
+
+    if (isVisible) {
+      loadBggUsername();
+    }
+  }, [isVisible]);
 
   const showFullSizeImage = (imageSource: any) => {
     setFullSizeImageSource(imageSource);
@@ -325,6 +350,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           onClose={() => setSyncModalVisible(false)}
           onSync={handleSync}
           loading={syncing}
+          savedBggUsername={savedBggUsername}
         />
       </>
     );
@@ -357,6 +383,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         onClose={() => setSyncModalVisible(false)}
         onSync={handleSync}
         loading={syncing}
+        savedBggUsername={savedBggUsername}
       />
     </>
   );

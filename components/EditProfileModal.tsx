@@ -24,11 +24,13 @@ interface EditProfileModalProps {
     username: string;
     firstname: string | null;
     lastname: string | null;
+    bgg_username: string | null;
   }) => void;
   initialData: {
     username: string;
     firstname: string | null;
     lastname: string | null;
+    bgg_username: string | null;
   };
   loading: boolean;
 }
@@ -43,6 +45,7 @@ export default function EditProfileModal({
   const [username, setUsername] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [bggUsername, setBggUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
 
@@ -57,6 +60,7 @@ export default function EditProfileModal({
       setUsername(initialData.username || '');
       setFirstName(initialData.firstname || '');
       setLastName(initialData.lastname || '');
+      setBggUsername(initialData.bgg_username || '');
       setError(null);
     }
   }, [visible, initialData]);
@@ -134,6 +138,7 @@ export default function EditProfileModal({
         username: username.trim(),
         firstname: firstName.trim() || null,
         lastname: lastName.trim() || null,
+        bgg_username: bggUsername.trim() || null,
       });
     } catch (err) {
       setError('Failed to save profile. Please try again.');
@@ -221,6 +226,21 @@ export default function EditProfileModal({
                   placeholder="Enter last name"
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="words"
+                  maxLength={50}
+                  editable={!loading}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>BGG Username (Optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={bggUsername}
+                  onChangeText={setBggUsername}
+                  placeholder="Enter BoardGameGeek username"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   maxLength={50}
                   editable={!loading}
                 />
