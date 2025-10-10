@@ -9,6 +9,7 @@ import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } fr
 import Toast from 'react-native-toast-message';
 import { initializeSafariFixes, persistSessionInSafari } from '@/utils/safari-polyfill';
 import { AccessibilityProvider } from '@/contexts/AccessibilityContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import '../styles/globals.css';
 
 export default function RootLayout() {
@@ -43,22 +44,24 @@ export default function RootLayout() {
   }
 
   return (
-    <AccessibilityProvider>
-      <SafeAreaProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen
-            name="(tabs)"
-            options={{ headerShown: false }}
+    <AuthProvider>
+      <AccessibilityProvider>
+        <SafeAreaProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen
+              name="(tabs)"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+          </Stack>
+          <Toast />
+          <StatusBar
+            style={colorScheme === 'dark' ? 'light' : 'dark'}
+            backgroundColor={colorScheme === 'dark' ? '#1a2b5f' : '#ffffff'}
           />
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-        </Stack>
-        <Toast />
-        <StatusBar
-          style={colorScheme === 'dark' ? 'light' : 'dark'}
-          backgroundColor={colorScheme === 'dark' ? '#1a2b5f' : '#ffffff'}
-        />
-      </SafeAreaProvider>
-    </AccessibilityProvider>
+        </SafeAreaProvider>
+      </AccessibilityProvider>
+    </AuthProvider>
   );
 }
