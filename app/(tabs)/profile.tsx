@@ -17,6 +17,7 @@ export default function ProfileScreen() {
     username: string;
     firstname: string | null;
     lastname: string | null;
+    bgg_username: string | null;
   } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const { colors, typography, isDark } = useTheme();
@@ -38,7 +39,7 @@ export default function ProfileScreen() {
         // Load profile data
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('username, firstname, lastname')
+          .select('username, firstname, lastname, bgg_username')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -76,6 +77,7 @@ export default function ProfileScreen() {
     username: string;
     firstname: string | null;
     lastname: string | null;
+    bgg_username: string | null;
   }) => {
     try {
       setLoading(true);
@@ -91,6 +93,7 @@ export default function ProfileScreen() {
           username: updatedProfile.username,
           firstname: updatedProfile.firstname,
           lastname: updatedProfile.lastname,
+          bgg_username: updatedProfile.bgg_username,
         })
         .eq('id', user.id);
 
