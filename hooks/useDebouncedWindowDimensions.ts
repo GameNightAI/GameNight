@@ -1,3 +1,5 @@
+// File not in use. Saved for future use if we implement screen rotation.
+
 import { useState, useEffect } from 'react';
 import { useWindowDimensions } from 'react-native';
 

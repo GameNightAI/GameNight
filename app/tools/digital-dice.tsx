@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Dimensions, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Platform, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Dice6, RotateCcw, Plus, Minus, X, Settings } from 'lucide-react-native';
 import ToolsFooter from '@/components/ToolsFooter';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
@@ -24,7 +25,6 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-const { height: screenHeight } = Dimensions.get('window');
 
 interface DiceResult {
   id: number;
@@ -32,16 +32,17 @@ interface DiceResult {
   sides: number;
 }
 
-const STANDARD_DICE_SIDES = [6, 12, 20];
+const STANDARD_DICE_SIDES = [4, 6, 8, 10, 12, 20];
 
 export default function DigitalDiceScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const { screenHeight } = useDeviceType();
 
-  const styles = useMemo(() => getStyles(colors, typography, touchTargets), [colors, typography, touchTargets]);
-
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets, screenHeight, insets), [colors, typography, touchTargets, screenHeight, insets]);
+  const footerHeight = 60 + Math.max(8, Platform.OS === 'web' ? 0 : insets.bottom);
   const [sides, setSides] = useState(6);
   const [numberOfDice, setNumberOfDice] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
@@ -183,8 +184,9 @@ export default function DigitalDiceScreen() {
     );
   }, [styles, RollingDice]);
 
+
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       {/* Background Image */}
       <Image
         source={{ uri: 'https://images.pexels.com/photos/278918/pexels-photo-278918.jpeg' }}
@@ -444,66 +446,66 @@ export default function DigitalDiceScreen() {
           </TouchableOpacity>
 
           {/* Settings Button */}
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => setShowSettings(true)}
-            accessibilityLabel="Open settings"
-            accessibilityRole="button"
-          >
-            <Settings size={20} color="#666666" />
-            <Text style={styles.settingsButtonText}>Settings</Text>
-          </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => setShowSettings(true)}
+              accessibilityLabel="Open settings"
+              accessibilityRole="button"
+            >
+              <Settings size={20} color="#666666" />
+              <Text style={styles.settingsButtonText}>Settings</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
       {/* Settings Modal */}
-      <Modal
-        visible={showSettings}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSettings(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Dice Settings</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowSettings(false)}
-              >
-                <X size={20} color="#666666" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Haptic Feedback</Text>
-                <Text style={styles.settingDescription}>
-                  {Platform.OS === 'web'
-                    ? 'Haptic feedback is not available on web'
-                    : 'Feel vibrations when rolling dice'
-                  }
-                </Text>
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={showSettings}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSettings(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Dice Settings</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowSettings(false)}
+                >
+                  <X size={20} color="#666666" />
+                </TouchableOpacity>
               </View>
-              <Switch
-                value={hapticEnabled}
-                onValueChange={toggleHaptic}
-                disabled={Platform.OS === 'web'}
-                trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
-                thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
-                accessibilityLabel="Toggle haptic feedback"
-                accessibilityRole="switch"
-              />
+
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Haptic Feedback</Text>
+                  <Text style={styles.settingDescription}>
+                    Feel vibrations when rolling dice
+                  </Text>
+                </View>
+                <Switch
+                  value={hapticEnabled}
+                  onValueChange={toggleHaptic}
+                  trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
+                  thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
+                  accessibilityLabel="Toggle haptic feedback"
+                  accessibilityRole="switch"
+                />
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
       <ToolsFooter currentScreen="tools" />
     </View>
   );
 }
 
-function getStyles(colors: any, typography: any, touchTargets: any) {
+function getStyles(colors: any, typography: any, touchTargets: any, screenHeight: number, insets: any) {
   return StyleSheet.create({
     // === CONTAINER & LAYOUT ===
     container: {

@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Toast from 'react-native-toast-message';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { usePollData } from '@/hooks/usePollData';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -27,6 +28,7 @@ export default function PollScreen() {
   const router = useRouter();
   const { colors, typography } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
+  const insets = useSafeAreaInsets();
 
   const {
     poll,
@@ -277,7 +279,7 @@ export default function PollScreen() {
     router.push({ pathname: '/poll/[id]/results', params: { id: id as string } });
   };
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
@@ -407,7 +409,7 @@ export default function PollScreen() {
   );
 }
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background
@@ -416,10 +418,12 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: insets.bottom + 20,
   },
   header: {
-    padding: 20,
+    paddingTop: Math.max(40, insets.top),
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     backgroundColor: colors.primary
   },
   title: {
@@ -463,7 +467,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingBottom: 20, // Safe area padding
+    paddingBottom: Math.max(20, insets.bottom),
   },
   submitVotesContainer: {
     paddingTop: 10,

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { useMemo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth, isSameDay, isBefore, startOfDay, min, max } from 'date-fns';
 import { DateReviewModal } from './DateReviewModal';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
@@ -38,6 +40,8 @@ interface EventOptions {
 export default function CreateEventModal({ visible, onClose, onSuccess, pollId }: CreateEventModalProps) {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
+  const insets = useSafeAreaInsets();
+  const { isMobile, screenWidth } = useDeviceType();
   const router = useRouter();
   const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
@@ -240,7 +244,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     }
   };
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets, isMobile, screenWidth), [colors, typography, insets, isMobile, screenWidth]);
 
   if (!visible) return null;
 
@@ -268,7 +272,11 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/*<Text style={styles.availabilityLabel}>Set Available Dates</Text>
             <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>*/}
 
@@ -397,6 +405,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
         eventName={eventName}
         eventDescription={eventDescription}
         eventLocation={eventLocation}
+        defaultEventName={defaultEventName}
         onEventDetailsSave={(name, description, location) => {
           setEventName(name);
           setEventDescription(description);
@@ -407,9 +416,8 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   );
 }
 
-const getStyles = (colors: any, typography: any) => {
-  const { height: screenHeight } = Dimensions.get('window');
-  const responsiveMinHeight = Math.max(300, Math.min(500, screenHeight * 0.4));
+const getStyles = (colors: any, typography: any, insets: any, isMobile: boolean, screenWidth: number) => {
+  const responsiveMinHeight = Math.max(550, Math.min(550, 600)); // Fixed height for consistency
 
   return StyleSheet.create({
     overlay: {
@@ -422,7 +430,9 @@ const getStyles = (colors: any, typography: any) => {
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000,
-      padding: 16,
+      paddingTop: Math.max(16, insets.top),
+      paddingBottom: Math.max(16, insets.bottom),
+      paddingHorizontal: 16,
     },
     dialogContainer: {
       maxWidth: 300,
@@ -437,8 +447,8 @@ const getStyles = (colors: any, typography: any) => {
     dialog: {
       backgroundColor: colors.card,
       borderRadius: 12,
-      width: '100%',
-      maxWidth: 800,
+      width: isMobile ? '100%' : '90%',
+      maxWidth: isMobile ? 500 : Math.min(800, screenWidth * 0.8),
       minHeight: responsiveMinHeight,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Alert, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, AlertTriangle, SquarePen } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import Toast from 'react-native-toast-message';
@@ -32,6 +33,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
 }) => {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [originalPollGames, setOriginalPollGames] = useState<Game[]>([]);
@@ -342,7 +344,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     });
   };
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   if (!isVisible) return null;
 
@@ -429,7 +431,10 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
             </View>
           )}
 
-          <ScrollView style={styles.content}>
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+          >
             <View style={styles.descriptionSection}>
               <TouchableOpacity
                 style={[styles.descriptionButton, (dynamicPollDescription || isTitleManuallyChanged) && styles.descriptionButtonActive]}
@@ -580,7 +585,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   );
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0,
@@ -591,6 +596,9 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    paddingTop: Math.max(16, insets.top),
+    paddingBottom: Math.max(16, insets.bottom),
+    paddingHorizontal: 16,
   },
   modal: {
     backgroundColor: colors.card,

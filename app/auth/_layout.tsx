@@ -28,6 +28,7 @@ export default function AuthLayout() {
       // Safe area handling
       contentStyle: {
         paddingTop: insets.top,
+        paddingBottom: insets.bottom,
       },
     }}>
       <Stack.Screen

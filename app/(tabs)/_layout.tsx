@@ -2,7 +2,7 @@ import 'react-native-reanimated';
 import { Tabs } from 'expo-router';
 import { StyleSheet, Platform, View, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Calendar, Library, User, Vote, Wrench, Sun, Moon } from 'lucide-react-native';
+import { Calendar, Library, User, Vote, Wrench } from 'lucide-react-native';
 import { useEffect, useState, useMemo } from 'react';
 import { saveLastVisitedTab, getLastVisitedTab } from '@/utils/storage';
 import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
@@ -30,13 +30,13 @@ const getHeaderTitle = (routeName: string): string => {
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const [initialTab, setInitialTab] = useState<string | null>(null);
-  const { colorScheme, toggleTheme } = useAccessibilityContext();
-  const { colors, isDark, typography, touchTargets } = useTheme();
+  const { colorScheme } = useAccessibilityContext();
+  const { colors, typography, touchTargets } = useTheme();
 
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
 
-  const styles = useMemo(() => getStyles(colors, typography, touchTargets, safeAreaBottom), [colors, typography, touchTargets, safeAreaBottom]);
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets, safeAreaBottom, insets), [colors, typography, touchTargets, safeAreaBottom, insets]);
 
   useEffect(() => {
     // Load the last visited tab on component mount
@@ -58,24 +58,10 @@ export default function TabLayout() {
     saveLastVisitedTab(tabName);
   };
 
-  // Simple header component with dark mode toggle
+  // Simple header component
   const CustomHeader = ({ title }: { title: string }) => (
     <View style={styles.customHeader}>
       <Text style={styles.customHeaderTitle}>{title}</Text>
-      <TouchableOpacity
-        style={styles.darkModeToggle}
-        onPress={toggleTheme}
-        accessibilityLabel={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        accessibilityRole="button"
-        accessibilityHint="Toggle between light and dark theme"
-        data-clickable="true"
-      >
-        {isDark ? (
-          <Sun size={20} color={colors.text} />
-        ) : (
-          <Moon size={20} color={colors.text} />
-        )}
-      </TouchableOpacity>
     </View>
   );
 
@@ -178,7 +164,7 @@ export default function TabLayout() {
   );
 }
 
-function getStyles(colors: any, typography: any, touchTargets: any, safeAreaBottom: number) {
+function getStyles(colors: any, typography: any, touchTargets: any, safeAreaBottom: number, insets: any) {
   return StyleSheet.create({
     tabBar: {
       backgroundColor: '#1a2b5f', // Keep exact same color
@@ -192,28 +178,18 @@ function getStyles(colors: any, typography: any, touchTargets: any, safeAreaBott
     },
     customHeader: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: '#1a2b5f', // Keep exact same color
       paddingHorizontal: 16,
       paddingVertical: 12,
-      paddingTop: Platform.OS === 'ios' ? 44 : 12, // Account for status bar on iOS
+      paddingTop: Math.max(12, insets.top), // Use safe area insets instead of hardcoded iOS value
       minHeight: touchTargets.standard.height,
     },
     customHeaderTitle: {
       color: '#ffffff', // Keep exact same color
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.title2,
-      flex: 1,
-    },
-    darkModeToggle: {
-      width: touchTargets.standard.height,
-      height: touchTargets.standard.height,
-      borderRadius: touchTargets.standard.height / 2,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.1)', // Keep exact same color
-      marginLeft: 12,
     },
   });
 }

@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus, Shuffle, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import ToolsFooter from '@/components/ToolsFooter';
 import Animated, {
   FadeIn,
@@ -15,13 +16,12 @@ import Animated, {
   SlideOutUp,
 } from 'react-native-reanimated';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 export default function FirstPlayerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const { screenHeight } = useDeviceType();
   const [players, setPlayers] = useState<string[]>([]);
   const [newPlayer, setNewPlayer] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
@@ -30,8 +30,7 @@ export default function FirstPlayerScreen() {
 
   // No shared values needed; animations are declarative on components
 
-  const styles = useMemo(() => getStyles(colors, typography, touchTargets), [colors, typography, touchTargets]);
-  const footerHeight = 60 + Math.max(8, Platform.OS === 'web' ? 0 : insets.bottom);
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets, insets), [colors, typography, touchTargets, insets]);
 
   const addPlayer = () => {
     if (newPlayer.trim() && !players.includes(newPlayer.trim())) {
@@ -79,7 +78,7 @@ export default function FirstPlayerScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <Image
         source={{ uri: 'https://images.pexels.com/photos/278918/pexels-photo-278918.jpeg' }}
         style={styles.backgroundImage}
@@ -162,7 +161,7 @@ export default function FirstPlayerScreen() {
           data={players}
           keyExtractor={(_, index) => index.toString()}
           style={styles.list}
-          contentContainerStyle={{ paddingBottom: footerHeight + 16 }}
+          contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item, index }) => (
             <Animated.View
@@ -204,11 +203,13 @@ export default function FirstPlayerScreen() {
           </TouchableOpacity>
         )}
       </View>
-      <ToolsFooter currentScreen="tools" />
+      <View style={styles.footerContainer}>
+        <ToolsFooter currentScreen="tools" />
+      </View>
     </View>
   );
 }
-function getStyles(colors: any, typography: any, touchTargets: any) {
+function getStyles(colors: any, typography: any, touchTargets: any, insets: any) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -252,7 +253,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       borderTopLeftRadius: 30,
       borderTopRightRadius: 30,
       padding: 20,
-      minHeight: screenHeight * 0.7,
+      paddingBottom: 60 + Math.max(8, Platform.OS === 'web' ? 0 : insets.bottom) + 20,
     },
     inputContainer: {
       flexDirection: 'row',
@@ -263,6 +264,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     },
     input: {
       flex: 1,
+      flexShrink: 1,
       backgroundColor: colors.card,
       borderRadius: 12,
       padding: 16,
@@ -374,7 +376,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     },
     countdownText: {
       fontFamily: typography.getFontFamily('bold'),
-      fontSize: Math.min(120, screenWidth * 0.3),
+      //fontSize: Math.min(120, screenWidth * 0.3),
       color: colors.card,
     },
     revealOverlay: {
@@ -406,14 +408,14 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     },
     revealText: {
       fontFamily: typography.getFontFamily('bold'),
-      fontSize: Math.min(32, screenWidth * 0.08),
+      //fontSize: Math.min(32, screenWidth * 0.08),
       color: colors.text,
       textAlign: 'center',
       marginBottom: 8,
     },
     revealSubtext: {
       fontFamily: typography.getFontFamily('normal'),
-      fontSize: Math.min(20, screenWidth * 0.05),
+      //fontSize: Math.min(20, screenWidth * 0.05),
       color: colors.textMuted,
       textAlign: 'center',
       marginBottom: 24,
@@ -429,6 +431,13 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.body,
       color: colors.card,
+    },
+    footerContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
     },
   });
 }

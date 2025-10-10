@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { supabase } from '@/services/supabase';
@@ -74,6 +75,7 @@ export default function EventResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { colors, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const [user, setUser] = useState<any>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [eventDates, setEventDates] = useState<PollEvent[]>([]);
@@ -82,7 +84,7 @@ export default function EventResultsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
 
 
@@ -412,13 +414,15 @@ export default function EventResultsScreen() {
   );
 }
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
   header: {
-    padding: 20,
+    paddingTop: Math.max(40, insets.top),
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     backgroundColor: colors.primary,
   },
   title: {
@@ -448,7 +452,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 8,
-    paddingBottom: 20,
+    paddingBottom: insets.bottom + 20,
     width: '100%',
     alignSelf: 'stretch',
   },
@@ -473,6 +477,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
   bottomActionsContainer: {
     padding: 20,
     paddingTop: 0,
+    paddingBottom: Math.max(20, insets.bottom),
   },
   backToVotingButton: {
     backgroundColor: colors.primary,

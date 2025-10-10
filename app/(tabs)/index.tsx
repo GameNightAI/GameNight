@@ -1,17 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Shuffle, Dice6, Trophy } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import { useMemo } from 'react';
-
-const { height: screenHeight } = Dimensions.get('window');
 
 export default function ToolsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors, typography, touchTargets } = useTheme();
+  const { screenHeight } = useDeviceType();
 
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
@@ -46,7 +46,7 @@ export default function ToolsScreen() {
     },
   ];
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, screenHeight), [colors, typography, screenHeight]);
 
   return (
     <ScrollView
@@ -108,7 +108,7 @@ export default function ToolsScreen() {
   );
 }
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, screenHeight: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

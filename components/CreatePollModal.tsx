@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Platform, Image, ImageStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen, ListFilter, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
@@ -44,6 +45,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const router = useRouter();
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
@@ -77,7 +79,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     complexity,
   ].some(_ => _.length);
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   // Dropdown z-index management similar to FilterGameModal
   const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
@@ -453,7 +455,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       </View>
       <ScrollView
         style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}
         showsVerticalScrollIndicator={true}
       >
         {!isAddingToExistingPoll && (
@@ -838,24 +840,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   return (
     <View style={styles.overlay}>
-      <View style={{
-        maxWidth: 800,
-        maxHeight: '85%',
-        width: '100%',
-        height: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 16,
-      }}>
-        <View style={[styles.dialog, {
-          height: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          maxWidth: '100%',
-          maxHeight: '100%'
-        }]}>
+      <View style={styles.modalContainer}>
+        <View style={[styles.dialog, styles.dialogResponsive]}>
           {content}
         </View>
       </View>
@@ -1069,9 +1055,11 @@ type Styles = {
   alreadyInPollText: TextStyle;
   checkboxDisabled: ViewStyle;
   infoTextEmphasis: TextStyle;
+  modalContainer: ViewStyle;
+  dialogResponsive: ViewStyle;
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create<Styles>({
   overlay: {
     position: Platform.OS === 'web' ? 'fixed' : 'absolute',
     top: 0,
@@ -1082,7 +1070,9 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: 16,
+    paddingTop: Math.max(16, insets.top),
+    paddingBottom: Math.max(16, insets.bottom),
+    paddingHorizontal: 16,
   },
   dialog: {
     backgroundColor: colors.card,
@@ -1099,6 +1089,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
     flexDirection: 'column',
     paddingHorizontal: 12,
     maxHeight: '85%',
+    minHeight: 550,
   },
   header: {
     flexDirection: 'row',
@@ -1686,6 +1677,24 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
   infoTextEmphasis: {
     fontFamily: typography.getFontFamily('semibold'),
     color: colors.text,
+  },
+  modalContainer: {
+    maxWidth: 800,
+    maxHeight: '85%',
+    width: '100%',
+    height: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  dialogResponsive: {
+    height: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
 });
 

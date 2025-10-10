@@ -3,11 +3,13 @@ import { useEffect } from 'react';
 import { Redirect, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import Toast from 'react-native-toast-message';
 import { initializeSafariFixes, persistSessionInSafari } from '@/utils/safari-polyfill';
 import { AccessibilityProvider } from '@/contexts/AccessibilityContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import '../styles/globals.css';
 
 export default function RootLayout() {
@@ -42,20 +44,24 @@ export default function RootLayout() {
   }
 
   return (
-    <AccessibilityProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen
-          name="(tabs)"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="auth" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-      </Stack>
-      <Toast />
-      <StatusBar
-        style={colorScheme === 'dark' ? 'light' : 'dark'}
-        backgroundColor={colorScheme === 'dark' ? '#1a2b5f' : '#ffffff'}
-      />
-    </AccessibilityProvider>
+    <AuthProvider>
+      <AccessibilityProvider>
+        <SafeAreaProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen
+              name="(tabs)"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+          </Stack>
+          <Toast />
+          <StatusBar
+            style={colorScheme === 'dark' ? 'light' : 'dark'}
+            backgroundColor={colorScheme === 'dark' ? '#1a2b5f' : '#ffffff'}
+          />
+        </SafeAreaProvider>
+      </AccessibilityProvider>
+    </AuthProvider>
   );
 }

@@ -633,6 +633,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     },
     input: {
       flex: 1,
+      flexShrink: 1,
       backgroundColor: colors.card,
       borderRadius: 12,
       padding: 16,
