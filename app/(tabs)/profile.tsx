@@ -10,6 +10,11 @@ import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
 import { supabase } from '@/services/supabase';
 import EditProfileModal from '@/components/EditProfileModal';
 
+const discordSymbolLight = require('@/assets/images/Discord-Symbol-Blurple.svg');
+const discordSymbolDark = require('@/assets/images/Discord-Symbol-Blurple.svg');
+const bggLogoLight = require('@/assets/images/powered-by-bgg-rgb.svg');
+const bggLogoDark = require('@/assets/images/powered-by-bgg-reversed-rgb.svg');
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string | null>(null);
@@ -199,7 +204,7 @@ export default function ProfileScreen() {
               style={[styles.iconButton, styles.iconButtonSpacing]}
             >
               <Image
-                source={require('@/assets/images/discord_symbol.svg')}
+                source={isDark ? discordSymbolDark : discordSymbolLight}
                 resizeMode="contain"
                 style={styles.discordIcon}
               />
@@ -230,7 +235,7 @@ export default function ProfileScreen() {
           onPress={handleViewOnBGG}
         >
           <Image
-            source={require('@/assets/images/Powered by BGG.webp')}
+            source={isDark ? bggLogoDark : bggLogoLight}
             style={styles.bggLogo}
             resizeMode="contain"
           />
