@@ -49,108 +49,15 @@ export default function RegisterScreen() {
         return;
       }
 
-      // Check if account exists but profile is incomplete
-      const { data: existingUser } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      }).then(async (result) => {
-        if (result.error) return { data: null, error: result.error };
-        // Check if profile exists
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, username')
-          .eq('id', result.data.user.id)
-          .maybeSingle();
-        if (!profile || !profile.username) {
-          // Account exists but profile incomplete - resume flow
-          return { data: { user: result.data.user, resume: true }, error: null };
+      // Validation passed - proceed to profile completion
+      // Auth user creation will happen on the next screen
+      router.push({
+        pathname: '/auth/register-profile',
+        params: {
+          email,
+          password,
         }
-        return { data: null, error: { message: 'Account already exists and is complete' } };
-      }).catch(() => ({ data: null, error: { message: 'Invalid credentials' } }));
-
-      if (existingUser?.resume) {
-        // Resume incomplete registration
-        router.push({
-          pathname: '/auth/register-profile',
-          params: {
-            email,
-            password,
-            userId: existingUser.user.id
-          }
-        });
-        return;
-      }
-
-      if (existingUser && !existingUser.resume) {
-        setError('Account already exists and is complete. Please sign in instead.');
-        return;
-      }
-
-      // Attempt to create the user account first to check for email duplicates
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: Platform.OS === 'web' ? window.location.origin : 'gamenyte://auth/callback',
-          data: {
-            email_confirm: true,
-          },
-        },
       });
-
-      if (authError) {
-        console.log('Auth error:', authError);
-
-        // Handle specific error cases by status code first
-        if (authError.status === 422) {
-          // 422 Unprocessable Entity - email already registered or validation error
-          if (authError.message.includes('already registered') ||
-            authError.message.includes('User already registered') ||
-            authError.message.includes('duplicate key value')) {
-            setError('This email is already registered. Please try logging in instead.');
-            return;
-          } else {
-            setError('Invalid email or password format. Please check your input.');
-            return;
-          }
-        } else if (authError.status === 400) {
-          // 400 Bad Request - malformed request
-          setError('Invalid request. Please check your input and try again.');
-          return;
-        } else if (authError.status === 429) {
-          // 429 Too Many Requests - rate limiting
-          setError('Too many attempts. Please wait a moment and try again.');
-          return;
-        } else if (authError.status && typeof authError.status === 'number' && authError.status >= 500) {
-          // 5xx Server Errors
-          setError('Server error. Please try again later.');
-          return;
-        } else if (authError.message.includes('Password should be at least')) {
-          // Server-side password validation
-          setError('Password must be at least 6 characters long.');
-          return;
-        } else if (authError.message.includes('Invalid email')) {
-          // Server-side email validation
-          setError('Please enter a valid email address.');
-          return;
-        } else {
-          // Generic fallback
-          setError(authError.message || 'Failed to create account. Please try again.');
-          return;
-        }
-      }
-
-      // If successful, store the user ID and proceed to profile completion
-      if (authData.user) {
-        router.push({
-          pathname: '/auth/register-profile',
-          params: {
-            email,
-            password,
-            userId: authData.user.id
-          }
-        });
-      }
     } catch (err) {
       console.error('Registration error:', err);
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -159,21 +66,21 @@ export default function RegisterScreen() {
     }
   };
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoIcon}>
-              <Text style={styles.logoText}>👥</Text>
+        <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <Text style={styles.logoText}>👥</Text>
+              </View>
+              <Text style={styles.title}>GameNyte</Text>
             </View>
-            <Text style={styles.title}>GameNyte</Text>
+            <Text style={styles.subtitle}>
+              The ultimate tool for organizing your next game night
+            </Text>
           </View>
-          <Text style={styles.subtitle}>
-            The ultimate tool for organizing your next game night
-          </Text>
-        </View>
 
-        <View style={styles.cardContainer}>
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>Create Account</Text>
             <Text style={styles.formSubtitle}>Enter your email and password to get started</Text>
@@ -263,6 +170,13 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     flex: 1,
     backgroundColor: isDark ? colors.background : colors.tints.neutral,
   },
+  contentWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
   header: {
     paddingHorizontal: 24,
     paddingBottom: 40,
@@ -299,13 +213,6 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     maxWidth: 280,
     color: colors.text,
     fontSize: typography.fontSize.body,
-  },
-  cardContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 40,
   },
   formContainer: {
     width: '100%',
