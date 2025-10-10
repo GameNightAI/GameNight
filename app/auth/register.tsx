@@ -91,7 +91,7 @@ export default function RegisterScreen() {
         email,
         password,
         options: {
-          emailRedirectTo: Platform.OS === 'web' ? window.location.origin : 'gamenyte://auth/callback',
+          emailRedirectTo: Platform.OS === 'web' ? window.location.origin : 'klack://auth/callback',
           data: {
             email_confirm: true,
           },
@@ -166,7 +166,7 @@ export default function RegisterScreen() {
             <View style={styles.logoIcon}>
               <Text style={styles.logoText}>👥</Text>
             </View>
-            <Text style={styles.title}>GameNyte</Text>
+            <Text style={styles.title}>Klack</Text>
           </View>
           <Text style={styles.subtitle}>
             The ultimate tool for organizing your next game night

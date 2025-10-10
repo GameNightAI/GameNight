@@ -1,4 +1,4 @@
-# Apple Human Interface Guidelines Checklist for GameNyte
+# Apple Human Interface Guidelines Checklist for Klack
 
 ## 🎯 Core Design Principles
 
@@ -52,7 +52,7 @@
 - [ ] **Clear navigation hierarchy** - users always know where they are
 - [ ] **Consistent navigation patterns** throughout the app
 
-### Tab Bar (Since GameNyte uses tabs)
+### Tab Bar (Since Klack uses tabs)
 - [ ] **3-5 tabs maximum** for optimal usability
 - [ ] **Meaningful icons and labels** for each tab
 - [ ] **Selected state clearly indicated**
@@ -108,7 +108,7 @@
 
 ## 📋 Content & Input
 
-### Forms & Input (Important for GameNyte's polls and collections)
+### Forms & Input (Important for Klack's polls and collections)
 - [ ] **Clear input field labels** and placeholders
 - [ ] **Real-time validation** with helpful error messages
 - [ ] **Keyboard types** appropriate for input (email, number, etc.)
@@ -124,7 +124,7 @@
 
 ## 🖼️ Media & Images
 
-### Images & Photos (Critical for GameNyte's camera features)
+### Images & Photos (Critical for Klack's camera features)
 - [ ] **Proper image aspect ratios** and sizing
 - [ ] **Image loading states** and placeholders
 - [ ] **Photo permissions** handled gracefully
@@ -166,7 +166,7 @@
 - [ ] **Privacy indicators** respected (camera, microphone usage)
 - [ ] **Data handling** transparent to users
 
-## 🎨 GameNyte-Specific Considerations
+## 🎨 Klack-Specific Considerations
 
 ### Board Game Collection Features
 - [ ] **Game cards** have consistent layout and touch targets
@@ -224,7 +224,7 @@
 
 ---
 
-## Priority for GameNyte:
+## Priority for Klack:
 
 ### High Priority (Must Fix)
 1. Safe area compliance and screen adaptation
@@ -246,4 +246,4 @@
 3. Advanced animations
 4. Notification support
 
-This checklist should help ensure GameNyte feels native and polished on iOS while meeting Apple's standards for App Store approval.
+This checklist should help ensure Klack feels native and polished on iOS while meeting Apple's standards for App Store approval.

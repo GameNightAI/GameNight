@@ -224,9 +224,9 @@ Backup Cleanup: Data will be removed from all backup systems
 
 a. iOS Permissions
 
-NSCameraUsageDescription: "GameNyte needs camera access to take photos of your board game collection for AI analysis."
+NSCameraUsageDescription: "Klack needs camera access to take photos of your board game collection for AI analysis."
 
-NSPhotoLibraryUsageDescription: "GameNyte needs photo library access to select existing photos of your board game collection."
+NSPhotoLibraryUsageDescription: "Klack needs photo library access to select existing photos of your board game collection."
 
 b. Android Permissions
 

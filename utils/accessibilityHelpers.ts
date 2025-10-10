@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 /**
- * Accessibility helper utilities for GameNyte
+ * Accessibility helper utilities for Klack
  */
 
 // Font scaling utilities

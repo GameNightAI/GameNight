@@ -106,7 +106,7 @@ export default function RegisterProfileScreen() {
       Toast.show({
         type: 'success',
         text1: 'Profile Created!',
-        text2: 'Welcome to GameNyte!',
+        text2: 'Welcome to Klack!',
       });
 
       // Delay redirect slightly to show toast

@@ -185,8 +185,8 @@ export default function EventsScreen() {
   const handleShare = useCallback(async (eventId: string) => {
     // Use a proper base URL for React Native
     const baseUrl = Platform.select({
-      web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
-      default: 'https://gamenyte.netlify.app', // Replace with your actual domain
+      web: typeof window !== 'undefined' ? window.location.origin : 'https://klack.netlify.app',
+      default: 'https://klack.netlify.app', // Replace with your actual domain
     });
 
     const shareUrl = `${baseUrl}/event/${eventId}`;

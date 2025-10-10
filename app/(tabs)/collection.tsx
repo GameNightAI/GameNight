@@ -442,7 +442,7 @@ export default function CollectionScreen() {
       <ConfirmationDialog
         isVisible={gameToDelete !== null}
         title="Delete Game"
-        message={`Are you sure you want to remove ${gameToDelete?.name} from your GameNyte collection?\n\n(This will not affect your BGG collection.)`}
+        message={`Are you sure you want to remove ${gameToDelete?.name} from your Klack collection?\n\n(This will not affect your BGG collection.)`}
         onConfirm={handleDelete}
         onCancel={() => setGameToDelete(null)}
       />
