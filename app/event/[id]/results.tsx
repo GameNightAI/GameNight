@@ -379,8 +379,8 @@ export default function EventResultsScreen() {
             try {
               // Copy event URL to clipboard
               const baseUrl = Platform.select({
-                web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
-                default: 'https://gamenyte.netlify.app',
+                web: typeof window !== 'undefined' ? window.location.origin : 'https://klack.netlify.app',
+                default: 'https://klack.netlify.app',
               });
               const eventUrl = `${baseUrl}/event/${event.id}`;
 

@@ -23,7 +23,7 @@ const getHeaderTitle = (routeName: string): string => {
     case 'profile':
       return 'User Profile';
     default:
-      return 'GameNyte';
+      return 'Klack';
   }
 };
 

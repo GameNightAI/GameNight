@@ -6,7 +6,7 @@ export const useTheme = () => {
 
   const isDark = colorScheme === 'dark';
 
-  // GameNyte color palette
+  // Klack color palette
   const colors = {
     primary: isDark ? '#3b82f6' : '#1a2b5f',
     accent: '#ff9654',

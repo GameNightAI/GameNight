@@ -397,49 +397,81 @@ const main = async () => {
     expansions = expansions.concat(row.expansions);
     expansionCount += row.expansions.length;
     if (games.length >= SUPABASE_BATCH_SIZE) {
-      const gamesResponse = await supabase
-        .from('games_staging')
-        .insert(games);
-      if (gamesResponse.error) {
-        throw new Error(`Failed to insert games: ${gamesResponse.error.message}`)
-      } else {
-        log(`Inserted ${gameCount} games so far...`);
-        games = [];
+      while (1) {
+        try {
+          const gamesResponse = await supabase
+            .from('games_staging')
+            .insert(games);
+          if (gamesResponse.error) {
+            throw new Error(`Failed to insert games: ${gamesResponse.error.message}`)
+          } else {
+            log(`Inserted ${gameCount} games so far...`);
+            games = [];
+            break;
+          }
+        } catch (err) {
+          cError(`${err} - Waiting ${SLEEP_TIME} seconds to insert games...`);
+          await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
+        }
       }
     }
     if (expansions.length >= SUPABASE_BATCH_SIZE) {
-      const expResponse = await supabase
-        .from('expansions_staging')
-        .insert(expansions);
-      if (expResponse.error) {
-        throw new Error(`Failed to insert expansions: ${expResponse.error.message}`)
-      } else {
-        log(`Inserted ${expansionCount} expansions so far...`);
-        expansions = [];
+      while (1) {
+        try {
+          const expResponse = await supabase
+            .from('expansions_staging')
+            .insert(expansions);
+          if (expResponse.error) {
+            throw new Error(`Failed to insert expansions: ${expResponse.error.message}`)
+          } else {
+            log(`Inserted ${expansionCount} expansions so far...`);
+            expansions = [];
+            break;
+          }
+        } catch (err) {
+          cError(`${err} - Waiting ${SLEEP_TIME} seconds to insert expansions...`);
+          await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
+        }
       }
     }
   }
   // Insert the leftovers
   if (games.length) {
-    const gamesResponse = await supabase
-      .from('games_staging')
-      .insert(games);
-    if (gamesResponse.error) {
-      throw new Error(`Failed to insert games: ${gamesResponse.error.message}`)
-    } else {
-      log(`Inserted ${gameCount} games so far...\nSuccessfully inserted all games!`);
+    while (1) {
+      try {
+        const gamesResponse = await supabase
+          .from('games_staging')
+          .insert(games);
+        if (gamesResponse.error) {
+          throw new Error(`Failed to insert games: ${gamesResponse.error.message}`)
+        } else {
+          log(`Inserted ${gameCount} games so far...\nSuccessfully inserted all games!`);
+          break;
+        }
+      } catch (err) {
+        cError(`${err} - Waiting ${SLEEP_TIME} seconds to insert games...`);
+        await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
+      }
     }
   } else {
     log('Successfully inserted all games!');
   }
   if (expansions.length) {
-    const expResponse = await supabase
-      .from('expansions_staging')
-      .insert(expansions);
-    if (expResponse.error) {
-      throw new Error(`Failed to insert expansions: ${expResponse.error.message}`)
-    } else {
-      log(`Inserted ${expansionCount} expansions so far...\nSuccessfully inserted all expansions!`);
+    while (1) {
+      try {
+        const expResponse = await supabase
+          .from('expansions_staging')
+          .insert(expansions);
+        if (expResponse.error) {
+          throw new Error(`Failed to insert expansions: ${expResponse.error.message}`)
+        } else {
+          log(`Inserted ${expansionCount} expansions so far...\nSuccessfully inserted all expansions!`);
+          break;
+        }
+      } catch (err) {
+        cError(`${err} - Waiting ${SLEEP_TIME} seconds to insert games...`);
+        await new Promise(resolve => setTimeout(resolve, SLEEP_TIME * 1000));
+      }
     }
   } else {
     log('Successfully inserted all expansions!');

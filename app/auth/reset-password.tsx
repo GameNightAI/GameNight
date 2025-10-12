@@ -26,7 +26,7 @@ export default function ResetPasswordScreen() {
     }
 
     // Fallback for mobile
-    return 'https://gamenyte.netlify.app';
+    return 'https://klack.netlify.app';
   };
 
   // Check for error parameters from redirects
@@ -132,7 +132,7 @@ export default function ResetPasswordScreen() {
               <View style={styles.logoIcon}>
                 <Text style={styles.logoText}>👥</Text>
               </View>
-              <Text style={styles.title}>GameNyte</Text>
+              <Text style={styles.title}>Klack</Text>
             </View>
             <Text style={styles.subtitle}>
               The ultimate tool for organizing your next game night

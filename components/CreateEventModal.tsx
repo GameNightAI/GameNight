@@ -85,22 +85,22 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   useEffect(() => {
     if (selectedDates.length === 0) {
       setDefaultEventName('');
-      if (!eventName || eventName.startsWith('GameNyte: ')) {
+      if (!eventName || eventName.startsWith('Klack: ')) {
         setEventName('');
       }
     } else if (selectedDates.length === 1) {
       const date = selectedDates[0];
-      const newDefaultName = `GameNyte: ${format(date, 'MMM/dd')}`;
+      const newDefaultName = `Klack: ${format(date, 'MMM/dd')}`;
       setDefaultEventName(newDefaultName);
-      if (!eventName || eventName.startsWith('GameNyte: ')) {
+      if (!eventName || eventName.startsWith('Klack: ')) {
         setEventName(newDefaultName);
       }
     } else {
       const minDate = min(selectedDates);
       const maxDate = max(selectedDates);
-      const newDefaultName = `GameNyte: ${format(minDate, 'MMM.dd')} - ${format(maxDate, 'MMM.dd')}`;
+      const newDefaultName = `Klack: ${format(minDate, 'MMM.dd')} - ${format(maxDate, 'MMM.dd')}`;
       setDefaultEventName(newDefaultName);
-      if (!eventName || eventName.startsWith('GameNyte: ')) {
+      if (!eventName || eventName.startsWith('Klack: ')) {
         setEventName(newDefaultName);
       }
     }

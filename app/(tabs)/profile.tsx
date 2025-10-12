@@ -10,6 +10,11 @@ import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
 import { supabase } from '@/services/supabase';
 import EditProfileModal from '@/components/EditProfileModal';
 
+const discordSymbolLight = require('@/assets/images/Discord-Symbol-Blurple.svg');
+const discordSymbolDark = require('@/assets/images/Discord-Symbol-Blurple.svg');
+const bggLogoLight = require('@/assets/images/powered-by-bgg-rgb.svg');
+const bggLogoDark = require('@/assets/images/powered-by-bgg-reversed-rgb.svg');
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string | null>(null);
@@ -183,26 +188,26 @@ export default function ProfileScreen() {
           <View style={styles.contactContainer}>
             <Text style={styles.contactText}>
               Questions, issues, or feature requests?{'\n'}
-              Email us or join our Discord server!
+              For any support needs, contact klackapp@gmail.com or join our Discord server.
             </Text>
-            <TouchableOpacity
+            { /*<TouchableOpacity
               accessibilityLabel="Email support"
               accessibilityRole="button"
               accessibilityHint="Opens your email app to contact support"
-              onPress={() => Linking.openURL('mailto:GameNyteApp@gmail.com')}
+              onPress={() => Linking.openURL('mailto:klackapp@gmail.com')}
               style={styles.iconButton}
             >
               <Mail size={28} color={colors.textMuted} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity
               accessibilityLabel="Open Discord server"
               accessibilityRole="button"
-              accessibilityHint="Opens the GameNyte Discord invite link"
+              accessibilityHint="Opens the Klack Discord invite link"
               onPress={() => Linking.openURL('https://discord.gg/FPX4hatRK2')}
               style={[styles.iconButton, styles.iconButtonSpacing]}
             >
               <Image
-                source={require('@/assets/images/discord_symbol.svg')}
+                source={isDark ? discordSymbolDark : discordSymbolLight}
                 resizeMode="contain"
                 style={styles.discordIcon}
               />
@@ -233,7 +238,7 @@ export default function ProfileScreen() {
           onPress={handleViewOnBGG}
         >
           <Image
-            source={require('@/assets/images/Powered by BGG.webp')}
+            source={isDark ? bggLogoDark : bggLogoLight}
             style={styles.bggLogo}
             resizeMode="contain"
           />

@@ -1,6 +1,6 @@
 {
   "name": "klack",
-  "homepage": "https://gamenyte.netlify.app/",
+  "homepage": "https://klack.netlify.app/",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "private": true,
