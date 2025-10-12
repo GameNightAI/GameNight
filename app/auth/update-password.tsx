@@ -121,21 +121,21 @@ export default function UpdatePasswordScreen() {
 
   if (checkingAuth) {
     return (
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
         <View style={styles.container}>
-          <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoIcon}>
-                <Text style={styles.logoText}>👥</Text>
+          <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <View style={styles.logoIcon}>
+                  <Text style={styles.logoText}>👥</Text>
+                </View>
+                <Text style={styles.title}>Klack</Text>
               </View>
-              <Text style={styles.title}>Klack</Text>
+              <Text style={styles.subtitle}>
+                The ultimate tool for organizing your next game night
+              </Text>
             </View>
-            <Text style={styles.subtitle}>
-              The ultimate tool for organizing your next game night
-            </Text>
-          </View>
 
-          <View style={styles.cardContainer}>
             <View style={styles.formContainer}>
               <Text style={styles.formTitle}>Verifying Reset Link</Text>
               <Text style={styles.formSubtitle}>
@@ -155,21 +155,21 @@ export default function UpdatePasswordScreen() {
 
   if (!isAuthenticated) {
     return (
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
         <View style={styles.container}>
-          <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoIcon}>
-                <Text style={styles.logoText}>👥</Text>
+          <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <View style={styles.logoIcon}>
+                  <Text style={styles.logoText}>👥</Text>
+                </View>
+                <Text style={styles.title}>Klack</Text>
               </View>
-              <Text style={styles.title}>Klack</Text>
+              <Text style={styles.subtitle}>
+                The ultimate tool for organizing your next game night
+              </Text>
             </View>
-            <Text style={styles.subtitle}>
-              The ultimate tool for organizing your next game night
-            </Text>
-          </View>
 
-          <View style={styles.cardContainer}>
             <View style={styles.formContainer}>
               <Text style={styles.formTitle}>Reset Link Required</Text>
               <Text style={styles.formSubtitle}>
@@ -290,21 +290,21 @@ export default function UpdatePasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoIcon}>
-              <Text style={styles.logoText}>👥</Text>
+        <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <Text style={styles.logoText}>👥</Text>
+              </View>
+              <Text style={styles.title}>Klack</Text>
             </View>
-            <Text style={styles.title}>Klack</Text>
+            <Text style={styles.subtitle}>
+              The ultimate tool for organizing your next game night
+            </Text>
           </View>
-          <Text style={styles.subtitle}>
-            The ultimate tool for organizing your next game night
-          </Text>
-        </View>
 
-        <View style={styles.cardContainer}>
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>Set New Password</Text>
             <Text style={styles.formSubtitle}>Enter your new password below</Text>
@@ -418,6 +418,13 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     flex: 1,
     backgroundColor: isDark ? colors.background : colors.tints.neutral,
   },
+  contentWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
   header: {
     paddingHorizontal: 24,
     paddingBottom: 40,
@@ -454,13 +461,6 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     maxWidth: 280,
     color: colors.text,
     fontSize: typography.fontSize.body,
-  },
-  cardContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 40,
   },
   formContainer: {
     width: '100%',

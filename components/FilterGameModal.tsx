@@ -170,23 +170,46 @@ export const filterGames = (
         const r = playerCount[0];
         const minVal = r.min != null ? r.min : undefined;
         const maxVal = r.max != null ? r.max : undefined;
-        const gameMin = Math.min(game.min_players, game.min_exp_players || Infinity);
-        const gameMax = Math.max(game.max_players, game.max_exp_players);
-        // If only max is provided: include 0 and all up to max
-        if (maxVal != null && minVal == null) {
-          is_match &&= (gameMin <= maxVal) || gameMin === 0;
+
+        // Handle null values in game data - exclude games with null player counts
+        const gameMinPlayers = game.min_players ?? null;
+        const gameMaxPlayers = game.max_players ?? null;
+        const gameMinExpPlayers = game.min_exp_players ?? null;
+        const gameMaxExpPlayers = game.max_exp_players ?? null;
+
+        // If any player count field is null, exclude this game from results
+        if (gameMinPlayers === null || gameMaxPlayers === null || gameMinExpPlayers === null || gameMaxExpPlayers === null) {
+          is_match = false;
         } else {
-          // Intersect [min,max] with [gameMin,gameMax], inclusive
-          const lo = minVal != null ? minVal : -Infinity;
-          const hi = maxVal != null ? maxVal : Infinity;
-          is_match &&= !(gameMax < lo || gameMin > hi);
+          const gameMin = Math.min(gameMinPlayers, gameMinExpPlayers);
+          const gameMax = Math.max(gameMaxPlayers, gameMaxExpPlayers);
+          // If only max is provided: include 0 and all up to max
+          if (maxVal != null && minVal == null) {
+            is_match &&= (gameMin <= maxVal) || gameMin === 0;
+          } else {
+            // Intersect [min,max] with [gameMin,gameMax], inclusive
+            const lo = minVal != null ? minVal : -Infinity;
+            const hi = maxVal != null ? maxVal : Infinity;
+            is_match &&= !(gameMax < lo || gameMin > hi);
+          }
         }
       } else {
         // Dropdown chips behavior (legacy): exact player count in [min,max]
-        is_match &&= playerCount.some(({ value }) => (
-          (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
-          && value <= (Math.max(game.max_players, game.max_exp_players))
-        ));
+        // Handle null values in game data - exclude games with null player counts
+        const gameMinPlayers = game.min_players ?? null;
+        const gameMaxPlayers = game.max_players ?? null;
+        const gameMinExpPlayers = game.min_exp_players ?? null;
+        const gameMaxExpPlayers = game.max_exp_players ?? null;
+
+        // If any player count field is null, exclude this game from results
+        if (gameMinPlayers === null || gameMaxPlayers === null || gameMinExpPlayers === null || gameMaxExpPlayers === null) {
+          is_match = false;
+        } else {
+          is_match &&= playerCount.some(({ value }) => (
+            (Math.min(gameMinPlayers, gameMinExpPlayers) <= value || value === 15)
+            && value <= (Math.max(gameMaxPlayers, gameMaxExpPlayers))
+          ));
+        }
       }
     }
 

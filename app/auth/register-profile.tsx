@@ -22,8 +22,8 @@ export default function RegisterProfileScreen() {
 
   useEffect(() => {
     // Check if we have params (new registration) or if user is authenticated (resume)
-    if (params.email && params.password && params.userId) {
-      // New registration flow with params
+    if (params.email && params.password) {
+      // New registration flow with params (userId no longer passed from register screen)
       setIsResume(false);
     } else {
       // Check if user is authenticated (resume flow)
@@ -83,11 +83,91 @@ export default function RegisterProfileScreen() {
         }
         userId = user.id;
       } else {
-        // New registration flow - use params
-        userId = params.userId as string;
+        // New registration flow - create auth user now
+        const email = params.email as string;
+        const password = params.password as string;
+
+        if (!email || !password) {
+          setError('Missing registration information. Please start over.');
+          return;
+        }
+
+        // Create the auth user
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: Platform.OS === 'web' ? window.location.origin : 'gamenyte://auth/callback',
+            data: {
+              email_confirm: true,
+            },
+          },
+        });
+
+        if (authError) {
+          console.log('Auth error:', authError);
+
+          // Check if email already exists - might be an incomplete registration
+          if (authError.status === 422 ||
+            authError.message.includes('already registered') ||
+            authError.message.includes('User already registered') ||
+            authError.message.includes('duplicate key value')) {
+
+            // Try to sign in with the credentials to check for incomplete profile
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+
+            if (signInError) {
+              // Can't sign in - might be wrong password or other issue
+              setError('This email is already registered with a different password. Please try logging in or use password reset.');
+              return;
+            }
+
+            // Successfully signed in - check if profile exists
+            if (signInData.user) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, username')
+                .eq('id', signInData.user.id)
+                .maybeSingle();
+
+              if (profile && profile.username) {
+                // Complete profile exists
+                setError('Account already exists and is complete. Please sign in instead.');
+                return;
+              }
+
+              // Incomplete profile - allow them to complete it
+              console.log('Found incomplete registration, allowing profile completion');
+              userId = signInData.user.id;
+            } else {
+              setError('Failed to create account. Please try again.');
+              return;
+            }
+          } else if (authError.status === 400) {
+            setError('Invalid request. Please check your input and try again.');
+            return;
+          } else if (authError.status === 429) {
+            setError('Too many attempts. Please wait a moment and try again.');
+            return;
+          } else if (authError.status && typeof authError.status === 'number' && authError.status >= 500) {
+            setError('Server error. Please try again later.');
+            return;
+          } else {
+            setError(authError.message || 'Failed to create account. Please try again.');
+            return;
+          }
+        } else if (authData.user) {
+          userId = authData.user.id;
+        } else {
+          setError('Failed to create account. Please try again.');
+          return;
+        }
       }
 
-      // Create profile record (user account already created in Step 1)
+      // Create profile record
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -142,9 +222,21 @@ export default function RegisterProfileScreen() {
   const styles = getStyles(colors, typography, isDark);
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
       <View style={styles.container}>
-        <View style={[styles.cardContainer, { paddingTop: insets.top + 20 }]}>
+        <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <Text style={styles.logoText}>👥</Text>
+              </View>
+              <Text style={styles.title}>GameNyte</Text>
+            </View>
+            <Text style={styles.subtitle}>
+              The ultimate tool for organizing your next game night
+            </Text>
+          </View>
+
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>
               {isResume ? 'Complete Your Registration' : 'Complete Profile'}
@@ -210,6 +302,9 @@ export default function RegisterProfileScreen() {
               <Text style={styles.privacyText}>
                 Privacy Notice: Your real name information may be visible to other users of the platform.
               </Text>
+              <Text style={styles.privacyText}>
+                Your email address will always remain private and will not be shared with other users.
+              </Text>
             </View>
 
             {error && (
@@ -262,12 +357,49 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     flex: 1,
     backgroundColor: isDark ? colors.background : colors.tints.neutral,
   },
-  cardContainer: {
+  contentWrapper: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 40,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: colors.card,
+  },
+  logoText: {
+    fontSize: 20,
+  },
+  title: {
+    fontFamily: 'Poppins-Bold',
+    textAlign: 'center',
+    color: colors.text,
+    fontSize: typography.fontSize.title1,
+  },
+  subtitle: {
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
+    opacity: 0.9,
+    lineHeight: 22,
+    maxWidth: 280,
+    color: colors.text,
+    fontSize: typography.fontSize.body,
   },
   formContainer: {
     width: '100%',
@@ -369,7 +501,8 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
   privacyText: {
     fontFamily: typography.getFontFamily('normal'),
     fontSize: typography.fontSize.caption1,
-    color: colors.warning,
+    color: isDark ? colors.warning : colors.text,
+    marginBottom: 8,
     lineHeight: typography.lineHeight.normal * typography.fontSize.caption1,
   },
   createButton: {

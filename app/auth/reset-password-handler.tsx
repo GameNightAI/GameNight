@@ -141,21 +141,21 @@ export default function ResetPasswordHandler() {
   }, [router]);
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoIcon}>
-              <Text style={styles.logoText}>👥</Text>
+        <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <Text style={styles.logoText}>👥</Text>
+              </View>
+              <Text style={styles.title}>Klack</Text>
             </View>
-            <Text style={styles.title}>Klack</Text>
+            <Text style={styles.subtitle}>
+              The ultimate tool for organizing your next game night
+            </Text>
           </View>
-          <Text style={styles.subtitle}>
-            The ultimate tool for organizing your next game night
-          </Text>
-        </View>
 
-        <View style={styles.cardContainer}>
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>Processing Password Reset</Text>
             <Text style={styles.formSubtitle}>{statusMessage}</Text>
@@ -205,6 +205,13 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  contentWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
   header: {
     paddingHorizontal: 24,
     paddingBottom: 40,
@@ -241,13 +248,6 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     maxWidth: 280,
     color: colors.text,
     fontSize: typography.fontSize.body,
-  },
-  cardContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 40,
   },
   formContainer: {
     width: '100%',

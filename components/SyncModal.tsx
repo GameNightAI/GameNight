@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, Info, CheckCircle } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -14,6 +15,7 @@ interface SyncModalProps {
     message: string;
     progress?: number;
   } | null;
+  savedBggUsername?: string | null;
 }
 
 export const SyncModal: React.FC<SyncModalProps> = ({
@@ -22,12 +24,14 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   onSync,
   loading = false,
   syncProgress,
+  savedBggUsername,
 }) => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   useEffect(() => {
     if (!loading) return;
@@ -39,6 +43,13 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     }
   }, [loading, syncProgress?.stage, syncProgress?.message, announceForAccessibility]);
 
+  // Clear username input on successful completion
+  useEffect(() => {
+    if (syncProgress?.stage === 'complete') {
+      setUsername('');
+    }
+  }, [syncProgress?.stage]);
+
   const handleSync = async () => {
     if (!username.trim()) {
       setError('Please enter a BoardGameGeek username');
@@ -49,6 +60,18 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     try {
       await onSync(username.trim());
       announceForAccessibility('Starting collection import');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sync collection');
+      announceForAccessibility('Failed to sync collection');
+    }
+  };
+
+  const handleSyncSavedUsername = async () => {
+    if (!savedBggUsername) return;
+    setError('');
+    try {
+      await onSync(savedBggUsername);
+      announceForAccessibility(`Starting collection import for ${savedBggUsername}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sync collection');
       announceForAccessibility('Failed to sync collection');
@@ -125,6 +148,21 @@ export const SyncModal: React.FC<SyncModalProps> = ({
         )}
       </TouchableOpacity>
 
+      {savedBggUsername && (
+        <TouchableOpacity
+          style={[styles.savedUsernameButton, loading && styles.syncButtonDisabled]}
+          onPress={handleSyncSavedUsername}
+          disabled={loading}
+          accessibilityLabel={`Import ${savedBggUsername}'s collection`}
+          accessibilityRole="button"
+          accessibilityHint={`Starts importing ${savedBggUsername}'s collection from BoardGameGeek`}
+          hitSlop={touchTargets.small}
+        >
+          <Search color="#ffffff" size={20} />
+          <Text style={styles.syncButtonText}>Import {savedBggUsername}'s Collection</Text>
+        </TouchableOpacity>
+      )}
+
       {syncProgress && (
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
@@ -157,13 +195,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   );
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingTop: Math.max(20, insets.top),
+    paddingBottom: Math.max(20, insets.bottom),
+    paddingHorizontal: 20,
   },
   dialog: {
     backgroundColor: colors.card,
@@ -219,6 +259,15 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
   },
   syncButton: {
     backgroundColor: colors.accent,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  savedUsernameButton: {
+    backgroundColor: colors.textMuted,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',

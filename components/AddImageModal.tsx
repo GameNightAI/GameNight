@@ -10,8 +10,8 @@ import {
   Modal,
   ScrollView,
   Alert,
-  Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, Upload, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
@@ -35,6 +35,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
 }) => {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
   const [image, setImage] = useState<{
     uri: string;
     name: string;
@@ -47,7 +48,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
   const [instructionsModalVisible, setInstructionsModalVisible] = useState(false);
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   // Reset picker visibility when modal becomes visible
   useEffect(() => {
@@ -286,8 +287,8 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
 
       <ScrollView
         style={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContentContainer, { paddingBottom: insets.bottom + 16 }]}
         showsVerticalScrollIndicator={true}
-        contentContainerStyle={styles.scrollContentContainer}
       >
         {/* Initial upload section - shown when no image is selected */}
         {!image && (
@@ -563,9 +564,8 @@ async function convertToBase64(blob: Blob): Promise<string> {
   });
 }
 
-const getStyles = (colors: any, typography: any) => {
-  const { height: screenHeight } = Dimensions.get('window');
-  const responsiveMinHeight = Math.max(300, Math.min(500, screenHeight * 0.4));
+const getStyles = (colors: any, typography: any, insets: any) => {
+  const responsiveMinHeight = Math.max(300, Math.min(500, 400)); // Fixed height for consistency
 
   return StyleSheet.create({
     overlay: {
@@ -573,7 +573,9 @@ const getStyles = (colors: any, typography: any) => {
       backgroundColor: colors.tints.neutral,
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 20,
+      paddingTop: Math.max(20, insets.top),
+      paddingBottom: Math.max(20, insets.bottom),
+      paddingHorizontal: 20,
     },
     webOverlay: {
       position: 'fixed',

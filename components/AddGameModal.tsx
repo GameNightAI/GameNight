@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Camera, RefreshCw, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -32,19 +33,45 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const router = useRouter();
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [savedBggUsername, setSavedBggUsername] = useState<string | null>(null);
 
   const {
     modalState,
     modalActions,
   } = useAddGameModalFlow();
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+
+  // Load saved BGG username from profile
+  useEffect(() => {
+    const loadBggUsername = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('bgg_username')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          setSavedBggUsername(profileData?.bgg_username || null);
+        }
+      } catch (err) {
+        console.error('Error loading BGG username:', err);
+      }
+    };
+
+    if (isVisible) {
+      loadBggUsername();
+    }
+  }, [isVisible]);
 
   const showFullSizeImage = (imageSource: any) => {
     setFullSizeImageSource(imageSource);
@@ -323,6 +350,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           onClose={() => setSyncModalVisible(false)}
           onSync={handleSync}
           loading={syncing}
+          savedBggUsername={savedBggUsername}
         />
       </>
     );
@@ -355,18 +383,21 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         onClose={() => setSyncModalVisible(false)}
         onSync={handleSync}
         loading={syncing}
+        savedBggUsername={savedBggUsername}
       />
     </>
   );
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingTop: Math.max(20, insets.top),
+    paddingBottom: Math.max(20, insets.bottom),
+    paddingHorizontal: 20,
   },
   webOverlay: {
     position: 'fixed',

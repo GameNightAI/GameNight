@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Share2, Users, Copy } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -23,6 +24,7 @@ export const PollSuccessModal: React.FC<PollSuccessModalProps> = ({
 }) => {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
 
   const handleCopyLink = async () => {
     try {
@@ -45,7 +47,7 @@ export const PollSuccessModal: React.FC<PollSuccessModalProps> = ({
     }
   };
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   if (!isVisible) return null;
 
@@ -153,7 +155,7 @@ type Styles = {
   doneButtonText: TextStyle;
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create<Styles>({
   overlay: {
     position: 'absolute',
     top: 0,
@@ -164,7 +166,9 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create<Styles>({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: 20,
+    paddingTop: Math.max(20, insets.top),
+    paddingBottom: Math.max(20, insets.bottom),
+    paddingHorizontal: 20,
   },
 
   dialog: {
