@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView, Animated as RNAnimated, ActivityIndicator } from 'react-native';
-import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus } from 'lucide-react-native';
-import Animated, { FadeOut, SlideInDown, SlideOutUp } from 'react-native-reanimated';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView, ActivityIndicator } from 'react-native';
+import { Users, Clock, X, ChevronDown, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus } from 'lucide-react-native';
+import Animated, { FadeOut } from 'react-native-reanimated';
 import { supabase } from '@/services/supabase';
 import { decode } from 'html-entities';
 
@@ -75,39 +75,10 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
         if (error) throw error;
       } else {
         // Add expansion to collection
-        // First, we need to get the expansion details from the BGG API
-        const response = await fetch(`https://boardgamegeek.com/xmlapi2/thing?id=${expansionId}&stats=1`);
-        const xmlText = await response.text();
-
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-
-        const item = xmlDoc.querySelector('item');
-        if (!item) throw new Error('Expansion not found');
-
-        const name = item.querySelector('name[type="primary"]')?.getAttribute('value') ||
-          item.querySelector('name')?.getAttribute('value') || 'Unknown';
-        const thumbnail = item.querySelector('thumbnail')?.textContent || '';
-        const minPlayers = parseInt(item.querySelector('minplayers')?.textContent || '1');
-        const maxPlayers = parseInt(item.querySelector('maxplayers')?.textContent || '4');
-        const playingTime = parseInt(item.querySelector('playingtime')?.textContent || '60');
-        const yearPublished = parseInt(item.querySelector('yearpublished')?.textContent || '0');
-
-        const expansionData = {
-          user_id: user.id,
-          bgg_game_id: expansionId,
-          name: name,
-          thumbnail: thumbnail,
-          min_players: minPlayers,
-          max_players: maxPlayers,
-          playing_time: playingTime,
-          year_published: yearPublished,
-        };
-
         const { error: insertError } = await supabase
-          .from('collections')
-          .upsert(expansionData);
-
+          .rpc('insert_game_into_collection', {
+            game_id: expansionId
+          });
         if (insertError) throw insertError;
       }
 
@@ -298,7 +269,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
                 <Calendar size={16} color={colors.accent} />
                 <Text style={styles.detailLabel}>Publication Year</Text>
                 <Text style={styles.detailValue}>
-                  {game.yearPublished ? (game.yearPublished >= 0 ? game.yearPublished : -game.yearPublished + ' BCE') : 'Unknown'}
+                  {game.yearPublished ? (game.yearPublished >= 0 ? game.yearPublished : -game.yearPublished + ' BCE') : 'N/A'}
                 </Text>
               </View>
 
@@ -308,7 +279,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
                 <Text style={styles.detailValue}>
                   {game.complexity ?
                     `${game.complexity.toFixed(1)}${game.complexity_desc ? ` (${game.complexity_desc})` : ''}`
-                    : 'Unknown'}
+                    : 'N/A'}
                 </Text>
               </View>
             </View>
