@@ -89,9 +89,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
       }
 
       // Call the callback to refresh the collection
-      if (onExpansionUpdate) {
-        onExpansionUpdate();
-      }
+      onExpansionUpdate?.();
     } catch (err) {
       console.error('Error updating expansion:', err);
     } finally {
