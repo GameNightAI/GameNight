@@ -1,7 +1,7 @@
 create or replace function update_expansions_from_expansions_staging()
 returns void
 language plpgsql
-security definer set search_path = ''
+security invoker set search_path = ''
 as $$
 begin
 
