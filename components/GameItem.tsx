@@ -57,27 +57,33 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
     });
   };
 
-  const handleExpansionToggle = async (expansionId: number, isOwned: boolean) => {
+  const handleExpansionToggle = async (expansion: Expansion) => {
     try {
-      setUpdatingExpansion(expansionId);
+      setUpdatingExpansion(expansion.id);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      if (isOwned) {
+      if (expansion.is_owned) {
         // Remove expansion from collection
         const { error } = await supabase
           .from('collections')
           .delete()
-          .eq('bgg_game_id', expansionId)
+          .eq('bgg_game_id', expansion.id)
           .eq('user_id', user.id);
 
         if (error) throw error;
       } else {
         // Add expansion to collection
         const { error: insertError } = await supabase
-          .rpc('insert_game_into_collection', {
-            game_id: expansionId
+          .from('collections')
+          .insert({
+            user_id: user.id,
+            bgg_game_id: expansion.id,
+            name: expansion.name,
+            min_players: expansion.min_players,
+            max_players: expansion.max_players,
+            thumbnail: expansion.thumbnail,
           });
         if (insertError) throw insertError;
       }
@@ -139,7 +145,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
             exp.is_owned ? styles.removeButton : styles.addButton
           ]}
           hitSlop={touchTargets.small}
-          onPress={() => handleExpansionToggle(exp.id, exp.is_owned)}
+          onPress={() => handleExpansionToggle(exp)}
           disabled={updatingExpansion === exp.id}
           accessibilityLabel={exp.is_owned ? "Remove expansion" : "Add expansion"}
           accessibilityRole="button"
