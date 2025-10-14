@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { FilterField } from './DropdownFilterMenu';
 import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 interface FilterOption {
   value: any;
@@ -44,6 +45,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 }) => {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+  const { screenHeight } = useDeviceType();
 
   // Lock body scroll on web when modal is visible
   useBodyScrollLock(isVisible);
@@ -64,7 +66,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 
 
 
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const styles = useMemo(() => getStyles(colors, typography, screenHeight), [colors, typography, screenHeight]);
 
   if (!isVisible) return null;
 
@@ -277,89 +279,93 @@ export const filterGames = (
   });
 };
 
-const getStyles = (colors: any, typography: any) => StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  dialog: {
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    width: '100%',
-    maxWidth: '100%',
-    maxHeight: '100%',
-    minHeight: 500,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 6,
+const getStyles = (colors: any, typography: any, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(450, Math.min(550, screenHeight * 0.65));
 
-  },
-  closeButton: {
-    padding: 4,
-  },
-  title: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.callout,
-    color: colors.text,
-  },
-  description: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption1,
-    color: colors.textMuted,
-    marginBottom: 8,
-    paddingTop: 2,
-  },
-  scrollView: {
-    flex: 1,
-    minHeight: 0,
-  },
-  scrollViewContent: {
-    paddingBottom: 4,
-    paddingTop: 2,
-  },
-  filterSection: {
-    marginBottom: 6,
-    position: 'relative',
-  },
-  applyButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    marginBottom: 0,
-  },
-  applyButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: '#ffffff',
-  },
-  clearAllButton: {
-    backgroundColor: colors.border,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  clearAllButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.text,
-  },
-});
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    dialog: {
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      width: '100%',
+      maxWidth: '100%',
+      maxHeight: '100%',
+      minHeight: responsiveMinHeight,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+      paddingHorizontal: 12,
+      paddingVertical: 16,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingBottom: 6,
+
+    },
+    closeButton: {
+      padding: 4,
+    },
+    title: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+    },
+    description: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      marginBottom: 8,
+      paddingTop: 2,
+    },
+    scrollView: {
+      flex: 1,
+      minHeight: 0,
+    },
+    scrollViewContent: {
+      paddingBottom: 4,
+      paddingTop: 2,
+    },
+    filterSection: {
+      marginBottom: 6,
+      position: 'relative',
+    },
+    applyButton: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      padding: 12,
+      alignItems: 'center',
+      marginBottom: 0,
+    },
+    applyButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: '#ffffff',
+    },
+    clearAllButton: {
+      backgroundColor: colors.border,
+      borderRadius: 12,
+      padding: 12,
+      alignItems: 'center',
+      marginTop: 8,
+      marginBottom: 8,
+    },
+    clearAllButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+    },
+  });
+};

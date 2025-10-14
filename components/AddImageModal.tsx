@@ -17,6 +17,7 @@ import { ArrowLeft, Camera, Upload, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 // Sample images
 const sampleImage2 = require('@/assets/images/sample-game-2.png');
@@ -37,6 +38,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
   // Lock body scroll on web when modal is visible
   useBodyScrollLock(isVisible);
@@ -53,7 +55,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
   const [instructionsModalVisible, setInstructionsModalVisible] = useState(false);
 
-  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+  const styles = useMemo(() => getStyles(colors, typography, insets, screenHeight), [colors, typography, insets, screenHeight]);
 
   // Reset picker visibility when modal becomes visible
   useEffect(() => {
@@ -569,8 +571,8 @@ async function convertToBase64(blob: Blob): Promise<string> {
   });
 }
 
-const getStyles = (colors: any, typography: any, insets: any) => {
-  const responsiveMinHeight = Math.max(300, Math.min(500, 400)); // Fixed height for consistency
+const getStyles = (colors: any, typography: any, insets: any, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(300, Math.min(500, screenHeight * 0.6));
 
   return StyleSheet.create({
     overlay: {

@@ -8,6 +8,7 @@ import { ThumbnailModal } from './ThumbnailModal';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 interface AddResultsModalProps {
   isVisible: boolean;
@@ -36,6 +37,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
   // Lock body scroll on web when modal is visible
   useBodyScrollLock(isVisible);
@@ -52,7 +54,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
-  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+  const styles = useMemo(() => getStyles(colors, typography, insets, screenHeight), [colors, typography, insets, screenHeight]);
 
   // Parse board games from analysis results
   const parsedBoardGames = analysisResults?.boardGames || [];
@@ -688,358 +690,363 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   );
 };
 
-const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: Math.max(20, insets.top),
-    paddingBottom: Math.max(20, insets.bottom),
-    paddingHorizontal: 20,
-  },
-  webOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: 20,
-  },
-  dialog: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 20,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  backButton: {
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButton: {
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.headline,
-    color: colors.text,
-  },
-  contentContainer: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  gamesScrollView: {
-    flex: 1,
-    marginBottom: 16,
-  },
-  imageSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  analyzedImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  imageName: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
-  },
-  resultsSection: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.text,
-    marginBottom: 12,
-  },
-  resultCard: {
-    backgroundColor: colors.card,
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.accent,
-  },
-  resultText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.text,
-    lineHeight: 20,
-  },
-  boardGamesSection: {
-    marginTop: 16,
-  },
-  gamesContainer: {
-    flex: 1,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.text,
-    flex: 1,
-  },
-  gamesList: {
-    flex: 1,
-  },
-  gameItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  thumbnailSection: {
-    marginRight: 12,
-  },
-  gameInfoSection: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.text,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  checkboxSelected: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
-  },
-  gameTitle: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.text,
-  },
-  thumbnailContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gameThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  noThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noThumbnailText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption2,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  statusText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.textMuted,
-  },
-  addToCollectionSection: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  addToCollectionButton: {
-    backgroundColor: colors.text,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    minWidth: 0,
-  },
-  addToCollectionButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.card,
-    textAlign: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.textMuted,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    minWidth: 0,
-    marginLeft: 12,
-  },
-  cancelButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.card,
-    textAlign: 'center',
-  },
-  summaryCard: {
-    backgroundColor: colors.card,
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.accent,
-    marginTop: 16,
-  },
-  summaryTitle: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.body,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  summaryText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption1,
-    color: colors.textMuted,
-  },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.callout,
-    color: colors.textMuted,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.error,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  warningText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.warning,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  successText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.success,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  stickyActionButtons: {
-    backgroundColor: colors.card,
-    padding: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  gameAlreadyInCollection: {
-    opacity: 0.5,
-  },
-  greyedOutImage: {
-    opacity: 0.7,
-  },
-  greyedOutText: {
-    color: colors.textMuted,
-  },
-  alreadyInCollectionText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption2,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
-  successView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  successIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  successIcon: {
-    fontSize: 40,
-    color: colors.card,
-    fontFamily: typography.getFontFamily('semibold'),
-  },
-  successTitle: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.title3,
-    color: colors.text,
-    marginBottom: 8,
-  },
-  successMessage: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.body,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  okButton: {
-    backgroundColor: colors.text,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  okButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.body,
-    color: colors.card,
-  },
-});
+const getStyles = (colors: any, typography: any, insets: any, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(450, Math.min(600, screenHeight * 0.75));
+
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: Math.max(20, insets.top),
+      paddingBottom: Math.max(20, insets.bottom),
+      paddingHorizontal: 20,
+    },
+    webOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      padding: 20,
+    },
+    dialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 20,
+      width: '100%',
+      maxWidth: 500,
+      maxHeight: '90%',
+      minHeight: responsiveMinHeight,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    backButton: {
+      padding: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    closeButton: {
+      padding: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    title: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.headline,
+      color: colors.text,
+    },
+    contentContainer: {
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+    },
+    gamesScrollView: {
+      flex: 1,
+      marginBottom: 16,
+    },
+    imageSection: {
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    analyzedImage: {
+      width: 120,
+      height: 120,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    imageName: {
+      fontFamily: 'Poppins-Regular',
+      fontSize: 12,
+      color: '#666666',
+    },
+    resultsSection: {
+      flex: 1,
+    },
+    sectionTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+      marginBottom: 12,
+    },
+    resultCard: {
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.accent,
+    },
+    resultText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    boardGamesSection: {
+      marginTop: 16,
+    },
+    gamesContainer: {
+      flex: 1,
+    },
+    tableHeader: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+      flex: 1,
+    },
+    gamesList: {
+      flex: 1,
+    },
+    gameItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    thumbnailSection: {
+      marginRight: 12,
+    },
+    gameInfoSection: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: colors.text,
+      backgroundColor: colors.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    checkboxSelected: {
+      backgroundColor: colors.text,
+      borderColor: colors.text,
+    },
+    gameTitle: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.text,
+    },
+    thumbnailContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    gameThumbnail: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+    },
+    noThumbnail: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    noThumbnailText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption2,
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
+    statusText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+    },
+    addToCollectionSection: {
+      marginTop: 16,
+      alignItems: 'center',
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    addToCollectionButton: {
+      backgroundColor: colors.text,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flex: 1,
+      minWidth: 0,
+    },
+    addToCollectionButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.card,
+      textAlign: 'center',
+    },
+    cancelButton: {
+      backgroundColor: colors.textMuted,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flex: 1,
+      minWidth: 0,
+      marginLeft: 12,
+    },
+    cancelButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.card,
+      textAlign: 'center',
+    },
+    summaryCard: {
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.accent,
+      marginTop: 16,
+    },
+    summaryTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.text,
+      marginBottom: 4,
+    },
+    summaryText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+    },
+    loadingContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 40,
+    },
+    loadingText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.textMuted,
+      marginTop: 16,
+      textAlign: 'center',
+    },
+    errorText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.error,
+      marginTop: 8,
+      textAlign: 'center',
+    },
+    warningText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.warning,
+      marginTop: 8,
+      textAlign: 'center',
+    },
+    successText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.success,
+      marginTop: 8,
+      textAlign: 'center',
+    },
+    stickyActionButtons: {
+      backgroundColor: colors.card,
+      padding: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 3,
+    },
+    gameAlreadyInCollection: {
+      opacity: 0.5,
+    },
+    greyedOutImage: {
+      opacity: 0.7,
+    },
+    greyedOutText: {
+      color: colors.textMuted,
+    },
+    alreadyInCollectionText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption2,
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+    successView: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    successIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.success,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    successIcon: {
+      fontSize: 40,
+      color: colors.card,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    successTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.text,
+      marginBottom: 8,
+    },
+    successMessage: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginBottom: 24,
+      lineHeight: 20,
+    },
+    okButton: {
+      backgroundColor: colors.text,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    okButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.card,
+    },
+  });
+};

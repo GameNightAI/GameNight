@@ -12,6 +12,7 @@ import { sortGamesByTitle } from '@/utils/sortingUtils';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 import { Game } from '@/types/game';
 
@@ -35,6 +36,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
   // Lock body scroll on web when modal is visible
   useBodyScrollLock(isVisible);
@@ -349,7 +351,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     });
   };
 
-  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+  const styles = useMemo(() => getStyles(colors, typography, insets, screenHeight), [colors, typography, insets, screenHeight]);
 
   if (!isVisible) return null;
 
@@ -597,300 +599,305 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   );
 };
 
-const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    paddingTop: Math.max(16, insets.top),
-    paddingBottom: Math.max(16, insets.bottom),
-    paddingHorizontal: 16,
-  },
-  modal: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    width: '90%',
-    maxWidth: 600,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-    paddingTop: 0,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: {
-    fontSize: typography.fontSize.headline,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: colors.text,
-    marginLeft: 12,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  warningHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.tints.warning,
-    borderTopWidth: 1,
-    borderTopColor: colors.warning,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.warning,
-    padding: 16,
-    margin: 0,
-  },
-  warningHeaderText: {
-    flex: 1,
-    fontSize: typography.fontSize.callout,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: colors.textMuted,
-    marginLeft: 12,
-  },
-  warningDismissButton: {
-    padding: 4,
-    borderRadius: 4,
-    backgroundColor: colors.tints.warning,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 10,
-  },
-  descriptionSection: {
-    marginBottom: 10,
-    width: '100%',
-    paddingTop: 4,
-  },
-  descriptionButton: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 8,
-  },
-  descriptionButtonActive: {
-    borderColor: colors.accent,
-    backgroundColor: colors.tints.accent,
-  },
-  descriptionButtonContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  descriptionButtonLeft: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  descriptionButtonRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  descriptionButtonLabel: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.subheadline,
-    color: colors.text,
-  },
-  descriptionButtonIndicator: {
-    backgroundColor: colors.success,
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-    marginRight: 6,
-  },
-  descriptionButtonIndicatorText: {
-    color: '#ffffff',
-    fontSize: typography.fontSize.caption1,
-    fontFamily: typography.getFontFamily('semibold'),
-  },
-  currentGamesSection: {
-    marginBottom: 0,
-    marginTop: 0,
-  },
-  sublabel: {
-    fontSize: typography.fontSize.subheadline,
-    fontFamily: typography.getFontFamily('normal'),
-    color: colors.textMuted,
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.subheadline,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: colors.text,
-    marginBottom: 12,
-  },
-  addGamesButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 8,
-  },
-  addGamesButtonText: {
-    fontSize: typography.fontSize.subheadline,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: colors.primary,
-    marginLeft: 8,
-  },
-  gameItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: colors.card,
-  },
-  gameThumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: colors.background,
-    marginRight: 12,
-  },
-  gameItemSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.tints.primary,
-  },
-  gameInfo: {
-    flex: 1,
-  },
-  gameName: {
-    fontSize: typography.fontSize.callout,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: colors.text,
-    marginBottom: 2,
-  },
-  playerCount: {
-    fontSize: typography.fontSize.caption1,
-    fontFamily: typography.getFontFamily('normal'),
-    color: colors.textMuted,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  footer: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  errorText: {
-    fontSize: typography.fontSize.callout,
-    fontFamily: typography.getFontFamily('normal'),
-    color: colors.error,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.textMuted,
-  },
-  saveButtonText: {
-    fontSize: typography.fontSize.subheadline,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: '#ffffff',
-  },
-  confirmationOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2000,
-  },
-  confirmationDialog: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 24,
-    margin: 20,
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  confirmationTitle: {
-    fontSize: typography.fontSize.title3,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: colors.text,
-    marginBottom: 12,
-  },
-  confirmationMessage: {
-    fontSize: typography.fontSize.body,
-    fontFamily: typography.getFontFamily('normal'),
-    color: colors.textMuted,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  confirmationButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  confirmationButtonCancel: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: colors.background,
-  },
-  confirmationButtonTextCancel: {
-    fontSize: typography.fontSize.body,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: colors.textMuted,
-  },
-  confirmationButtonContinue: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: colors.primary,
-    marginLeft: 12,
-  },
-  confirmationButtonTextContinue: {
-    fontSize: typography.fontSize.body,
-    fontFamily: typography.getFontFamily('semibold'),
-    color: '#ffffff',
-  },
-});
+const getStyles = (colors: any, typography: any, insets: any, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(500, Math.min(650, screenHeight * 0.75));
+
+  return StyleSheet.create({
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      paddingTop: Math.max(16, insets.top),
+      paddingBottom: Math.max(16, insets.bottom),
+      paddingHorizontal: 16,
+    },
+    modal: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      width: '90%',
+      maxWidth: 600,
+      maxHeight: '90%',
+      minHeight: responsiveMinHeight,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 8,
+      paddingTop: 0,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    title: {
+      fontSize: typography.fontSize.headline,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.text,
+      marginLeft: 12,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    warningHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.tints.warning,
+      borderTopWidth: 1,
+      borderTopColor: colors.warning,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.warning,
+      padding: 16,
+      margin: 0,
+    },
+    warningHeaderText: {
+      flex: 1,
+      fontSize: typography.fontSize.callout,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.textMuted,
+      marginLeft: 12,
+    },
+    warningDismissButton: {
+      padding: 4,
+      borderRadius: 4,
+      backgroundColor: colors.tints.warning,
+    },
+    content: {
+      flex: 1,
+      padding: 20,
+      paddingTop: 10,
+    },
+    descriptionSection: {
+      marginBottom: 10,
+      width: '100%',
+      paddingTop: 4,
+    },
+    descriptionButton: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 10,
+      marginTop: 8,
+    },
+    descriptionButtonActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.tints.accent,
+    },
+    descriptionButtonContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    descriptionButtonLeft: {
+      flex: 1,
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+    },
+    descriptionButtonRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    descriptionButtonLabel: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+    },
+    descriptionButtonIndicator: {
+      backgroundColor: colors.success,
+      borderRadius: 10,
+      width: 20,
+      height: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+      marginRight: 6,
+    },
+    descriptionButtonIndicatorText: {
+      color: '#ffffff',
+      fontSize: typography.fontSize.caption1,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    currentGamesSection: {
+      marginBottom: 0,
+      marginTop: 0,
+    },
+    sublabel: {
+      fontSize: typography.fontSize.subheadline,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.textMuted,
+      marginBottom: 8,
+    },
+    sectionTitle: {
+      fontSize: typography.fontSize.subheadline,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.text,
+      marginBottom: 12,
+    },
+    addGamesButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      borderStyle: 'dashed',
+      borderRadius: 8,
+      padding: 16,
+      marginTop: 8,
+    },
+    addGamesButtonText: {
+      fontSize: typography.fontSize.subheadline,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.primary,
+      marginLeft: 8,
+    },
+    gameItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      marginBottom: 8,
+      backgroundColor: colors.card,
+    },
+    gameThumbnail: {
+      width: 60,
+      height: 60,
+      borderRadius: 8,
+      backgroundColor: colors.background,
+      marginRight: 12,
+    },
+    gameItemSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.tints.primary,
+    },
+    gameInfo: {
+      flex: 1,
+    },
+    gameName: {
+      fontSize: typography.fontSize.callout,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.text,
+      marginBottom: 2,
+    },
+    playerCount: {
+      fontSize: typography.fontSize.caption1,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.textMuted,
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    footer: {
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    errorText: {
+      fontSize: typography.fontSize.callout,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.error,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    saveButtonDisabled: {
+      backgroundColor: colors.textMuted,
+    },
+    saveButtonText: {
+      fontSize: typography.fontSize.subheadline,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: '#ffffff',
+    },
+    confirmationOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 2000,
+    },
+    confirmationDialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 24,
+      margin: 20,
+      maxWidth: 400,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    confirmationTitle: {
+      fontSize: typography.fontSize.title3,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.text,
+      marginBottom: 12,
+    },
+    confirmationMessage: {
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.textMuted,
+      marginBottom: 20,
+      lineHeight: 20,
+    },
+    confirmationButtons: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    confirmationButtonCancel: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 6,
+      backgroundColor: colors.background,
+    },
+    confirmationButtonTextCancel: {
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.textMuted,
+    },
+    confirmationButtonContinue: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 6,
+      backgroundColor: colors.primary,
+      marginLeft: 12,
+    },
+    confirmationButtonTextContinue: {
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: '#ffffff',
+    },
+  });
+};
