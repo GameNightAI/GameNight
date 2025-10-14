@@ -318,9 +318,8 @@ export default function EventScreen() {
         {event.description && (
           <Text style={styles.description}>{event.description}</Text>
         )}
-        {/* Commented out until the creator logic is actually working */}
         <Text style={styles.subtitle}>
-          Poll created by {isCreator ? creatorName : 'you'}
+          Poll created by {isCreator ? 'you' : creatorName }
         </Text>
       </View>
 
@@ -343,13 +342,6 @@ export default function EventScreen() {
       {/* Event Dates */}
       <View style={styles.datesSection}>
         <Text style={styles.sectionTitle}>Vote on Event Dates</Text>
-        {!user && (
-          <View style={styles.loginPrompt}>
-            <Text style={styles.loginPromptText}>
-              Please log in to vote on event dates
-            </Text>
-          </View>
-        )}
         {eventDates.map((eventDate, index) => {
           const displayLocation = event.use_same_location && event.location
             ? event.location
@@ -385,7 +377,7 @@ export default function EventScreen() {
               index={index}
               selectedVote={userVotes[eventDate.id]}
               onVote={handleVote}
-              disabled={voting || !user}
+              disabled={voting}
               voteCounts={voteCounts[eventDate.id]}
               displayLocation={displayLocation}
               displayTime={displayTime}

@@ -314,29 +314,30 @@ export default function PollScreen() {
           </Text>
         </View>
 
-        {/* Always show voter name input */}
-        <VoterNameInput
-          value={voterName}
-          onChange={(text) => {
-            setVoterName(text);
-            if (nameError) setNameError(false);
-          }}
-          hasError={nameError}
-        />
         {!user && (
-          <View style={styles.signUpContainer}>
-            <Text style={styles.signUpText}>
-              Want to create your own polls?{' '}
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push('/auth/register')}
-              accessibilityLabel="Sign up for free"
-              accessibilityRole="button"
-              accessibilityHint="Opens registration screen to create your own polls"
-            >
-              <Text style={styles.signUpLink}>Sign up for free</Text>
-            </TouchableOpacity>
-          </View>
+          <>
+            <VoterNameInput
+              value={voterName}
+              onChange={(text) => {
+                setVoterName(text);
+                if (nameError) setNameError(false);
+              }}
+              hasError={nameError}
+            />
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>
+                Want to create your own polls?{' '}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/auth/register')}
+                accessibilityLabel="Sign up for free"
+                accessibilityRole="button"
+                accessibilityHint="Opens registration screen to create your own polls"
+              >
+                <Text style={styles.signUpLink}>Sign up for free</Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
         <View style={styles.gamesContainer}>
