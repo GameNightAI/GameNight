@@ -11,6 +11,7 @@ import { CreatePollDetails } from './CreatePollDetails';
 import { sortGamesByTitle } from '@/utils/sortingUtils';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 
 import { Game } from '@/types/game';
 
@@ -34,6 +35,10 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
+
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [originalPollGames, setOriginalPollGames] = useState<Game[]>([]);

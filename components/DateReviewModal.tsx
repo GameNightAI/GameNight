@@ -7,6 +7,7 @@ import { SquarePen } from 'lucide-react-native';
 import { CreateEventDetails } from './CreateEventDetails';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 import { useDeviceType } from '@/hooks/useDeviceType';
 
 
@@ -54,6 +55,10 @@ export function DateReviewModal({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(visible);
+
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   const [localEventOptions, setLocalEventOptions] = useState(eventOptions);

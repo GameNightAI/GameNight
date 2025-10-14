@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, Info, CheckCircle } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 
 interface SyncModalProps {
   isVisible: boolean;
@@ -31,6 +32,10 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
   const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
+
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   useEffect(() => {

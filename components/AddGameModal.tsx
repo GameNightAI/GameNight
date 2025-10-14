@@ -14,6 +14,7 @@ import { supabase } from '@/services/supabase';
 import { fetchGames } from '@/services/bggApi';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 
 const sampleImage1 = require('@/assets/images/sample-game-1.png');
 
@@ -34,6 +35,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);

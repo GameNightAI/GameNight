@@ -5,6 +5,7 @@ import { Game } from '@/types/game';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { FilterField } from './DropdownFilterMenu';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 
 interface FilterOption {
   value: any;
@@ -43,6 +44,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
 }) => {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
 
 
 

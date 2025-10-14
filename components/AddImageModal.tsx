@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, Upload, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 
 // Sample images
 const sampleImage2 = require('@/assets/images/sample-game-2.png');
@@ -36,6 +37,10 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
+
   const [image, setImage] = useState<{
     uri: string;
     name: string;

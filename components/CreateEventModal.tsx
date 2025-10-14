@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth, isSameDay, isBefore, startOfDay, min, max } from 'date-fns';
 import { DateReviewModal } from './DateReviewModal';
@@ -43,6 +44,9 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   const insets = useSafeAreaInsets();
   const { isMobile, screenWidth } = useDeviceType();
   const router = useRouter();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(visible);
   const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [eventLocation, setEventLocation] = useState('');

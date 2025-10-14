@@ -7,6 +7,7 @@ import { supabase } from '@/services/supabase';
 import { ThumbnailModal } from './ThumbnailModal';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 
 interface AddResultsModalProps {
   isVisible: boolean;
@@ -35,6 +36,10 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
+
   const [selectedGames, setSelectedGames] = useState<Set<number>>(new Set());
   const [databaseResults, setDatabaseResults] = useState<any[] | null>(null);
   const [loadingDatabase, setLoadingDatabase] = useState(false);
