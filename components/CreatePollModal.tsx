@@ -449,9 +449,9 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         style={styles.absoluteCloseButton}
         onPress={handleMainModalClose}
         accessibilityLabel="Close"
-        hitSlop={touchTargets.small}
+        hitSlop={touchTargets.sizeTwenty}
       >
-        <X size={16} color={colors.textMuted} />
+        <X size={20} color={colors.textMuted} />
       </TouchableOpacity>
       <View style={styles.header}>
         <Text style={styles.title}>
@@ -1643,8 +1643,8 @@ const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.crea
     top: 16,
     right: 16,
     zIndex: 100,
-    backgroundColor: colors.tints.neutral,
-    borderRadius: 12,
+    //backgroundColor: colors.tints.neutral,
+    //borderRadius: 12,
     padding: 4,
     elevation: 2,
     //borderWidth: 1,

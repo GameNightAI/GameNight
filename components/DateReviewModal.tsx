@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Switch, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Switch, Modal } from 'react-native';
 import { format } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SquarePen } from 'lucide-react-native';
+import { SquarePen, X } from 'lucide-react-native';
 import { CreateEventDetails } from './CreateEventDetails';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -55,11 +55,12 @@ export function DateReviewModal({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
   // Lock body scroll on web when modal is visible
   useBodyScrollLock(visible);
 
-  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+  const styles = useMemo(() => getStyles(colors, typography, screenHeight, insets), [colors, typography, screenHeight, insets]);
 
   const [localEventOptions, setLocalEventOptions] = useState(eventOptions);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -228,312 +229,326 @@ export function DateReviewModal({
   if (!visible) return null;
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.dateReviewDialog}>
-        <View style={styles.dateReviewHeader}>
-          <Text style={styles.dateReviewTitle}>Review Selected Dates</Text>
-
-        </View>
-
-        <ScrollView
-          style={styles.dateReviewContent}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Event Details Section */}
-          <View style={styles.eventDetailsSection}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.dateReviewDialog}>
+          <View style={styles.dateReviewHeader}>
+            <Text style={styles.dateReviewTitle}>Review Selected Dates</Text>
             <TouchableOpacity
-              style={[styles.eventDetailsButton, hasManualDetails && styles.eventDetailsButtonActive]}
-              onPress={() => {
-                announceForAccessibility('Opening event details');
-                setShowEventDetailsModal(true);
-              }}
-              hitSlop={touchTargets.small}
-              accessibilityLabel="Edit event details"
-              accessibilityHint="Opens event title, description, and location editor"
+              style={[styles.closeButton]}
+              onPress={() => { onClose(); announceForAccessibility?.('Date review modal closed'); }}
+              accessibilityLabel="Close"
+              accessibilityHint="Closes the date review modal"
+              hitSlop={touchTargets.sizeTwenty}
             >
-              <View style={styles.eventDetailsButtonContent}>
-                <View style={styles.eventDetailsButtonLeft}>
-                  <Text style={styles.eventDetailsButtonLabel}>Event Details</Text>
-                </View>
-                <View style={styles.eventDetailsButtonRight}>
-                  <View style={[styles.eventDetailsButtonIndicator, { opacity: hasManualDetails ? 1 : 0, marginRight: 8 }]}>
-                    <Text style={styles.eventDetailsButtonIndicatorText}>✓</Text>
-                  </View>
-                  <SquarePen size={20} color={colors.textMuted} />
-                </View>
-              </View>
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
-          {/* Time Inputs */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Event Time</Text>
-            <View style={styles.timeFormContainer}>
-              <View style={styles.timeForm}>
-                <View style={styles.timeInputRow}>
-                  <Text style={styles.timeFormLabel}>Start</Text>
-                  <TextInput
-                    style={styles.timeInput}
-                    value={formatTimeForInput(localEventOptions.startTime)}
-                    onChangeText={(text) => setLocalEventOptions(prevOptions => ({
-                      ...prevOptions,
-                      startTime: convertTimeInputToDate(text, new Date()) || null,
-                    }))}
-                    placeholder="HH:MM"
-                    keyboardType="numeric"
-                    maxLength={5}
-                  />
-                  <TouchableOpacity
-                    style={[styles.timeResetButton, { marginLeft: 8 }]}
-                    hitSlop={touchTargets.small}
-                    accessibilityRole="button"
-                    accessibilityLabel="Clear start time"
-                    accessibilityHint="Clears the selected start time"
-                    onPress={(e) => {
-                      e.preventDefault?.();
-                      setLocalEventOptions(prevOptions => ({
-                        ...prevOptions,
-                        startTime: null,
-                      }));
-                      announceForAccessibility('Start time cleared');
-                    }}
-                  >
-                    <Text style={styles.clearTimeButtonText}>✕</Text>
-                  </TouchableOpacity>
+          <ScrollView
+            style={styles.dateReviewContent}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Event Details Section */}
+            <View style={styles.eventDetailsSection}>
+              <TouchableOpacity
+                style={[styles.eventDetailsButton, hasManualDetails && styles.eventDetailsButtonActive]}
+                onPress={() => {
+                  announceForAccessibility('Opening event details');
+                  setShowEventDetailsModal(true);
+                }}
+                hitSlop={touchTargets.small}
+                accessibilityLabel="Edit event details"
+                accessibilityHint="Opens event title, description, and location editor"
+              >
+                <View style={styles.eventDetailsButtonContent}>
+                  <View style={styles.eventDetailsButtonLeft}>
+                    <Text style={styles.eventDetailsButtonLabel}>Event Details</Text>
+                  </View>
+                  <View style={styles.eventDetailsButtonRight}>
+                    <View style={[styles.eventDetailsButtonIndicator, { opacity: hasManualDetails ? 1 : 0, marginRight: 8 }]}>
+                      <Text style={styles.eventDetailsButtonIndicatorText}>✓</Text>
+                    </View>
+                    <SquarePen size={20} color={colors.textMuted} />
+                  </View>
                 </View>
-              </View>
-              <View style={styles.timeForm}>
-                <View style={styles.timeInputRow}>
-                  <Text style={styles.timeFormLabel}>End</Text>
-                  <TextInput
-                    style={styles.timeInput}
-                    value={formatTimeForInput(localEventOptions.endTime)}
-                    onChangeText={(text) => setLocalEventOptions(prevOptions => ({
-                      ...prevOptions,
-                      endTime: convertTimeInputToDate(text, new Date()) || null,
-                    }))}
-                    placeholder="HH:MM"
-                    keyboardType="numeric"
-                    maxLength={5}
-                  />
-                  <TouchableOpacity
-                    style={[styles.timeResetButton, { marginLeft: 8 }]}
-                    hitSlop={touchTargets.small}
-                    accessibilityRole="button"
-                    accessibilityLabel="Clear end time"
-                    accessibilityHint="Clears the selected end time"
-                    onPress={(e) => {
-                      e.preventDefault?.();
-                      setLocalEventOptions(prevOptions => ({
-                        ...prevOptions,
-                        endTime: null,
-                      }));
-                      announceForAccessibility('End time cleared');
-                    }}
-                  >
-                    <Text style={styles.clearTimeButtonText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              </TouchableOpacity>
             </View>
 
-            {timeValidationError ? (
-              <Text style={styles.validationError}>{timeValidationError}</Text>
-            ) : null}
-          </View>
-          {selectedDates.map((date, index) => {
-            const dateKey = getDateKey(date);
-            const dateOptions = getDateSpecificOptions(date);
-            const hasCustomTime = customTimeDates.has(dateKey);
-            const hasCustomLocation = customLocationDates.has(dateKey);
-
-            const getDisplayTime = (startTime: Date | null, endTime: Date | null): string => {
-              if (startTime && endTime) {
-                return ` ${formatTime(startTime)} - ${formatTime(endTime)}`;
-              } else if (startTime) {
-                return ` Starts at ${formatTime(startTime)}`;
-              } else if (endTime) {
-                return ` Ends at ${formatTime(endTime)}`;
-              } else {
-                return ' Time not set';
-              }
-            };
-
-            const displayTime = hasCustomTime
-              ? getDisplayTime(dateOptions.startTime, dateOptions.endTime)
-              : getDisplayTime(localEventOptions.startTime, localEventOptions.endTime);
-
-            const displayLocation = hasCustomLocation
-              ? (dateOptions.location || 'Location not set')
-              : (defaultLocation || 'Location not set');
-
-            return (
-              <View key={index} style={styles.dateCard}>
-                <View style={styles.dateCardContent}>
-                  <View style={styles.dateCardDateContainer}>
-                    <Text style={styles.dateCardDate}>
-                      {format(date, 'MMM d, yyyy')}
-                    </Text>
-                    <Text style={styles.dateCardDayTime}>
-                      • {format(date, 'EEEE')}
-                    </Text>
+            {/* Time Inputs */}
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>Event Time</Text>
+              <View style={styles.timeFormContainer}>
+                <View style={styles.timeForm}>
+                  <View style={styles.timeInputRow}>
+                    <Text style={styles.timeFormLabel}>Start</Text>
+                    <TextInput
+                      style={styles.timeInput}
+                      value={formatTimeForInput(localEventOptions.startTime)}
+                      onChangeText={(text) => setLocalEventOptions(prevOptions => ({
+                        ...prevOptions,
+                        startTime: convertTimeInputToDate(text, new Date()) || null,
+                      }))}
+                      placeholder="HH:MM"
+                      keyboardType="numeric"
+                      maxLength={5}
+                    />
+                    <TouchableOpacity
+                      style={[styles.timeResetButton, { marginLeft: 8 }]}
+                      hitSlop={touchTargets.small}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear start time"
+                      accessibilityHint="Clears the selected start time"
+                      onPress={(e) => {
+                        e.preventDefault?.();
+                        setLocalEventOptions(prevOptions => ({
+                          ...prevOptions,
+                          startTime: null,
+                        }));
+                        announceForAccessibility('Start time cleared');
+                      }}
+                    >
+                      <Text style={styles.clearTimeButtonText}>✕</Text>
+                    </TouchableOpacity>
                   </View>
-                  <View style={styles.dateCardDayTimeContainer}>
-                    {hasCustomTime ? (
-                      <View style={styles.customTimeInputs}>
-                        <View style={styles.timeInputRow}>
-                          <Text style={styles.timeFormLabel}>Start</Text>
-                          <TextInput
-                            style={styles.customTimeInput}
-                            value={formatTimeForInput(dateOptions.startTime)}
-                            onChangeText={(text) => updateDateSpecificOptions(
-                              date,
-                              { startTime: convertTimeInputToDate(text, date) }
-                            )}
-                            placeholder="HH:MM"
-                            keyboardType="numeric"
-                            maxLength={5}
-                          />
-                          <TouchableOpacity
-                            style={styles.customTimeResetButton}
-                            onPress={() => {
-                              updateDateSpecificOptions(
-                                date,
-                                { startTime: null }
-                              );
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Clear start time"
-                          >
-                            <Text style={styles.clearTimeButtonText}>✕</Text>
-                          </TouchableOpacity>
-                        </View>
-                        <View style={styles.timeInputRow}>
-                          <Text style={styles.timeFormLabel}>End</Text>
-                          <TextInput
-                            style={styles.customTimeInput}
-                            value={formatTimeForInput(dateOptions.endTime)}
-                            onChangeText={(text) => updateDateSpecificOptions(
-                              date,
-                              { endTime: convertTimeInputToDate(text, date) }
-                            )}
-                            placeholder="HH:MM"
-                            keyboardType="numeric"
-                            maxLength={5}
-                          />
-                          <TouchableOpacity
-                            style={styles.customTimeResetButton}
-                            onPress={() => {
-                              updateDateSpecificOptions(
-                                date,
-                                { endTime: null }
-                              );
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Clear end time"
-                          >
-                            <Text style={styles.clearTimeButtonText}>✕</Text>
-                          </TouchableOpacity>
-                        </View>
-
-                      </View>
-                    ) : (
-                      <Text style={styles.dateCardDayTime}>{displayTime}</Text>
-                    )}
-                  </View>
-                  <Text style={styles.dateCardLocation}>
-                    📍 {hasCustomLocation ? (
-                      <TextInput
-                        style={styles.inlineLocationInput}
-                        value={dateOptions.location}
-                        onChangeText={(text) => updateDateSpecificOptions(date, { location: text })}
-                        placeholder="Enter location"
-                        maxLength={50}
-                      />
-                    ) : displayLocation}
-                  </Text>
-
-                  {/* Toggle Switches */}
-                  <View style={styles.dateToggles}>
-                    <View style={styles.toggleRow}>
-                      <Text style={styles.toggleLabel}>Custom Time</Text>
-                      <Switch
-                        value={hasCustomTime}
-                        onValueChange={() => {
-                          toggleCustomTime(date);
-                          announceForAccessibility(hasCustomTime ? 'Custom time disabled' : 'Custom time enabled');
-                        }}
-                      />
-                    </View>
-                    <View style={styles.toggleRow}>
-                      <Text style={styles.toggleLabel}>Custom Location</Text>
-                      <Switch
-                        value={hasCustomLocation}
-                        onValueChange={() => {
-                          toggleCustomLocation(date);
-                          announceForAccessibility(hasCustomLocation ? 'Custom location disabled' : 'Custom location enabled');
-                        }}
-                      />
-                    </View>
+                </View>
+                <View style={styles.timeForm}>
+                  <View style={styles.timeInputRow}>
+                    <Text style={styles.timeFormLabel}>End</Text>
+                    <TextInput
+                      style={styles.timeInput}
+                      value={formatTimeForInput(localEventOptions.endTime)}
+                      onChangeText={(text) => setLocalEventOptions(prevOptions => ({
+                        ...prevOptions,
+                        endTime: convertTimeInputToDate(text, new Date()) || null,
+                      }))}
+                      placeholder="HH:MM"
+                      keyboardType="numeric"
+                      maxLength={5}
+                    />
+                    <TouchableOpacity
+                      style={[styles.timeResetButton, { marginLeft: 8 }]}
+                      hitSlop={touchTargets.small}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear end time"
+                      accessibilityHint="Clears the selected end time"
+                      onPress={(e) => {
+                        e.preventDefault?.();
+                        setLocalEventOptions(prevOptions => ({
+                          ...prevOptions,
+                          endTime: null,
+                        }));
+                        announceForAccessibility('End time cleared');
+                      }}
+                    >
+                      <Text style={styles.clearTimeButtonText}>✕</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
-            );
-          })}
-        </ScrollView>
 
-        <View style={styles.dateReviewActions}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              announceForAccessibility('Returning to calendar');
-              onClose();
-            }}
-            accessibilityLabel="Back to Calendar"
-            accessibilityHint="Returns to the calendar view"
-            hitSlop={touchTargets.small}
-          >
-            <Text style={styles.backButtonText}>Back to Calendar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.finalizeButton}
-            onPress={() => {
-              // Prepare the final event options with date-specific data
-              const finalOptions = {
-                ...localEventOptions,
-                dateSpecificOptions: dateSpecificOptions
+              {timeValidationError ? (
+                <Text style={styles.validationError}>{timeValidationError}</Text>
+              ) : null}
+            </View>
+            {selectedDates.map((date, index) => {
+              const dateKey = getDateKey(date);
+              const dateOptions = getDateSpecificOptions(date);
+              const hasCustomTime = customTimeDates.has(dateKey);
+              const hasCustomLocation = customLocationDates.has(dateKey);
+
+              const getDisplayTime = (startTime: Date | null, endTime: Date | null): string => {
+                if (startTime && endTime) {
+                  return ` ${formatTime(startTime)} - ${formatTime(endTime)}`;
+                } else if (startTime) {
+                  return ` Starts at ${formatTime(startTime)}`;
+                } else if (endTime) {
+                  return ` Ends at ${formatTime(endTime)}`;
+                } else {
+                  return ' Time not set';
+                }
               };
-              onFinalize(finalOptions);
-              announceForAccessibility('Event creation finalized');
-            }}
-            accessibilityLabel="Create Event"
-            accessibilityHint="Creates the event with the selected dates and options"
-            hitSlop={touchTargets.small}
-          >
-            <Text style={styles.finalizeButtonText}>Create Event</Text>
-          </TouchableOpacity>
+
+              const displayTime = hasCustomTime
+                ? getDisplayTime(dateOptions.startTime, dateOptions.endTime)
+                : getDisplayTime(localEventOptions.startTime, localEventOptions.endTime);
+
+              const displayLocation = hasCustomLocation
+                ? (dateOptions.location || 'Location not set')
+                : (defaultLocation || 'Location not set');
+
+              return (
+                <View key={index} style={styles.dateCard}>
+                  <View style={styles.dateCardContent}>
+                    <View style={styles.dateCardDateContainer}>
+                      <Text style={styles.dateCardDate}>
+                        {format(date, 'MMM d, yyyy')}
+                      </Text>
+                      <Text style={styles.dateCardDayTime}>
+                        • {format(date, 'EEEE')}
+                      </Text>
+                    </View>
+                    <View style={styles.dateCardDayTimeContainer}>
+                      {hasCustomTime ? (
+                        <View style={styles.customTimeInputs}>
+                          <View style={styles.timeInputRow}>
+                            <Text style={styles.timeFormLabel}>Start</Text>
+                            <TextInput
+                              style={styles.customTimeInput}
+                              value={formatTimeForInput(dateOptions.startTime)}
+                              onChangeText={(text) => updateDateSpecificOptions(
+                                date,
+                                { startTime: convertTimeInputToDate(text, date) }
+                              )}
+                              placeholder="HH:MM"
+                              keyboardType="numeric"
+                              maxLength={5}
+                            />
+                            <TouchableOpacity
+                              style={styles.customTimeResetButton}
+                              onPress={() => {
+                                updateDateSpecificOptions(
+                                  date,
+                                  { startTime: null }
+                                );
+                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel="Clear start time"
+                            >
+                              <Text style={styles.clearTimeButtonText}>✕</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <View style={styles.timeInputRow}>
+                            <Text style={styles.timeFormLabel}>End</Text>
+                            <TextInput
+                              style={styles.customTimeInput}
+                              value={formatTimeForInput(dateOptions.endTime)}
+                              onChangeText={(text) => updateDateSpecificOptions(
+                                date,
+                                { endTime: convertTimeInputToDate(text, date) }
+                              )}
+                              placeholder="HH:MM"
+                              keyboardType="numeric"
+                              maxLength={5}
+                            />
+                            <TouchableOpacity
+                              style={styles.customTimeResetButton}
+                              onPress={() => {
+                                updateDateSpecificOptions(
+                                  date,
+                                  { endTime: null }
+                                );
+                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel="Clear end time"
+                            >
+                              <Text style={styles.clearTimeButtonText}>✕</Text>
+                            </TouchableOpacity>
+                          </View>
+
+                        </View>
+                      ) : (
+                        <Text style={styles.dateCardDayTime}>{displayTime}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.dateCardLocation}>
+                      📍 {hasCustomLocation ? (
+                        <TextInput
+                          style={styles.inlineLocationInput}
+                          value={dateOptions.location}
+                          onChangeText={(text) => updateDateSpecificOptions(date, { location: text })}
+                          placeholder="Enter location"
+                          maxLength={50}
+                        />
+                      ) : displayLocation}
+                    </Text>
+
+                    {/* Toggle Switches */}
+                    <View style={styles.dateToggles}>
+                      <View style={styles.toggleRow}>
+                        <Text style={styles.toggleLabel}>Custom Time</Text>
+                        <Switch
+                          value={hasCustomTime}
+                          onValueChange={() => {
+                            toggleCustomTime(date);
+                            announceForAccessibility(hasCustomTime ? 'Custom time disabled' : 'Custom time enabled');
+                          }}
+                        />
+                      </View>
+                      <View style={styles.toggleRow}>
+                        <Text style={styles.toggleLabel}>Custom Location</Text>
+                        <Switch
+                          value={hasCustomLocation}
+                          onValueChange={() => {
+                            toggleCustomLocation(date);
+                            announceForAccessibility(hasCustomLocation ? 'Custom location disabled' : 'Custom location enabled');
+                          }}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.dateReviewActions}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                announceForAccessibility('Returning to calendar');
+                onClose();
+              }}
+              accessibilityLabel="Back to Calendar"
+              accessibilityHint="Returns to the calendar view"
+              hitSlop={touchTargets.small}
+            >
+              <Text style={styles.backButtonText}>Back to Calendar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.finalizeButton}
+              onPress={() => {
+                // Prepare the final event options with date-specific data
+                const finalOptions = {
+                  ...localEventOptions,
+                  dateSpecificOptions: dateSpecificOptions
+                };
+                onFinalize(finalOptions);
+                announceForAccessibility('Event creation finalized');
+              }}
+              accessibilityLabel="Create Event"
+              accessibilityHint="Creates the event with the selected dates and options"
+              hitSlop={touchTargets.small}
+            >
+              <Text style={styles.finalizeButtonText}>Create Event</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        {/* Event Details Modal */}
+        <CreateEventDetails
+          isVisible={showEventDetailsModal}
+          onClose={() => {
+            setShowEventDetailsModal(false);
+            announceForAccessibility('Event details closed');
+          }}
+          onSave={onEventDetailsSave}
+          currentEventName={eventName}
+          currentDescription={eventDescription}
+          currentLocation={eventLocation}
+        />
       </View>
-      {/* Event Details Modal */}
-      <CreateEventDetails
-        isVisible={showEventDetailsModal}
-        onClose={() => {
-          setShowEventDetailsModal(false);
-          announceForAccessibility('Event details closed');
-        }}
-        onSave={onEventDetailsSave}
-        currentEventName={eventName}
-        currentDescription={eventDescription}
-        currentLocation={eventLocation}
-      />
-    </View>
+    </Modal>
   );
 }
 
-const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: ReturnType<typeof useTheme>['typography'], insets: any) => {
-  const { height: screenHeight } = Dimensions.get('window');
-  const responsiveMinHeight = Math.max(500, Math.min(600, screenHeight * 0.8));
+const getStyles = (colors: any, typography: any, screenHeight: number, insets: any) => {
+  const responsiveMinHeight = Math.max(500, Math.min(600, screenHeight * 0.75));
 
   return StyleSheet.create({
     overlay: {
@@ -546,7 +561,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000,
-      paddingTop: Math.max(20, insets.top),
+      //paddingTop: Math.max(20, insets.top),
       paddingBottom: Math.max(20, insets.bottom),
       paddingHorizontal: 20,
     },
@@ -556,7 +571,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       width: '90%',
       maxWidth: 600,
       minHeight: responsiveMinHeight,
-      maxHeight: '85%',
+      maxHeight: '80%',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.25,
@@ -570,6 +585,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       padding: 16,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+    },
+    closeButton: {
+      paddingHorizontal: 4,
     },
     eventDetailsSection: {
       marginBottom: 0,
