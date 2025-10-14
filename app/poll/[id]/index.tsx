@@ -74,7 +74,7 @@ export default function PollScreen() {
 
   useEffect(() => {
     if (poll?.user_id) {
-      // Fetch the creator's email or name from Supabase auth.users
+      // Fetch the creator's username, firstname, and lastname from Supabase `profiles`
       (async () => {
         try {
           const { data: { username, firstname, lastname }, error } = await supabase
@@ -84,12 +84,15 @@ export default function PollScreen() {
             .maybeSingle();
           setCreatorName(
             firstname || lastname ?
-            `${[firstname, lastname].join(' ').trim()} (${username})`
-            : username
+              `${[firstname, lastname].join(' ').trim()} (${username})`
+              : username
           );
-        } catch (e) {
-          console.error(e);
-          setCreatorName(null);
+          if (error) {
+            throw error;
+          }
+        } catch (error) {
+          console.error(error);
+          setCreatorName(poll.user_id);
         }
       })();
     }
