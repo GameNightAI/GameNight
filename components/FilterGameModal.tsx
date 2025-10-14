@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { X } from 'lucide-react-native';
 import { Game } from '@/types/game';
 import { useTheme } from '@/hooks/useTheme';
@@ -87,6 +87,7 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={true}
+        bounces={false}
       >
         {filterConfigs.map((config) => {
           const isPlayerCount = config.key === 'playerCount';
@@ -142,13 +143,20 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   );
 
   return (
-    <View style={styles.overlay}>
-      <View
-        style={styles.dialog}
-      >
-        {content}
+    <Modal
+      visible={isVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View
+          style={styles.dialog}
+        >
+          {content}
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 };
 
@@ -267,15 +275,10 @@ export const filterGames = (
 
 const getStyles = (colors: any, typography: any) => StyleSheet.create({
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 999999,
     padding: 20,
   },
   dialog: {

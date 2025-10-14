@@ -26,6 +26,7 @@ export const useTheme = () => {
       error: isDark ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.10)',
       neutral: isDark ? 'rgba(75,85,99,0.22)' : 'rgba(26,43,95,0.18)',
       warningBg: isDark ? 'rgba(255,243,205,0.15)' : '#fffbe6',
+      warningBgDark: isDark ? 'rgba(255,243,205,0.15)' : 'rgba(245,158,11,0.12)',
       warningBorder: isDark ? 'rgba(255,229,143,0.25)' : '#ffe58f',
     },
   };

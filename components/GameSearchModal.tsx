@@ -363,6 +363,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
                 ref={searchInputRef}
                 style={styles.input}
                 placeholder={searchPlaceholder}
+                placeholderTextColor={colors.textMuted}
                 value={searchQuery}
                 onChangeText={handleSearch}
                 autoCapitalize="none"

@@ -114,6 +114,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
         <TextInput
           style={styles.input}
           placeholder="BGG Username"
+          placeholderTextColor={colors.textMuted}
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"

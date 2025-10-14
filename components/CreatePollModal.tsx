@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Platform, Image, ImageStyle } from 'react-native';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Platform, Image, ImageStyle, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, ArrowLeft, SquarePen, ListFilter, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -838,11 +838,20 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     </>
   );
 
+  if (!isVisible) return null;
+
   return (
-    <View style={styles.overlay}>
-      <View style={styles.modalContainer}>
-        <View style={[styles.dialog, styles.dialogResponsive]}>
-          {content}
+    <Modal
+      visible={isVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          <View style={[styles.dialog, styles.dialogResponsive]}>
+            {content}
+          </View>
         </View>
       </View>
       {/* Details Modal */}
@@ -954,7 +963,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           }
         }}
       />
-    </View>
+    </Modal>
   );
 };
 
@@ -1061,15 +1070,10 @@ type Styles = {
 
 const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create<Styles>({
   overlay: {
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
     paddingTop: Math.max(16, insets.top),
     paddingBottom: Math.max(16, insets.bottom),
     paddingHorizontal: 16,

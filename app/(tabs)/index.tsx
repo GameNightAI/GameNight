@@ -23,7 +23,7 @@ export default function ToolsScreen() {
       description: 'Randomly select who goes first',
       icon: Shuffle,
       color: colors.warning,
-      backgroundColor: colors.tints.warningBg,
+      backgroundColor: colors.tints.warningBgDark,
       onPress: () => router.navigate('/tools/first-player'),
     },
     {
