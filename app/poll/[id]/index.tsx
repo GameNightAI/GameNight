@@ -13,14 +13,14 @@ import { GameCard } from '@/components/PollGameCard';
 import { PollResultsButton } from '@/components/PollResultsButton';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
-import { getOrCreateAnonId } from '@/utils/anon';
+// import { getOrCreateAnonId } from '@/utils/anon';
 import {
   saveUsername,
   getUsername,
   saveVotedFlag,
   saveVoteUpdatedFlag
 } from '@/utils/storage';
-import { BarChart3 } from 'lucide-react-native';
+// import { BarChart3 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function PollScreen() {
@@ -55,9 +55,9 @@ export default function PollScreen() {
   useEffect(() => {
     const initializeStorage = async () => {
       try {
-        // Single device: prefill with user email/username if logged in
-        if (user && (user.email || user.username)) {
-          setVoterName(user.username || user.email);
+        // Single device: prefill with username if logged in
+        if (user?.username) {
+          setVoterName(user.username);
         } else {
           const savedName = await getUsername();
           if (savedName) setVoterName(savedName);
@@ -73,25 +73,22 @@ export default function PollScreen() {
   }, [user]);
 
   useEffect(() => {
-    if (poll && poll.user_id) {
+    if (poll?.user_id) {
       // Fetch the creator's email or name from Supabase auth.users
       (async () => {
         try {
-          const { data, error } = await supabase
-            .from('profiles') // Try profiles table first
+          const { data: { username, firstname, lastname }, error } = await supabase
+            .from('profiles') 
             .select('username, firstname, lastname')
             .eq('id', poll.user_id)
             .maybeSingle();
-          if (data) {
-            setCreatorName(data.username || null);
-          } else {
-            // Fallback: try auth.users
-            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(poll.user_id);
-            if (userData && userData.user) {
-              setCreatorName(userData.user.email || null);
-            }
-          }
+          setCreatorName(
+            firstname || lastname ?
+            `${[firstname, lastname].join(' ').trim()} (${username})`
+            : username
+          );
         } catch (e) {
+          console.error(e);
           setCreatorName(null);
         }
       })();
