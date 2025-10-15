@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 interface CreateEventDetailsProps {
   isVisible: boolean;
@@ -23,7 +24,8 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
 }) => {
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
-  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const { screenHeight } = useDeviceType();
+  const styles = useMemo(() => getStyles(colors, typography, screenHeight), [colors, typography, screenHeight]);
 
   const [eventName, setEventName] = useState(currentEventName);
   const [description, setDescription] = useState(currentDescription);
@@ -49,101 +51,108 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
     onClose();
   };
 
-  if (!isVisible) return null;
-
   return (
-    <View style={styles.overlay}>
-      <View style={styles.dialog}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Edit Event Details</Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleClose}
-            accessibilityLabel="Close"
-            accessibilityHint="Closes the event details editor"
-            hitSlop={touchTargets.sizeTwenty}
-          >
-            <X size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.content}>
-            <Text style={styles.label}>Event Name (Optional)</Text>
-            <Text style={styles.sublabel}>
-              Customize your event title or keep the auto-generated name
-            </Text>
-            <TextInput
-              style={styles.titleInput}
-              value={eventName}
-              onChangeText={setEventName}
-              placeholder="Event title will appear when dates are selected"
-              placeholderTextColor={colors.textMuted}
-              maxLength={100}
-              autoFocus
-              accessibilityLabel="Event name input"
-              accessibilityHint="Enter a custom event title or leave blank for auto-generated name"
-            />
-
-            <Text style={[styles.label, styles.locationLabel]}>Location (Optional)</Text>
-            <Text style={styles.sublabel}>
-              Default location for all event dates
-            </Text>
-            <TextInput
-              style={styles.locationInput}
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Enter default location for all dates"
-              placeholderTextColor={colors.textMuted}
-              maxLength={100}
-              accessibilityLabel="Location input"
-              accessibilityHint="Enter the default location for all event dates"
-            />
-
-            <Text style={[styles.label, styles.descriptionLabel]}>Description (Optional)</Text>
-            <TextInput
-              style={styles.descriptionInput}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Add context, details, or any additional information about the event"
-              placeholderTextColor={colors.textMuted}
-              maxLength={500}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              accessibilityLabel="Description input"
-              accessibilityHint="Add additional details or context about the event"
-            />
+    <Modal
+      visible={isVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.dialog}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Edit Event Details</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={handleClose}
+              accessibilityLabel="Close"
+              accessibilityHint="Closes the event details editor"
+              hitSlop={touchTargets.sizeTwenty}
+            >
+              <X size={20} color={colors.textMuted} />
+            </TouchableOpacity>
           </View>
-        </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={handleClose}
-            accessibilityLabel="Cancel"
-            accessibilityHint="Cancels editing and discards changes"
-            hitSlop={touchTargets.small}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleSave}
-            accessibilityLabel="Save"
-            accessibilityHint="Saves the event details and closes the editor"
-            hitSlop={touchTargets.small}
-          >
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
+          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.content}>
+              <Text style={styles.label}>Event Name (Optional)</Text>
+              <Text style={styles.sublabel}>
+                Customize your event title or keep the auto-generated name
+              </Text>
+              <TextInput
+                style={styles.titleInput}
+                value={eventName}
+                onChangeText={setEventName}
+                placeholder="Event title will appear when dates are selected"
+                placeholderTextColor={colors.textMuted}
+                maxLength={100}
+                autoFocus
+                accessibilityLabel="Event name input"
+                accessibilityHint="Enter a custom event title or leave blank for auto-generated name"
+              />
+
+              <Text style={[styles.label, styles.locationLabel]}>Location (Optional)</Text>
+              <Text style={styles.sublabel}>
+                Default location for all event dates
+              </Text>
+              <TextInput
+                style={styles.locationInput}
+                value={location}
+                onChangeText={setLocation}
+                placeholder="Enter default location for all dates"
+                placeholderTextColor={colors.textMuted}
+                maxLength={100}
+                accessibilityLabel="Location input"
+                accessibilityHint="Enter the default location for all event dates"
+              />
+
+              <Text style={[styles.label, styles.descriptionLabel]}>Description (Optional)</Text>
+              <TextInput
+                style={styles.descriptionInput}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Add context, details, or any additional information about the event"
+                placeholderTextColor={colors.textMuted}
+                maxLength={500}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                accessibilityLabel="Description input"
+                accessibilityHint="Add additional details or context about the event"
+              />
+            </View>
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleClose}
+              accessibilityLabel="Cancel"
+              accessibilityHint="Cancels editing and discards changes"
+              hitSlop={touchTargets.small}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleSave}
+              accessibilityLabel="Save"
+              accessibilityHint="Saves the event details and closes the editor"
+              hitSlop={touchTargets.small}
+            >
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
+    </Modal>
   );
 };
 
-const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: ReturnType<typeof useTheme>['typography']) =>
-  StyleSheet.create({
+const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: ReturnType<typeof useTheme>['typography'], screenHeight: number) => {
+  const responsiveMinHeight = Math.max(300, Math.min(500, screenHeight * 0.6));
+
+  return StyleSheet.create({
     overlay: {
       position: 'absolute',
       top: 0,
@@ -161,7 +170,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       borderRadius: 12,
       width: '100%',
       maxWidth: 500,
-      maxHeight: '100%',
+      minHeight: responsiveMinHeight,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.25,
@@ -169,7 +178,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       elevation: 5,
       position: 'relative',
       overflow: 'hidden',
-      flex: 1,
     },
     header: {
       flexDirection: 'row',
@@ -286,3 +294,4 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       color: '#ffffff',
     },
   });
+};
