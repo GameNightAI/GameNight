@@ -10,6 +10,7 @@ interface SyncModalProps {
   isVisible: boolean;
   onClose: () => void;
   onSync: (username: string) => Promise<void>;
+  onUpdateProfile?: (username: string) => Promise<void>;
   loading?: boolean;
   syncProgress?: {
     stage: 'connecting' | 'fetching' | 'processing' | 'saving' | 'complete';
@@ -23,12 +24,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   isVisible,
   onClose,
   onSync,
+  onUpdateProfile,
   loading = false,
   syncProgress,
   savedBggUsername,
 }) => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [saveToProfile, setSaveToProfile] = useState(true);
+  const [viewMode, setViewMode] = useState<'buttons' | 'input'>('buttons');
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
   const insets = useSafeAreaInsets();
@@ -55,6 +59,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     }
   }, [syncProgress?.stage]);
 
+  // Reset view mode when modal opens
+  useEffect(() => {
+    if (isVisible) {
+      setViewMode(savedBggUsername ? 'buttons' : 'input');
+      setSaveToProfile(true);
+      setError('');
+    }
+  }, [isVisible, savedBggUsername]);
+
   const handleSync = async () => {
     if (!username.trim()) {
       setError('Please enter a BoardGameGeek username');
@@ -63,6 +76,10 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     }
     setError('');
     try {
+      // Save to profile first if checkbox is checked
+      if (saveToProfile && onUpdateProfile) {
+        await onUpdateProfile(username.trim());
+      }
       await onSync(username.trim());
       announceForAccessibility('Starting collection import');
     } catch (err) {
@@ -83,6 +100,14 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     }
   };
 
+  const handleImportAnother = () => {
+    setViewMode('input');
+    setUsername('');
+    setSaveToProfile(true);
+    setError('');
+    announceForAccessibility('Switched to manual input mode');
+  };
+
   const getProgressMessage = () => {
     if (!syncProgress) return 'Importing Games...';
     return syncProgress.message;
@@ -95,22 +120,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     return <ActivityIndicator color="#ffffff" size="small" />;
   };
 
-  const content = (
-    <View style={styles.dialog}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Connect to BoardGameGeek</Text>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={() => { onClose(); announceForAccessibility('Sync modal closed'); }}
-          accessibilityLabel="Close"
-          accessibilityRole="button"
-          accessibilityHint="Closes the sync modal"
-          hitSlop={touchTargets.sizeTwenty}
-        >
-          <X size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-
+  const renderFlow1 = () => (
+    <>
       <Text style={styles.description}>
         Enter your BoardGameGeek username to import your collection
       </Text>
@@ -128,6 +139,25 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           accessibilityLabel="BoardGameGeek username"
           accessibilityHint="Enter your BoardGameGeek username"
         />
+      </View>
+
+      <View style={styles.checkboxContainer}>
+        <TouchableOpacity
+          style={styles.checkbox}
+          onPress={() => setSaveToProfile(!saveToProfile)}
+          disabled={loading}
+          accessibilityLabel={saveToProfile ? "Uncheck to not save username" : "Check to save username"}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: saveToProfile }}
+          accessibilityHint="Saves the BGG username to your profile for future imports"
+        >
+          <View style={[styles.checkboxBox, saveToProfile && styles.checkboxChecked]}>
+            {saveToProfile && <CheckCircle size={16} color="#ffffff" />}
+          </View>
+          <Text style={styles.checkboxText}>
+            {savedBggUsername ? 'Update BGG username on my Klack profile for future imports' : 'Add BGG username to my Klack profile for future imports'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -153,21 +183,68 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           </>
         )}
       </TouchableOpacity>
+    </>
+  );
 
-      {savedBggUsername && (
+  const renderFlow2 = () => (
+    <>
+      <Text style={styles.description}>
+        Import your saved collection or another collection
+      </Text>
+
+      <TouchableOpacity
+        style={[styles.syncButton, loading && styles.syncButtonDisabled]}
+        onPress={handleSyncSavedUsername}
+        disabled={loading}
+        accessibilityLabel={`Import ${savedBggUsername}'s collection`}
+        accessibilityRole="button"
+        accessibilityHint={`Starts importing ${savedBggUsername}'s collection from BoardGameGeek`}
+        hitSlop={touchTargets.small}
+      >
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            {getProgressIcon()}
+            <Text style={styles.syncButtonText}>{getProgressMessage()}</Text>
+          </View>
+        ) : (
+          <>
+            <Search color="#ffffff" size={20} />
+            <Text style={styles.syncButtonText}>Import {savedBggUsername}'s Collection</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.secondaryButton, loading && styles.syncButtonDisabled]}
+        onPress={handleImportAnother}
+        disabled={loading}
+        accessibilityLabel="Import another collection"
+        accessibilityRole="button"
+        accessibilityHint="Opens form to import a different user's collection"
+        hitSlop={touchTargets.small}
+      >
+        <Text style={styles.secondaryButtonText}>Import Another Collection</Text>
+      </TouchableOpacity>
+    </>
+  );
+
+  const content = (
+    <View style={styles.dialog}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Connect to BoardGameGeek</Text>
         <TouchableOpacity
-          style={[styles.savedUsernameButton, loading && styles.syncButtonDisabled]}
-          onPress={handleSyncSavedUsername}
-          disabled={loading}
-          accessibilityLabel={`Import ${savedBggUsername}'s collection`}
+          style={styles.closeButton}
+          onPress={() => { onClose(); announceForAccessibility('Sync modal closed'); }}
+          accessibilityLabel="Close"
           accessibilityRole="button"
-          accessibilityHint={`Starts importing ${savedBggUsername}'s collection from BoardGameGeek`}
-          hitSlop={touchTargets.small}
+          accessibilityHint="Closes the sync modal"
+          hitSlop={touchTargets.sizeTwenty}
         >
-          <Search color="#ffffff" size={20} />
-          <Text style={styles.syncButtonText}>Import {savedBggUsername}'s Collection</Text>
+          <X size={20} color={colors.textMuted} />
         </TouchableOpacity>
-      )}
+      </View>
+
+      {viewMode === 'input' ? renderFlow1() : renderFlow2()}
 
       {syncProgress && (
         <View style={styles.progressContainer}>
@@ -315,5 +392,46 @@ const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.crea
     fontSize: typography.fontSize.body,
     color: colors.textMuted,
     textAlign: 'center',
+  },
+  checkboxContainer: {
+    marginBottom: 20,
+  },
+  checkbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  checkboxText: {
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
+    flex: 1,
+  },
+  secondaryButton: {
+    backgroundColor: colors.textMuted,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  secondaryButtonText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: '#ffffff',
   },
 });

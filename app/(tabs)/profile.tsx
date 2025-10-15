@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { LogOut, CreditCard as Edit2, ExternalLink, Mail, Edit3 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
@@ -35,31 +36,33 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setEmail(user.email ?? null);
+  const loadUserData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setEmail(user.email ?? null);
 
-        // Load profile data
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('username, firstname, lastname, bgg_username')
-          .eq('id', user.id)
-          .maybeSingle();
+      // Load profile data
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('username, firstname, lastname, bgg_username')
+        .eq('id', user.id)
+        .maybeSingle();
 
-        if (error) {
-          console.error('Error loading profile:', error);
-        } else if (profileData) {
-          setProfile(profileData);
-        }
-      } else {
-        router.replace('/auth/login');
+      if (error) {
+        console.error('Error loading profile:', error);
+      } else if (profileData) {
+        setProfile(profileData);
       }
-    };
-
-    loadUserData();
+    } else {
+      router.replace('/auth/login');
+    }
   }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+    }, [loadUserData])
+  );
 
   const handleLogout = async () => {
     try {

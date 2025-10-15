@@ -110,6 +110,28 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     setSearchModalVisible(false);
   };
 
+  const handleUpdateProfile = async (username: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ bgg_username: username })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setSavedBggUsername(username);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      throw err;
+    }
+  };
+
   const handleSync = async (username: string) => {
     try {
       setSyncing(true);
@@ -353,6 +375,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           isVisible={syncModalVisible}
           onClose={() => setSyncModalVisible(false)}
           onSync={handleSync}
+          onUpdateProfile={handleUpdateProfile}
           loading={syncing}
           savedBggUsername={savedBggUsername}
         />
@@ -386,6 +409,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         isVisible={syncModalVisible}
         onClose={() => setSyncModalVisible(false)}
         onSync={handleSync}
+        onUpdateProfile={handleUpdateProfile}
         loading={syncing}
         savedBggUsername={savedBggUsername}
       />
