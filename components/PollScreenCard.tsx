@@ -146,7 +146,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
   },
   gameName: {
     fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.subheadline,
+    fontSize: typography.fontSize.caption2, // Font for game name in dropdown on poll screen
     color: colors.text,
     flex: 1,
   },

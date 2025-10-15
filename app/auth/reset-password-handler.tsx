@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/hooks/useTheme';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 export default function ResetPasswordHandler() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function ResetPasswordHandler() {
   const [statusMessage, setStatusMessage] = useState('Processing password reset...');
   const { colors, typography, touchTargets, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
   const styles = getStyles(colors, typography);
 
@@ -144,8 +146,8 @@ export default function ResetPasswordHandler() {
     <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
       <View style={styles.container}>
         <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
+          {/*<View style={styles.header}>
+             <View style={styles.logoContainer}>
               <View style={styles.logoIcon}>
                 <Text style={styles.logoText}>👥</Text>
               </View>
@@ -154,7 +156,7 @@ export default function ResetPasswordHandler() {
             <Text style={styles.subtitle}>
               The ultimate tool for organizing your next game night
             </Text>
-          </View>
+          </View>*/}
 
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>Processing Password Reset</Text>
@@ -211,6 +213,7 @@ const getStyles = (colors: any, typography: any) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 40,
+    minHeight: Math.max(360, Math.min(520, (typeof window !== 'undefined' ? window.innerHeight : 700) * 0.6)),
   },
   header: {
     paddingHorizontal: 24,

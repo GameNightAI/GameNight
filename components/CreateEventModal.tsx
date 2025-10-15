@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, Modal } from 'react-native';
 import { useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth, isSameDay, isBefore, startOfDay, min, max } from 'date-fns';
 import { DateReviewModal } from './DateReviewModal';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -41,8 +42,11 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
   const insets = useSafeAreaInsets();
-  const { isMobile, screenWidth } = useDeviceType();
+  const { isMobile, screenWidth, screenHeight } = useDeviceType();
   const router = useRouter();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(visible);
   const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [eventLocation, setEventLocation] = useState('');
@@ -244,180 +248,187 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     }
   };
 
-  const styles = useMemo(() => getStyles(colors, typography, insets, isMobile, screenWidth), [colors, typography, insets, isMobile, screenWidth]);
+  const styles = useMemo(() => getStyles(colors, typography, insets, isMobile, screenWidth, screenHeight), [colors, typography, insets, isMobile, screenWidth, screenHeight]);
 
   if (!visible) return null;
 
   const calendarDays = getCalendarDays();
 
   return (
-    <View style={styles.overlay}>
-      <View
-        style={styles.dialog}
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>
-
-            {/*{pollId ? 'Set for Poll' : 'Create Event'}*/}
-            Select Available Dates
-          </Text>
-          <TouchableOpacity
-            style={[styles.closeButton]}
-            onPress={() => { onClose(); announceForAccessibility?.('Event creation cancelled'); }}
-            accessibilityLabel="Close"
-            accessibilityHint="Closes the create event modal"
-            hitSlop={touchTargets.sizeTwenty}
-          >
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
-          showsVerticalScrollIndicator={false}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View
+          style={styles.dialog}
         >
-          {/*<Text style={styles.availabilityLabel}>Set Available Dates</Text>
-            <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>*/}
+          <View style={styles.header}>
+            <Text style={styles.title}>
 
-          {/* Calendar Container */}
-          <View style={styles.calendarContainer}>
-            {/* Month Navigation */}
-            <View style={styles.monthNavigation}>
-              <TouchableOpacity
-                style={styles.monthNavButton}
-                onPress={() => { navigateMonth('prev'); announceForAccessibility?.(`Month changed to ${format(subMonths(currentMonth, 1), 'MMMM yyyy')}`); }}
-                accessibilityLabel="Previous month"
-                accessibilityHint="Navigates to the previous month"
-                hitSlop={touchTargets.small}
-              >
-                <ChevronLeft size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-              <Text style={styles.monthText} accessibilityRole="header">
-                {format(currentMonth, 'MMMM yyyy')}
-              </Text>
-              <TouchableOpacity
-                style={styles.monthNavButton}
-                onPress={() => { navigateMonth('next'); announceForAccessibility?.(`Month changed to ${format(addMonths(currentMonth, 1), 'MMMM yyyy')}`); }}
-                accessibilityLabel="Next month"
-                accessibilityHint="Navigates to the next month"
-                hitSlop={touchTargets.small}
-              >
-                <ChevronRight size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Day Headers */}
-            <View style={styles.dayHeaders}>
-              {days.map((day, index) => (
-                <Text
-                  key={day}
-                  style={[
-                    styles.dayHeader,
-                    index === days.length - 1 && styles.lastDayHeader // Remove border from last header
-                  ]}
-                >
-                  {day}
-                </Text>
-              ))}
-            </View>
-
-            {/* Calendar Grid */}
-            <View style={styles.calendarGrid}>
-              {Array.from({ length: 5 }, (_, rowIndex) => (
-                <View key={rowIndex} style={styles.calendarRow}>
-                  {Array.from({ length: 7 }, (_, colIndex) => {
-                    const dayIndex = rowIndex * 7 + colIndex;
-                    const dayData = calendarDays[dayIndex];
-                    if (!dayData) return (
-                      <TouchableOpacity
-                        key={colIndex}
-                        style={styles.calendarDay}
-                        disabled={true}
-                      />
-                    );
-
-                    const { date, isCurrentMonth, isPast } = dayData;
-                    const isSelected = isDateSelected(date);
-
-                    return (
-                      <TouchableOpacity
-                        key={colIndex}
-                        style={[
-                          styles.calendarDay,
-                          isSelected && styles.selectedDay,
-                          !isCurrentMonth && styles.otherMonthDay,
-                          isPast && styles.pastDay,
-                        ]}
-                        onPress={() => { if (!isPast) { toggleDateSelection(date); announceForAccessibility?.(`${format(date, 'MMM d')} ${isSelected ? 'deselected' : 'selected'}`); } }}
-                        disabled={isPast}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${format(date, 'EEEE, MMMM d')}${isPast ? ', unavailable' : ''}`}
-                        accessibilityHint={isPast ? undefined : 'Toggles date selection'}
-                        hitSlop={touchTargets.small}
-                      >
-                        <Text
-                          style={[
-                            styles.dayText,
-                            isSelected && styles.selectedDayText,
-                            !isCurrentMonth && styles.otherMonthDayText,
-                            isPast && styles.pastDayText,
-                          ]}
-                        >
-                          {date.getDate()}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              ))}
-            </View>
+              {/*{pollId ? 'Set for Poll' : 'Create Event'}*/}
+              Select Available Dates
+            </Text>
+            <TouchableOpacity
+              style={[styles.closeButton]}
+              onPress={() => { onClose(); announceForAccessibility?.('Event creation cancelled'); }}
+              accessibilityLabel="Close"
+              accessibilityHint="Closes the create event modal"
+              hitSlop={touchTargets.sizeTwenty}
+            >
+              <X size={20} color={colors.textMuted} />
+            </TouchableOpacity>
           </View>
 
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.createButton, selectedDates.length === 0 && styles.createButtonDisabled]}
-            onPress={() => { if (selectedDates.length > 0) { setShowDateReviewModal(true); announceForAccessibility?.('Review selected dates'); } }}
-            disabled={selectedDates.length === 0}
-            accessibilityLabel="Review selected dates"
-            accessibilityHint="Opens the review screen to finalize event details"
-            hitSlop={touchTargets.small}
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.createButtonText}>Select Dates</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => { onClose(); announceForAccessibility?.('Event creation cancelled'); }} style={styles.cancelButton} accessibilityLabel="Cancel" accessibilityHint="Closes the create event modal" hitSlop={touchTargets.small}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            {/*<Text style={styles.availabilityLabel}>Set Available Dates</Text>
+            <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>*/}
 
-      {/* Date Review Modal */}
-      <DateReviewModal
-        visible={showDateReviewModal}
-        onClose={() => setShowDateReviewModal(false)}
-        onFinalize={handleCreate}
-        selectedDates={selectedDates}
-        eventOptions={eventOptions}
-        defaultLocation={eventLocation}
-        pollId={pollId}
-        eventName={eventName}
-        eventDescription={eventDescription}
-        eventLocation={eventLocation}
-        defaultEventName={defaultEventName}
-        onEventDetailsSave={(name, description, location) => {
-          setEventName(name);
-          setEventDescription(description);
-          setEventLocation(location);
-        }}
-      />
-    </View>
+            {/* Calendar Container */}
+            <View style={styles.calendarContainer}>
+              {/* Month Navigation */}
+              <View style={styles.monthNavigation}>
+                <TouchableOpacity
+                  style={styles.monthNavButton}
+                  onPress={() => { navigateMonth('prev'); announceForAccessibility?.(`Month changed to ${format(subMonths(currentMonth, 1), 'MMMM yyyy')}`); }}
+                  accessibilityLabel="Previous month"
+                  accessibilityHint="Navigates to the previous month"
+                  hitSlop={touchTargets.small}
+                >
+                  <ChevronLeft size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+                <Text style={styles.monthText} accessibilityRole="header">
+                  {format(currentMonth, 'MMMM yyyy')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.monthNavButton}
+                  onPress={() => { navigateMonth('next'); announceForAccessibility?.(`Month changed to ${format(addMonths(currentMonth, 1), 'MMMM yyyy')}`); }}
+                  accessibilityLabel="Next month"
+                  accessibilityHint="Navigates to the next month"
+                  hitSlop={touchTargets.small}
+                >
+                  <ChevronRight size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Day Headers */}
+              <View style={styles.dayHeaders}>
+                {days.map((day, index) => (
+                  <Text
+                    key={day}
+                    style={[
+                      styles.dayHeader,
+                      index === days.length - 1 && styles.lastDayHeader // Remove border from last header
+                    ]}
+                  >
+                    {day}
+                  </Text>
+                ))}
+              </View>
+
+              {/* Calendar Grid */}
+              <View style={styles.calendarGrid}>
+                {Array.from({ length: 5 }, (_, rowIndex) => (
+                  <View key={rowIndex} style={styles.calendarRow}>
+                    {Array.from({ length: 7 }, (_, colIndex) => {
+                      const dayIndex = rowIndex * 7 + colIndex;
+                      const dayData = calendarDays[dayIndex];
+                      if (!dayData) return (
+                        <TouchableOpacity
+                          key={colIndex}
+                          style={styles.calendarDay}
+                          disabled={true}
+                        />
+                      );
+
+                      const { date, isCurrentMonth, isPast } = dayData;
+                      const isSelected = isDateSelected(date);
+
+                      return (
+                        <TouchableOpacity
+                          key={colIndex}
+                          style={[
+                            styles.calendarDay,
+                            isSelected && styles.selectedDay,
+                            !isCurrentMonth && styles.otherMonthDay,
+                            isPast && styles.pastDay,
+                          ]}
+                          onPress={() => { if (!isPast) { toggleDateSelection(date); announceForAccessibility?.(`${format(date, 'MMM d')} ${isSelected ? 'deselected' : 'selected'}`); } }}
+                          disabled={isPast}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${format(date, 'EEEE, MMMM d')}${isPast ? ', unavailable' : ''}`}
+                          accessibilityHint={isPast ? undefined : 'Toggles date selection'}
+                          hitSlop={touchTargets.small}
+                        >
+                          <Text
+                            style={[
+                              styles.dayText,
+                              isSelected && styles.selectedDayText,
+                              !isCurrentMonth && styles.otherMonthDayText,
+                              isPast && styles.pastDayText,
+                            ]}
+                          >
+                            {date.getDate()}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.createButton, selectedDates.length === 0 && styles.createButtonDisabled]}
+              onPress={() => { if (selectedDates.length > 0) { setShowDateReviewModal(true); announceForAccessibility?.('Review selected dates'); } }}
+              disabled={selectedDates.length === 0}
+              accessibilityLabel="Review selected dates"
+              accessibilityHint="Opens the review screen to finalize event details"
+              hitSlop={touchTargets.small}
+            >
+              <Text style={styles.createButtonText}>Select Dates</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { onClose(); announceForAccessibility?.('Event creation cancelled'); }} style={styles.cancelButton} accessibilityLabel="Cancel" accessibilityHint="Closes the create event modal" hitSlop={touchTargets.small}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Date Review Modal */}
+        <DateReviewModal
+          visible={showDateReviewModal}
+          onClose={() => setShowDateReviewModal(false)}
+          onFinalize={handleCreate}
+          selectedDates={selectedDates}
+          eventOptions={eventOptions}
+          defaultLocation={eventLocation}
+          pollId={pollId}
+          eventName={eventName}
+          eventDescription={eventDescription}
+          eventLocation={eventLocation}
+          defaultEventName={defaultEventName}
+          onEventDetailsSave={(name, description, location) => {
+            setEventName(name);
+            setEventDescription(description);
+            setEventLocation(location);
+          }}
+        />
+      </View>
+    </Modal>
   );
 }
 
-const getStyles = (colors: any, typography: any, insets: any, isMobile: boolean, screenWidth: number) => {
-  const responsiveMinHeight = Math.max(550, Math.min(550, 600)); // Fixed height for consistency
+const getStyles = (colors: any, typography: any, insets: any, isMobile: boolean, screenWidth: number, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(500, Math.min(600, screenHeight * 0.75));
 
   return StyleSheet.create({
     overlay: {
@@ -478,11 +489,6 @@ const getStyles = (colors: any, typography: any, insets: any, isMobile: boolean,
     },
     closeButton: {
       paddingHorizontal: 4,
-    },
-    closeButtonText: {
-      fontSize: typography.fontSize.body,
-      color: colors.textMuted,
-      fontFamily: typography.getFontFamily('semibold'),
     },
     content: {
       flex: 1,

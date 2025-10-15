@@ -15,6 +15,7 @@ import { X, Save } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 import { supabase } from '@/services/supabase';
 
 interface EditProfileModalProps {
@@ -52,6 +53,10 @@ export default function EditProfileModal({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(visible);
+
   const styles = getStyles(colors, typography, touchTargets);
 
   // Initialize form with current data

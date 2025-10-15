@@ -14,6 +14,7 @@ import { supabase } from '@/services/supabase';
 import { fetchGames } from '@/services/bggApi';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 
 const sampleImage1 = require('@/assets/images/sample-game-1.png');
 
@@ -34,6 +35,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
@@ -104,6 +108,28 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const handleGameAdded = (game: Game) => {
     onGameAdded();
     setSearchModalVisible(false);
+  };
+
+  const handleUpdateProfile = async (username: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ bgg_username: username })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setSavedBggUsername(username);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      throw err;
+    }
   };
 
   const handleSync = async (username: string) => {
@@ -349,6 +375,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           isVisible={syncModalVisible}
           onClose={() => setSyncModalVisible(false)}
           onSync={handleSync}
+          onUpdateProfile={handleUpdateProfile}
           loading={syncing}
           savedBggUsername={savedBggUsername}
         />
@@ -382,6 +409,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         isVisible={syncModalVisible}
         onClose={() => setSyncModalVisible(false)}
         onSync={handleSync}
+        onUpdateProfile={handleUpdateProfile}
         loading={syncing}
         savedBggUsername={savedBggUsername}
       />

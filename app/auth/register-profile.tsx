@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/hooks/useTheme';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 export default function RegisterProfileScreen() {
   const [username, setUsername] = useState('');
@@ -19,6 +20,7 @@ export default function RegisterProfileScreen() {
   const params = useLocalSearchParams();
   const { colors, typography, touchTargets, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
   useEffect(() => {
     // Check if we have params (new registration) or if user is authenticated (resume)
@@ -225,7 +227,7 @@ export default function RegisterProfileScreen() {
     <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
       <View style={styles.container}>
         <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
-          <View style={styles.header}>
+          {/*<View style={styles.header}>
             <View style={styles.logoContainer}>
               <View style={styles.logoIcon}>
                 <Text style={styles.logoText}>👥</Text>
@@ -235,7 +237,7 @@ export default function RegisterProfileScreen() {
             <Text style={styles.subtitle}>
               The ultimate tool for organizing your next game night
             </Text>
-          </View>
+          </View>*/}
 
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>
@@ -363,6 +365,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 40,
+    minHeight: Math.max(380, Math.min(560, (typeof window !== 'undefined' ? window.innerHeight : 700) * 0.62)),
   },
   header: {
     paddingHorizontal: 24,
@@ -407,6 +410,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     backgroundColor: colors.card,
     borderRadius: 20,
     padding: 32,
+    // Slightly taller minHeight for profile fields
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -480,6 +484,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     borderWidth: 1,
     borderColor: colors.border,
     paddingLeft: 12,
+    minHeight: 48,
   },
   nameRow: {
     flexDirection: 'row',
@@ -488,7 +493,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
   },
   nameInput: {
     flex: 1,
-    marginHorizontal: 4,
+    marginRight: 4,
   },
   privacyNotice: {
     backgroundColor: colors.tints.warningBg,

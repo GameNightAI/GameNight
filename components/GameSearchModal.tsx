@@ -10,6 +10,8 @@ import { decode } from 'html-entities';
 
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 import { Game } from '@/types/game';
 
@@ -39,7 +41,12 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+  const { screenHeight } = useDeviceType();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
+
+  const styles = useMemo(() => getStyles(colors, typography, insets, screenHeight), [colors, typography, insets, screenHeight]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -363,6 +370,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
                 ref={searchInputRef}
                 style={styles.input}
                 placeholder={searchPlaceholder}
+                placeholderTextColor={colors.textMuted}
                 value={searchQuery}
                 onChangeText={handleSearch}
                 autoCapitalize="none"
@@ -402,181 +410,186 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   );
 };
 
-const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.tints.neutral,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: Math.max(20, insets.top),
-    paddingBottom: Math.max(20, insets.bottom),
-    paddingHorizontal: 20,
-  },
-  dialog: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 24,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '85%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  title: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.body,
-    color: colors.text,
-  },
-  description: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.callout,
-    color: colors.textMuted,
-    marginBottom: 20,
-  },
-  searchContainer: {
-    marginBottom: 16,
-  },
-  searchInputContainer: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  input: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.callout,
-    color: colors.text,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingRight: 40, // Make room for clear button
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    backgroundColor: colors.card,
-    textAlign: 'left',
-    width: '100%',
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 12,
-    padding: 4,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-  },
-  errorText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.callout,
-    color: colors.error,
-    marginBottom: 16,
-  },
-  resultsList: {
-    flex: 1,
-  },
-  resultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.background,
-    padding: 12,
-    paddingLeft: 8,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  resultInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  resultTitle: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.callout,
-    color: colors.text,
-  },
-  resultDetails: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption1,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
-  alreadyInCollection: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption1,
-    color: colors.textMuted,
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  alreadyInPoll: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption1,
-    color: colors.textMuted,
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  actionButton: {
-    backgroundColor: colors.accent,
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionButtonDisabled: {
-    opacity: 0.5,
-    backgroundColor: colors.textMuted,
-  },
-  emptyText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.callout,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  thumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 4,
-    marginLeft: 0,
-    marginRight: 6,
-    backgroundColor: colors.background,
-  },
-  warningContainer: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  warningText: {
-    fontFamily: typography.getFontFamily('normal'),
-    fontSize: typography.fontSize.caption1,
-    color: colors.text,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  successContainer: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  successText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.callout,
-    color: colors.text,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});
+const getStyles = (colors: any, typography: any, insets: any, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(400, Math.min(550, screenHeight * 0.7));
+
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: Math.max(20, insets.top),
+      paddingBottom: Math.max(20, insets.bottom),
+      paddingHorizontal: 20,
+    },
+    dialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 24,
+      width: '100%',
+      maxWidth: 500,
+      maxHeight: '85%',
+      minHeight: responsiveMinHeight,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    title: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.text,
+    },
+    description: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.textMuted,
+      marginBottom: 20,
+    },
+    searchContainer: {
+      marginBottom: 16,
+    },
+    searchInputContainer: {
+      position: 'relative',
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    input: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      paddingRight: 40, // Make room for clear button
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.card,
+      textAlign: 'left',
+      width: '100%',
+    },
+    clearButton: {
+      position: 'absolute',
+      right: 12,
+      padding: 4,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+    },
+    errorText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.error,
+      marginBottom: 16,
+    },
+    resultsList: {
+      flex: 1,
+    },
+    resultItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.background,
+      padding: 12,
+      paddingLeft: 8,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    resultInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    resultTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+    },
+    resultDetails: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+    alreadyInCollection: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      marginTop: 4,
+      fontStyle: 'italic',
+    },
+    alreadyInPoll: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      marginTop: 4,
+      fontStyle: 'italic',
+    },
+    actionButton: {
+      backgroundColor: colors.accent,
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionButtonDisabled: {
+      opacity: 0.5,
+      backgroundColor: colors.textMuted,
+    },
+    emptyText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: 20,
+    },
+    thumbnail: {
+      width: 80,
+      height: 80,
+      borderRadius: 4,
+      marginLeft: 0,
+      marginRight: 6,
+      backgroundColor: colors.background,
+    },
+    warningContainer: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    warningText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.text,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    successContainer: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    successText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+  });
+};

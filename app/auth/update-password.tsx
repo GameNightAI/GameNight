@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/hooks/useTheme';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 export default function UpdatePasswordScreen() {
   const [password, setPassword] = useState('');
@@ -21,6 +22,7 @@ export default function UpdatePasswordScreen() {
   const router = useRouter();
   const { colors, typography, touchTargets, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -312,7 +314,7 @@ export default function UpdatePasswordScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>New Password</Text>
               <View style={styles.inputWrapper}>
-                <Lock color={colors.textMuted} size={20} style={styles.inputIcon} />
+                {/* <Lock color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
                 <TextInput
                   style={styles.input}
                   value={password}
@@ -343,7 +345,7 @@ export default function UpdatePasswordScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Confirm Password</Text>
               <View style={styles.inputWrapper}>
-                <Lock color={colors.textMuted} size={20} style={styles.inputIcon} />
+                {/* <Lock color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
                 <TextInput
                   style={styles.input}
                   value={confirmPassword}
@@ -424,6 +426,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 40,
+    minHeight: Math.max(380, Math.min(540, (typeof window !== 'undefined' ? window.innerHeight : 700) * 0.6)),
   },
   header: {
     paddingHorizontal: 24,

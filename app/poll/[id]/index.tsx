@@ -363,6 +363,7 @@ export default function PollScreen() {
             value={comment}
             onChangeText={setComment}
             placeholder="Add any comments about your vote..."
+            placeholderTextColor={colors.textMuted}
             multiline
             editable={!submitting}
             accessibilityLabel="Comments input"

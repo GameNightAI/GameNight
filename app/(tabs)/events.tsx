@@ -954,13 +954,13 @@ const getStyles = (colors: any, typography: any) => {
     eventTableHeaderDate: {
       flex: 2,
       fontFamily: typography.getFontFamily('semibold'),
-      fontSize: typography.fontSize.subheadline,
+      fontSize: typography.fontSize.caption1,
       color: colors.primary,
     },
     eventTableHeaderVote: {
       flex: 1,
       fontFamily: typography.getFontFamily('semibold'),
-      fontSize: typography.fontSize.subheadline,
+      fontSize: typography.fontSize.caption1,
       color: colors.primary,
       textAlign: 'center',
     },
@@ -977,13 +977,13 @@ const getStyles = (colors: any, typography: any) => {
     },
     eventTableDateText: {
       fontFamily: typography.getFontFamily('semibold'),
-      fontSize: typography.fontSize.subheadline,
+      fontSize: typography.fontSize.caption1,
       color: colors.primary,
       marginBottom: 2,
     },
     eventTableDateSubtext: {
       fontFamily: typography.getFontFamily('normal'),
-      fontSize: typography.fontSize.caption1,
+      fontSize: typography.fontSize.caption2,
       color: colors.textMuted,
     },
     eventTableVoteCell: {
