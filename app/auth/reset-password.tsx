@@ -7,6 +7,7 @@ import Toast from 'react-native-toast-message';
 
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/hooks/useTheme';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 export default function ResetPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -17,8 +18,9 @@ export default function ResetPasswordScreen() {
   const params = useLocalSearchParams();
   const { colors, typography, touchTargets, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
-  const styles = getStyles(colors, typography, isDark);
+  const styles = getStyles(colors, typography, isDark, screenHeight);
 
   const getBaseUrl = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -146,7 +148,7 @@ export default function ResetPasswordScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputWrapper}>
-                <Mail color={colors.textMuted} size={20} style={styles.inputIcon} />
+                {/* <Mail color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
                 <TextInput
                   style={styles.input}
                   value={email}
@@ -168,7 +170,7 @@ export default function ResetPasswordScreen() {
 
             {success && (
               <View style={styles.successContainer}>
-                <MailCheck color={colors.success} size={20} style={styles.successIcon} />
+                {/* <MailCheck color={colors.success} size={20} style={styles.successIcon} /> */}
                 <Text style={styles.successText}>Reset email sent! Check your inbox.</Text>
               </View>
             )}
@@ -181,7 +183,7 @@ export default function ResetPasswordScreen() {
               accessibilityLabel={loading ? "Sending reset email" : "Send reset link"}
               accessibilityRole="button"
             >
-              <MailCheck color={colors.card} size={20} />
+              {/* <MailCheck color={colors.card} size={20} /> */}
               <Text style={styles.buttonText}>
                 {loading ? 'Sending...' : 'Send Reset Link'}
               </Text>
@@ -204,7 +206,7 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: isDark ? colors.background : colors.tints.neutral,
@@ -215,6 +217,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 40,
+    minHeight: Math.max(360, Math.min(520, screenHeight * 0.6)),
   },
   header: {
     paddingHorizontal: 24,

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/hooks/useTheme';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -18,8 +19,9 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { colors, typography, touchTargets, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
 
-  const styles = getStyles(colors, typography, isDark);
+  const styles = getStyles(colors, typography, isDark, screenHeight);
 
   const handleContinue = async () => {
     try {
@@ -88,7 +90,7 @@ export default function RegisterScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputWrapper}>
-                <Mail color={colors.textMuted} size={20} style={styles.inputIcon} />
+                {/* <Mail color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
                 <TextInput
                   style={styles.input}
                   value={email}
@@ -106,7 +108,7 @@ export default function RegisterScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputWrapper}>
-                <Lock color={colors.textMuted} size={20} style={styles.inputIcon} />
+                {/* <Lock color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
                 <TextInput
                   style={styles.input}
                   value={password}
@@ -165,7 +167,7 @@ export default function RegisterScreen() {
   );
 }
 
-const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.create({
+const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: isDark ? colors.background : colors.tints.neutral,
@@ -176,6 +178,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 40,
+    minHeight: Math.max(360, Math.min(520, screenHeight * 0.6)),
   },
   header: {
     paddingHorizontal: 24,
