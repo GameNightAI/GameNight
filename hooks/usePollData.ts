@@ -126,18 +126,14 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       // Get user identifier for vote checking with better fallback
       let identifier = null;
       try {
-        if (user?.email) {
-          identifier = user.email;
+        // Try to get saved username from storage
+        const savedUsername = await getUsername();
+        if (savedUsername) {
+          identifier = savedUsername;
         } else {
-          // Try to get saved username from storage
-          const savedUsername = await getUsername();
-          if (savedUsername) {
-            identifier = savedUsername;
-          } else {
-            // Fallback to anonymous ID
-            const anonId = await getOrCreateAnonId();
-            identifier = anonId;
-          }
+          // Fallback to anonymous ID
+          const anonId = await getOrCreateAnonId();
+          identifier = anonId;
         }
       } catch (error) {
         console.warn('Could not get user identifier:', error);
