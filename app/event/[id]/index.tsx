@@ -117,8 +117,8 @@ export default function EventScreen() {
             throw creatorError;
           } else {
             setCreatorName(
-              firstname || lastname ?
-                `${[firstname, lastname].join(' ').trim()} (${username})`
+              firstname || lastname
+                ? `${[firstname, lastname].join(' ').trim()} (${username})`
                 : username
             );
           }
@@ -171,7 +171,7 @@ export default function EventScreen() {
         }
 
         // Track user's votes
-        if (userId && vote.voter_name === userId) {
+        if (userId && vote.user_id === userId) {
           userVoteMap[dateId] = vote.vote_type as EventVoteType;
         }
       });
@@ -199,7 +199,8 @@ export default function EventScreen() {
           .from('votes_events')
           .delete()
           .eq('poll_event_id', eventId)
-          .eq('voter_name', user.id);
+          .eq('user_id', user.id);
+          // .eq('voter_name', user.id);
 
         if (deleteError) throw deleteError;
 
@@ -224,7 +225,8 @@ export default function EventScreen() {
         // Insert or update vote
         const voteData = {
           poll_event_id: eventId,
-          voter_name: user.id,
+          user_id: user.id,
+          // voter_name: user.id,
           vote_type: voteType,
         };
 
@@ -234,7 +236,8 @@ export default function EventScreen() {
             .from('votes_events')
             .update({ vote_type: voteType })
             .eq('poll_event_id', eventId)
-            .eq('voter_name', user.id);
+            .eq('user_id', user.id);
+            // .eq('voter_name', user.id)
 
           if (updateError) throw updateError;
         } else {
@@ -319,7 +322,7 @@ export default function EventScreen() {
           <Text style={styles.description}>{event.description}</Text>
         )}
         <Text style={styles.subtitle}>
-          Poll created by {isCreator ? 'you' : creatorName }
+          Poll created by {creatorName}
         </Text>
       </View>
 
