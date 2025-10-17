@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/hooks/useTheme';
 import { useDeviceType } from '@/hooks/useDeviceType';
+import { validateProfileFields } from '@/utils/profanityFilter';
 
 export default function RegisterProfileScreen() {
   const [username, setUsername] = useState('');
@@ -54,6 +55,13 @@ export default function RegisterProfileScreen() {
       // Validate required fields
       if (!username.trim()) {
         setError('Username is required');
+        return;
+      }
+
+      // Check for profanity in all fields
+      const profanityValidation = validateProfileFields(username, firstName, lastName);
+      if (!profanityValidation.isValid) {
+        setError(profanityValidation.errors.join('. '));
         return;
       }
 

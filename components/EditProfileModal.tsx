@@ -17,6 +17,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
 import { supabase } from '@/services/supabase';
+import { validateProfileFields } from '@/utils/profanityFilter';
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -105,6 +106,13 @@ export default function EditProfileModal({
       // Validation
       if (!username.trim()) {
         setError('Username is required');
+        return;
+      }
+
+      // Check for profanity in all fields
+      const profanityValidation = validateProfileFields(username, firstName, lastName);
+      if (!profanityValidation.isValid) {
+        setError(profanityValidation.errors.join('. '));
         return;
       }
 
