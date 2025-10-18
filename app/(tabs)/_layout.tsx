@@ -45,9 +45,9 @@ export default function TabLayout() {
       if (lastTab) {
         setInitialTab(lastTab);
       } else {
-        // If no last tab is saved, default to index (tools) and save it
-        setInitialTab('index');
-        saveLastVisitedTab('index');
+        // If no last tab is saved, default to collection and save it
+        setInitialTab('collection');
+        saveLastVisitedTab('collection');
       }
     };
     loadLastTab();
@@ -67,7 +67,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName="index"
+      initialRouteName="collection"
       screenOptions={{
         headerShown: true,
         tabBarActiveTintColor: colors.accent,
@@ -93,7 +93,7 @@ export default function TabLayout() {
           const routeName = e.target;
 
           // Try to extract tab name from the route
-          let tabName = 'index'; // default
+          let tabName = 'collection'; // default
 
           if (routeName) {
             // Try different approaches to extract the tab name
