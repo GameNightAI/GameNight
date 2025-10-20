@@ -13,14 +13,14 @@ import { GameCard } from '@/components/PollGameCard';
 import { PollResultsButton } from '@/components/PollResultsButton';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
-import { getOrCreateAnonId } from '@/utils/anon';
+// import { getOrCreateAnonId } from '@/utils/anon';
 import {
   saveUsername,
   getUsername,
   saveVotedFlag,
   saveVoteUpdatedFlag
 } from '@/utils/storage';
-import { BarChart3 } from 'lucide-react-native';
+// import { BarChart3 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function PollScreen() {
@@ -52,12 +52,13 @@ export default function PollScreen() {
   const [storageInitialized, setStorageInitialized] = useState(false);
 
   // Initialize storage and voter name
+  // TODO: there's probably no reason to use storage for logged in users
   useEffect(() => {
     const initializeStorage = async () => {
       try {
-        // Single device: prefill with user email/username if logged in
-        if (user && (user.email || user.username)) {
-          setVoterName(user.username || user.email);
+        // Single device: prefill with username if logged in
+        if (user?.username) {
+          setVoterName(user.username);
         } else {
           const savedName = await getUsername();
           if (savedName) setVoterName(savedName);
@@ -73,26 +74,26 @@ export default function PollScreen() {
   }, [user]);
 
   useEffect(() => {
-    if (poll && poll.user_id) {
-      // Fetch the creator's email or name from Supabase auth.users
+    if (poll?.user_id) {
+      // Fetch the creator's username, firstname, and lastname from Supabase `profiles`
       (async () => {
         try {
-          const { data, error } = await supabase
-            .from('profiles') // Try profiles table first
+          const { data: { username, firstname, lastname }, error } = await supabase
+            .from('profiles') 
             .select('username, firstname, lastname')
             .eq('id', poll.user_id)
             .maybeSingle();
-          if (data) {
-            setCreatorName(data.username || null);
-          } else {
-            // Fallback: try auth.users
-            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(poll.user_id);
-            if (userData && userData.user) {
-              setCreatorName(userData.user.email || null);
-            }
+          setCreatorName(
+            firstname || lastname
+              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              : username
+          );
+          if (error) {
+            throw error;
           }
-        } catch (e) {
-          setCreatorName(null);
+        } catch (error) {
+          console.error(error);
+          setCreatorName(poll.user_id);
         }
       })();
     }
@@ -101,17 +102,23 @@ export default function PollScreen() {
   // Check for previous votes with better error handling
   const checkPreviousVotes = useCallback(async (name: string, pollId: string) => {
     try {
-      const trimmedName = name.trim();
-      if (!trimmedName) {
-        setHasPreviousVotes(false);
-        return;
+      let trimmedName;
+      if (!user) {
+        trimmedName = name.trim();
+        if (!trimmedName) {
+          setHasPreviousVotes(false);
+          return;
+        }
       }
 
       const { data: previousVotes, error: previousVotesError } = await supabase
         .from('votes')
         .select('id')
         .eq('poll_id', pollId)
-        .eq('voter_name', trimmedName);
+        .eq(
+          user ? 'user_id' : 'voter_name',
+          user ? user.id : trimmedName
+        );
 
       if (previousVotesError) {
         console.warn('Error checking previous votes:', previousVotesError);
@@ -127,10 +134,10 @@ export default function PollScreen() {
   }, []);
 
   useEffect(() => {
-    if (storageInitialized && voterName && id) {
+    if (user || ((storageInitialized && voterName)) && id) {
       checkPreviousVotes(voterName, id as string);
     }
-  }, [voterName, id, storageInitialized, checkPreviousVotes]);
+  }, [user, voterName, id, storageInitialized, checkPreviousVotes]);
 
   const handleVote = (gameId: number, voteType: VoteType) => {
     setPendingVotes(prev => {
@@ -160,29 +167,32 @@ export default function PollScreen() {
     try {
       setSubmitting(true);
 
-      // Always use entered voterName
-      const trimmedName = voterName.trim();
-      if (!trimmedName) {
-        setNameError(true);
-        Toast.show({ type: 'error', text1: 'Please enter your name' });
-        setSubmitting(false);
-        return;
+      let finalName;
+      if (!user) {
+        finalName = voterName.trim();
+        if (!finalName) {
+          setNameError(true);
+          Toast.show({ type: 'error', text1: 'Please enter your name' });
+          setSubmitting(false);
+          return;
+        }
       }
-      const finalName = trimmedName;
-
       // Check if the voter has previously voted on any game in this poll
       const { data: previousVotes, error: previousVotesError } = await supabase
         .from('votes')
         .select('id, game_id, vote_type')
         .eq('poll_id', id)
-        .eq('voter_name', finalName);
+        .eq(
+          user ? 'user_id' : 'voter_name',
+          user ? user.id : finalName
+        );
 
       if (previousVotesError) {
         console.error('Error checking previous votes:', previousVotesError);
         throw previousVotesError;
       }
 
-      const hasPreviousVotes = previousVotes && previousVotes.length > 0;
+      const hasPreviousVotes = previousVotes?.length > 0;
       let updated = false; // Track if any votes were updated or inserted as an update
 
       // Submit each vote
@@ -205,12 +215,15 @@ export default function PollScreen() {
             updated = true;
           }
         } else {
-          const { error: insertError } = await supabase.from('votes').insert({
-            poll_id: id,
-            game_id: gameId,
-            vote_type: score,
-            voter_name: finalName,
-          });
+          const { error: insertError } = await supabase
+            .from('votes')
+            .insert({
+              poll_id: id,
+              game_id: gameId,
+              vote_type: score,
+              voter_name: user ? null : finalName,
+              user_id: user ? user.id : null,
+            });
           if (insertError) {
             console.error('Error inserting vote:', insertError);
             throw insertError;
@@ -223,10 +236,12 @@ export default function PollScreen() {
       }
 
       // Save voter name for future use with error handling
-      try {
-        await saveUsername(finalName);
-      } catch (storageError) {
-        console.warn('Failed to save username to storage:', storageError);
+      if (!user) {
+        try {
+          await saveUsername(finalName);
+        } catch (storageError) {
+          console.warn('Failed to save username to storage:', storageError);
+        }
       }
 
       // Set flag if votes were updated
@@ -242,7 +257,8 @@ export default function PollScreen() {
       if (comment.trim()) {
         const { error: commentError } = await supabase.from('poll_comments').insert({
           poll_id: id,
-          voter_name: finalName,
+          voter_name: user ? null : finalName,
+          user_id: user ? user.id : null,
           comment_text: comment.trim(),
         });
         if (commentError) {
@@ -314,29 +330,30 @@ export default function PollScreen() {
           </Text>
         </View>
 
-        {/* Always show voter name input */}
-        <VoterNameInput
-          value={voterName}
-          onChange={(text) => {
-            setVoterName(text);
-            if (nameError) setNameError(false);
-          }}
-          hasError={nameError}
-        />
         {!user && (
-          <View style={styles.signUpContainer}>
-            <Text style={styles.signUpText}>
-              Want to create your own polls?{' '}
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push('/auth/register')}
-              accessibilityLabel="Sign up for free"
-              accessibilityRole="button"
-              accessibilityHint="Opens registration screen to create your own polls"
-            >
-              <Text style={styles.signUpLink}>Sign up for free</Text>
-            </TouchableOpacity>
-          </View>
+          <>
+            <VoterNameInput
+              value={voterName}
+              onChange={(text) => {
+                setVoterName(text);
+                if (nameError) setNameError(false);
+              }}
+              hasError={nameError}
+            />
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>
+                Want to create your own polls?{' '}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/auth/register')}
+                accessibilityLabel="Sign up for free"
+                accessibilityRole="button"
+                accessibilityHint="Opens registration screen to create your own polls"
+              >
+                <Text style={styles.signUpLink}>Sign up for free</Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
         <View style={styles.gamesContainer}>

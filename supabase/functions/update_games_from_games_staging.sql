@@ -1,7 +1,7 @@
 create or replace function update_games_from_games_staging()
 returns void
 language plpgsql
-security definer set search_path = ''
+security invoker set search_path = ''
 set statement_timeout to '120s'
 as $$
 begin

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
-import { Calendar, MapPin, Clock } from 'lucide-react-native';
+// import { Calendar, MapPin, Clock } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { Poll, PollEvent, VoteEvent } from '@/types/poll';
 import { EventDateCard } from '@/components/EventDateCard';
@@ -41,8 +41,6 @@ interface Event extends Poll {
   date_specific_options?: Record<string, any>;
 }
 
-
-
 export default function EventScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -55,13 +53,12 @@ export default function EventScreen() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [isCreator, setIsCreator] = useState(false);
+  const [creatorName, setCreatorName] = useState<string | null>(null);
   const [userVotes, setUserVotes] = useState<Record<string, EventVoteType>>({});
   const [voteCounts, setVoteCounts] = useState<Record<string, { yes: number; no: number; maybe: number }>>({});
   const [voting, setVoting] = useState(false);
 
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
-
-
 
   // Load event data
   useEffect(() => {
@@ -101,8 +98,6 @@ export default function EventScreen() {
         if (datesError) throw datesError;
         setEventDates(datesData || []);
 
-
-
         // Check if current user is creator
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (currentUser) {
@@ -111,17 +106,23 @@ export default function EventScreen() {
         }
 
         // Get creator name
-        // if (eventData.user_id) {
-        //   const { data: profileData } = await supabase
-        //     .from('profiles')
-        //     .select('username, email')
-        //     .eq('id', eventData.user_id)
-        //     .maybeSingle();
-
-        //   if (profileData) {
-        //     setCreatorName(profileData.username || profileData.email || null);
-        //   }
-        // }
+        if (eventData?.user_id) {
+          const { data: { username, firstname, lastname }, error: creatorError } = await supabase
+            .from('profiles')
+            .select('username, firstname, lastname')
+            .eq('id', eventData.user_id)
+            .maybeSingle();
+          if (creatorError) {
+            setCreatorName(eventData.user_id)
+            throw creatorError;
+          } else {
+            setCreatorName(
+              firstname || lastname
+                ? `${[firstname, lastname].join(' ').trim()} (${username})`
+                : username
+            );
+          }
+        }
 
         // Load user votes and vote counts
         await loadVotes(id as string, currentUser?.id);
@@ -170,7 +171,7 @@ export default function EventScreen() {
         }
 
         // Track user's votes
-        if (userId && vote.voter_name === userId) {
+        if (userId && vote.user_id === userId) {
           userVoteMap[dateId] = vote.vote_type as EventVoteType;
         }
       });
@@ -198,7 +199,8 @@ export default function EventScreen() {
           .from('votes_events')
           .delete()
           .eq('poll_event_id', eventId)
-          .eq('voter_name', user.id);
+          .eq('user_id', user.id);
+          // .eq('voter_name', user.id);
 
         if (deleteError) throw deleteError;
 
@@ -223,7 +225,8 @@ export default function EventScreen() {
         // Insert or update vote
         const voteData = {
           poll_event_id: eventId,
-          voter_name: user.id,
+          user_id: user.id,
+          // voter_name: user.id,
           vote_type: voteType,
         };
 
@@ -233,7 +236,8 @@ export default function EventScreen() {
             .from('votes_events')
             .update({ vote_type: voteType })
             .eq('poll_event_id', eventId)
-            .eq('voter_name', user.id);
+            .eq('user_id', user.id);
+            // .eq('voter_name', user.id)
 
           if (updateError) throw updateError;
         } else {
@@ -317,10 +321,9 @@ export default function EventScreen() {
         {event.description && (
           <Text style={styles.description}>{event.description}</Text>
         )}
-        {/* Commented out until the creator logic is actually working */}
-        {/* <Text style={styles.subtitle}>
-          Created by {user?.email || 'Anonymous'}
-        </Text> */}
+        <Text style={styles.subtitle}>
+          Poll created by {creatorName}
+        </Text>
       </View>
 
       {!user && (
@@ -342,13 +345,6 @@ export default function EventScreen() {
       {/* Event Dates */}
       <View style={styles.datesSection}>
         <Text style={styles.sectionTitle}>Vote on Event Dates</Text>
-        {!user && (
-          <View style={styles.loginPrompt}>
-            <Text style={styles.loginPromptText}>
-              Please log in to vote on event dates
-            </Text>
-          </View>
-        )}
         {eventDates.map((eventDate, index) => {
           const displayLocation = event.use_same_location && event.location
             ? event.location
@@ -384,7 +380,7 @@ export default function EventScreen() {
               index={index}
               selectedVote={userVotes[eventDate.id]}
               onVote={handleVote}
-              disabled={voting || !user}
+              disabled={voting}
               voteCounts={voteCounts[eventDate.id]}
               displayLocation={displayLocation}
               displayTime={displayTime}
@@ -392,10 +388,6 @@ export default function EventScreen() {
           );
         })}
       </View>
-
-
-
-
 
       {/* View Results Button */}
       <TouchableOpacity

@@ -169,32 +169,18 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
         return;
       }
 
-      // Fetch detailed game info
-      const response = await fetch(`https://boardgamegeek.com/xmlapi2/thing?id=${game.id}&stats=1`);
-      const xmlText = await response.text();
-
-      const parser = new XMLParser({
-        ignoreAttributes: false,
-        attributeNamePrefix: '',
-      });
-
-      const result = parser.parse(xmlText);
-      const gameInfo = result.items.item;
-
-      const gameData = {
-        user_id: user.id,
-        bgg_game_id: game.id,
-        name: game.name,
-        thumbnail: gameInfo.thumbnail,
-        min_players: parseInt(gameInfo.minplayers?.value),
-        max_players: parseInt(gameInfo.maxplayers?.value),
-        playing_time: parseInt(gameInfo.playingtime?.value),
-        year_published: game.yearPublished,
-      };
-
       const { error: insertError } = await supabase
         .from('collections')
-        .upsert(gameData);
+        .insert({
+          user_id: user.id,
+          bgg_game_id: game.id,
+          name: game.name,
+          thumbnail: game.thumbnail,
+          min_players: game.min_players,
+          max_players: game.max_players,
+          playing_time: game.playing_time,
+          year_published: game.yearPublished,
+        });
 
       if (insertError) throw insertError;
 

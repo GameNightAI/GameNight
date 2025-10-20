@@ -108,12 +108,14 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     try {
       const { data: votes, error } = await supabase
         .from('votes')
-        .select('voter_name')
+        .select('user_id, voter_name')
         .eq('poll_id', pollId);
 
       if (!error && votes) {
-        // Count unique voters (distinct voter_name values)
-        const uniqueVoters = new Set(votes.map((vote: any) => vote.voter_name).filter((name: any) => name));
+        // Count unique voters
+        const uniqueVoters = new Set(
+          votes.map((vote: any) => vote.user_id || vote.voter_name)
+        );
         const voterCount = uniqueVoters.size;
 
         setHasExistingVotes(voterCount > 0);

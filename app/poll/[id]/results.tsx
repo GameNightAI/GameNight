@@ -18,7 +18,7 @@ export default function PollResultsScreen() {
   const { colors, typography, touchTargets } = useTheme();
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<any>(null);
-  const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
+  const [comments, setComments] = useState<{ username: string; firstname: string; lastname: string; voter_name: string; comment_text: string }[]>([]);
   // --- Real-time vote listening ---
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
@@ -65,10 +65,10 @@ export default function PollResultsScreen() {
     const fetchComments = async () => {
       if (!id) return;
       const { data, error } = await supabase
-        .from('poll_comments')
-        .select('voter_name, comment_text')
+        .from('poll_comments_view')
+        .select('username, firstname, lastname, voter_name, comment_text')
         .eq('poll_id', id)
-        .order('id', { ascending: false });
+        .order('created_at', { ascending: false });
       if (!error && data) setComments(data);
     };
     fetchComments();
@@ -215,7 +215,13 @@ export default function PollResultsScreen() {
                 <Text style={styles.commentsTitle}>Comments</Text>
                 {comments.map((c, idx) => (
                   <View key={idx} style={styles.commentItem}>
-                    <Text style={styles.commentVoter}>{c.voter_name || 'Anonymous'}:</Text>
+                    <Text style={styles.commentVoter}>{
+                      c.username
+                        ? (c.firstname || c.lastname
+                          ? `${[c.firstname, c.lastname].join(' ').trim()} (${c.username})`
+                          : c.username
+                        ) : c.voter_name || 'Anonymous'
+                    }:</Text>
                     <Text style={styles.commentText}>{c.comment_text}</Text>
                   </View>
                 ))}
