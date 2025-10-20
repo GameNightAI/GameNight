@@ -96,13 +96,13 @@ export default function PollsScreen() {
       if (pollIds.length > 0) {
         const { data: numberOfVoters, error: numberOfVotersError } = await supabase
           .from('votes')
-          .select('poll_id, voter_name');
+          .select('poll_id, user_id, voter_name');
         if (!numberOfVotersError && numberOfVoters) {
           const pollVoters: Record<string, Set<string>> = {};
           numberOfVoters.forEach((row: any) => {
-            if (row.poll_id && row.voter_name) {
+            if (row.poll_id && (row.user_id || row.voter_name)) {
               if (!pollVoters[row.poll_id]) pollVoters[row.poll_id] = new Set();
-              pollVoters[row.poll_id].add(row.voter_name);
+              pollVoters[row.poll_id].add(row.user_id || row.voter_name);
             }
           });
           Object.keys(pollVoters).forEach(pid => {
@@ -135,8 +135,8 @@ export default function PollsScreen() {
       // Get polls from other users that the current user has voted in
       const { data: userVotes, error: votesError } = await supabase
         .from('votes')
-        .select('poll_id, voter_name')
-        .eq('voter_name', user.email || 'Anonymous');
+        .select('poll_id')
+        .eq('user_id', user.id);
 
       if (votesError) throw votesError;
 

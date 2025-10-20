@@ -52,20 +52,17 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
 
         // Get user identifier using the same logic as usePollData
         let identifier = null;
-        if (user?.email) {
-          identifier = user.email;
+
+        // Try to get saved username from storage
+        const { getUsername } = await import('@/utils/storage');
+        const savedUsername = await getUsername();
+        if (savedUsername) {
+          identifier = savedUsername;
         } else {
-          // Try to get saved username from storage
-          const { getUsername } = await import('@/utils/storage');
-          const savedUsername = await getUsername();
-          if (savedUsername) {
-            identifier = savedUsername;
-          } else {
-            // Fallback to anonymous ID
-            const { getOrCreateAnonId } = await import('@/utils/anon');
-            const anonId = await getOrCreateAnonId();
-            identifier = anonId;
-          }
+          // Fallback to anonymous ID
+          const { getOrCreateAnonId } = await import('@/utils/anon');
+          const anonId = await getOrCreateAnonId();
+          identifier = anonId;
         }
 
         if (identifier) {
@@ -80,7 +77,20 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
             console.warn('Error checking user votes:', votesError);
             setHasVoted(false);
           } else {
-            setHasVoted(userVotes && userVotes.length > 0);
+            setHasVoted(userVotes?.length > 0);
+          }
+        } else if (user) {
+          const { data: userVotes, error: votesError } = await supabase
+            .from('votes')
+            .select('id')
+            .eq('poll_id', id)
+            .eq('user_id', user?.id)
+            .limit(1);
+          if (votesError) {
+            console.warn('Error checking user votes:', votesError);
+            setHasVoted(false);
+          } else {
+            setHasVoted(userVotes?.length > 0);
           }
         } else {
           setHasVoted(false);
@@ -167,7 +177,7 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
 
       // Get votes for this poll
       const { data: votes, error: votesError } = await supabase
-        .from('votes')
+        .from('votes_view')
         .select('*')
         .eq('poll_id', id);
 
@@ -183,7 +193,11 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
         const voteData: GameVotes = {
           votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
-            name: v.voter_name || 'Anonymous',
+            name: v.username
+              ? (v.firstname || v.lastname
+                ? `${[v.firstname, v.lastname].join(' ').trim()} (${v.username})`
+                : v.username
+              ) : v.voter_name || 'Anonymous',
             vote_type: v.vote_type,
           })) || [],
         };

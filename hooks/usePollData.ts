@@ -81,7 +81,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       // console.log('Poll games:', pollGames);
 
       if (!pollGames || pollGames.length === 0) {
-        console.log('No games found in poll');
+        // console.log('No games found in poll');
         setGames([]);
         setLoading(false);
         return;
@@ -112,7 +112,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       // Get votes for this poll
       const { data: votes, error: votesError } = await supabase
-        .from('votes')
+        .from('votes_view')
         .select('*')
         .eq('poll_id', id);
 
@@ -121,7 +121,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         throw votesError;
       }
 
-      console.log('Votes loaded:', votes);
+      // console.log('Votes loaded:', votes);
 
       // Get user identifier for vote checking with better fallback
       let identifier = null;
@@ -146,10 +146,13 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         }
       }
 
-      console.log('User identifier:', identifier);
+      // console.log('User identifier:', identifier);
 
-      const userVotes = votes?.filter(v => v.voter_name === identifier) || [];
-      setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
+      const userVotes = votes?.filter(v => 
+        (identifier && identifier === v.voter_name)
+        || (user?.id && user?.id === v.user_id)
+      ) || [];
+      setHasVoted(userVotes.length > 0 );
 
       // Map games data to the expected format
       const formattedGames = gamesData.map(game => {
@@ -160,7 +163,11 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         const voteData: GameVotes = {
           votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
-            name: v.voter_name || 'Anonymous',
+            name: v.username
+              ? (v.firstname || v.lastname
+                ? `${[v.firstname, v.lastname].join(' ').trim()} (${v.username})`
+                : v.username
+              ) : v.voter_name || 'Anonymous',
             vote_type: v.vote_type,
           })),
         };
@@ -177,9 +184,10 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         });
 
         // Find user's vote for this game
-        const userVote = identifier ?
-          gameVotes.find(v => v.voter_name === identifier)?.vote_type ?? null
-          : null;
+        const userVote = gameVotes.find(v =>
+          (identifier && identifier === v.voter_name)
+          || (user?.id && user?.id === v.user_id)
+        )?.vote_type;
 
         return {
           id: game.id,
