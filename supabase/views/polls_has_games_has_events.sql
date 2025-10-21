@@ -1,4 +1,4 @@
-create or replace view polls_view with (security_invoker = on) as
+create or replace view polls_has_games_has_events with (security_invoker = on) as
   select
     polls.*,
     coalesce(game_count > 0, false) as has_games,

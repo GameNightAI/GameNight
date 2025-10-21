@@ -98,7 +98,7 @@ export default function EventResultsScreen() {
 
         // Load event details (only polls that have poll_events - these are events)
         const { data: eventData, error: eventError } = await supabase
-          .from('polls')
+          .from('polls_profiles')
           .select(`
             *,
             poll_events!inner(
@@ -262,6 +262,14 @@ export default function EventResultsScreen() {
         </TouchableOpacity>
         <Text style={styles.title}>Event Results</Text>
         <Text style={styles.subtitle}>{event.title}</Text>
+        <Text style={styles.subtitle}>
+          Poll created by {(() => {
+            const { username, firstname, lastname } = event;
+            return firstname || lastname
+              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              : username;
+          })()}
+        </Text>
       </View>
 
       {!user && (
