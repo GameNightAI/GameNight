@@ -1,3 +1,17 @@
+/* This view expands on the `collections_games` view by adding
+the `min_exp_players` and `max_exp_players` columns. These are
+intended for determining the "expanded" player counts from game expansions,
+such as a max player count of 6 for Catan when the 5-6 player expansion is owned:
+
+* `min_exp_players`: The minimum value of `min_players` out of
+  all of a user's owned expansions for a particular game
+
+* `max_exp_players`: The maximum value of `max_players` out of
+  all of a user's owned expansions for a particular game
+
+If the user does not own any expansions for a particular game,
+these columns will be NULL. */
+
 drop view expansions_players_view;
 
 create or replace view expansions_players_view with (security_invoker = on) as
