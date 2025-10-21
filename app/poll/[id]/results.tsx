@@ -22,7 +22,7 @@ export default function PollResultsScreen() {
   // --- Real-time vote listening ---
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
-  const [creatorName, setCreatorName] = useState('');
+  const [creatorName, setCreatorName] = useState<string>('');
 
   const { poll, games, results, hasVoted, voteUpdated, loading, error, reload } = usePollResults(id);
 
