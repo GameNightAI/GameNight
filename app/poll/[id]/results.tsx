@@ -22,14 +22,30 @@ export default function PollResultsScreen() {
   // --- Real-time vote listening ---
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
+  const [creatorName, setCreatorName] = useState('');
 
   const { poll, games, results, hasVoted, voteUpdated, loading, error, reload } = usePollResults(id);
 
   // Move useMemo before any early returns to follow Rules of Hooks
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
+  
   useEffect(() => {
     if (!id) return;
+
+    (async () => {
+      const { data: { username, firstname, lastname }, error } = await supabase
+        .from('polls_profiles')
+        .select('username, firstname, lastname')
+        .eq('id', id)
+        .maybeSingle();
+      setCreatorName(
+        firstname || lastname
+          ? `${[firstname, lastname].join(' ').trim()} (${username})`
+          : username
+      );
+    })();
+
     // Subscribe to new votes for this poll
     const channel = supabase
       .channel('votes-listener')
@@ -136,6 +152,7 @@ export default function PollResultsScreen() {
         </TouchableOpacity>
         <Text style={styles.title}>Poll Results</Text>
         <Text style={styles.subtitle}>{poll?.title}</Text>
+        <Text style={styles.subtitle}>Poll created by {creatorName}</Text>
       </View>
       {/* --- Banner notification for new votes --- */}
       {newVotes && (
@@ -210,7 +227,7 @@ export default function PollResultsScreen() {
               </View>
             ))}
             {/* Comments Section at the bottom of the scrollview */}
-            {comments && comments.length > 0 && (
+            {comments?.length > 0 && (
               <View style={styles.commentsContainer}>
                 <Text style={styles.commentsTitle}>Comments</Text>
                 {comments.map((c, idx) => (

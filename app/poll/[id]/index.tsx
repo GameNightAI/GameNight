@@ -406,21 +406,11 @@ export default function PollScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.bottomActionsContainer}>
-          {hasVoted && (
-            <View style={styles.viewResultsContainer}>
-              <PollResultsButton
-                onPress={navigateToResults}
-              />
-            </View>
-          )}
-
-          {!hasVoted && (
-            <View style={styles.viewResultsContainer}>
-              <PollResultsButton
-                onPress={navigateToResults}
-              />
-            </View>
-          )}
+          <View style={styles.viewResultsContainer}>
+            <PollResultsButton
+              onPress={navigateToResults}
+            />
+          </View>
         </View>
       </View>
     </View>
