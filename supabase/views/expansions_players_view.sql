@@ -1,3 +1,5 @@
+drop view expansions_players_view;
+
 create or replace view expansions_players_view with (security_invoker = on) as
   select
     collections_games.*,
@@ -12,7 +14,7 @@ create or replace view expansions_players_view with (security_invoker = on) as
         min(exp.min_players) as min_exp_players,
         max(exp.max_players) as max_exp_players
       from
-        collections_games as base
+        collections as base
         join expansions on base.bgg_game_id = expansions.base_id
         join collections_games as exp
           on expansions.expansion_id = exp.bgg_game_id
