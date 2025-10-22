@@ -14,6 +14,7 @@ import { EventDateCard } from '@/components/EventDateCard';
 import { EventVoteType } from '@/components/eventVotingOptions';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -118,7 +119,7 @@ export default function EventScreen() {
           } else {
             setCreatorName(
               firstname || lastname
-                ? `${[firstname, lastname].join(' ').trim()} (${username})`
+                ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
                 : username
             );
           }

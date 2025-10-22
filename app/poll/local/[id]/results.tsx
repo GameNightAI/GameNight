@@ -189,7 +189,7 @@ export default function LocalPollResultsScreen() {
                 <Text style={styles.commentsTitle}>Comments</Text>
                 {comments.map((c, idx) => (
                   <View key={idx} style={styles.commentItem}>
-                    <Text style={styles.commentVoter}>{c.voter_name || 'Anonymous'}:</Text>
+                    <Text style={styles.commentVoter}>{censor(c.voter_name) || 'Anonymous'}:</Text>
                     <Text style={styles.commentText}>{c.comment_text}</Text>
                   </View>
                 ))}

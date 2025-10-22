@@ -22,6 +22,7 @@ import {
 } from '@/utils/storage';
 // import { BarChart3 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 export default function PollScreen() {
   const { id } = useLocalSearchParams();
@@ -85,7 +86,7 @@ export default function PollScreen() {
             .maybeSingle();
           setCreatorName(
             firstname || lastname
-              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
               : username
           );
           if (error) {
