@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { X, ListFilter, Plus } from 'lucide-react-native';
@@ -12,8 +12,8 @@ import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyStateCollection } from '@/components/EmptyStateCollection';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
-import { FilterGameModal, filterGames } from '@/components/FilterGameModal';
-import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
+import { FilterGameModal } from '@/components/FilterGameModal';
+import { useGameFilters } from '@/utils/filterOptions';
 import { AddGameModal } from '@/components/AddGameModal';
 import { CreatePollModal } from '@/components/CreatePollModal';
 import { SyncModal } from '@/components/SyncModal';
@@ -47,19 +47,13 @@ export default function CollectionScreen() {
 
   const router = useRouter();
 
-  const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
-  const [playTime, setPlayTime] = useState<FilterOption[]>([]);
-  const [age, setAge] = useState<FilterOption[]>([]);
-  const [gameType, setGameType] = useState<FilterOption[]>([]);
-  const [complexity, setComplexity] = useState<FilterOption[]>([]);
-
-  const isFiltered = ([
-    playerCount,
-    playTime,
-    age,
-    gameType,
-    complexity,
-  ]).some(_ => _.length);
+  // Filter state management
+  const {
+    filters: rangeFilters,
+    setFilters: setRangeFilters,
+    clearFilters: clearRangeFilters,
+    applyFilters: applyRangeFilters,
+  } = useGameFilters();
 
   const loadGames = useCallback(async () => {
     try {
@@ -139,17 +133,16 @@ export default function CollectionScreen() {
           complexity_desc: game.complexity_desc,
           average: game.average,
           bayesaverage: game.bayesaverage,
-          expansions: expansions,
           min_exp_players: min_exp_players,
           max_exp_players: max_exp_players,
+          expansions: expansions,
         }
       });
 
       // Sort games alphabetically by title, ignoring articles
       const sortedGames = sortGamesByTitle(mappedGames);
       setAllGames(sortedGames);
-      const filteredGames = filterGames(sortedGames, playerCount, playTime, age, gameType, complexity);
-      setGames(filteredGames);
+      setGames(sortedGames); // Set initial games directly
 
     } catch (err) {
       console.error('Error in loadGames:', err);
@@ -185,22 +178,17 @@ export default function CollectionScreen() {
     }
   }, [gameToDelete]);
 
-  const applyFilters = useCallback(() => {
-    const filteredGames = filterGames(allGames, playerCount, playTime, age, gameType, complexity);
-    setGames(filteredGames);
-    announceForAccessibility(`Filters applied. Showing ${filteredGames.length} games.`);
-  }, [allGames, playerCount, playTime, age, gameType, complexity, announceForAccessibility]);
-
-  const clearFilters = () => {
-    setPlayerCount([]);
-    setPlayTime([]);
-    setAge([]);
-    setGameType([]);
-    setComplexity([]);
-    // Immediately show all games when filters are cleared
+  // Reactive filtering - apply filters whenever allGames or rangeFilters change
+  useEffect(() => {
     if (allGames.length > 0) {
-      setGames(allGames);
+      const filteredGames = applyRangeFilters(allGames);
+      setGames(filteredGames);
     }
+  }, [allGames, applyRangeFilters]);
+
+  // Clear filters function
+  const clearFilters = () => {
+    clearRangeFilters();
     announceForAccessibility('All filters cleared. Showing all games.');
   };
 
@@ -308,27 +296,15 @@ export default function CollectionScreen() {
     }
   }, [loadGames, router]);
 
-  // Convert collection filters to CreatePollModal format
-  const convertFiltersForPoll = () => {
-    const convertedFilters = {
-      playerCount: playerCount,
-      playTime: playTime,
-      minAge: age,
-      gameType: gameType,
-      complexity: complexity,
-    };
-    return convertedFilters;
-  };
+  // TODO: Re-add filter conversion in Phase 3
+  // const convertFiltersForPoll = useMemo(() => {
+  //   return rangeFilters;
+  // }, [rangeFilters]);
 
   useEffect(() => {
     loadGames();
   }, [loadGames]);
 
-  useEffect(() => {
-    if (allGames.length > 0) {
-      applyFilters();
-    }
-  }, [applyFilters]);
 
   if (loading) {
     return <LoadingState />;
@@ -344,9 +320,9 @@ export default function CollectionScreen() {
         username={null}
         onRefresh={loadGames}
         loadGames={loadGames}
-        message={isFiltered ? 'No games found' : undefined}
-        buttonText={isFiltered ? "Clear Filters" : undefined}
-        showSyncButton={!isFiltered}
+        message={undefined}
+        buttonText={undefined}
+        showSyncButton={true}
         handleClearFilters={clearFilters}
       />
     );
@@ -399,7 +375,7 @@ export default function CollectionScreen() {
         </ScrollView>
       </View>
 
-      {isFiltered && (
+      {false && (
         <View style={styles.filterBanner}>
           <View style={styles.filterBannerContent}>
             <TouchableOpacity
@@ -454,48 +430,8 @@ export default function CollectionScreen() {
         title="Filter Your Collection"
         description="All filters (optional)"
         applyButtonText="Filter Games"
-        filterConfigs={[
-          {
-            key: 'playerCount',
-            label: 'Player Count',
-            placeholder: '# Players',
-            options: playerOptions,
-            value: playerCount,
-            onChange: setPlayerCount,
-          },
-          {
-            key: 'playTime',
-            label: 'Play Time',
-            placeholder: 'Play Time',
-            options: timeOptions,
-            value: playTime,
-            onChange: setPlayTime,
-          },
-          {
-            key: 'age',
-            label: 'Age Range',
-            placeholder: 'Age Range',
-            options: ageOptions,
-            value: age,
-            onChange: setAge,
-          },
-          {
-            key: 'gameType',
-            label: 'Game Type',
-            placeholder: 'Play Style',
-            options: typeOptions,
-            value: gameType,
-            onChange: setGameType,
-          },
-          {
-            key: 'complexity',
-            label: 'Complexity',
-            placeholder: 'Complexity',
-            options: complexityOptions,
-            value: complexity,
-            onChange: setComplexity,
-          },
-        ]}
+        initialFilters={rangeFilters}
+        onFiltersChange={setRangeFilters}
       />
 
       <AddGameModal
@@ -513,7 +449,7 @@ export default function CollectionScreen() {
           // Navigate to polls tab with refresh parameter
           router.push('/(tabs)/polls?refresh=true');
         }}
-        initialFilters={convertFiltersForPoll()}
+        initialFilters={rangeFilters}
       />
 
       <SyncModal

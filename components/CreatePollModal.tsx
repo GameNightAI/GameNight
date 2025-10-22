@@ -12,7 +12,7 @@ import { CreatePollAddOptions } from './CreatePollAddOptions';
 import { FilterGameModal } from './FilterGameModal';
 import { GameSearchModal } from './GameSearchModal';
 import { PollSuccessModal } from './PollSuccessModal';
-import { FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
+import { FilterState, useGameFilters } from '@/utils/filterOptions';
 import { sortGamesByTitle } from '@/utils/sortingUtils';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -26,13 +26,7 @@ interface CreatePollModalProps {
   onClose: () => void;
   onSuccess: (pollType: 'single-user' | 'multi-user-device' | 'add-games', addedGames?: Game[]) => void;
   preselectedGames?: Game[];
-  initialFilters?: {
-    playerCount: any[];
-    playTime: any[];
-    minAge: any[];
-    gameType: any[];
-    complexity: any[];
-  };
+  initialFilters?: FilterState;
   isAddingToExistingPoll?: boolean;
 }
 
@@ -71,35 +65,25 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [isPollCreatedModalVisible, setIsPollCreatedModalVisible] = useState(false);
   const [createdPollUrl, setCreatedPollUrl] = useState('');
 
-  // Filter states - changed to arrays for multi-select
-  const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
-  const [playTime, setPlayTime] = useState<FilterOption[]>([]);
-  const [minAge, setMinAge] = useState<FilterOption[]>([]);
-  const [gameType, setGameType] = useState<FilterOption[]>([]);
-  const [complexity, setComplexity] = useState<FilterOption[]>([]);
+  // TODO: Re-add filter state in Phase 3
+  // Filter states - arrays for UI selections (legacy shape maintained for now)
+  // const [playerCount, setPlayerCount] = useState<FilterOption[]>([]);
+  // const [playTime, setPlayTime] = useState<FilterOption[]>([]);
+  // const [minAge, setMinAge] = useState<FilterOption[]>([]);
+  // const [gameType, setGameType] = useState<FilterOption[]>([]);
+  // const [complexity, setComplexity] = useState<FilterOption[]>([]);
 
-  const isFiltered = [
-    playerCount,
-    playTime,
-    minAge,
-    gameType,
-    complexity,
-  ].some(_ => _.length);
+  // Centralized range-based filters (Phase 3 integration)
+  const {
+    filters,
+    setFilters,
+    clearFilters: clearAllFilters,
+    applyFilters,
+    isFiltered,
+  } = useGameFilters(initialFilters); // Initialize with collection's filters!
+  // ].some(_ => _.length);
 
   const styles = useMemo(() => getStyles(colors, typography, insets, screenHeight), [colors, typography, insets, screenHeight]);
-
-  // Dropdown z-index management similar to FilterGameModal
-  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
-  const getFilterSectionZIndex = (index: number) => {
-    if (openDropdownIndex === null) return 1000;
-    if (openDropdownIndex === index) return 99999;
-    return 1000;
-  };
-  const handleDropdownChange = (index: number, isOpen: boolean) => {
-    setOpenDropdownIndex(isOpen ? index : null);
-  };
-
-
 
   // Filter options imported from utils/filterOptions.ts
 
@@ -109,87 +93,49 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       if (preselectedGames && preselectedGames.length > 0) {
         setSelectedGames(preselectedGames);
       }
+      // TODO: Re-add initial filters logic in Phase 3
       // Apply initial filters if provided
-      if (initialFilters) {
-        setPlayerCount(initialFilters.playerCount);
-        setPlayTime(initialFilters.playTime);
-        setMinAge(initialFilters.minAge);
-        setGameType(initialFilters.gameType);
-        setComplexity(initialFilters.complexity);
-      }
+      // if (initialFilters) {
+      //   setPlayerCount(initialFilters.playerCount);
+      //   setPlayTime(initialFilters.playTime);
+      //   setMinAge(initialFilters.minAge);
+      //   setGameType(initialFilters.gameType);
+      //   setComplexity(initialFilters.complexity);
+      // }
     }
   }, [isVisible, initialFilters]);
 
-  const filterGames = useCallback(() => {
-    let filtered = [...availableGames];
+  // TODO: Re-add filtering logic in Phase 3
+  // Apply centralized filtering when inputs change
+  // useEffect(() => {
+  //   // Start with available games and remove those added via search to avoid duplicates
+  //   const baseList = availableGames.filter(game =>
+  //     !searchAddedGames.some(searchGame => searchGame.id === game.id)
+  //   );
 
-    // Filter out games that are already added via search to prevent duplicates
-    filtered = filtered.filter(game =>
+  //   // Convert legacy arrays to range-based state and apply
+  //   const converted = convertLegacyFiltersToState({
+  //     playerCount,
+  //     playTime,
+  //     minAge,
+  //     gameType,
+  //     complexity,
+  //   });
+  //   setRangeFilters(converted);
+  //   // Use enhanced filtering with bucket unions for time and age
+  //   const filtered = filterGamesWithBuckets(baseList, converted, playTime, minAge);
+  //   setFilteredGames(filtered);
+  //   // Don't automatically remove selected games when filters change
+  // }, [availableGames, searchAddedGames, playerCount, playTime, minAge, gameType, complexity, setRangeFilters]);
+
+  // Apply filters to available games
+  useEffect(() => {
+    const baseList = availableGames.filter(game =>
       !searchAddedGames.some(searchGame => searchGame.id === game.id)
     );
-
-    if (playerCount.length) {
-      filtered = filtered.filter(game =>
-        playerCount.some(({ value }) => (
-          // Ignore game.min_players when 15+ is selected,
-          // since the number of actual players could be arbitrarily large.
-          (Math.min(game.min_players, game.min_exp_players || Infinity) <= value || value === 15)
-          && value <= (Math.max(game.max_players, game.max_exp_players))
-        ))
-      );
-    }
-
-    if (playTime.length) {
-      filtered = filtered.filter(game =>
-        playTime.some(t => {
-          const time = game.playing_time || game.maxPlaytime || game.minPlaytime;
-          return time && t.min !== undefined && t.max !== undefined && t.min <= time && time <= t.max;
-        })
-      );
-    }
-
-    if (minAge.length) {
-      filtered = filtered.filter(game =>
-        minAge.some(a => (
-          a.min !== undefined && a.max !== undefined && a.min <= game.minAge
-          && game.minAge <= a.max
-        ))
-      );
-    }
-
-    if (gameType.length) {
-      filtered = filtered.filter(game =>
-        gameType.some(t => {
-          switch (t.value) {
-            case 'Competitive':
-              return !game.is_cooperative;
-            case 'Cooperative':
-              return game.is_cooperative;
-            case 'Team-based':
-              return game.is_teambased;
-            default:
-              return true;
-          }
-        })
-      );
-    }
-
-    if (complexity.length) {
-      filtered = filtered.filter(game =>
-        complexity.some(c => (
-          game.complexity_tier === c.value
-        ))
-      );
-    }
-
+    const filtered = applyFilters(baseList);
     setFilteredGames(filtered);
-    // Don't automatically remove selected games when filters change
-    // This prevents scroll jumping when selecting filter options
-  }, [availableGames, searchAddedGames, playerCount, playTime, minAge, gameType, complexity]);
-
-  useEffect(() => {
-    filterGames();
-  }, [filterGames]);
+  }, [availableGames, searchAddedGames, applyFilters]);
 
   // Update default title when selected games change
   useEffect(() => {
@@ -227,21 +173,22 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       const games = data.map(game => ({
         id: game.bgg_game_id,
         name: game.name,
-        thumbnail: game.thumbnail,
+        yearPublished: game.year_published,
+        thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+        image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
         min_players: game.min_players,
         max_players: game.max_players,
         playing_time: game.playing_time,
-        yearPublished: game.year_published,
+        minPlaytime: game.minplaytime,
+        maxPlaytime: game.maxplaytime,
         description: game.description,
-        image: game.image_url,
         minAge: game.min_age,
         is_cooperative: game.is_cooperative,
         is_teambased: game.is_teambased,
         complexity: game.complexity,
-        minPlaytime: game.minplaytime,
-        maxPlaytime: game.maxplaytime,
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc,
+        average: game.average,
         bayesaverage: game.bayesaverage ?? null,
         min_exp_players: game.min_exp_players,
         max_exp_players: game.max_exp_players,
@@ -367,11 +314,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setError(null);
     setPollTitle('');
     setPollDescription('');
-    setPlayerCount([]);
-    setPlayTime([]);
-    setMinAge([]);
-    setGameType([]);
-    setComplexity([]);
+    clearAllFilters();
     announceForAccessibility('Form reset');
   };
 
@@ -389,25 +332,26 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
     });
   };
 
-  const handlePlayerCountChange = (newValue: any) => {
-    setPlayerCount(newValue || []);
-  };
+  // TODO: Re-add filter change handlers in Phase 3
+  // const handlePlayerCountChange = (newValue: any) => {
+  //   setPlayerCount(newValue || []);
+  // };
 
-  const handlePlayTimeChange = (newValue: any) => {
-    setPlayTime(newValue || []);
-  };
+  // const handlePlayTimeChange = (newValue: any) => {
+  //   setPlayTime(newValue || []);
+  // };
 
-  const handleMinAgeChange = (newValue: any) => {
-    setMinAge(newValue || []);
-  };
+  // const handleMinAgeChange = (newValue: any) => {
+  //   setMinAge(newValue || []);
+  // };
 
-  const handleGameTypeChange = (newValue: any) => {
-    setGameType(newValue || []);
-  };
+  // const handleGameTypeChange = (newValue: any) => {
+  //   setGameType(newValue || []);
+  // };
 
-  const handleComplexityChange = (newValue: any) => {
-    setComplexity(newValue || []);
-  };
+  // const handleComplexityChange = (newValue: any) => {
+  //   setComplexity(newValue || []);
+  // };
 
   const handlePollCreatedModalClose = () => {
     setIsPollCreatedModalVisible(false);
@@ -512,14 +456,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         )}
 
         <View style={styles.filterSection}>
-          {/* <Text style={styles.label}>Filter Games</Text> */}
-          <Text style={styles.sublabel}>
-            {isAddingToExistingPoll
-              ? 'Edit poll filters'
-              : ''
-            }
-          </Text>
-
           <TouchableOpacity
             style={[styles.filterButton, isFiltered && styles.filterButtonActive]}
             onPress={() => setIsFilterModalVisible(true)}
@@ -539,37 +475,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
               </View>
             </View>
           </TouchableOpacity>
-
-          {isFiltered && (
-            <View style={styles.activeFilters}>
-              <Text style={styles.activeFiltersText}>
-                Active filters: {[
-                  playerCount.length ? `Player Count` : null,
-                  playTime.length ? `Play Time` : null,
-                  minAge.length ? `Age Range` : null,
-                  gameType.length ? `Game Type` : null,
-                  complexity.length ? `Complexity` : null,
-                ].filter(Boolean).join(', ')}
-              </Text>
-              <TouchableOpacity
-                style={styles.clearFiltersButton}
-                onPress={() => {
-                  setPlayerCount([]);
-                  setPlayTime([]);
-                  setMinAge([]);
-                  setGameType([]);
-                  setComplexity([]);
-                  announceForAccessibility('All filters cleared');
-                }}
-                hitSlop={touchTargets.small}
-                accessibilityLabel="Clear all filters"
-                accessibilityHint="Removes all applied game filters"
-              >
-                <X size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-          )}
-
         </View>
 
         <View style={styles.searchSection}>
@@ -732,7 +637,7 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         <View style={styles.gamesListSection}>
           {filteredGames.length === 0 ? (
             <Text style={styles.noGamesText}>
-              No games found matching your filters
+              {availableGames.length === 0 ? 'No games found in your collection' : 'No games match your filters'}
             </Text>
           ) : (
             filteredGames.map(game => {
@@ -881,7 +786,6 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         }}
       />
 
-      {/* Filter Modal */}
       <FilterGameModal
         isVisible={isFilterModalVisible}
         onClose={() => setIsFilterModalVisible(false)}
@@ -889,48 +793,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         title="Filter Collection"
         description="All filters (optional)"
         applyButtonText="Apply Filters"
-        filterConfigs={[
-          {
-            key: 'playerCount',
-            label: 'Player Count',
-            placeholder: '# Players',
-            options: playerOptions,
-            value: playerCount,
-            onChange: setPlayerCount,
-          },
-          {
-            key: 'playTime',
-            label: 'Play Time',
-            placeholder: 'Play Time',
-            options: timeOptions,
-            value: playTime,
-            onChange: setPlayTime,
-          },
-          {
-            key: 'age',
-            label: 'Age Range',
-            placeholder: 'Age Range',
-            options: ageOptions,
-            value: minAge,
-            onChange: setMinAge,
-          },
-          {
-            key: 'gameType',
-            label: 'Game Type',
-            placeholder: 'Play Style',
-            options: typeOptions,
-            value: gameType,
-            onChange: setGameType,
-          },
-          {
-            key: 'complexity',
-            label: 'Complexity',
-            placeholder: 'Complexity',
-            options: complexityOptions,
-            value: complexity,
-            onChange: setComplexity,
-          },
-        ]}
+        initialFilters={filters}
+        onFiltersChange={setFilters}
       />
 
       {/* Game Search Modal */}
