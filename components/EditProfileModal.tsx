@@ -110,7 +110,7 @@ export default function EditProfileModal({
       }
 
       // Check for profanity in all fields
-      const profanityValidation = validateProfileFields(username, firstName, lastName);
+      const profanityValidation = validateProfileFields(username);
       if (!profanityValidation.isValid) {
         setError(profanityValidation.errors.join('. '));
         return;

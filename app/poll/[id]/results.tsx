@@ -11,6 +11,7 @@ import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useRef } from 'react';
 import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 export default function PollResultsScreen() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function PollResultsScreen() {
         .maybeSingle();
       setCreatorName(
         firstname || lastname
-          ? `${[firstname, lastname].join(' ').trim()} (${username})`
+          ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
           : username
       );
     })();
@@ -235,9 +236,9 @@ export default function PollResultsScreen() {
                     <Text style={styles.commentVoter}>{
                       c.username
                         ? (c.firstname || c.lastname
-                          ? `${[c.firstname, c.lastname].join(' ').trim()} (${c.username})`
+                          ? `${censor([c.firstname, c.lastname].join(' ').trim())} (${c.username})`
                           : c.username
-                        ) : c.voter_name || 'Anonymous'
+                        ) : censor(c.voter_name) || 'Anonymous'
                     }:</Text>
                     <Text style={styles.commentText}>{c.comment_text}</Text>
                   </View>

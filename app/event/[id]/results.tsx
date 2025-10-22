@@ -12,6 +12,7 @@ import Toast from 'react-native-toast-message';
 import * as Clipboard from 'expo-clipboard';
 import { TruncatedText } from '@/components/TruncatedText';
 import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -266,7 +267,7 @@ export default function EventResultsScreen() {
           Poll created by {(() => {
             const { username, firstname, lastname } = event;
             return firstname || lastname
-              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
               : username;
           })()}
         </Text>
