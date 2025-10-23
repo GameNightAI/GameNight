@@ -30,6 +30,8 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
   const [error, setError] = useState<string | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [voteUpdated, setVoteUpdated] = useState(false);
+  const [creatorName, setCreatorName] = useState<string>('Loading...');
+  const [comments, setComments] = useState<{ username: string; firstname: string; lastname: string; voter_name: string; comment_text: string }[]>([]);
 
   // Track the last pollId to prevent unnecessary re-fetches
   const lastPollIdRef = useRef<string | null>(null);
@@ -278,6 +280,36 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
       });
 
       setResults(gameResults);
+
+      // Fetch creator info
+      const fetchCreatorInfo = async () => {
+        const { data, error } = await supabase
+          .from('polls_profiles')
+          .select('username, firstname, lastname')
+          .eq('id', id)
+          .maybeSingle();
+        if (!error && data) {
+          const { username, firstname, lastname } = data;
+          setCreatorName(
+            firstname || lastname
+              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              : username
+          );
+        }
+      };
+      await fetchCreatorInfo();
+
+      // Fetch poll comments
+      const fetchComments = async () => {
+        const { data, error } = await supabase
+          .from('poll_comments_view')
+          .select('username, firstname, lastname, voter_name, comment_text')
+          .eq('poll_id', id)
+          .order('created_at', { ascending: false });
+        if (!error && data) setComments(data);
+      };
+      await fetchComments();
+
     } catch (err) {
       console.error('Error in loadResults:', err);
       setError((err as Error).message || 'Failed to load results');
@@ -305,6 +337,8 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
     results,
     hasVoted,
     voteUpdated,
+    creatorName,
+    comments,
     loading,
     error,
     reload,

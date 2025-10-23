@@ -17,9 +17,10 @@ export default function LocalPollResultsScreen() {
   const { id } = useLocalSearchParams();
   const { colors, typography, touchTargets } = useTheme();
   const insets = useSafeAreaInsets();
-  const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
+  const [comments, setComments] = useState<{ username: string; firstname: string; lastname: string; voter_name: string; comment_text: string }[]>([]);
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
+  const [creatorName, setCreatorName] = useState<string>('Loading...');
 
   const { poll, results, hasVoted, loading, error } = usePollResults(id as string | undefined);
 
@@ -27,14 +28,34 @@ export default function LocalPollResultsScreen() {
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
   useEffect(() => {
+    if (!id) return;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from('polls_profiles')
+        .select('username, firstname, lastname')
+        .eq('id', id)
+        .maybeSingle();
+      if (!error && data) {
+        const { username, firstname, lastname } = data;
+        setCreatorName(
+          firstname || lastname
+            ? `${[firstname, lastname].join(' ').trim()} (${username})`
+            : username
+        );
+      }
+    })();
+  }, [id]);
+
+  useEffect(() => {
     // Fetch poll comments
     const fetchComments = async () => {
       if (!id) return;
       const { data, error } = await supabase
-        .from('poll_comments')
-        .select('voter_name, comment_text')
+        .from('poll_comments_view')
+        .select('username, firstname, lastname, voter_name, comment_text')
         .eq('poll_id', id)
-        .order('id', { ascending: false });
+        .order('created_at', { ascending: false });
       if (!error && data) setComments(data);
     };
     fetchComments();
@@ -126,6 +147,9 @@ export default function LocalPollResultsScreen() {
         </TouchableOpacity>
         <Text style={styles.title}>Local Poll Results</Text>
         <Text style={styles.subtitle}>{poll?.title}</Text>
+        <Text style={styles.subtitle}>
+          Poll created by {creatorName}
+        </Text>
       </View>
       {/* --- Banner notification for new votes --- */}
       {newVotes && (
@@ -187,10 +211,16 @@ export default function LocalPollResultsScreen() {
             {comments && comments.length > 0 && (
               <View style={styles.commentsContainer}>
                 <Text style={styles.commentsTitle}>Comments</Text>
-                {comments.map((c, idx) => (
-                  <View key={idx} style={styles.commentItem}>
-                    <Text style={styles.commentVoter}>{c.voter_name || 'Anonymous'}:</Text>
-                    <Text style={styles.commentText}>{c.comment_text}</Text>
+                {comments.map((comment, index) => (
+                  <View key={index} style={styles.commentItem}>
+                    <Text style={styles.commentVoter}>
+                      {comment.username
+                        ? (comment.firstname || comment.lastname
+                          ? `${[comment.firstname, comment.lastname].join(' ').trim()} (${comment.username})`
+                          : comment.username
+                        ) : comment.voter_name || 'Anonymous'}
+                    </Text>
+                    <Text style={styles.commentText}>{comment.comment_text}</Text>
                   </View>
                 ))}
               </View>

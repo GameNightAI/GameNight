@@ -40,13 +40,13 @@ export default function PollScreen() {
     user,
     pendingVotes,
     setPendingVotes,
+    creatorName,
     reload,
   } = usePollData(id);
 
   const [voterName, setVoterName] = useState('');
   const [nameError, setNameError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [creatorName, setCreatorName] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [hasPreviousVotes, setHasPreviousVotes] = useState(false);
   const [storageInitialized, setStorageInitialized] = useState(false);
@@ -73,65 +73,52 @@ export default function PollScreen() {
     initializeStorage();
   }, [user]);
 
-  useEffect(() => {
-    if (poll?.user_id) {
-      // Fetch the creator's username, firstname, and lastname from Supabase `profiles`
-      (async () => {
-        try {
-          const { data: { username, firstname, lastname }, error } = await supabase
-            .from('profiles') 
-            .select('username, firstname, lastname')
-            .eq('id', poll.user_id)
-            .maybeSingle();
-          setCreatorName(
-            firstname || lastname
-              ? `${[firstname, lastname].join(' ').trim()} (${username})`
-              : username
-          );
-          if (error) {
-            throw error;
-          }
-        } catch (error) {
-          console.error(error);
-          setCreatorName(poll.user_id);
-        }
-      })();
-    }
-  }, [poll]);
 
   // Check for previous votes with better error handling
   const checkPreviousVotes = useCallback(async (name: string, pollId: string) => {
     try {
-      let trimmedName;
       if (!user) {
-        trimmedName = name.trim();
+        const trimmedName = name.trim();
         if (!trimmedName) {
           setHasPreviousVotes(false);
           return;
         }
+
+        // Use trimmedName in the query for non-logged-in users
+        const { data: previousVotes, error: previousVotesError } = await supabase
+          .from('votes')
+          .select('id')
+          .eq('poll_id', pollId)
+          .eq('voter_name', trimmedName);
+
+        if (previousVotesError) {
+          console.warn('Error checking previous votes:', previousVotesError);
+          setHasPreviousVotes(false);
+          return;
+        }
+
+        setHasPreviousVotes(previousVotes && previousVotes.length > 0);
+      } else {
+        // Use user.id for logged-in users
+        const { data: previousVotes, error: previousVotesError } = await supabase
+          .from('votes')
+          .select('id')
+          .eq('poll_id', pollId)
+          .eq('user_id', user.id);
+
+        if (previousVotesError) {
+          console.warn('Error checking previous votes:', previousVotesError);
+          setHasPreviousVotes(false);
+          return;
+        }
+
+        setHasPreviousVotes(previousVotes && previousVotes.length > 0);
       }
-
-      const { data: previousVotes, error: previousVotesError } = await supabase
-        .from('votes')
-        .select('id')
-        .eq('poll_id', pollId)
-        .eq(
-          user ? 'user_id' : 'voter_name',
-          user ? user.id : trimmedName
-        );
-
-      if (previousVotesError) {
-        console.warn('Error checking previous votes:', previousVotesError);
-        setHasPreviousVotes(false);
-        return;
-      }
-
-      setHasPreviousVotes(previousVotes && previousVotes.length > 0);
     } catch (error) {
       console.warn('Error in checkPreviousVotes:', error);
       setHasPreviousVotes(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (user || ((storageInitialized && voterName)) && id) {
@@ -167,16 +154,19 @@ export default function PollScreen() {
     try {
       setSubmitting(true);
 
-      let finalName;
-      if (!user) {
-        finalName = voterName.trim();
-        if (!finalName) {
-          setNameError(true);
-          Toast.show({ type: 'error', text1: 'Please enter your name' });
-          setSubmitting(false);
-          return;
+      const finalName = (() => {
+        if (!user) {
+          const trimmed = voterName.trim();
+          if (!trimmed) {
+            setNameError(true);
+            Toast.show({ type: 'error', text1: 'Please enter your name' });
+            setSubmitting(false);
+            return '';
+          }
+          return trimmed;
         }
-      }
+        return user.username || user.id || '';
+      })();
       // Check if the voter has previously voted on any game in this poll
       const { data: previousVotes, error: previousVotesError } = await supabase
         .from('votes')

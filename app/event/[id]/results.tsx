@@ -11,6 +11,8 @@ import { Poll, PollEvent } from '@/types/poll';
 import Toast from 'react-native-toast-message';
 import * as Clipboard from 'expo-clipboard';
 import { TruncatedText } from '@/components/TruncatedText';
+import { EventDateResultCard } from '@/components/EventDateResultCard';
+import { useEventResults } from '@/hooks/useEventResults';
 import { useTheme } from '@/hooks/useTheme';
 
 // Helper function to format time strings (HH:mm format) to readable format
@@ -77,145 +79,12 @@ export default function EventResultsScreen() {
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<any>(null);
-  const [event, setEvent] = useState<Event | null>(null);
-  const [eventDates, setEventDates] = useState<PollEvent[]>([]);
-  const [voteCounts, setVoteCounts] = useState<Record<string, { yes: number; no: number; maybe: number }>>({});
-  const [rankedDates, setRankedDates] = useState<Array<PollEvent & { ranking: number; totalScore: number; totalVotes: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const { event, eventDates, dateResults, comments, creatorName, loading, error, reload } = useEventResults(id);
 
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
 
-
-  useEffect(() => {
-    if (!id) return;
-
-    const loadEventData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Load event details (only polls that have poll_events - these are events)
-        const { data: eventData, error: eventError } = await supabase
-          .from('polls_profiles')
-          .select(`
-            *,
-            poll_events!inner(
-              id,
-              event_date,
-              start_time,
-              end_time,
-              location
-            )
-          `)
-          .eq('id', id)
-          .single();
-
-        if (eventError) throw eventError;
-        setEvent(eventData);
-
-        // Load event dates
-        const { data: datesData, error: datesError } = await supabase
-          .from('poll_events')
-          .select('*')
-          .eq('poll_id', id)
-          .order('event_date', { ascending: true });
-
-        if (datesError) throw datesError;
-        setEventDates(datesData || []);
-
-        // Get current user
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
-          setUser(currentUser);
-        }
-
-        // Load vote counts for ranking
-        await loadVoteCounts(datesData || []);
-
-      } catch (err) {
-        console.error('Error loading event data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load event data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadEventData();
-  }, [id]);
-
-  // Load vote counts and calculate rankings
-  const loadVoteCounts = async (dates: PollEvent[]) => {
-    if (!dates || dates.length === 0) return;
-
-    try {
-      // Load all votes for this event's dates
-      const { data: votesData, error: votesError } = await supabase
-        .from('votes_events')
-        .select('*')
-        .in('poll_event_id', dates.map(d => d.id));
-
-      if (votesError) {
-        console.error('Error loading votes:', votesError);
-        return;
-      }
-
-      // Calculate vote counts for each date
-      const counts: Record<string, { yes: number; no: number; maybe: number }> = {};
-
-      dates.forEach(date => {
-        counts[date.id] = { yes: 0, no: 0, maybe: 0 };
-      });
-
-      votesData?.forEach(vote => {
-        const dateId = vote.poll_event_id;
-        if (counts[dateId]) {
-          switch (vote.vote_type) {
-            case 2: counts[dateId].yes++; break;
-            case 1: counts[dateId].maybe++; break;
-            case -2: counts[dateId].no++; break;
-          }
-        }
-      });
-
-      setVoteCounts(counts);
-
-      // Calculate rankings
-      const dateResults = dates.map(date => {
-        const dateCounts = counts[date.id] || { yes: 0, no: 0, maybe: 0 };
-        // Calculate score: Ideal (2 points), Doable (1 point), No (-1 point)
-        const totalScore = (dateCounts.yes * 2) + (dateCounts.maybe * 1) + (dateCounts.no * -1);
-        const totalVotes = dateCounts.yes + dateCounts.maybe + dateCounts.no;
-
-        return {
-          ...date,
-          totalScore,
-          totalVotes,
-          ranking: 0, // Will be set after sorting
-        };
-      });
-
-      // Sort by total score (descending) and assign rankings
-      dateResults.sort((a, b) => b.totalScore - a.totalScore);
-
-      // Handle ties - assign same rank to items with same score
-      let currentRank = 1;
-      let lastScore: number | null = null;
-
-      dateResults.forEach((result, index) => {
-        if (lastScore !== null && result.totalScore !== lastScore) {
-          currentRank = index + 1;
-        }
-        result.ranking = currentRank;
-        lastScore = result.totalScore;
-      });
-
-      setRankedDates(dateResults);
-    } catch (err) {
-      console.error('Error loading vote counts:', err);
-    }
-  };
 
   useEffect(() => {
     const getUser = async () => {
@@ -224,6 +93,7 @@ export default function EventResultsScreen() {
     };
     getUser();
   }, []);
+
 
   if (loading) return <LoadingState />;
 
@@ -263,12 +133,7 @@ export default function EventResultsScreen() {
         <Text style={styles.title}>Event Results</Text>
         <Text style={styles.subtitle}>{event.title}</Text>
         <Text style={styles.subtitle}>
-          Poll created by {(() => {
-            const { username, firstname, lastname } = event;
-            return firstname || lastname
-              ? `${[firstname, lastname].join(' ').trim()} (${username})`
-              : username;
-          })()}
+          Poll created by {creatorName}
         </Text>
       </View>
 
@@ -297,14 +162,13 @@ export default function EventResultsScreen() {
         {/* Event Dates */}
         <View style={styles.dateResults}>
           <Text style={styles.sectionTitle}>Event Date Rankings</Text>
-          {rankedDates.length === 0 ? (
+          {dateResults.length === 0 ? (
             <Text style={styles.emptyText}>No votes have been cast yet.</Text>
           ) : (
-            rankedDates.map((eventDate) => {
-              const date = new Date(eventDate.event_date);
+            dateResults.map((eventDate) => {
               const displayLocation = event.use_same_location && event.location
                 ? event.location
-                : eventDate.location || 'Location not set';
+                : eventDate.date.location || 'Location not set';
               const getDisplayTime = (startTime: string | null, endTime: string | null): string => {
                 if (startTime) {
                   startTime = formatTimeString(startTime);
@@ -326,59 +190,40 @@ export default function EventResultsScreen() {
               if (event.use_same_time && (event.start_time || event.end_time)) {
                 displayTime = getDisplayTime(event.start_time || null, event.end_time || null);
               } else {
-                displayTime = getDisplayTime(eventDate.start_time || null, eventDate.end_time || null);
+                displayTime = getDisplayTime(eventDate.date.start_time || null, eventDate.date.end_time || null);
               }
-              const counts = voteCounts[eventDate.id] || { yes: 0, no: 0, maybe: 0 };
 
               return (
-                <View key={eventDate.id} style={styles.dateResultCard}>
-                  <View style={styles.dateResultHeader}>
-                    <View style={styles.rankingContainer}>
-                      <View style={[styles.rankingBadge, { backgroundColor: getRankingColor(eventDate.ranking) }]}>
-                        <Text style={styles.rankingNumber}>{eventDate.ranking}</Text>
-                      </View>
-                      <View style={styles.rankingInfo}>
-                        <Text style={styles.rankingLabel}>
-                          {`${eventDate.ranking}${getOrdinalSuffix(eventDate.ranking)} Place`}
-                        </Text>
-                        <Text style={styles.scoreText}>
-                          {eventDate.totalVotes} vote{eventDate.totalVotes !== 1 ? 's' : ''} • Score: {eventDate.totalScore}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                  <View style={styles.dateInfo}>
-                    <Text style={styles.dateText}>
-                      {format(date, 'EEEE, MMMM d, yyyy')}
-                    </Text>
-                    <View style={styles.dateDetails}>
-                      <View style={styles.dateDetailRow}>
-                        <MapPin size={16} color="#6b7280" />
-                        <TruncatedText
-                          text={displayLocation}
-                          maxLength={35}
-                          textStyle={styles.dateDetailText}
-                          buttonTextStyle={styles.truncateButtonText}
-                        />
-                      </View>
-                      <View style={styles.dateDetailRow}>
-                        <Clock size={16} color="#6b7280" />
-                        <Text style={styles.dateDetailText}>{displayTime}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.voteBreakdown}>
-                      <Text style={styles.voteBreakdownText}>
-                        Ideal: {counts.yes} • Doable: {counts.maybe} • No: {counts.no}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+                <EventDateResultCard
+                  key={eventDate.date.id}
+                  eventDate={eventDate}
+                  votes={eventDate.votes}
+                  displayLocation={displayLocation}
+                  displayTime={displayTime}
+                />
               );
             })
           )}
         </View>
 
-
+        {/* Comments Section */}
+        {comments?.length > 0 && (
+          <View style={styles.commentsContainer}>
+            <Text style={styles.commentsTitle}>Comments</Text>
+            {comments.map((comment, index) => (
+              <View key={index} style={styles.commentItem}>
+                <Text style={styles.commentAuthor}>
+                  {comment.username
+                    ? (comment.firstname || comment.lastname
+                      ? `${[comment.firstname, comment.lastname].join(' ').trim()} (${comment.username})`
+                      : comment.username
+                    ) : comment.voter_name || 'Anonymous'}
+                </Text>
+                <Text style={styles.commentText}>{comment.comment_text}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Share Button */}
         <TouchableOpacity
@@ -657,5 +502,36 @@ const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.crea
     fontSize: typography.fontSize.caption1,
     fontFamily: typography.getFontFamily('semibold'),
     textDecorationLine: 'underline',
+  },
+  commentsContainer: {
+    backgroundColor: colors.card,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  commentsTitle: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.title3,
+    color: colors.primary,
+    marginBottom: 16,
+    lineHeight: typography.lineHeight.tight * typography.fontSize.title3,
+  },
+  commentItem: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  commentAuthor: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  commentText: {
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.text,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
 });

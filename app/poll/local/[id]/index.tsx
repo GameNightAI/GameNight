@@ -19,6 +19,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingVotes, setPendingVotes] = useState<Record<number, number>>({});
+  const [creatorName, setCreatorName] = useState<string | null>(null);
 
   useEffect(() => {
     if (pollId) loadLocalPoll(pollId.toString());
@@ -46,6 +47,23 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
       }
 
       setPoll(pollData);
+
+      // Fetch creator info
+      if (pollData?.user_id) {
+        const { data: profileData, error: creatorError } = await supabase
+          .from('profiles')
+          .select('username, firstname, lastname')
+          .eq('id', pollData.user_id)
+          .maybeSingle();
+        if (!creatorError && profileData) {
+          const { username, firstname, lastname } = profileData;
+          setCreatorName(
+            firstname || lastname
+              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              : username
+          );
+        }
+      }
 
       // Get the games in this poll
       const { data: pollGames, error: gamesError } = await supabase
@@ -160,6 +178,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
     error,
     pendingVotes,
     setPendingVotes,
+    creatorName,
     reload: () => pollId && loadLocalPoll(pollId.toString()),
   };
 };
@@ -177,6 +196,7 @@ export default function LocalPollScreen() {
     error,
     pendingVotes,
     setPendingVotes,
+    creatorName,
     reload,
   } = useLocalPollData(id);
 
@@ -329,6 +349,9 @@ export default function LocalPollScreen() {
               : poll?.title}
           </Text>
           {!!poll?.description && <Text style={styles.description}>{poll.description}</Text>}
+          {creatorName && (
+            <Text style={styles.creatorSubtitle}>Poll created by {creatorName}</Text>
+          )}
           <Text style={styles.subtitle}>Local Voting Mode: Enter your name, vote, and pass the device to the next voter!</Text>
         </View>
 
@@ -435,6 +458,12 @@ const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.crea
     fontFamily: typography.getFontFamily('normal'),
     color: colors.card,
     marginBottom: 12
+  },
+  creatorSubtitle: {
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.accent,
+    marginBottom: 8
   },
   subtitle: {
     fontSize: typography.fontSize.footnote,
