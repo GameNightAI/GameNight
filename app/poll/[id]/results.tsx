@@ -19,33 +19,18 @@ export default function PollResultsScreen() {
   const { colors, typography, touchTargets } = useTheme();
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<any>(null);
-  const [comments, setComments] = useState<{ username: string; firstname: string; lastname: string; voter_name: string; comment_text: string }[]>([]);
   // --- Real-time vote listening ---
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
-  const [creatorName, setCreatorName] = useState<string>('');
 
-  const { poll, games, results, hasVoted, voteUpdated, loading, error, reload } = usePollResults(id);
+  const { poll, games, results, hasVoted, voteUpdated, creatorName, comments, loading, error, reload } = usePollResults(id);
 
   // Move useMemo before any early returns to follow Rules of Hooks
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
-  
+
   useEffect(() => {
     if (!id) return;
-
-    (async () => {
-      const { data: { username, firstname, lastname }, error } = await supabase
-        .from('polls_profiles')
-        .select('username, firstname, lastname')
-        .eq('id', id)
-        .maybeSingle();
-      setCreatorName(
-        firstname || lastname
-          ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
-          : username
-      );
-    })();
 
     // Subscribe to new votes for this poll
     const channel = supabase
@@ -78,23 +63,11 @@ export default function PollResultsScreen() {
     };
     getUser();
 
-    // Fetch poll comments
-    const fetchComments = async () => {
-      if (!id) return;
-      const { data, error } = await supabase
-        .from('poll_comments_view')
-        .select('username, firstname, lastname, voter_name, comment_text')
-        .eq('poll_id', id)
-        .order('created_at', { ascending: false });
-      if (!error && data) setComments(data);
-    };
-    fetchComments();
-
     // Check if user just updated their votes
     if (voteUpdated) {
       Toast.show({ type: 'success', text1: 'Vote updated!' });
     }
-  }, [id, voteUpdated]);
+  }, [voteUpdated]);
 
   if (loading) return <LoadingState />;
 

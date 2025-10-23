@@ -28,6 +28,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
   const [isCreator, setIsCreator] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [pendingVotes, setPendingVotes] = useState<Record<number, number>>({});
+  const [creatorName, setCreatorName] = useState<string | null>(null);
 
   useEffect(() => {
     if (pollId) loadPoll(pollId.toString());
@@ -67,6 +68,26 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       setUser(user);
       setIsCreator(user?.id === pollData.user_id);
+
+      // Fetch creator info
+      if (pollData?.user_id) {
+        const { data: profileData, error: creatorError } = await supabase
+          .from('profiles')
+          .select('username, firstname, lastname')
+          .eq('id', pollData.user_id)
+          .maybeSingle();
+        if (!creatorError && profileData) {
+          const { username, firstname, lastname } = profileData;
+          setCreatorName(
+            firstname || lastname
+              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              : username
+          );
+        } else if (creatorError) {
+          console.error('Error fetching creator:', creatorError);
+          setCreatorName(pollData.user_id);
+        }
+      }
 
       // Get the games in this poll
       const { data: pollGames, error: gamesError } = await supabase
@@ -149,11 +170,11 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       // console.log('User identifier:', identifier);
 
-      const userVotes = votes?.filter(v => 
+      const userVotes = votes?.filter(v =>
         (identifier && identifier === v.voter_name)
         || (user?.id && user?.id === v.user_id)
       ) || [];
-      setHasVoted(userVotes.length > 0 );
+      setHasVoted(userVotes.length > 0);
 
       // Map games data to the expected format
       const formattedGames = gamesData.map(game => {
@@ -246,6 +267,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
     user,
     pendingVotes,
     setPendingVotes,
+    creatorName,
     reload: () => pollId && loadPoll(pollId.toString()),
   };
 };
