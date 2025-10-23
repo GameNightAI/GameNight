@@ -14,6 +14,7 @@ import { TruncatedText } from '@/components/TruncatedText';
 import { EventDateResultCard } from '@/components/EventDateResultCard';
 import { useEventResults } from '@/hooks/useEventResults';
 import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {

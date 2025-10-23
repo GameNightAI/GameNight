@@ -4,6 +4,7 @@ import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
 import { VOTING_OPTIONS, getVoteTypeKeyFromScore } from '@/components/votingOptions';
 import { getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
+import { censor } from '@/utils/profanityFilter';
 
 interface GameVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
@@ -197,9 +198,9 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
           voters: gameVotes.map(v => ({
             name: v.username
               ? (v.firstname || v.lastname
-                ? `${[v.firstname, v.lastname].join(' ').trim()} (${v.username})`
+                ? `${censor([v.firstname, v.lastname].join(' ').trim())} (${v.username})`
                 : v.username
-              ) : v.voter_name || 'Anonymous',
+              ) : censor(v.voter_name) || 'Anonymous',
             vote_type: v.vote_type,
           })) || [],
         };

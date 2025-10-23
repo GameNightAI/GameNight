@@ -19,6 +19,7 @@ import {
   saveUsername,
   getUsername,
 } from '@/utils/storage';
+import { censor } from '@/utils/profanityFilter';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -203,7 +204,7 @@ export default function EventScreen() {
             const { username, firstname, lastname } = profileData;
             setCreatorName(
               firstname || lastname
-                ? `${[firstname, lastname].join(' ').trim()} (${username})`
+                ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
                 : username
             );
           }

@@ -120,7 +120,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
         const voteData = {
           votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
-            name: v.voter_name || 'Anonymous',
+            name: censor(v.voter_name) || 'Anonymous',
             vote_type: v.vote_type as VoteType,
           })),
         };
