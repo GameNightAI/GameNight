@@ -145,6 +145,13 @@ export default function EventScreen() {
     }
   }, [user, voterName, id, storageInitialized, checkPreviousVotes]);
 
+  // Reload votes after storage initialization to display user's previous votes
+  useEffect(() => {
+    if (storageInitialized && id && eventDates.length > 0) {
+      loadVotes(id as string, user?.id);
+    }
+  }, [storageInitialized, voterName, id, user?.id]);
+
   // Load event data
   useEffect(() => {
     const loadEvent = async () => {
@@ -227,6 +234,11 @@ export default function EventScreen() {
   // Load votes for the event
   const loadVotes = async (eventId: string, userId?: string) => {
     try {
+      // Guard: Don't load votes if eventDates hasn't been populated yet
+      if (eventDates.length === 0) {
+        return;
+      }
+
       // Load all votes for this event's dates using votes_events
       const { data: votesData, error: votesError } = await supabase
         .from('votes_events')

@@ -37,14 +37,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) {
           console.error('Error getting initial session:', error);
           // If there's an error getting the session, clear everything
-          await handleAuthError(error);
+          // Don't await to prevent blocking app startup
+          clearAuthState().catch(console.error);
         } else {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        await clearAuthState();
+        // Don't await to prevent blocking app startup
+        clearAuthState().catch(console.error);
       } finally {
         setLoading(false);
       }
@@ -107,11 +109,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Token refresh failed - clearing auth state and signing out');
       await clearAuthState();
 
-      // Sign out to ensure clean state
+      // Sign out to ensure clean state (but don't throw if it fails)
       try {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: 'local' });
       } catch (signOutError) {
-        console.error('Error during sign out:', signOutError);
+        console.error('Error during sign out (non-critical):', signOutError);
+        // Ignore sign out errors - we've already cleared local state
       }
     }
   };

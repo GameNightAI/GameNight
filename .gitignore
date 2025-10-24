@@ -51,3 +51,8 @@ android/
 # Logs & script output
 *.log
 *.csv
+
+# Editor temporary files
+*.swp
+*.swo
+*~

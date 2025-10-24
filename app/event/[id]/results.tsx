@@ -8,8 +8,6 @@ import { supabase } from '@/services/supabase';
 import { Calendar, MapPin, Clock, Trophy, Medal, Award } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { Poll, PollEvent } from '@/types/poll';
-import Toast from 'react-native-toast-message';
-import * as Clipboard from 'expo-clipboard';
 import { TruncatedText } from '@/components/TruncatedText';
 import { EventDateResultCard } from '@/components/EventDateResultCard';
 import { useEventResults } from '@/hooks/useEventResults';
@@ -216,9 +214,9 @@ export default function EventResultsScreen() {
                 <Text style={styles.commentAuthor}>
                   {comment.username
                     ? (comment.firstname || comment.lastname
-                      ? `${[comment.firstname, comment.lastname].join(' ').trim()} (${comment.username})`
+                      ? `${censor([comment.firstname, comment.lastname].join(' ').trim())} (${comment.username})`
                       : comment.username
-                    ) : comment.voter_name || 'Anonymous'}
+                    ) : censor(comment.voter_name) || 'Anonymous'}
                 </Text>
                 <Text style={styles.commentText}>{comment.comment_text}</Text>
               </View>
@@ -226,31 +224,6 @@ export default function EventResultsScreen() {
           </View>
         )}
 
-        {/* Share Button */}
-        <TouchableOpacity
-          style={styles.shareButton}
-          onPress={async () => {
-            try {
-              // Copy event URL to clipboard
-              const baseUrl = Platform.select({
-                web: typeof window !== 'undefined' ? window.location.origin : 'https://klack.netlify.app',
-                default: 'https://klack.netlify.app',
-              });
-              const eventUrl = `${baseUrl}/event/${event.id}`;
-
-              await Clipboard.setStringAsync(eventUrl);
-              Toast.show({ type: 'success', text1: 'Event link copied to clipboard!' });
-            } catch (err) {
-              console.log('Error copying to clipboard:', err);
-              Toast.show({ type: 'error', text1: 'Failed to copy link' });
-            }
-          }}
-          accessibilityLabel="Share event"
-          accessibilityRole="button"
-          accessibilityHint="Copies the event link to your clipboard"
-        >
-          <Text style={styles.shareButtonText}>Share Event</Text>
-        </TouchableOpacity>
       </ScrollView>
 
       <View style={styles.bottomActionsContainer}>
@@ -483,20 +456,6 @@ const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.crea
     color: colors.textMuted,
     textAlign: 'center',
     padding: 20,
-  },
-  shareButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    padding: 16,
-    margin: 20,
-    alignItems: 'center',
-    minHeight: 44,
-  },
-  shareButtonText: {
-    fontFamily: typography.getFontFamily('semibold'),
-    fontSize: typography.fontSize.body,
-    color: colors.card,
-    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   truncateButtonText: {
     color: colors.accent,

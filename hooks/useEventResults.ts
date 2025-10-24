@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/services/supabase';
 import { Poll, PollEvent } from '@/types/poll';
 import { EVENT_VOTING_OPTIONS } from '@/components/eventVotingOptions';
+import { censor } from '@/utils/profanityFilter';
 
 interface EventVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
@@ -111,7 +112,7 @@ export const useEventResults = (eventId: string | string[] | undefined) => {
           const { username, firstname, lastname } = data;
           setCreatorName(
             firstname || lastname
-              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
               : username
           );
         }
