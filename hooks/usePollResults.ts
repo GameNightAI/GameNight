@@ -293,7 +293,7 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
           const { username, firstname, lastname } = data;
           setCreatorName(
             firstname || lastname
-              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
               : username
           );
         }

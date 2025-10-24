@@ -11,6 +11,7 @@ import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
 import { VOTING_OPTIONS } from '@/components/votingOptions';
 import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 export default function LocalPollResultsScreen() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function LocalPollResultsScreen() {
         const { username, firstname, lastname } = data;
         setCreatorName(
           firstname || lastname
-            ? `${[firstname, lastname].join(' ').trim()} (${username})`
+            ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
             : username
         );
       }
@@ -216,9 +217,9 @@ export default function LocalPollResultsScreen() {
                     <Text style={styles.commentVoter}>
                       {comment.username
                         ? (comment.firstname || comment.lastname
-                          ? `${[comment.firstname, comment.lastname].join(' ').trim()} (${comment.username})`
+                          ? `${censor([comment.firstname, comment.lastname].join(' ').trim())} (${comment.username})`
                           : comment.username
-                        ) : comment.voter_name || 'Anonymous'}
+                        ) : censor(comment.voter_name) || 'Anonymous'}
                     </Text>
                     <Text style={styles.commentText}>{comment.comment_text}</Text>
                   </View>
