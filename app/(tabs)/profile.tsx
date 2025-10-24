@@ -246,6 +246,10 @@ export default function ProfileScreen() {
             resizeMode="contain"
           />
         </TouchableOpacity>
+
+        <Text style={styles.infoText}>
+          © 2025 Klack LLC. All rights reserved.
+        </Text>
       </View>
 
       {showEditModal && profile && (
