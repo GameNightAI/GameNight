@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SquarePen, X } from 'lucide-react-native';
 import { CreateEventDetails } from './CreateEventDetails';
+import { TimeDropdown } from './DropdownEventTime';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
@@ -54,6 +55,7 @@ interface TimeRowProps {
   touchTargets: any;
   styles: any;
   colors: any;
+  typography: any;
   saveAttempted: boolean;
 }
 
@@ -64,7 +66,7 @@ interface TimeRowProps {
 const timePartsToDate = (h: string, m: string, p: 'AM' | 'PM', baseDate: Date): Date | null => {
   const hour = parseInt(h, 10);
   const minute = parseInt(m, 10);
-  if (isNaN(hour) || isNaN(minute) || hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
+  if (isNaN(hour) || isNaN(minute) || hour < 1 || hour > 12 || ![0, 15, 30, 45].includes(minute)) return null;
   let hour24 = hour % 12;
   if (p === 'PM') hour24 += 12;
   return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hour24, minute);
@@ -74,9 +76,17 @@ const dateToTimeParts = (date: Date | null): TimeParts => {
   if (!date) return { h: '', m: '', p: 'AM' };
   const hour24 = date.getHours();
   const hour12 = hour24 % 12 || 12;
+
+  // Round minutes to nearest supported value (0, 15, 30, 45)
+  const minutes = date.getMinutes();
+  const supportedMinutes = [0, 15, 30, 45];
+  const roundedMinutes = supportedMinutes.reduce((prev, curr) =>
+    Math.abs(curr - minutes) < Math.abs(prev - minutes) ? curr : prev
+  );
+
   return {
     h: hour12.toString(),
-    m: date.getMinutes().toString().padStart(2, '0'),
+    m: roundedMinutes.toString().padStart(2, '0'),
     p: hour24 >= 12 ? 'PM' : 'AM'
   };
 };
@@ -108,66 +118,108 @@ const TimeRow = React.memo(({
   touchTargets,
   styles,
   colors,
+  typography,
   saveAttempted,
 }: TimeRowProps) => {
-  const inputStyle = small ? styles.customTimeInput : styles.hhInput;
+  const hourValue = parts.h ? parseInt(parts.h, 10) : null;
+  const minuteValue = parts.m ? parseInt(parts.m, 10) : null;
+
+  const handleHourChange = (value: number | null) => {
+    onChange({ ...parts, h: value ? value.toString() : '' });
+  };
+
+  const handleMinuteChange = (value: number | null) => {
+    onChange({ ...parts, m: value !== null ? value.toString().padStart(2, '0') : '' });
+  };
+
   return (
-    <View style={styles.timeInputRow}>
+    <View style={styles.timeInputContainer}>
       <Text style={styles.timeFormLabel}>{label}</Text>
-      <TextInput
-        style={inputStyle}
-        value={parts.h}
-        onChangeText={(text) => onChange({ ...parts, h: text.replace(/[^0-9]/g, '').slice(0, 2) })}
-        placeholder="HH"
-        keyboardType="numeric"
-        maxLength={2}
-      />
-      <Text style={styles.timeSeparator}>:</Text>
-      <TextInput
-        style={inputStyle}
-        value={parts.m}
-        onChangeText={(text) => onChange({ ...parts, m: text.replace(/[^0-9]/g, '').slice(0, 2) })}
-        placeholder="MM"
-        keyboardType="numeric"
-        maxLength={2}
-      />
-      <View style={styles.periodToggleContainer}>
+      <View style={styles.timeInputRow}>
+        <TimeDropdown
+          type="hour"
+          value={hourValue}
+          onChange={handleHourChange}
+          label="Hour"
+          small={small}
+          colors={colors}
+          typography={typography}
+          touchTargets={touchTargets}
+        />
+        <Text style={styles.timeSeparator}>:</Text>
+        <TimeDropdown
+          type="minute"
+          value={minuteValue}
+          onChange={handleMinuteChange}
+          label="Minute"
+          small={small}
+          colors={colors}
+          typography={typography}
+          touchTargets={touchTargets}
+        />
+        <View style={styles.periodToggleContainer}>
+          <TouchableOpacity
+            style={[
+              styles.periodButton,
+              small && styles.periodButtonSmall,
+              parts.p === 'AM' && styles.periodButtonActive
+            ]}
+            onPress={() => onChange({ ...parts, p: 'AM' })}
+            accessibilityRole="button"
+            accessibilityLabel="Set period to AM"
+          >
+            <Text style={[
+              styles.periodButtonText,
+              small && styles.periodButtonTextSmall,
+              parts.p === 'AM' && styles.periodButtonTextActive
+            ]}>AM</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.periodButton,
+              small && styles.periodButtonSmall,
+              parts.p === 'PM' && styles.periodButtonActive
+            ]}
+            onPress={() => onChange({ ...parts, p: 'PM' })}
+            accessibilityRole="button"
+            accessibilityLabel="Set period to PM"
+          >
+            <Text style={[
+              styles.periodButtonText,
+              small && styles.periodButtonTextSmall,
+              parts.p === 'PM' && styles.periodButtonTextActive
+            ]}>PM</Text>
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
-          style={[styles.periodButton, parts.p === 'AM' && styles.periodButtonActive]}
-          onPress={() => onChange({ ...parts, p: 'AM' })}
+          style={[
+            styles.timeResetButton,
+            small && styles.timeResetButtonSmall,
+            { marginLeft: 6 }
+          ]}
+          hitSlop={touchTargets.small}
           accessibilityRole="button"
-          accessibilityLabel="Set period to AM"
+          accessibilityLabel={`Clear ${label.toLowerCase()} time`}
+          accessibilityHint={`Clears the ${label.toLowerCase()} time`}
+          onPress={(e) => {
+            e.preventDefault?.();
+            onClear();
+          }}
         >
-          <Text style={styles.periodButtonText}>AM</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.periodButton, parts.p === 'PM' && styles.periodButtonActive]}
-          onPress={() => onChange({ ...parts, p: 'PM' })}
-          accessibilityRole="button"
-          accessibilityLabel="Set period to PM"
-        >
-          <Text style={styles.periodButtonText}>PM</Text>
+          <Text style={[
+            styles.clearTimeButtonText,
+            small && styles.clearTimeButtonTextSmall
+          ]}>✕</Text>
         </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        style={[styles.timeResetButton, { marginLeft: 8 }]}
-        hitSlop={touchTargets.small}
-        accessibilityRole="button"
-        accessibilityLabel={`Clear ${label.toLowerCase()} time`}
-        accessibilityHint={`Clears the ${label.toLowerCase()} time`}
-        onPress={(e) => {
-          e.preventDefault?.();
-          onClear();
-        }}
-      >
-        <Text style={styles.clearTimeButtonText}>✕</Text>
-      </TouchableOpacity>
       {saveAttempted && !!error ? (
-        <Text style={[styles.validationError, { marginLeft: 8 }]}>{error}</Text>
+        <Text style={styles.validationError}>{error}</Text>
       ) : null}
     </View>
   );
 });
+
+TimeRow.displayName = 'TimeRow';
 
 const ValidationBanner: React.FC<{ visible: boolean; styles: any }> = ({ visible, styles }) => {
   if (!visible) return null;
@@ -223,37 +275,36 @@ const GlobalTimeInputs: React.FC<{
   saveAttempted: boolean;
   styles: any;
   colors: any;
+  typography: any;
   touchTargets: any;
-}> = ({ startParts, endParts, onStartChange, onEndChange, onStartClear, onEndClear, errors, saveAttempted, styles, colors, touchTargets }) => (
+}> = ({ startParts, endParts, onStartChange, onEndChange, onStartClear, onEndClear, errors, saveAttempted, styles, colors, typography, touchTargets }) => (
   <View style={styles.inputSection}>
     <Text style={styles.inputLabel}>Event Time</Text>
-    <View style={styles.timeFormContainer}>
-      <View style={styles.timeForm}>
-        <TimeRow
-          label="Start"
-          parts={startParts}
-          onChange={onStartChange}
-          onClear={onStartClear}
-          error={errors.globalStart}
-          touchTargets={touchTargets}
-          styles={styles}
-          colors={colors}
-          saveAttempted={saveAttempted}
-        />
-      </View>
-      <View style={styles.timeForm}>
-        <TimeRow
-          label="End"
-          parts={endParts}
-          onChange={onEndChange}
-          onClear={onEndClear}
-          error={errors.globalEnd}
-          touchTargets={touchTargets}
-          styles={styles}
-          colors={colors}
-          saveAttempted={saveAttempted}
-        />
-      </View>
+    <View style={styles.globalTimeInputs}>
+      <TimeRow
+        label="Start"
+        parts={startParts}
+        onChange={onStartChange}
+        onClear={onStartClear}
+        error={errors.globalStart}
+        touchTargets={touchTargets}
+        styles={styles}
+        colors={colors}
+        typography={typography}
+        saveAttempted={saveAttempted}
+      />
+      <TimeRow
+        label="End"
+        parts={endParts}
+        onChange={onEndChange}
+        onClear={onEndClear}
+        error={errors.globalEnd}
+        touchTargets={touchTargets}
+        styles={styles}
+        colors={colors}
+        typography={typography}
+        saveAttempted={saveAttempted}
+      />
     </View>
   </View>
 );
@@ -277,6 +328,7 @@ const DateCard: React.FC<{
   saveAttempted: boolean;
   styles: any;
   colors: any;
+  typography: any;
   touchTargets: any;
   announceForAccessibility: (message: string) => void;
 }> = ({
@@ -298,6 +350,7 @@ const DateCard: React.FC<{
   saveAttempted,
   styles,
   colors,
+  typography,
   touchTargets,
   announceForAccessibility,
 }) => (
@@ -324,6 +377,7 @@ const DateCard: React.FC<{
                 touchTargets={touchTargets}
                 styles={styles}
                 colors={colors}
+                typography={typography}
                 saveAttempted={saveAttempted}
               />
               <TimeRow
@@ -336,6 +390,7 @@ const DateCard: React.FC<{
                 touchTargets={touchTargets}
                 styles={styles}
                 colors={colors}
+                typography={typography}
                 saveAttempted={saveAttempted}
               />
               {saveAttempted && (errors.startError || errors.endError) && (
@@ -471,7 +526,7 @@ export function DateReviewModal({
   }, []);
 
   const clearGlobalTime = useCallback((type: 'start' | 'end') => {
-    setGlobalTime(prev => ({ ...prev, [type]: { h: '', m: '', p: type === 'start' ? 'AM' : 'PM' } }));
+    setGlobalTime(prev => ({ ...prev, [type]: { h: '', m: '', p: 'AM' } }));
     setErrors(prev => ({ ...prev, [`global${type === 'start' ? 'Start' : 'End'}`]: '' }));
     announceForAccessibility(`${type === 'start' ? 'Start' : 'End'} time cleared`);
   }, [announceForAccessibility]);
@@ -498,8 +553,8 @@ export function DateReviewModal({
       ...prev,
       [key]: {
         start: prev[key]?.start || { h: '', m: '', p: 'AM' },
-        end: prev[key]?.end || { h: '', m: '', p: 'PM' },
-        [type]: { h: '', m: '', p: type === 'start' ? 'AM' : 'PM' }
+        end: prev[key]?.end || { h: '', m: '', p: 'AM' },
+        [type]: { h: '', m: '', p: 'AM' }
       }
     }));
     setErrors(prev => ({
@@ -566,12 +621,12 @@ export function DateReviewModal({
       : null;
 
     if (isTimeFilled(globalTime.start.h, globalTime.start.m) && !globalStart) {
-      newErrors.globalStart = 'Hour 1–12, Minute 00–59';
+      newErrors.globalStart = 'Hour 1–12, Minute 00/15/30/45';
     }
     if (isTimeFilled(globalTime.end.h, globalTime.end.m) && !globalEnd) {
-      newErrors.globalEnd = 'Hour 1–12, Minute 00–59';
+      newErrors.globalEnd = 'Hour 1–12, Minute 00/15/30/45';
     }
-    if (globalStart && globalEnd && compareTimes(globalStart, globalEnd) >= 0) {
+    if (globalStart && globalEnd && compareTimes(globalStart, globalEnd) > 0) {
       newErrors.globalEnd = 'End must be after Start';
     }
 
@@ -589,12 +644,12 @@ export function DateReviewModal({
             : null;
 
           if (isTimeFilled(dateTimes.start.h, dateTimes.start.m) && !customStart) {
-            newErrors.perDate[dateKey] = { ...newErrors.perDate[dateKey], startError: 'Hour 1–12, Minute 00–59' };
+            newErrors.perDate[dateKey] = { ...newErrors.perDate[dateKey], startError: 'Hour 1–12, Minute 00/15/30/45' };
           }
           if (isTimeFilled(dateTimes.end.h, dateTimes.end.m) && !customEnd) {
-            newErrors.perDate[dateKey] = { ...newErrors.perDate[dateKey], endError: 'Hour 1–12, Minute 00–59' };
+            newErrors.perDate[dateKey] = { ...newErrors.perDate[dateKey], endError: 'Hour 1–12, Minute 00/15/30/45' };
           }
-          if (customStart && customEnd && compareTimes(customStart, customEnd) >= 0) {
+          if (customStart && customEnd && compareTimes(customStart, customEnd) > 0) {
             newErrors.perDate[dateKey] = { ...newErrors.perDate[dateKey], endError: 'End must be after Start' };
           }
         }
@@ -676,6 +731,7 @@ export function DateReviewModal({
               saveAttempted={validationUI.saveAttempted}
               styles={styles}
               colors={colors}
+              typography={typography}
               touchTargets={touchTargets}
             />
 
@@ -736,6 +792,7 @@ export function DateReviewModal({
                   saveAttempted={validationUI.saveAttempted}
                   styles={styles}
                   colors={colors}
+                  typography={typography}
                   touchTargets={touchTargets}
                   announceForAccessibility={announceForAccessibility}
                 />
@@ -937,18 +994,26 @@ const getStyles = (colors: any, typography: any, isMobile: boolean, screenWidth:
       flexDirection: 'column',
       alignItems: 'stretch',
     },
+    globalTimeInputs: {
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      marginTop: 4,
+      gap: 8,
+    },
+    timeInputContainer: {
+      marginBottom: 8,
+    },
     timeInputRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 6,
+      marginTop: 4,
+      maxWidth: '100%',
     },
     timeFormLabel: {
       fontFamily: typography.getFontFamily('normal'),
       fontSize: typography.fontSize.subheadline,
       color: colors.text,
-      minWidth: 32,
       textAlign: 'left',
-      marginRight: 8,
     },
     hhInput: {
       borderWidth: 1,
@@ -965,37 +1030,45 @@ const getStyles = (colors: any, typography: any, isMobile: boolean, screenWidth:
       textAlign: 'center',
     },
     timeResetButton: {
-      fontFamily: typography.getFontFamily('semibold'),
-      fontSize: typography.fontSize.body,
-      color: colors.textMuted,
       backgroundColor: colors.background,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 8,
-      padding: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 2,
       minHeight: 28,
       minWidth: 32,
-      textAlign: 'center',
-      marginLeft: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 4,
+      flexShrink: 1,
+    },
+    timeResetButtonSmall: {
+      borderRadius: 6,
+      padding: 3,
+      minHeight: 24,
+      minWidth: 28,
+
     },
     clearTimeButtonText: {
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.body,
       color: colors.textMuted,
-      marginLeft: 4,
+    },
+    clearTimeButtonTextSmall: {
+      fontSize: typography.fontSize.caption1,
     },
     toggleRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-start',
       alignItems: 'center',
       marginBottom: 8,
+      gap: 8,
     },
     toggleLabel: {
       fontFamily: typography.getFontFamily('normal'),
       fontSize: typography.fontSize.subheadline,
       color: colors.text,
-      flex: 1,
-      marginRight: 16,
     },
     dateReviewContent: {
       flex: 1,
@@ -1040,7 +1113,7 @@ const getStyles = (colors: any, typography: any, isMobile: boolean, screenWidth:
     customTimeInputs: {
       flexDirection: 'column',
       alignItems: 'center',
-      marginLeft: 4,
+      marginLeft: 8,
     },
     customTimeInput: {
       borderWidth: 1,
@@ -1157,22 +1230,39 @@ const getStyles = (colors: any, typography: any, isMobile: boolean, screenWidth:
       marginLeft: 8,
     },
     periodButton: {
-      paddingVertical: 4,
+      paddingVertical: 8.5,
       paddingHorizontal: 8,
-      borderRadius: 6,
+      borderRadius: 8,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.background,
-      marginLeft: 4,
+      // marginLeft: 4,
+      minHeight: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 1,
     },
     periodButtonActive: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
     },
+    periodButtonSmall: {
+      paddingVertical: 2.5,
+      borderRadius: 6,
+      minHeight: 24,
+    },
     periodButtonText: {
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.caption1,
       color: colors.text,
+    },
+    periodButtonTextSmall: {
+      fontSize: typography.fontSize.caption2,
+    },
+    periodButtonTextActive: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.card,
     },
   });
 };

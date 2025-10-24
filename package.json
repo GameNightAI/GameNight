@@ -54,6 +54,8 @@
     "@types/uuid": "^10.0.0",
     "@xmldom/xmldom": "^0.8.11",
     "csv-parse": "^6.1.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~10.0.0",
     "iter-tools": "^7.5.4",
     "metro": "^0.83.1",
     "typescript": "^5.3.0",
