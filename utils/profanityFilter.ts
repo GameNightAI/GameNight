@@ -1,3 +1,7 @@
+/* TODO: Try to get the `obscenity` package working at some point,
+since it seems much more robust. However, Metro has some problems
+bundling it. */
+
 import { Profanity } from '@2toad/profanity';
 
 const profanity = new Profanity({
@@ -14,7 +18,6 @@ export const containsProfanity = (text: string): boolean => {
   if (!text || typeof text !== 'string') {
     return false;
   }
-
   return profanity.exists(text);
 };
 
