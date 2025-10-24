@@ -61,7 +61,10 @@ export default function CollectionScreen() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        router.replace('/auth/login');
+        // Use setTimeout to ensure router is ready
+        setTimeout(() => {
+          router.replace('/auth/login');
+        }, 0);
         return;
       }
 
