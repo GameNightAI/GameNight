@@ -15,7 +15,7 @@ export default function Index() {
         const lastTab = await getLastVisitedTab();
         // Always default to index (tools) for now
         // TODO: Re-enable last tab navigation once tab conflicts are resolved
-        setRedirectPath('/(tabs)/');
+        setRedirectPath('/(tabs)/collection');
       }
     }
 
