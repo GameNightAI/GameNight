@@ -214,9 +214,9 @@ export default function EventResultsScreen() {
                 <Text style={styles.commentAuthor}>
                   {comment.username
                     ? (comment.firstname || comment.lastname
-                      ? `${[comment.firstname, comment.lastname].join(' ').trim()} (${comment.username})`
+                      ? `${censor([comment.firstname, comment.lastname].join(' ').trim())} (${comment.username})`
                       : comment.username
-                    ) : comment.voter_name || 'Anonymous'}
+                    ) : censor(comment.voter_name) || 'Anonymous'}
                 </Text>
                 <Text style={styles.commentText}>{comment.comment_text}</Text>
               </View>

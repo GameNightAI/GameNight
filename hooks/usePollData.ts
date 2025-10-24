@@ -80,7 +80,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
           const { username, firstname, lastname } = profileData;
           setCreatorName(
             firstname || lastname
-              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
               : username
           );
         } else if (creatorError) {

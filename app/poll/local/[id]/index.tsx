@@ -11,6 +11,7 @@ import { GameCard } from '@/components/PollGameCard';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 // Custom hook for local voting that bypasses user authentication
 const useLocalPollData = (pollId: string | string[] | undefined) => {
@@ -59,7 +60,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
           const { username, firstname, lastname } = profileData;
           setCreatorName(
             firstname || lastname
-              ? `${[firstname, lastname].join(' ').trim()} (${username})`
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
               : username
           );
         }
