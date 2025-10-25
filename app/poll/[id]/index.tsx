@@ -155,7 +155,7 @@ export default function PollScreen() {
     try {
       setSubmitting(true);
 
-      const finalName = (() => {
+      let finalName = (() => {
         if (!user) {
           const trimmed = voterName.trim();
           if (!trimmed) {
@@ -168,6 +168,28 @@ export default function PollScreen() {
         }
         return user.username || user.id || '';
       })();
+
+      // Check for existing votes with this name and deduplicate if needed
+      if (!user && finalName) {
+        const { data: existingVotes, error: checkError } = await supabase
+          .from('votes')
+          .select('voter_name')
+          .eq('poll_id', id)
+          .ilike('voter_name', finalName)
+          .is('user_id', null)
+          .order('created_at', { ascending: true });
+
+        if (!checkError && existingVotes && existingVotes.length > 0) {
+          // Count exact matches (case-insensitive, trimmed)
+          const exactMatches = existingVotes.filter(v =>
+            v.voter_name?.trim().toLowerCase() === finalName.toLowerCase()
+          ).length;
+
+          if (exactMatches > 0) {
+            finalName = `${finalName} (${exactMatches + 1})`;
+          }
+        }
+      }
       // Check if the voter has previously voted on any game in this poll
       const { data: previousVotes, error: previousVotesError } = await supabase
         .from('votes')

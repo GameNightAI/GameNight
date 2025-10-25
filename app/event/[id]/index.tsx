@@ -322,7 +322,7 @@ export default function EventScreen() {
     try {
       setSubmitting(true);
 
-      const finalName = (() => {
+      let finalName = (() => {
         if (!user) {
           const trimmed = voterName.trim();
           if (!trimmed) {
@@ -335,6 +335,28 @@ export default function EventScreen() {
         }
         return user.username || user.id || '';
       })();
+
+      // Check for existing votes with this name and deduplicate if needed
+      if (!user && finalName) {
+        const { data: existingVotes, error: checkError } = await supabase
+          .from('votes_events')
+          .select('voter_name, poll_events!inner(poll_id)')
+          .eq('poll_events.poll_id', id)
+          .ilike('voter_name', finalName)
+          .is('user_id', null)
+          .order('created_at', { ascending: true });
+
+        if (!checkError && existingVotes && existingVotes.length > 0) {
+          // Count exact matches (case-insensitive, trimmed)
+          const exactMatches = existingVotes.filter(v =>
+            v.voter_name?.trim().toLowerCase() === finalName.toLowerCase()
+          ).length;
+
+          if (exactMatches > 0) {
+            finalName = `${finalName} (${exactMatches + 1})`;
+          }
+        }
+      }
 
       // Check if the voter has previously voted on any date in this event
       const { data: previousVotes, error: previousVotesError } = await supabase
