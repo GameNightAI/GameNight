@@ -52,10 +52,17 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   const [eventLocation, setEventLocation] = useState('');
   const [defaultEventName, setDefaultEventName] = useState('');
   const [showDateReviewModal, setShowDateReviewModal] = useState(false);
+  // Create default 1:00 PM time
+  const createDefaultTime = () => {
+    const defaultTime = new Date();
+    defaultTime.setHours(13, 0, 0, 0); // 1:00 PM
+    return defaultTime;
+  };
+
   const [eventOptions, setEventOptions] = useState<EventOptions>({
     location: '',
-    startTime: null,
-    endTime: null,
+    startTime: createDefaultTime(),
+    endTime: createDefaultTime(),
   });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -68,8 +75,8 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     setDefaultEventName('');
     setEventOptions({
       location: '',
-      startTime: null,
-      endTime: null,
+      startTime: createDefaultTime(),
+      endTime: createDefaultTime(),
     });
     setSelectedDates([]);
     setCurrentMonth(new Date()); // Reset calendar to current month

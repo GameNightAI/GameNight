@@ -79,17 +79,30 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
               <Text style={styles.sublabel}>
                 Customize your event title or keep the auto-generated name
               </Text>
-              <TextInput
-                style={styles.titleInput}
-                value={eventName}
-                onChangeText={setEventName}
-                placeholder="Event title will appear when dates are selected"
-                placeholderTextColor={colors.textMuted}
-                maxLength={100}
-                autoFocus
-                accessibilityLabel="Event name input"
-                accessibilityHint="Enter a custom event title or leave blank for auto-generated name"
-              />
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.titleInput, eventName ? styles.titleInputWithClearButton : null]}
+                  value={eventName}
+                  onChangeText={setEventName}
+                  placeholder="Event title will appear when dates are selected"
+                  placeholderTextColor={colors.textMuted}
+                  maxLength={100}
+                  autoFocus
+                  accessibilityLabel="Event name input"
+                  accessibilityHint="Enter a custom event title or leave blank for auto-generated name"
+                />
+                {eventName ? (
+                  <TouchableOpacity
+                    style={styles.clearButton}
+                    onPress={() => setEventName('')}
+                    accessibilityLabel="Clear event name"
+                    accessibilityHint="Clears the event name field"
+                    hitSlop={touchTargets.small}
+                  >
+                    <X size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
 
               <Text style={[styles.label, styles.locationLabel]}>Location (Optional)</Text>
               <Text style={styles.sublabel}>
@@ -227,6 +240,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       marginTop: 6,
       marginBottom: 0,
       minHeight: 44,
+      width: '100%',
+    },
+    inputContainer: {
+      position: 'relative',
+    },
+    titleInputWithClearButton: {
+      paddingRight: 40,
+    },
+    clearButton: {
+      position: 'absolute',
+      right: 12,
+      top: 20,
+      padding: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     locationLabel: {
       marginTop: 12,
