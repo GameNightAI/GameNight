@@ -59,7 +59,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
           paddingVertical: 10,
           minHeight: 44,
           backgroundColor: colors.card,
-          borderColor: colors.border,
+          borderColor: value != null ? colors.accent : colors.border,
         }}
         onPress={() => setModalVisible(true)}
         accessibilityLabel={`${placeholder}: ${displayText}`}
@@ -69,6 +69,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
           style={{
             flex: 1,
             fontFamily: typography.getFontFamily('normal'),
+            //fontFamily: typography.getFontFamily(value != null ? 'semibold' : 'normal'),
             fontSize: typography.fontSize.subheadline,
             color: value != null ? colors.text : colors.textMuted,
           }}
@@ -292,7 +293,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
           paddingVertical: 10,
           minHeight: 44,
           backgroundColor: colors.card,
-          borderColor: colors.border,
+          borderColor: selectedValues.length > 0 ? colors.accent : colors.border,
         }}
         onPress={() => setModalVisible(true)}
         accessibilityLabel={`${placeholder}: ${displayText}`}
@@ -302,6 +303,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
           style={{
             flex: 1,
             fontFamily: typography.getFontFamily('normal'),
+            //fontFamily: typography.getFontFamily(selectedValues.length > 0 ? 'semibold' : 'normal'),
             fontSize: typography.fontSize.subheadline,
             color: selectedValues.length > 0 ? colors.text : colors.textMuted,
           }}
@@ -546,10 +548,10 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
       // Store the option.value directly (not the extracted min/max)
       const updated = { ...current, [field]: value };
 
-      // Single-point range behavior: only for playerCount and complexity (not time/age)
-      if ((key === 'playerCount' || key === 'complexity') && field === 'min' && value != null && current.max == null) {
+      // Single-point range behavior: only for playerCount (not time/age/complexity)
+      if (key === 'playerCount' && field === 'min' && value != null && current.max == null) {
         updated.max = value;
-      } else if ((key === 'playerCount' || key === 'complexity') && field === 'max' && value != null && current.min == null) {
+      } else if (key === 'playerCount' && field === 'max' && value != null && current.min == null) {
         updated.min = value;
       }
 
@@ -632,7 +634,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           </View>
           <View style={styles.dropdownRow}>
             <FilterDropdown
-              placeholder="Min Players"
+              //placeholder="Min Players"
+              placeholder="Min"
               value={draftFilters.playerCount?.min}
               options={playerOptions}
               onChange={(val) => updateRangeFilter('playerCount', 'min', val)}
@@ -643,7 +646,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             />
             <View style={{ width: 16 }} />
             <FilterDropdown
-              placeholder="Max Players"
+              //placeholder="Max Players"
+              placeholder="Max"
               value={draftFilters.playerCount?.max}
               options={playerOptions}
               onChange={(val) => updateRangeFilter('playerCount', 'max', val)}
@@ -666,7 +670,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           </View>
           <View style={styles.dropdownRow}>
             <FilterDropdown
-              placeholder="Min Age"
+              //placeholder="Min Age"
+              placeholder="Min"
               value={draftFilters.minAge?.min}
               options={ageOptions}
               onChange={(val) => updateRangeFilter('minAge', 'min', val)}
@@ -677,7 +682,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             />
             <View style={{ width: 16 }} />
             <FilterDropdown
-              placeholder="Max Age"
+              //placeholder="Max Age"
+              placeholder="Max"
               value={draftFilters.minAge?.max}
               options={ageOptions}
               onChange={(val) => updateRangeFilter('minAge', 'max', val)}
@@ -700,7 +706,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           </View>
           <View style={styles.dropdownRow}>
             <FilterDropdown
-              placeholder="Light"
+              //placeholder="Light"
+              placeholder="Min"
               value={draftFilters.complexity?.min}
               options={complexityOptions}
               onChange={(val) => updateRangeFilter('complexity', 'min', val)}
@@ -711,7 +718,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             />
             <View style={{ width: 16 }} />
             <FilterDropdown
-              placeholder="Heavy"
+              //placeholder="Heavy"
+              placeholder="Max"
               value={draftFilters.complexity?.max}
               options={complexityOptions}
               onChange={(val) => updateRangeFilter('complexity', 'max', val)}
@@ -734,7 +742,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           </View>
           <View style={styles.dropdownRow}>
             <FilterDropdown
-              placeholder="30 min or less"
+              //placeholder="30 min or less"
+              placeholder="Min"
               value={draftFilters.playTime?.min}
               options={timeOptions}
               onChange={(val) => updateRangeFilter('playTime', 'min', val)}
@@ -745,7 +754,8 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             />
             <View style={{ width: 16 }} />
             <FilterDropdown
-              placeholder="More than 120 min"
+              //placeholder="More than 120 min"
+              placeholder="Max"
               value={draftFilters.playTime?.max}
               options={timeOptions}
               onChange={(val) => updateRangeFilter('playTime', 'max', val)}
