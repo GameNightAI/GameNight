@@ -76,15 +76,12 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
           <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <View style={styles.content}>
               <Text style={styles.label}>Event Name (Optional)</Text>
-              <Text style={styles.sublabel}>
-                Customize your event title or keep the auto-generated name
-              </Text>
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[styles.titleInput, eventName ? styles.titleInputWithClearButton : null]}
                   value={eventName}
                   onChangeText={setEventName}
-                  placeholder="Event title will appear when dates are selected"
+                  placeholder="Enter Event Name"
                   placeholderTextColor={colors.textMuted}
                   maxLength={100}
                   autoFocus
@@ -106,7 +103,7 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
 
               <Text style={[styles.label, styles.locationLabel]}>Location (Optional)</Text>
               <Text style={styles.sublabel}>
-                Default location for all event dates
+                Enter Location Details
               </Text>
               <TextInput
                 style={styles.locationInput}
