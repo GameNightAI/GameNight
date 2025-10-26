@@ -17,6 +17,7 @@ export default function RegisterProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isResume, setIsResume] = useState(false);
+  const [privacyExpanded, setPrivacyExpanded] = useState(false);
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors, typography, touchTargets, isDark } = useTheme();
@@ -308,14 +309,25 @@ export default function RegisterProfileScreen() {
               </View>
             </View>
 
-            <View style={styles.privacyNotice}>
-              <Text style={styles.privacyText}>
-                Privacy Notice: Your real name information may be visible to other users of the platform.
-              </Text>
-              <Text style={styles.privacyText}>
-                Your email address will always remain private and will not be shared with other users.
-              </Text>
-            </View>
+            <TouchableOpacity
+              style={styles.privacyNotice}
+              onPress={() => setPrivacyExpanded(!privacyExpanded)}
+              accessibilityRole="button"
+              accessibilityLabel={privacyExpanded ? "Collapse privacy notice" : "Expand privacy notice"}
+              accessibilityHint="Tap to show or hide privacy information"
+            >
+              <Text style={styles.privacyHeader}>Privacy Notice</Text>
+              {privacyExpanded && (
+                <View>
+                  <Text style={styles.privacyText}>
+                    Your real name information may be visible to other users of the platform.
+                  </Text>
+                  <Text style={styles.privacyText}>
+                    Your email address will always remain private and will not be shared with other users.
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
 
             {error && (
               <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
@@ -377,7 +389,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
   },
   header: {
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   logoContainer: {
@@ -469,6 +481,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     paddingHorizontal: 16,
     paddingVertical: 4,
     minHeight: 48,
+    overflow: 'hidden',
   },
   inputIcon: {
     marginRight: 12,
@@ -497,19 +510,23 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
   nameRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 0,
   },
   nameInput: {
     flex: 1,
     marginRight: 4,
   },
   privacyNotice: {
-    backgroundColor: colors.tints.warningBg,
-    borderWidth: 1,
-    borderColor: colors.tints.warningBorder,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
+    paddingRight: 16,
+    paddingBottom: 0,
+    marginBottom: 24,
+  },
+  privacyHeader: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption1,
+    color: isDark ? colors.warning : colors.text,
+    textDecorationLine: 'underline',
+    marginBottom: 0,
   },
   privacyText: {
     fontFamily: typography.getFontFamily('normal'),

@@ -182,7 +182,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
   },
   header: {
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   logoContainer: {
@@ -262,6 +262,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
     paddingHorizontal: 16,
     paddingVertical: 4,
     minHeight: 48,
+    overflow: 'hidden',
   },
   inputIcon: {
     marginRight: 12,
@@ -278,6 +279,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
   eyeIcon: {
     padding: 8,
     marginLeft: 8,
+    flexShrink: 0,
   },
   button: {
     backgroundColor: colors.accent,

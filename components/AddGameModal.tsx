@@ -278,7 +278,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           hitSlop={touchTargets.small}
         >
           <RefreshCw size={16} color="#fff" />
-          <Text style={styles.syncButtonText}>Sync with BGG</Text>
+          <Text style={styles.syncButtonText}>Import from BGG</Text>
         </TouchableOpacity>
       </View>
     </View>
