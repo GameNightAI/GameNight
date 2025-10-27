@@ -189,6 +189,21 @@ export default function CollectionScreen() {
     }
   }, [allGames, applyRangeFilters]);
 
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      (rangeFilters.playerCount?.min != null) ||
+      (rangeFilters.playerCount?.max != null) ||
+      (rangeFilters.minAge?.min != null) ||
+      (rangeFilters.minAge?.max != null) ||
+      (rangeFilters.complexity?.min != null) ||
+      (rangeFilters.complexity?.max != null) ||
+      (rangeFilters.playTime?.min != null) ||
+      (rangeFilters.playTime?.max != null) ||
+      (rangeFilters.gameType && rangeFilters.gameType.length > 0)
+    );
+  }, [rangeFilters]);
+
   // Clear filters function
   const clearFilters = () => {
     clearRangeFilters();
@@ -317,7 +332,7 @@ export default function CollectionScreen() {
     return <ErrorState message={error} onRetry={loadGames} />;
   }
 
-  if ((!filterModalVisible) && games.length === 0 && !loading) {
+  if ((!filterModalVisible) && allGames.length === 0 && !loading) {
     return (
       <EmptyStateCollection
         username={null}
@@ -378,7 +393,7 @@ export default function CollectionScreen() {
         </ScrollView>
       </View>
 
-      {false && (
+      {hasActiveFilters && (
         <View style={styles.filterBanner}>
           <View style={styles.filterBannerContent}>
             <TouchableOpacity

@@ -38,7 +38,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility } = useAccessibility();
   const insets = useSafeAreaInsets();
-  const { screenHeight } = useDeviceType();
+  const { screenHeight, isDesktop } = useDeviceType();
 
   // Lock body scroll on web when modal is visible
   useBodyScrollLock(isVisible);
@@ -339,7 +339,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
 
             <View style={styles.uploadSection}>
               <View style={styles.uploadButtons}>
-                {Platform.OS === 'web' ? null : (
+                {isDesktop ? null : (
                   <TouchableOpacity
                     style={styles.uploadButton}
                     onPress={() => {
@@ -363,14 +363,14 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                     pickImage(false);
                     announceForAccessibility('Opening image library');
                   }}
-                  accessibilityLabel={Platform.OS === 'web' ? 'Choose from library' : 'Upload image'}
+                  accessibilityLabel={!isDesktop ? 'Add photo' : 'Upload Image'}
                   accessibilityRole="button"
                   accessibilityHint="Opens image library to select a photo"
                   hitSlop={touchTargets.tiny}
                 >
                   <Upload size={24} color="#fff" />
                   <Text style={styles.uploadButtonText}>
-                    {Platform.OS === 'web' ? 'Choose from Library' : 'Upload Image'}
+                    {!isDesktop ? 'Add Photo' : 'Upload Image'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -513,13 +513,13 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
             </TouchableOpacity>
           </View>
           <View style={styles.instructionsContent}>
-            <Text style={styles.instructionsBulletPoint}>• Take a clear photo with good lighting</Text>
+            <Text style={styles.instructionsBulletPoint}>• Add a clear photo with good lighting</Text>
             <Text style={styles.instructionsBulletPoint}>• Ensure boxes are oriented so game names are visible</Text>
             <Text style={styles.instructionsBulletPoint}>• Remove any obstructions</Text>
-            <View style={styles.orContainer}>
+            {/* <View style={styles.orContainer}>
               <Text style={styles.orText}>OR</Text>
             </View>
-            <Text style={styles.instructionsBulletPoint}>• Choose a photo from your library</Text>
+            <Text style={styles.instructionsBulletPoint}>• Choose a photo from your library</Text>*/}
           </View>
         </TouchableOpacity>
       </TouchableOpacity>

@@ -260,7 +260,28 @@ export default function LocalPollScreen() {
         setSubmitting(false);
         return;
       }
-      const finalName = trimmedName;
+      let finalName = trimmedName;
+
+      // Check for existing votes with this name and deduplicate if needed
+      const { data: existingVotes, error: checkError } = await supabase
+        .from('votes')
+        .select('voter_name')
+        .eq('poll_id', id)
+        .ilike('voter_name', finalName)
+        .is('user_id', null)
+        .order('created_at', { ascending: true });
+
+      if (!checkError && existingVotes && existingVotes.length > 0) {
+        // Count exact matches (case-insensitive, trimmed)
+        const exactMatches = existingVotes.filter(v =>
+          v.voter_name?.trim().toLowerCase() === finalName.toLowerCase()
+        ).length;
+
+        if (exactMatches > 0) {
+          finalName = `${finalName} (${exactMatches + 1})`;
+        }
+      }
+
       for (const [gameIdStr, score] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
         const { data: existing, error: selectError } = await supabase
