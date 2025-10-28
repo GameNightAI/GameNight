@@ -255,7 +255,7 @@ const createSupabaseClient = async () => {
 };
 
 const bggApiCaller = async function* (csvParser) {
-  // Make API calls in batches of 20 (or whatever the max that BGG allows) games at a time
+  // Make API calls in batches of 20 (or whatever the max that BGG allows is) games at a time
   for await (const bggBatch of asyncBatch(BGG_API_BATCH_SIZE, csvParser)) {
     
     const ids = await asyncToArray(asyncMap((game => game.id), bggBatch));

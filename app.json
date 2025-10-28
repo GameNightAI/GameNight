@@ -53,7 +53,8 @@
       "web"
     ],
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "react-native-legal"
     ],
     "experiments": {
       "typedRoutes": true
