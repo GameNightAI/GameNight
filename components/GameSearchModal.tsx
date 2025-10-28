@@ -75,7 +75,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   const fetchSearchResults = useCallback(async (term: string) => {
     try {
       // Perform an API request based on the search term
-      const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(term)}&type=boardgame`);
+      const response = await fetch(`/.netlify/functions/bgg-api/search?query=${encodeURIComponent(term)}&type=boardgame`);
 
       const xmlText = await response.text();
 

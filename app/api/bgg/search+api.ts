@@ -12,7 +12,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const bggUrl = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame&exact=0`;
+    const bggUrl = `/.netlify/functions/bgg-api/search?query=${encodeURIComponent(query)}&type=boardgame&exact=0`;
 
     const response = await fetch(bggUrl);
     const responseText = await response.text();
