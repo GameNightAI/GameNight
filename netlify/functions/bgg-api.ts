@@ -12,7 +12,7 @@ export const handler: Handler = async (req: Request, context: Context) => {
     `https://boardgamegeek.com/xmlapi2/${apiString}`, {
     headers: {
       ...req.headers,
-      Authorization: `Bearer ${BGG_API_AUTH_TOKEN}`,
+      Authorization: `Bearer ${apiKey}`,
     }},
   );
 };
