@@ -7,7 +7,7 @@ export default handler: Handler = async (req: Request, context: Context) => {
   const apiString = urlSplit[urlSplit.length - 1];
   req.url = `https://boardgamegeek.com/xmlapi2/${apiString}`;
   req.headers.append('Authorization', `Bearer ${apiKey}`);
-  return await req;
+  return await fetch(req);
 };
 
 // export const config: Config = {
