@@ -1,28 +1,35 @@
 // poll/PollScreen.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Toast from 'react-native-toast-message';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { usePollData } from '@/hooks/usePollData';
+import { useAccessibility } from '@/hooks/useAccessibility';
 import { VoteType, VOTE_TYPE_TO_SCORE, SCORE_TO_VOTE_TYPE } from '@/components/votingOptions';
 import { VoterNameInput } from '@/components/PollVoterNameInput';
 import { GameCard } from '@/components/PollGameCard';
 import { PollResultsButton } from '@/components/PollResultsButton';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
-import { getOrCreateAnonId } from '@/utils/anon';
+// import { getOrCreateAnonId } from '@/utils/anon';
 import {
   saveUsername,
   getUsername,
   saveVotedFlag,
   saveVoteUpdatedFlag
 } from '@/utils/storage';
-import { BarChart3 } from 'lucide-react-native';
+// import { BarChart3 } from 'lucide-react-native';
+import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 export default function PollScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { colors, typography } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
+  const insets = useSafeAreaInsets();
 
   const {
     poll,
@@ -34,24 +41,25 @@ export default function PollScreen() {
     user,
     pendingVotes,
     setPendingVotes,
+    creatorName,
     reload,
   } = usePollData(id);
 
   const [voterName, setVoterName] = useState('');
   const [nameError, setNameError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [creatorName, setCreatorName] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [hasPreviousVotes, setHasPreviousVotes] = useState(false);
   const [storageInitialized, setStorageInitialized] = useState(false);
 
   // Initialize storage and voter name
+  // TODO: there's probably no reason to use storage for logged in users
   useEffect(() => {
     const initializeStorage = async () => {
       try {
-        // Single device: prefill with user email/username if logged in
-        if (user && (user.email || user.username)) {
-          setVoterName(user.username || user.email);
+        // Single device: prefill with username if logged in
+        if (user?.username) {
+          setVoterName(user.username);
         } else {
           const savedName = await getUsername();
           if (savedName) setVoterName(savedName);
@@ -66,65 +74,58 @@ export default function PollScreen() {
     initializeStorage();
   }, [user]);
 
-  useEffect(() => {
-    if (poll && poll.user_id) {
-      // Fetch the creator's email or name from Supabase auth.users
-      (async () => {
-        try {
-          const { data, error } = await supabase
-            .from('profiles') // Try profiles table first
-            .select('username, email')
-            .eq('id', poll.user_id)
-            .maybeSingle();
-          if (data) {
-            setCreatorName(data.username || data.email || null);
-          } else {
-            // Fallback: try auth.users
-            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(poll.user_id);
-            if (userData && userData.user) {
-              setCreatorName(userData.user.email || null);
-            }
-          }
-        } catch (e) {
-          setCreatorName(null);
-        }
-      })();
-    }
-  }, [poll]);
 
   // Check for previous votes with better error handling
   const checkPreviousVotes = useCallback(async (name: string, pollId: string) => {
     try {
-      const trimmedName = name.trim();
-      if (!trimmedName) {
-        setHasPreviousVotes(false);
-        return;
+      if (!user) {
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+          setHasPreviousVotes(false);
+          return;
+        }
+
+        // Use trimmedName in the query for non-logged-in users
+        const { data: previousVotes, error: previousVotesError } = await supabase
+          .from('votes')
+          .select('id')
+          .eq('poll_id', pollId)
+          .eq('voter_name', trimmedName);
+
+        if (previousVotesError) {
+          console.warn('Error checking previous votes:', previousVotesError);
+          setHasPreviousVotes(false);
+          return;
+        }
+
+        setHasPreviousVotes(previousVotes && previousVotes.length > 0);
+      } else {
+        // Use user.id for logged-in users
+        const { data: previousVotes, error: previousVotesError } = await supabase
+          .from('votes')
+          .select('id')
+          .eq('poll_id', pollId)
+          .eq('user_id', user.id);
+
+        if (previousVotesError) {
+          console.warn('Error checking previous votes:', previousVotesError);
+          setHasPreviousVotes(false);
+          return;
+        }
+
+        setHasPreviousVotes(previousVotes && previousVotes.length > 0);
       }
-
-      const { data: previousVotes, error: previousVotesError } = await supabase
-        .from('votes')
-        .select('id')
-        .eq('poll_id', pollId)
-        .eq('voter_name', trimmedName);
-
-      if (previousVotesError) {
-        console.warn('Error checking previous votes:', previousVotesError);
-        setHasPreviousVotes(false);
-        return;
-      }
-
-      setHasPreviousVotes(previousVotes && previousVotes.length > 0);
     } catch (error) {
       console.warn('Error in checkPreviousVotes:', error);
       setHasPreviousVotes(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    if (storageInitialized && voterName && id) {
+    if (user || ((storageInitialized && voterName)) && id) {
       checkPreviousVotes(voterName, id as string);
     }
-  }, [voterName, id, storageInitialized, checkPreviousVotes]);
+  }, [user, voterName, id, storageInitialized, checkPreviousVotes]);
 
   const handleVote = (gameId: number, voteType: VoteType) => {
     setPendingVotes(prev => {
@@ -154,29 +155,57 @@ export default function PollScreen() {
     try {
       setSubmitting(true);
 
-      // Always use entered voterName
-      const trimmedName = voterName.trim();
-      if (!trimmedName) {
-        setNameError(true);
-        Toast.show({ type: 'error', text1: 'Please enter your name' });
-        setSubmitting(false);
-        return;
-      }
-      const finalName = trimmedName;
+      let finalName = (() => {
+        if (!user) {
+          const trimmed = voterName.trim();
+          if (!trimmed) {
+            setNameError(true);
+            Toast.show({ type: 'error', text1: 'Please enter your name' });
+            setSubmitting(false);
+            return '';
+          }
+          return trimmed;
+        }
+        return user.username || user.id || '';
+      })();
 
+      // Check for existing votes with this name and deduplicate if needed
+      if (!user && finalName) {
+        const { data: existingVotes, error: checkError } = await supabase
+          .from('votes')
+          .select('voter_name')
+          .eq('poll_id', id)
+          .ilike('voter_name', finalName)
+          .is('user_id', null)
+          .order('created_at', { ascending: true });
+
+        if (!checkError && existingVotes && existingVotes.length > 0) {
+          // Count exact matches (case-insensitive, trimmed)
+          const exactMatches = existingVotes.filter(v =>
+            v.voter_name?.trim().toLowerCase() === finalName.toLowerCase()
+          ).length;
+
+          if (exactMatches > 0) {
+            finalName = `${finalName} (${exactMatches + 1})`;
+          }
+        }
+      }
       // Check if the voter has previously voted on any game in this poll
       const { data: previousVotes, error: previousVotesError } = await supabase
         .from('votes')
         .select('id, game_id, vote_type')
         .eq('poll_id', id)
-        .eq('voter_name', finalName);
+        .eq(
+          user ? 'user_id' : 'voter_name',
+          user ? user.id : finalName
+        );
 
       if (previousVotesError) {
         console.error('Error checking previous votes:', previousVotesError);
         throw previousVotesError;
       }
 
-      const hasPreviousVotes = previousVotes && previousVotes.length > 0;
+      const hasPreviousVotes = previousVotes?.length > 0;
       let updated = false; // Track if any votes were updated or inserted as an update
 
       // Submit each vote
@@ -199,12 +228,15 @@ export default function PollScreen() {
             updated = true;
           }
         } else {
-          const { error: insertError } = await supabase.from('votes').insert({
-            poll_id: id,
-            game_id: gameId,
-            vote_type: score,
-            voter_name: finalName,
-          });
+          const { error: insertError } = await supabase
+            .from('votes')
+            .insert({
+              poll_id: id,
+              game_id: gameId,
+              vote_type: score,
+              voter_name: user ? null : finalName,
+              user_id: user ? user.id : null,
+            });
           if (insertError) {
             console.error('Error inserting vote:', insertError);
             throw insertError;
@@ -217,10 +249,12 @@ export default function PollScreen() {
       }
 
       // Save voter name for future use with error handling
-      try {
-        await saveUsername(finalName);
-      } catch (storageError) {
-        console.warn('Failed to save username to storage:', storageError);
+      if (!user) {
+        try {
+          await saveUsername(finalName);
+        } catch (storageError) {
+          console.warn('Failed to save username to storage:', storageError);
+        }
       }
 
       // Set flag if votes were updated
@@ -236,7 +270,8 @@ export default function PollScreen() {
       if (comment.trim()) {
         const { error: commentError } = await supabase.from('poll_comments').insert({
           poll_id: id,
-          voter_name: finalName,
+          voter_name: user ? null : finalName,
+          user_id: user ? user.id : null,
           comment_text: comment.trim(),
         });
         if (commentError) {
@@ -259,9 +294,11 @@ export default function PollScreen() {
       if (!updated) {
         Toast.show({ type: 'success', text1: 'Votes submitted!' });
       }
+      announceForAccessibility('Votes submitted successfully');
     } catch (err) {
       console.error('Error submitting votes:', err);
       Toast.show({ type: 'error', text1: 'Failed to submit votes' });
+      announceForAccessibility('Failed to submit votes');
     } finally {
       setSubmitting(false);
     }
@@ -271,89 +308,110 @@ export default function PollScreen() {
     router.push({ pathname: '/poll/[id]/results', params: { id: id as string } });
   };
 
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!poll) return <ErrorState message="Poll not found." onRetry={reload} />;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/polls')}>
-          <Text style={styles.backLink}>&larr; Back to Polls</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>
-          {poll?.title === 'Vote on games' && games && games.length > 0
-            ? `Vote on games (${games.length} game${games.length === 1 ? '' : 's'})`
-            : poll?.title}
-        </Text>
-        {!!poll?.description && <Text style={styles.description}>{poll.description}</Text>}
-        {/* Show creator for non-creator users */}
-        {!isCreator && creatorName && (
-          <Text style={[styles.subtitle, { marginBottom: 2, color: '#ff9654' }]}>Poll created by {creatorName}</Text>
-        )}
-        <Text style={styles.subtitle}>
-          {isCreator
-            ? (creatorName ? `Poll created by ${creatorName}` : 'Poll created by you')
-            : 'Vote for as many games as you like or none at all!'}
-        </Text>
-      </View>
-
-      {/* Always show voter name input */}
-      <VoterNameInput
-        value={voterName}
-        onChange={(text) => {
-          setVoterName(text);
-          if (nameError) setNameError(false);
-        }}
-        hasError={nameError}
-      />
-      {!user && (
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>
-            Want to create your own polls?{' '}
-          </Text>
-          <TouchableOpacity onPress={() => router.push('/auth/register')}>
-            <Text style={styles.signUpLink}>Sign up for free</Text>
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/polls')}
+            accessibilityLabel="Back to Polls"
+            accessibilityRole="button"
+            accessibilityHint="Returns to the polls list"
+          >
+            <Text style={styles.backLink}>&larr; Back to Polls</Text>
           </TouchableOpacity>
+          <Text style={styles.title}>
+            {poll?.title === 'Vote on games' && games && games.length > 0
+              ? `Vote on games (${games.length} game${games.length === 1 ? '' : 's'})`
+              : poll?.title}
+          </Text>
+          {!!poll?.description && <Text style={styles.description}>{poll.description}</Text>}
+          {/* Show creator for non-creator users */}
+          {!isCreator && creatorName && (
+            <Text style={styles.creatorSubtitle}>Poll created by {creatorName}</Text>
+          )}
+          <Text style={styles.subtitle}>
+            {isCreator
+              ? (creatorName ? `Poll created by ${creatorName}` : 'Poll created by you')
+              : 'Vote for as many games as you like or none at all!'}
+          </Text>
         </View>
-      )}
 
-      <View style={styles.gamesContainer}>
-        {games.length === 0 ? (
-          <Text style={styles.noGamesText}>No games found in this poll.</Text>
-        ) : (
-          games.map((game, i) => (
-            <GameCard
-              key={game.id}
-              game={game as any} // Allow for missing image_url, etc.
-              index={i}
-              selectedVote={pendingVotes[game.id] !== undefined && pendingVotes[game.id] !== null ? SCORE_TO_VOTE_TYPE[pendingVotes[game.id]] as VoteType : (game.userVote !== undefined && game.userVote !== null ? SCORE_TO_VOTE_TYPE[game.userVote] as VoteType : undefined)}
-              onVote={handleVote}
-              disabled={submitting}
+        {!user && (
+          <>
+            <VoterNameInput
+              value={voterName}
+              onChange={(text) => {
+                setVoterName(text);
+                if (nameError) setNameError(false);
+              }}
+              hasError={nameError}
             />
-          ))
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>
+                Want to create your own polls?{' '}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/auth/register')}
+                accessibilityLabel="Sign up for free"
+                accessibilityRole="button"
+                accessibilityHint="Opens registration screen to create your own polls"
+              >
+                <Text style={styles.signUpLink}>Sign up for free</Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
-      </View>
-      {/* Comments Field */}
-      <View style={styles.commentContainer}>
-        <Text style={styles.commentLabel}>Comments (optional):</Text>
-        <TextInput
-          style={styles.commentInput}
-          value={comment}
-          onChangeText={setComment}
-          placeholder="Add any comments about your vote..."
-          multiline
-          editable={!submitting}
-        />
-      </View>
 
-      {/* Shared button container for consistent width and padding */}
-      <View style={{ paddingHorizontal: 0, width: '100%', alignSelf: 'stretch' }}>
+        <View style={styles.gamesContainer}>
+          {games.length === 0 ? (
+            <Text style={styles.noGamesText}>No games found in this poll.</Text>
+          ) : (
+            games.map((game, i) => (
+              <GameCard
+                key={game.id}
+                game={game as any} // Allow for missing image_url, etc.
+                index={i}
+                selectedVote={pendingVotes[game.id] !== undefined && pendingVotes[game.id] !== null ? SCORE_TO_VOTE_TYPE[pendingVotes[game.id]] as VoteType : (game.userVote !== undefined && game.userVote !== null ? SCORE_TO_VOTE_TYPE[game.userVote] as VoteType : undefined)}
+                onVote={handleVote}
+                disabled={submitting}
+              />
+            ))
+          )}
+        </View>
+        {/* Comments Field */}
+        <View style={styles.commentContainer}>
+          <Text style={styles.commentLabel}>Comments (optional):</Text>
+          <TextInput
+            style={styles.commentInput}
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Add any comments about your vote..."
+            placeholderTextColor={colors.textMuted}
+            multiline
+            editable={!submitting}
+            accessibilityLabel="Comments input"
+            accessibilityHint="Optional field to add comments about your vote"
+          />
+        </View>
+      </ScrollView>
+
+      {/* Fixed bottom button container */}
+      <View style={styles.fixedBottomContainer}>
         <View style={styles.submitVotesContainer}>
           <TouchableOpacity
             style={styles.submitVotesButton}
             onPress={submitAllVotes}
             disabled={submitting}
+            accessibilityLabel={submitting ? 'Submitting votes' : (hasPreviousVotes ? 'Update Vote' : 'Submit My Votes')}
+            accessibilityRole="button"
+            accessibilityHint={submitting ? 'Votes are being submitted' : 'Submits your votes for this poll'}
           >
             <Text style={styles.submitVotesButtonText}>
               {submitting ? 'Submitting...' : (hasPreviousVotes ? 'Update Vote' : 'Submit My Votes')}
@@ -361,104 +419,124 @@ export default function PollScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.bottomActionsContainer}>
-          {hasVoted && (
-            <View style={styles.viewResultsContainer}>
-              <PollResultsButton
-                onPress={navigateToResults}
-              />
-            </View>
-          )}
-
-          {!hasVoted && (
-            <View style={styles.viewResultsContainer}>
-              <TouchableOpacity
-                style={styles.viewResultsButton}
-                onPress={navigateToResults}
-              >
-                <BarChart3 size={20} color="#ffffff" />
-                <Text style={styles.viewResultsButtonText}>View Results</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <View style={styles.viewResultsContainer}>
+            <PollResultsButton
+              onPress={navigateToResults}
+            />
+          </View>
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7f9fc' },
-  header: { padding: 20, backgroundColor: '#1a2b5f' },
-  title: { fontSize: 24, fontFamily: 'Poppins-Bold', color: '#fff', marginBottom: 8 },
-  description: { fontSize: 16, fontFamily: 'Poppins-Regular', color: '#fff', marginBottom: 12 },
-  subtitle: { fontSize: 14, fontFamily: 'Poppins-Regular', color: '#fff', opacity: 0.8 },
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: insets.bottom + 20,
+  },
+  header: {
+    paddingTop: Math.max(40, insets.top),
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: colors.primary
+  },
+  title: {
+    fontSize: typography.fontSize.title2,
+    fontFamily: typography.getFontFamily('bold'),
+    color: colors.card,
+    marginBottom: 8
+  },
+  description: {
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.card,
+    marginBottom: 12
+  },
+  subtitle: {
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.card,
+    opacity: 0.8
+  },
+  creatorSubtitle: {
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.accent,
+    marginBottom: 2,
+  },
   gamesContainer: {
-    paddingTop: 20,
+    paddingTop: 6,
     paddingLeft: 20,
     paddingRight: 20,
-    paddingBottom: 0, // Reduce bottom padding by 50%
+    paddingBottom: 0,
   },
   noGamesText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 32,
+  },
+  fixedBottomContainer: {
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingBottom: Math.max(20, insets.bottom),
   },
   submitVotesContainer: {
     paddingTop: 10,
     paddingLeft: 20,
     paddingRight: 20,
     paddingBottom: 0,
-    width: '100%', alignSelf: 'stretch'
+    width: '100%',
+    alignSelf: 'stretch'
   },
   submitVotesButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
-    width: '100%', // Make button full width
+    width: '100%',
     alignSelf: 'stretch',
+    minHeight: 44,
   },
   submitVotesButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.card,
   },
-  bottomActionsContainer: { width: '100%', alignSelf: 'stretch', marginTop: 8 },
-  viewResultsContainer: { marginTop: 8, width: '100%', alignSelf: 'stretch' },
-  viewResultsButton: {
-    backgroundColor: '#ff9654',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%', // Make button full width
+  bottomActionsContainer: {
+    width: '100%',
     alignSelf: 'stretch',
+    marginTop: 8
   },
-  viewResultsButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
+  viewResultsContainer: {
+    marginTop: 8,
+    width: '100%',
+    alignSelf: 'stretch'
   },
   signUpContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   signUpText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
   },
   signUpLink: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ff9654',
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.accent,
     textDecorationLine: 'underline',
   },
   commentContainer: {
@@ -468,26 +546,26 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   commentLabel: {
-    fontSize: 15,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.primary,
     marginBottom: 4,
   },
   commentInput: {
     minHeight: 48,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 8,
     padding: 10,
-    fontSize: 15,
-    fontFamily: 'Poppins-Regular',
-    backgroundColor: '#fff',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('normal'),
+    backgroundColor: colors.background,
+    color: colors.text,
   },
   backLink: {
-    color: '#1d4ed8',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
+    color: colors.accent,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
     marginBottom: 8,
     textDecorationLine: 'underline',
     alignSelf: 'flex-start',

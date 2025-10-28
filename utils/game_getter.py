@@ -8,25 +8,61 @@ import time
 import string
 from supabase import create_client
 import pprint
-# from bs4 import BeautifulSoup
+import requests
+import json
+from bs4 import BeautifulSoup
+import io
+from zipfile import ZipFile
 # from optparse import OptionParser
 
-CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks'
-INPUT_PATH = 'boardgames_ranks.csv'
+LOGIN_URL = 'https://boardgamegeek.com/login/api/v1'
+BGG_CSV_URL = 'https://boardgamegeek.com/data_dumps/bg_ranks'
+BGG_CSV_FILENAME = 'boardgames_ranks.csv'
 OUTPUT_PATH = 'output.csv'
 EXPANSION_OUTPUT_PATH = 'expansion_output.csv'
-SLEEP_TIME = 10 # seconds to wait after receiving a urllib.request error
+SLEEP_TIME = 5 # seconds to wait after receiving a urllib.request error
 DASH = '–' # NOT the hyphen character on the keyboard
 DESCRIPTION_NCHARS = 0 # number of description characters to store in the output, since we currently have a database size limit
 INCLUDE_BGG_TAXONOMY = True
 TAXONOMY_DELIMITER = '|'
+USERNAME = os.environ.get('BGG_USERNAME')
+PASSWORD = os.environ.get('BGG_PASSWORD')
 
-# def get_zip_url():
-#   response = urllib.request.urlopen(CSV_URL)
-#   soup = BeautifulSoup(response.read(), 'lxml')
+def get_private_collection():
+  session = requests.Session()
+  post = session.post(
+    LOGIN_URL,
+    data = json.dumps({'credentials': {'username': USERNAME, 'password': PASSWORD}}),
+    headers = {'content-type': 'application/json'},
+  )
+  response = session.get(
+    f'https://boardgamegeek.com/xmlapi2/collection?username={USERNAME}&subtype=boardgame&own=1&stats=1&showprivate=1'
+  )
+  soup = BeautifulSoup(response.text, 'xml')
+  print(soup.prettify())
   
+def get_zip_url():
+  session = requests.Session()
+  post = session.post(
+    LOGIN_URL,
+    data = json.dumps({'credentials': {'username': USERNAME, 'password': PASSWORD}}),
+    headers = {'content-type': 'application/json'}
+  )
+  response = session.get(BGG_CSV_URL)
+  soup = BeautifulSoup(response.text, 'lxml')
+  return soup.find(id='maincontent').a['href']
+
+def write_bgg_csv(zip_url):
+  request = requests.get(zip_url)
+  bgg_zipfile = ZipFile(io.BytesIO(request.content))
+  bgg_zipfile.extract(BGG_CSV_FILENAME)
+
 def has_taxonomy(game, type, value):
-  return any(link.attrib['type'] == type and link.attrib['value'] == value for link in game.findall('link'))
+  return any(
+    link.attrib['type'] == type
+    and link.attrib['value'] == value
+    for link in game.findall('link')
+  )
 
 def parse_xml(text):
   root = ET.fromstring(text)
@@ -89,7 +125,11 @@ def parse_xml(text):
     if INCLUDE_BGG_TAXONOMY:
       links = game.findall('link')
       for type in ['boardgamecategory', 'boardgamemechanic', 'boardgamefamily']:
-        row[type] = TAXONOMY_DELIMITER.join(link.attrib['value'] for link in links if link.attrib['type'] == type)
+        row[type] = TAXONOMY_DELIMITER.join(
+          link.attrib['value']
+          for link in links
+          if link.attrib['type'] == type
+        )
     
     yield row
 
@@ -119,18 +159,25 @@ def main():
   
   # parser = OptionParser()
   # parser.add_option()
+  
+  write_bgg_csv(get_zip_url())
+  
   game_cols = get_game_cols()
 
-  reader = csv.DictReader(open(INPUT_PATH, 'r', encoding='utf-8'))
-  writer = csv.DictWriter(open(OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=game_cols, extrasaction='ignore')
+  reader = csv.DictReader(
+    open(BGG_CSV_FILENAME, 'r', encoding='utf-8')
+  )
+  writer = csv.DictWriter(
+    open(OUTPUT_PATH, 'w', encoding='utf-8', newline=''),
+    fieldnames=game_cols,
+    extrasaction='ignore',
+  )
   writer.writeheader()
   
-  expansion_writer = csv.DictWriter(open(EXPANSION_OUTPUT_PATH, 'w', encoding='utf-8', newline=''), fieldnames=[
-    'base_id',
-    # 'base_name',
-    'expansion_id',
-    # 'expansion_name',
-  ])
+  expansion_writer = csv.DictWriter(
+    open(EXPANSION_OUTPUT_PATH, 'w', encoding='utf-8', newline=''),
+    fieldnames=['base_id', 'expansion_id'],
+  )
   expansion_writer.writeheader()
   
   # Make API calls in batches of 20 games at a time
@@ -150,9 +197,10 @@ def main():
       try:
         response = urllib.request.urlopen(url)
       except urllib.error.HTTPError as err:
-        # 429: Too many requests
-        # 502: Bad gateway
-        if err.code in [429, 502]: 
+        if err.code in [
+          429, # Too many requests
+          502, # Bad gateway
+        ]: 
           urllib_error_handler(err)
         else:
           raise
@@ -168,15 +216,11 @@ def main():
       pprint.pp(game)
       writer.writerow(game)
       
-      for e in game['expansions']:
+      for exp in game['expansions']:
         expansion_writer.writerow({
           'base_id': game['id'],
-          # 'base_name': game['name'],
-          'expansion_id': e['id'],
-          # 'expansion_name': e['name']
+          'expansion_id': exp['id'],
         })
       
-      
 if __name__ == '__main__':
-
   main()

@@ -1,38 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
-import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/LoadingState';
 import { getLastVisitedTab } from '@/utils/storage';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Index() {
-  const [session, setSession] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { session, loading } = useAuth();
   const [redirectPath, setRedirectPath] = useState<string>('/(tabs)/index');
 
   useEffect(() => {
-    async function getSession() {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-
-        if (currentSession) {
-          // Get the last visited tab and redirect there
-          const lastTab = await getLastVisitedTab();
-          // Always default to index (tools) for now
-          // TODO: Re-enable last tab navigation once tab conflicts are resolved
-          setRedirectPath('/(tabs)/');
-        }
-      } catch (error) {
-        console.error('Error getting session:', error);
-      } finally {
-        setIsLoading(false);
+    async function setRedirect() {
+      if (session) {
+        // Get the last visited tab and redirect there
+        const lastTab = await getLastVisitedTab();
+        // Always default to index (tools) for now
+        // TODO: Re-enable last tab navigation once tab conflicts are resolved
+        setRedirectPath('/(tabs)/collection');
       }
     }
 
-    getSession();
-  }, []);
+    setRedirect();
+  }, [session]);
 
-  if (isLoading) {
+  if (loading) {
     return <LoadingState />;
   }
 

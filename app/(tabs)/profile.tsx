@@ -1,45 +1,74 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
-import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import { LogOut, CreditCard as Edit2, ExternalLink, Mail } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { LogOut, CreditCard as Edit2, ExternalLink, Mail, Edit3 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
 
 import { supabase } from '@/services/supabase';
+import EditProfileModal from '@/components/EditProfileModal';
+
+const discordSymbolLight = require('@/assets/images/Discord-Symbol-Blurple.svg');
+const discordSymbolDark = require('@/assets/images/Discord-Symbol-Blurple.svg');
+const bggLogoLight = require('@/assets/images/powered-by-bgg-rgb.svg');
+const bggLogoDark = require('@/assets/images/powered-by-bgg-reversed-rgb.svg');
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{
+    username: string;
+    firstname: string | null;
+    lastname: string | null;
+    bgg_username: string | null;
+  } | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const { colors, typography, isDark } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
+  const { toggleTheme } = useAccessibilityContext();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': Poppins_400Regular,
-    'Poppins-SemiBold': Poppins_600SemiBold,
-    'Poppins-Bold': Poppins_700Bold,
-  });
+  const loadUserData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setEmail(user.email ?? null);
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setEmail(user.email ?? null);
-      } else {
-        router.replace('/auth/login');
+      // Load profile data
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('username, firstname, lastname, bgg_username')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading profile:', error);
+      } else if (profileData) {
+        setProfile(profileData);
       }
-    };
-
-    loadUserData();
+    } else {
+      router.replace('/auth/login');
+    }
   }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+    }, [loadUserData])
+  );
 
   const handleLogout = async () => {
     try {
       setLoading(true);
       await supabase.auth.signOut();
+      announceForAccessibility('Successfully signed out');
       router.replace('/auth/login');
     } catch (error) {
       console.error('Error logging out:', error);
@@ -52,7 +81,46 @@ export default function ProfileScreen() {
     Linking.openURL('https://boardgamegeek.com');
   };
 
-  if (!fontsLoaded || !email) {
+  const handleProfileUpdate = async (updatedProfile: {
+    username: string;
+    firstname: string | null;
+    lastname: string | null;
+    bgg_username: string | null;
+  }) => {
+    try {
+      setLoading(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: updatedProfile.username,
+          firstname: updatedProfile.firstname,
+          lastname: updatedProfile.lastname,
+          bgg_username: updatedProfile.bgg_username,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setProfile(updatedProfile);
+      setShowEditModal(false);
+      announceForAccessibility('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      announceForAccessibility('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!email) {
     return null;
   }
 
@@ -62,18 +130,54 @@ export default function ProfileScreen() {
       contentContainerStyle={[styles.contentContainer, { paddingBottom: 80 + safeAreaBottom }]}
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View
-        style={styles.profileHeader}
-      >
+      <View style={styles.profileHeader}>
         <View style={styles.avatarContainer}>
-          <Text style={styles.avatarLetter}>{email.charAt(0).toUpperCase()}</Text>
+          <Text style={styles.avatarLetter}>
+            {profile?.username?.charAt(0).toUpperCase() || email.charAt(0).toUpperCase()}
+          </Text>
         </View>
-        <Text style={styles.username}>{email}</Text>
-      </Animated.View>
+        <Text style={styles.username}>
+          {profile?.username || email}
+        </Text>
+        {profile?.firstname || profile?.lastname ? (
+          <Text style={styles.fullName}>
+            {[profile.firstname, profile.lastname].filter(Boolean).join(' ')}
+          </Text>
+        ) : null}
+        {profile?.username && (
+          <Text style={styles.email}>
+            {email}
+          </Text>
+        )}
+        <TouchableOpacity
+          style={styles.editButton}
+          accessibilityLabel="Edit profile"
+          accessibilityRole="button"
+          accessibilityHint="Opens the edit profile form"
+          onPress={() => setShowEditModal(true)}
+        >
+          <Edit3 size={16} color={colors.primary} />
+          <Text style={styles.editButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
 
-      <Animated.View
-        style={styles.statsContainer}
-      >
+        <TouchableOpacity
+          style={styles.themeToggleButton}
+          activeOpacity={1}
+          accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+          accessibilityRole="button"
+          accessibilityHint={`Switches to ${isDark ? 'light' : 'dark'} mode`}
+          onPress={() => {
+            toggleTheme();
+            announceForAccessibility(`Switched to ${isDark ? 'light' : 'dark'} mode`);
+          }}
+        >
+          <Text style={styles.themeToggleText}>
+            {isDark ? 'Light Mode' : 'Dark Mode'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.statsContainer}>
         <Text style={styles.sectionTitle}>App Information</Text>
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>About this app</Text>
@@ -87,51 +191,84 @@ export default function ProfileScreen() {
           <View style={styles.contactContainer}>
             <Text style={styles.contactText}>
               Questions, issues, or feature requests?{'\n'}
-              Email us or join our Discord server!
+              For any support needs, contact klackapp@gmail.com or join our Discord server.
             </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('mailto:GameNyteApp@gmail.com')}>
-              <Mail size={64} color="#666666" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => Linking.openURL('https://discord.gg/FPX4hatRK2')}>
+            { /*<TouchableOpacity
+              accessibilityLabel="Email support"
+              accessibilityRole="button"
+              accessibilityHint="Opens your email app to contact support"
+              onPress={() => Linking.openURL('mailto:klackapp@gmail.com')}
+              style={styles.iconButton}
+            >
+              <Mail size={28} color={colors.textMuted} />
+            </TouchableOpacity> */}
+            <TouchableOpacity
+              accessibilityLabel="Open Discord server"
+              accessibilityRole="button"
+              accessibilityHint="Opens the Klack Discord invite link"
+              onPress={() => Linking.openURL('https://discord.gg/FPX4hatRK2')}
+              style={[styles.iconButton, styles.iconButtonSpacing]}
+            >
               <Image
-                source={require('@/assets/images/discord_symbol.svg')}
+                source={isDark ? discordSymbolDark : discordSymbolLight}
                 resizeMode="contain"
+                style={styles.discordIcon}
               />
             </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity onPress={handleViewOnBGG}>
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            accessibilityLabel="Log out"
+            accessibilityRole="button"
+            accessibilityHint="Logs you out and returns to the login screen"
+            onPress={handleLogout}
+            disabled={loading}
+          >
+            <LogOut size={20} color={colors.error} />
+            <Text style={[styles.actionButtonText, styles.logoutButtonText]}>
+              {loading ? 'Logging out...' : 'Log Out'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          accessibilityLabel="View BoardGameGeek website"
+          accessibilityRole="button"
+          accessibilityHint="Opens boardgamegeek.com in your browser"
+          onPress={handleViewOnBGG}
+        >
           <Image
-            source={require('@/assets/images/Powered by BGG.webp')}
+            source={isDark ? bggLogoDark : bggLogoLight}
             style={styles.bggLogo}
             resizeMode="contain"
           />
         </TouchableOpacity>
-      </Animated.View>
 
-      <Animated.View
-        style={styles.actionsContainer}
-      >
-        <TouchableOpacity
-          style={[styles.actionButton, styles.logoutButton]}
-          onPress={handleLogout}
-          disabled={loading}
-        >
-          <LogOut size={20} color="#e74c3c" />
-          <Text style={[styles.actionButtonText, styles.logoutButtonText]}>
-            {loading ? 'Logging out...' : 'Log Out'}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
+        <Text style={styles.infoText}>
+          © 2025 Klack LLC. All rights reserved.
+        </Text>
+      </View>
+
+      {showEditModal && profile && (
+        <EditProfileModal
+          visible={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleProfileUpdate}
+          initialData={profile}
+          loading={loading}
+        />
+      )}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
   },
   contentContainer: {
     padding: 20,
@@ -145,7 +282,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#1a2b5f',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -156,15 +293,65 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   avatarLetter: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 40,
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.title1 * 1.25,
     color: '#ffffff',
   },
   username: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.title3,
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  fullName: {
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
     marginBottom: 8,
+  },
+  email: {
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
+    marginBottom: 16,
+    opacity: 0.8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  editButtonText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.primary,
+    marginLeft: 6,
+  },
+  themeToggleButton: {
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  themeToggleText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.primary,
+    textAlign: 'center',
   },
   bggLink: {
     flexDirection: 'row',
@@ -172,22 +359,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   bggLinkText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.accent,
     marginRight: 4,
   },
   statsContainer: {
     marginBottom: 32,
   },
   sectionTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#4CAF50',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.success,
     marginBottom: 16,
   },
   infoCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -198,41 +385,50 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   infoLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.primary,
     marginBottom: 8,
   },
   infoText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
     lineHeight: 22,
   },
   contactContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
   },
   contactText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
     lineHeight: 22,
     flex: 1,
+  },
+  iconButton: {
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconButtonSpacing: {
+    marginLeft: 12,
+  },
+  discordIcon: {
+    width: 28,
+    height: 28,
   },
   bggLogo: {
     width: '100%',
     height: 60,
     marginTop: 16,
   },
-  actionsContainer: {
-    marginTop: 16,
-  },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -241,18 +437,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    minHeight: 44,
   },
   actionButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.primary,
     marginLeft: 12,
   },
-  logoutButton: {
-    borderWidth: 1,
-    borderColor: '#ffeeee',
-  },
   logoutButtonText: {
-    color: '#e74c3c',
+    color: colors.error,
   },
 });

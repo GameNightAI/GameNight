@@ -1,6 +1,12 @@
-import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, Dimensions } from 'react-native';
+import { useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Plus, Shuffle, X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useDeviceType } from '@/hooks/useDeviceType';
+import ToolsFooter from '@/components/ToolsFooter';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -8,20 +14,23 @@ import Animated, {
   ZoomOut,
   SlideInDown,
   SlideOutUp,
-  useSharedValue,
-  runOnJS
 } from 'react-native-reanimated';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 export default function FirstPlayerScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+  const { screenHeight } = useDeviceType();
   const [players, setPlayers] = useState<string[]>([]);
   const [newPlayer, setNewPlayer] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  const opacity = useSharedValue(0);
+  // No shared values needed; animations are declarative on components
+
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets, insets), [colors, typography, touchTargets, insets]);
 
   const addPlayer = () => {
     if (newPlayer.trim() && !players.includes(newPlayer.trim())) {
@@ -43,7 +52,8 @@ export default function FirstPlayerScreen() {
     setIsSelecting(false);
     setSelectedPlayer(finalPlayer);
     setCountdown(null);
-  }, []);
+    announceForAccessibility(`${finalPlayer} goes first!`);
+  }, [announceForAccessibility]);
 
   const selectRandomPlayer = async () => {
     if (players.length > 0) {
@@ -55,14 +65,14 @@ export default function FirstPlayerScreen() {
 
       // Start countdown with faster timing (700ms per number)
       for (let i = 3; i > 0; i--) {
-        runOnJS(updateCountdown)(i);
+        updateCountdown(i);
         await new Promise(resolve => setTimeout(resolve, 700));
       }
 
       // Show the reveal animation slightly faster
-      runOnJS(updateCountdown)(null);
+      updateCountdown(null);
       setTimeout(() => {
-        runOnJS(finishSelection)(finalPlayer);
+        finishSelection(finalPlayer);
       }, 300);
     }
   };
@@ -110,6 +120,8 @@ export default function FirstPlayerScreen() {
             <TouchableOpacity
               style={styles.closeRevealButton}
               onPress={() => setSelectedPlayer(null)}
+              accessibilityLabel="Close results"
+              accessibilityRole="button"
             >
               <Text style={styles.closeRevealText}>Close</Text>
             </TouchableOpacity>
@@ -129,16 +141,19 @@ export default function FirstPlayerScreen() {
             value={newPlayer}
             onChangeText={setNewPlayer}
             placeholder="Enter player name"
-            placeholderTextColor="#666666"
+            placeholderTextColor={colors.textMuted}
             onSubmitEditing={addPlayer}
             maxLength={20}
+            accessibilityLabel="Enter player name"
           />
           <TouchableOpacity
             style={[styles.addButton, !newPlayer.trim() && styles.addButtonDisabled]}
             onPress={() => addPlayer()}
             disabled={!newPlayer.trim()}
+            accessibilityLabel="Add player"
+            accessibilityRole="button"
           >
-            <Plus color="#fff" size={20} />
+            <Plus color={colors.card} size={20} />
           </TouchableOpacity>
         </View>
 
@@ -146,6 +161,8 @@ export default function FirstPlayerScreen() {
           data={players}
           keyExtractor={(_, index) => index.toString()}
           style={styles.list}
+          contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item, index }) => (
             <Animated.View
               entering={FadeIn.duration(300)}
@@ -156,8 +173,11 @@ export default function FirstPlayerScreen() {
               <TouchableOpacity
                 style={styles.removeButton}
                 onPress={() => removePlayer(index)}
+                hitSlop={touchTargets.getHitSlop(28)}
+                accessibilityLabel={`Remove ${item}`}
+                accessibilityRole="button"
               >
-                <X size={16} color="#e74c3c" />
+                <X size={16} color={colors.error} />
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -173,216 +193,251 @@ export default function FirstPlayerScreen() {
             style={[styles.shuffleButton, isSelecting && styles.shuffleButtonDisabled]}
             onPress={selectRandomPlayer}
             disabled={isSelecting}
+            accessibilityLabel="Select a random player"
+            accessibilityRole="button"
           >
-            <Shuffle size={24} color="#fff" />
+            <Shuffle size={24} color={colors.card} />
             <Text style={styles.shuffleText}>
               {isSelecting ? 'Selecting...' : 'Select Random Player'}
             </Text>
           </TouchableOpacity>
         )}
       </View>
+      <View style={styles.footerContainer}>
+        <ToolsFooter currentScreen="tools" />
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-  },
-  backgroundImage: {
-    position: 'absolute',
-    width: '100%',
-    height: 200,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
-    backgroundColor: 'rgba(26, 43, 95, 0.85)',
-  },
-  header: {
-    paddingTop: 40,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: Math.min(32, screenWidth * 0.08),
-    color: '#ffffff',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: Math.min(16, screenWidth * 0.04),
-    color: '#ffffff',
-    marginTop: 8,
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: 20,
-    padding: 20,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 4, // Add padding to prevent edge cutoff
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    marginRight: 12, // Consistent spacing between input and button
-    minWidth: 0, // Allow input to shrink properly
-  },
-  addButton: {
-    width: 48, // Slightly smaller button
-    height: 48,
-    backgroundColor: '#ff9654',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  addButtonDisabled: {
-    opacity: 0.7,
-  },
-  list: {
-    flex: 1,
-  },
-  playerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  playerName: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#fff0f0',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    textAlign: 'center',
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
-    marginTop: 32,
-  },
-  shuffleButton: {
-    backgroundColor: '#ff9654',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  shuffleButtonDisabled: {
-    opacity: 0.7,
-  },
-  shuffleText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    marginLeft: 8,
-  },
-  countdownOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 43, 95, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  countdownText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: Math.min(120, screenWidth * 0.3),
-    color: '#ffffff',
-  },
-  revealOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 43, 95, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  revealCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 32,
-    width: '80%',
-    maxWidth: 400,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  revealText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: Math.min(32, screenWidth * 0.08),
-    color: '#1a2b5f',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  revealSubtext: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: Math.min(20, screenWidth * 0.05),
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  closeRevealButton: {
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  closeRevealText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-  },
-});
+function getStyles(colors: any, typography: any, touchTargets: any, insets: any) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    backgroundImage: {
+      position: 'absolute',
+      width: '100%',
+      height: 200,
+    },
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 200,
+      backgroundColor: colors.primary + 'D9',
+    },
+    header: {
+      paddingTop: 10,
+      paddingHorizontal: 20,
+      paddingBottom: 10,
+      minHeight: 60,
+      justifyContent: 'center',
+    },
+    title: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.headline,
+      color: colors.card,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.card,
+      textAlign: 'center',
+    },
+    content: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+      padding: 20,
+      paddingBottom: 60 + Math.max(8, Platform.OS === 'web' ? 0 : insets.bottom) + 20,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+      paddingTop: 8,
+      paddingHorizontal: 8,
+    },
+    input: {
+      flex: 1,
+      flexShrink: 1,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.text,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      marginRight: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 44,
+    },
+    addButton: {
+      width: Math.max(48, touchTargets.minSize),
+      height: Math.max(48, touchTargets.minSize),
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    addButtonDisabled: {
+      opacity: 0.7,
+    },
+    list: {
+      flex: 1,
+    },
+    playerItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      marginBottom: 12,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 44,
+    },
+    playerName: {
+      flex: 1,
+      fontSize: typography.fontSize.callout,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.text,
+    },
+    removeButton: {
+      width: 28,
+      height: 28,
+      backgroundColor: colors.tints.error,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emptyText: {
+      textAlign: 'center',
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+      marginTop: 32,
+    },
+    shuffleButton: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 16,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+      minHeight: 44,
+    },
+    shuffleButtonDisabled: {
+      opacity: 0.7,
+    },
+    shuffleText: {
+      color: colors.card,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      marginLeft: 8,
+    },
+    countdownOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.primary + 'F2',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    },
+    countdownText: {
+      fontFamily: typography.getFontFamily('bold'),
+      //fontSize: Math.min(120, screenWidth * 0.3),
+      color: colors.card,
+    },
+    revealOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.primary + 'F2',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      padding: 20,
+    },
+    revealCard: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: 32,
+      width: '100%',
+      maxWidth: 400,
+      alignItems: 'center',
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    revealText: {
+      fontFamily: typography.getFontFamily('bold'),
+      //fontSize: Math.min(32, screenWidth * 0.08),
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    revealSubtext: {
+      fontFamily: typography.getFontFamily('normal'),
+      //fontSize: Math.min(20, screenWidth * 0.05),
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    closeRevealButton: {
+      backgroundColor: colors.accent,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+      minHeight: 44,
+    },
+    closeRevealText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.card,
+    },
+    footerContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+    },
+  });
+}

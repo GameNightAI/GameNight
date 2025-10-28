@@ -3,7 +3,8 @@ import { supabase } from '@/services/supabase';
 import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
 import { VOTING_OPTIONS, getVoteTypeKeyFromScore } from '@/components/votingOptions';
-import { getVotedFlag, getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
+import { getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
+import { censor } from '@/utils/profanityFilter';
 
 interface GameVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
@@ -30,6 +31,8 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
   const [error, setError] = useState<string | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [voteUpdated, setVoteUpdated] = useState(false);
+  const [creatorName, setCreatorName] = useState<string>('Loading...');
+  const [comments, setComments] = useState<{ username: string; firstname: string; lastname: string; voter_name: string; comment_text: string }[]>([]);
 
   // Track the last pollId to prevent unnecessary re-fetches
   const lastPollIdRef = useRef<string | null>(null);
@@ -46,12 +49,57 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
       setLoading(true);
       setError(null);
 
-      // Check if user has voted
+      // Check if user has voted by querying the database
       try {
-        const votedFlag = await getVotedFlag(id);
-        setHasVoted(votedFlag);
-      } catch (storageError) {
-        console.warn('Error checking voted flag:', storageError);
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // Get user identifier using the same logic as usePollData
+        let identifier = null;
+
+        // Try to get saved username from storage
+        const { getUsername } = await import('@/utils/storage');
+        const savedUsername = await getUsername();
+        if (savedUsername) {
+          identifier = savedUsername;
+        } else {
+          // Fallback to anonymous ID
+          const { getOrCreateAnonId } = await import('@/utils/anon');
+          const anonId = await getOrCreateAnonId();
+          identifier = anonId;
+        }
+
+        if (identifier) {
+          const { data: userVotes, error: votesError } = await supabase
+            .from('votes')
+            .select('id')
+            .eq('poll_id', id)
+            .eq('voter_name', identifier)
+            .limit(1);
+
+          if (votesError) {
+            console.warn('Error checking user votes:', votesError);
+            setHasVoted(false);
+          } else {
+            setHasVoted(userVotes?.length > 0);
+          }
+        } else if (user) {
+          const { data: userVotes, error: votesError } = await supabase
+            .from('votes')
+            .select('id')
+            .eq('poll_id', id)
+            .eq('user_id', user?.id)
+            .limit(1);
+          if (votesError) {
+            console.warn('Error checking user votes:', votesError);
+            setHasVoted(false);
+          } else {
+            setHasVoted(userVotes?.length > 0);
+          }
+        } else {
+          setHasVoted(false);
+        }
+      } catch (error) {
+        console.warn('Error checking if user has voted:', error);
         setHasVoted(false);
       }
 
@@ -114,7 +162,7 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
 
       // Get the actual game details from games table
       const { data: gamesData, error: gameDetailsError } = await supabase
-        .from('games')
+        .from('games_view')
         .select('*')
         .in('id', gameIds);
 
@@ -132,7 +180,7 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
 
       // Get votes for this poll
       const { data: votes, error: votesError } = await supabase
-        .from('votes')
+        .from('votes_view')
         .select('*')
         .eq('poll_id', id);
 
@@ -148,7 +196,11 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
         const voteData: GameVotes = {
           votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
-            name: v.voter_name || 'Anonymous',
+            name: v.username
+              ? (v.firstname || v.lastname
+                ? `${censor([v.firstname, v.lastname].join(' ').trim())} (${v.username})`
+                : v.username
+              ) : censor(v.voter_name) || 'Anonymous',
             vote_type: v.vote_type,
           })) || [],
         };
@@ -166,26 +218,26 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
 
         return {
           id: game.id,
-          name: game.name || 'Unknown Game',
-          yearPublished: game.year_published || null,
-          thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
-          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
-          min_players: game.min_players || 1,
-          max_players: game.max_players || 1,
-          min_exp_players: game.min_exp_players || 1,
-          max_exp_players: game.max_exp_players || 1,
-          playing_time: game.playing_time || 0,
-          minPlaytime: game.minplaytime || 0,
-          maxPlaytime: game.maxplaytime || 0,
-          description: game.description || '',
-          minAge: game.min_age || 0,
-          is_cooperative: game.is_cooperative || false,
-          is_teambased: game.is_teambased || false,
-          complexity: game.complexity || 1,
-          complexity_tier: game.complexity_tier || 1,
-          complexity_desc: game.complexity_desc || '',
-          average: game.average ?? null,
-          bayesaverage: game.bayesaverage ?? null,
+          name: game.name,
+          yearPublished: game.year_published,
+          thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          min_players: game.min_players,
+          max_players: game.max_players,
+          min_exp_players: game.min_exp_players,
+          max_exp_players: game.max_exp_players,
+          playing_time: game.playing_time,
+          minPlaytime: game.minplaytime,
+          maxPlaytime: game.maxplaytime,
+          description: game.description,
+          minAge: game.min_age,
+          is_cooperative: game.is_cooperative,
+          is_teambased: game.is_teambased,
+          complexity: game.complexity,
+          complexity_tier: game.complexity_tier,
+          complexity_desc: game.complexity_desc,
+          average: game.average,
+          bayesaverage: game.bayesaverage,
           votes: voteData,
         };
       });
@@ -229,6 +281,36 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
       });
 
       setResults(gameResults);
+
+      // Fetch creator info
+      const fetchCreatorInfo = async () => {
+        const { data, error } = await supabase
+          .from('polls_profiles')
+          .select('username, firstname, lastname')
+          .eq('id', id)
+          .maybeSingle();
+        if (!error && data) {
+          const { username, firstname, lastname } = data;
+          setCreatorName(
+            firstname || lastname
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
+              : username
+          );
+        }
+      };
+      await fetchCreatorInfo();
+
+      // Fetch poll comments
+      const fetchComments = async () => {
+        const { data, error } = await supabase
+          .from('poll_comments_view')
+          .select('username, firstname, lastname, voter_name, comment_text')
+          .eq('poll_id', id)
+          .order('created_at', { ascending: false });
+        if (!error && data) setComments(data);
+      };
+      await fetchComments();
+
     } catch (err) {
       console.error('Error in loadResults:', err);
       setError((err as Error).message || 'Failed to load results');
@@ -256,6 +338,8 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
     results,
     hasVoted,
     voteUpdated,
+    creatorName,
+    comments,
     loading,
     error,
     reload,

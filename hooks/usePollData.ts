@@ -7,15 +7,7 @@ import { Poll, Vote } from '@/types/poll';
 import { Game } from '@/types/game';
 import { VOTING_OPTIONS, VOTE_TYPE_TO_SCORE, getVoteTypeKeyFromScore } from '@/components/votingOptions';
 import { getUsername } from '@/utils/storage';
-
-// Helper function to get complexity description
-function getComplexityDescription(complexity: number): string {
-  if (complexity < 1.5) return 'Light';
-  if (complexity < 2.5) return 'Medium Light';
-  if (complexity < 3.5) return 'Medium';
-  if (complexity < 4.5) return 'Medium Heavy';
-  return 'Heavy';
-}
+import { censor } from '@/utils/profanityFilter';
 
 interface GameVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
@@ -36,6 +28,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
   const [isCreator, setIsCreator] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [pendingVotes, setPendingVotes] = useState<Record<number, number>>({});
+  const [creatorName, setCreatorName] = useState<string | null>(null);
 
   useEffect(() => {
     if (pollId) loadPoll(pollId.toString());
@@ -46,7 +39,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
       setLoading(true);
       setError(null);
 
-      console.log('Loading poll with ID:', id);
+      // console.log('Loading poll with ID:', id);
 
       // Get the poll details
       const { data: pollData, error: pollError } = await supabase
@@ -64,7 +57,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         throw new Error('Poll not found');
       }
 
-      console.log('Poll data loaded:', pollData);
+      // console.log('Poll data loaded:', pollData);
       setPoll(pollData);
 
       // Get current user (may be null for anonymous users)
@@ -75,6 +68,26 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       setUser(user);
       setIsCreator(user?.id === pollData.user_id);
+
+      // Fetch creator info
+      if (pollData?.user_id) {
+        const { data: profileData, error: creatorError } = await supabase
+          .from('profiles')
+          .select('username, firstname, lastname')
+          .eq('id', pollData.user_id)
+          .maybeSingle();
+        if (!creatorError && profileData) {
+          const { username, firstname, lastname } = profileData;
+          setCreatorName(
+            firstname || lastname
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
+              : username
+          );
+        } else if (creatorError) {
+          console.error('Error fetching creator:', creatorError);
+          setCreatorName(pollData.user_id);
+        }
+      }
 
       // Get the games in this poll
       const { data: pollGames, error: gamesError } = await supabase
@@ -87,21 +100,21 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         throw gamesError;
       }
 
-      console.log('Poll games:', pollGames);
+      // console.log('Poll games:', pollGames);
 
       if (!pollGames || pollGames.length === 0) {
-        console.log('No games found in poll');
+        // console.log('No games found in poll');
         setGames([]);
         setLoading(false);
         return;
       }
 
       const gameIds = pollGames.map(pg => pg.game_id);
-      console.log('Game IDs to fetch:', gameIds);
+      // console.log('Game IDs to fetch:', gameIds);
 
       // Get the actual game details from games table
       const { data: gamesData, error: gameDetailsError } = await supabase
-        .from('games')
+        .from('games_view')
         .select('*')
         .in('id', gameIds);
 
@@ -110,7 +123,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         throw gameDetailsError;
       }
 
-      console.log('Games data loaded:', gamesData);
+      // console.log('Games data loaded:', gamesData);
 
       if (!gamesData || gamesData.length === 0) {
         console.log('No game details found');
@@ -121,7 +134,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
 
       // Get votes for this poll
       const { data: votes, error: votesError } = await supabase
-        .from('votes')
+        .from('votes_view')
         .select('*')
         .eq('poll_id', id);
 
@@ -130,23 +143,19 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         throw votesError;
       }
 
-      console.log('Votes loaded:', votes);
+      // console.log('Votes loaded:', votes);
 
       // Get user identifier for vote checking with better fallback
       let identifier = null;
       try {
-        if (user?.email) {
-          identifier = user.email;
+        // Try to get saved username from storage
+        const savedUsername = await getUsername();
+        if (savedUsername) {
+          identifier = savedUsername;
         } else {
-          // Try to get saved username from storage
-          const savedUsername = await getUsername();
-          if (savedUsername) {
-            identifier = savedUsername;
-          } else {
-            // Fallback to anonymous ID
-            const anonId = await getOrCreateAnonId();
-            identifier = anonId;
-          }
+          // Fallback to anonymous ID
+          const anonId = await getOrCreateAnonId();
+          identifier = anonId;
         }
       } catch (error) {
         console.warn('Could not get user identifier:', error);
@@ -159,10 +168,13 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         }
       }
 
-      console.log('User identifier:', identifier);
+      // console.log('User identifier:', identifier);
 
-      const userVotes = votes?.filter(v => v.voter_name === identifier) || [];
-      setHasVoted(userVotes.length > 0 || user?.id === pollData.user_id);
+      const userVotes = votes?.filter(v =>
+        (identifier && identifier === v.voter_name)
+        || (user?.id && user?.id === v.user_id)
+      ) || [];
+      setHasVoted(userVotes.length > 0);
 
       // Map games data to the expected format
       const formattedGames = gamesData.map(game => {
@@ -173,7 +185,11 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         const voteData: GameVotes = {
           votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
-            name: v.voter_name || 'Anonymous',
+            name: v.username
+              ? (v.firstname || v.lastname
+                ? `${censor([v.firstname, v.lastname].join(' ').trim())} (${v.username})`
+                : v.username
+              ) : v.voter_name || 'Anonymous',
             vote_type: v.vote_type,
           })),
         };
@@ -190,38 +206,38 @@ export const usePollData = (pollId: string | string[] | undefined) => {
         });
 
         // Find user's vote for this game
-        const userVote = identifier ?
-          gameVotes.find(v => v.voter_name === identifier)?.vote_type ?? null
-          : null;
+        const userVote = gameVotes.find(v =>
+          (identifier && identifier === v.voter_name)
+          || (user?.id && user?.id === v.user_id)
+        )?.vote_type;
 
         return {
           id: game.id,
-          name: game.name || 'Unknown Game',
-          yearPublished: game.year_published || null,
-          thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
-          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
-          min_players: game.min_players || 1,
-          max_players: game.max_players || 1,
-          min_exp_players: game.min_exp_players || game.min_players || 1,
-          max_exp_players: game.max_exp_players || game.max_players || 1,
-          playing_time: game.playing_time || 0,
-          minPlaytime: game.minplaytime || 0,
-          maxPlaytime: game.maxplaytime || 0,
-          description: game.description || '',
-          minAge: game.min_age || 0,
-          is_cooperative: game.is_cooperative || false,
-          is_teambased: game.is_teambased || false,
-          complexity: game.complexity || 1,
-          complexity_tier: game.complexity_tier || 1,
-          complexity_desc: game.complexity ? getComplexityDescription(game.complexity) : '',
-          average: game.average ?? null,
-          bayesaverage: game.bayesaverage ?? null,
+          name: game.name,
+          yearPublished: game.year_published,
+          thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          min_players: game.min_players,
+          max_players: game.max_players,
+          min_exp_players: game.min_exp_players,
+          max_exp_players: game.max_exp_players,
+          playing_time: game.playing_time,
+          minPlaytime: game.minplaytime,
+          maxPlaytime: game.maxplaytime,
+          description: game.description,
+          minAge: game.min_age,
+          is_cooperative: game.is_cooperative,
+          is_teambased: game.is_teambased,
+          complexity: game.complexity,
+          complexity_tier: game.complexity_tier,
+          complexity_desc: game.complexity_desc,
+          average: game.average,
+          bayesaverage: game.bayesaverage,
+          expansions: game.expansions || [],
           votes: voteData,
           userVote,
         };
       });
-
-      console.log('Formatted games:', formattedGames);
 
       // Set initial pending votes from user's existing votes
       const initialVotes: Record<number, number> = {};
@@ -251,6 +267,7 @@ export const usePollData = (pollId: string | string[] | undefined) => {
     user,
     pendingVotes,
     setPendingVotes,
+    creatorName,
     reload: () => pollId && loadPoll(pollId.toString()),
   };
 };

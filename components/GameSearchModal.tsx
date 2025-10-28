@@ -1,13 +1,19 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, FlatList, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Plus } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { debounce } from 'lodash';
-import { Game } from '@/types/game';
 import { XMLParser } from 'fast-xml-parser';
 import Toast from 'react-native-toast-message';
-import { sortGamesByTitle } from '@/utils/sortingUtils';
+import { decode } from 'html-entities';
 
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useDeviceType } from '@/hooks/useDeviceType';
+
+import { Game } from '@/types/game';
 
 interface GameSearchModalProps {
   isVisible: boolean;
@@ -32,6 +38,15 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   existingGameIds = [],
   userCollectionIds = [],
 }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
+
+  const styles = useMemo(() => getStyles(colors, typography, insets, screenHeight), [colors, typography, insets, screenHeight]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -60,7 +75,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   const fetchSearchResults = useCallback(async (term: string) => {
     try {
       // Perform an API request based on the search term
-      const response = await fetch(`https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(term)}&type=boardgame`);
+      const response = await fetch(`/.netlify/functions/bgg-api/search?query=${encodeURIComponent(term)}&type=boardgame`);
 
       const xmlText = await response.text();
 
@@ -81,16 +96,15 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
           .filter((item: any) => item.name.type === 'primary')
           .map((item: any) => item.id);
 
+        /* We are intentionally sorting by rank in the hopes that
+           more relevant results will be displayed first */
         const { data: games } = await supabase
           .from('games')
           .select()
           .in('id', ids)
           .order('rank');
 
-        // Sort games alphabetically by title, ignoring articles
-        const sortedGames = sortGamesByTitle(games || []);
-
-        setSearchResults(sortedGames);
+        setSearchResults(games || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -100,13 +114,14 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
     }
   }, []);
 
+  const debouncedSearch = useMemo(() => debounce(fetchSearchResults, 500), [fetchSearchResults]);
 
-
-
-
-  const debouncedSearch = useMemo(() => {
-    return debounce(fetchSearchResults, 500);
-  }, []); // No dependencies to ensure stable reference
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel?.();
+    };
+  }, [debouncedSearch]);
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
@@ -131,6 +146,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   };
 
   const handleAddGameToCollection = async (game: Game) => {
+    const decodedName = decode(game.name);
     try {
       setAdding(true);
       setError('');
@@ -149,46 +165,33 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
         .eq('bgg_game_id', game.id);
 
       if (existingGames && existingGames.length > 0) {
-        setError(`${game.name} is already in your collection`);
+        setError(`${decodedName} is already in your collection`);
         return;
       }
 
-      // Fetch detailed game info
-      const response = await fetch(`https://boardgamegeek.com/xmlapi2/thing?id=${game.id}&stats=1`);
-      const xmlText = await response.text();
-
-      const parser = new XMLParser({
-        ignoreAttributes: false,
-        attributeNamePrefix: '',
-      });
-
-      const result = parser.parse(xmlText);
-      const gameInfo = result.items.item;
-
-      const gameData = {
-        user_id: user.id,
-        bgg_game_id: game.id,
-        name: game.name,
-        thumbnail: gameInfo.thumbnail,
-        min_players: parseInt(gameInfo.minplayers?.value || '0'),
-        max_players: parseInt(gameInfo.maxplayers?.value || '0'),
-        playing_time: parseInt(gameInfo.playingtime?.value || '0'),
-        year_published: game.yearPublished,
-      };
-
       const { error: insertError } = await supabase
         .from('collections')
-        .upsert(gameData);
+        .insert({
+          user_id: user.id,
+          bgg_game_id: game.id,
+          name: game.name,
+          thumbnail: game.thumbnail,
+          min_players: game.min_players,
+          max_players: game.max_players,
+          playing_time: game.playing_time,
+          year_published: game.yearPublished,
+        });
 
       if (insertError) throw insertError;
 
       onGameAdded?.(game);
+      announceForAccessibility(`${decodedName} added to your collection`);
 
       // Show success toast
       Toast.show({
         type: 'success',
         text1: 'Game Added!',
-        text2: `${game.name} has been added to your collection`,
+        text2: `${decodedName} has been added to your collection`,
         visibilityTime: 2000,
         autoHide: true,
       });
@@ -197,21 +200,25 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
     } catch (err) {
       console.error('Add game error:', err);
       setError('Failed to add game to collection');
+      announceForAccessibility('Failed to add game to collection');
     } finally {
       setAdding(false);
     }
   };
 
   const handleSelectGameForPoll = (game: Game) => {
+    const decodedName = decode(game.name);
     // Check if game is already in the poll
     if (existingGameIds.includes(game.id.toString())) {
-      setError(`${game.name} is already in the poll`);
+      setError(`${decodedName} is already in the poll`);
+      announceForAccessibility(`${decodedName} is already in the poll`);
       return;
     }
 
     // Check if game is in user's collection
     if (userCollectionIds.includes(game.id.toString())) {
-      setError(`${game.name} is already in your collection`);
+      setError(`${decodedName} is already in your collection`);
+      announceForAccessibility(`${decodedName} is already in your collection`);
       return;
     }
 
@@ -220,7 +227,8 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
     onGameSelected?.(game);
 
     // Show success message
-    setSuccessMessage(`${game.name} added successfully!`);
+    setSuccessMessage(`${decodedName} added successfully!`);
+    announceForAccessibility(`${decodedName} added successfully`);
     setError('');
 
     // Clear search state after game is selected but keep modal open
@@ -271,12 +279,12 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       renderItem={({ item }) => (
         <View style={styles.resultItem}>
           <Image
-            source={{ uri: item.thumbnail || item.image }}
+            source={{ uri: item.thumbnail || item.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
             style={styles.thumbnail}
             resizeMode="contain"
           />
           <View style={styles.resultInfo}>
-            <Text style={styles.resultTitle}>{item.name}</Text>
+            <Text style={styles.resultTitle}>{decode(item.name)}</Text>
             <Text style={styles.resultDetails}>
               {item.min_players}-{item.max_players} players • {item.playing_time} min
               {item.yearPublished && ` • ${item.yearPublished}`}
@@ -292,6 +300,10 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
             style={getActionButtonStyle(item)}
             onPress={() => handleAction(item)}
             disabled={isActionDisabled(item)}
+            accessibilityLabel={mode === 'collection' ? `Add ${decode(item.name)} to collection` : `Add ${decode(item.name)} to poll`}
+            accessibilityRole="button"
+            accessibilityHint={mode === 'collection' ? 'Adds game to your collection' : 'Adds game to the current poll'}
+            hitSlop={touchTargets.sizeTwenty}
           >
             <Plus size={20} color="#ffffff" />
           </TouchableOpacity>
@@ -315,11 +327,18 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.dialog, Platform.OS === 'web' && styles.webDialog]}>
+        <View style={styles.dialog}>
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <X size={20} color="#666666" />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => { onClose(); announceForAccessibility('Search modal closed'); }}
+              accessibilityLabel="Close search"
+              accessibilityRole="button"
+              accessibilityHint="Closes the game search modal"
+              hitSlop={touchTargets.sizeTwenty}
+            >
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -337,17 +356,24 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
                 ref={searchInputRef}
                 style={styles.input}
                 placeholder={searchPlaceholder}
+                placeholderTextColor={colors.textMuted}
                 value={searchQuery}
                 onChangeText={handleSearch}
                 autoCapitalize="none"
                 autoCorrect={false}
+                accessibilityLabel="Search games"
+                accessibilityHint="Type to search for games by name"
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   style={styles.clearButton}
                   onPress={handleClearSearch}
+                  accessibilityLabel="Clear search"
+                  accessibilityRole="button"
+                  accessibilityHint="Clears the current search text"
+                  hitSlop={touchTargets.small}
                 >
-                  <X size={16} color="#666666" />
+                  <X size={16} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
@@ -370,183 +396,186 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Platform.OS === 'ios' ? 20 : 10,
-  },
-  dialog: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 24,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '85%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  webDialog: {
-    maxWidth: 600,
-    maxHeight: '90%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
-  },
-  description: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 20,
-  },
-  searchContainer: {
-    marginBottom: 16,
-  },
-  searchInputContainer: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  input: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333333',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingRight: 40, // Make room for clear button
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    textAlign: 'left',
-    width: '100%',
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 12,
-    padding: 4,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-  },
-  errorText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#e74c3c',
-    marginBottom: 16,
-  },
-  resultsList: {
-    flex: 1,
-  },
-  resultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f7f9fc',
-    padding: 12,
-    paddingLeft: 8,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  resultInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  resultTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-  },
-  resultDetails: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
-    marginTop: 4,
-  },
-  alreadyInCollection: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  alreadyInPoll: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  actionButton: {
-    backgroundColor: '#ff9654',
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionButtonDisabled: {
-    opacity: 0.5,
-    backgroundColor: '#cccccc',
-  },
-  emptyText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  thumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 4,
-    marginLeft: 0,
-    marginRight: 6,
-    backgroundColor: '#f0f0f0',
-  },
-  warningContainer: {
-    backgroundColor: '#fff3cd',
-    borderWidth: 1,
-    borderColor: '#ffeaa7',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  warningText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
-    color: '#856404',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  successContainer: {
-    backgroundColor: '#d1fae5',
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  successText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#065f46',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});
+const getStyles = (colors: any, typography: any, insets: any, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(400, Math.min(550, screenHeight * 0.7));
+
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: Math.max(20, insets.top),
+      paddingBottom: Math.max(20, insets.bottom),
+      paddingHorizontal: 20,
+    },
+    dialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 24,
+      width: '100%',
+      maxWidth: 500,
+      maxHeight: '85%',
+      minHeight: responsiveMinHeight,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    title: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.text,
+    },
+    description: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.textMuted,
+      marginBottom: 20,
+    },
+    searchContainer: {
+      marginBottom: 16,
+    },
+    searchInputContainer: {
+      position: 'relative',
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    input: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      paddingRight: 40, // Make room for clear button
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.card,
+      textAlign: 'left',
+      width: '100%',
+    },
+    clearButton: {
+      position: 'absolute',
+      right: 12,
+      padding: 4,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+    },
+    errorText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.error,
+      marginBottom: 16,
+    },
+    resultsList: {
+      flex: 1,
+    },
+    resultItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.background,
+      padding: 12,
+      paddingLeft: 8,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    resultInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    resultTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+    },
+    resultDetails: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+    alreadyInCollection: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      marginTop: 4,
+      fontStyle: 'italic',
+    },
+    alreadyInPoll: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      marginTop: 4,
+      fontStyle: 'italic',
+    },
+    actionButton: {
+      backgroundColor: colors.accent,
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionButtonDisabled: {
+      opacity: 0.5,
+      backgroundColor: colors.textMuted,
+    },
+    emptyText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.callout,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: 20,
+    },
+    thumbnail: {
+      width: 80,
+      height: 80,
+      borderRadius: 4,
+      marginLeft: 0,
+      marginRight: 6,
+      backgroundColor: colors.background,
+    },
+    warningContainer: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    warningText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.text,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    successContainer: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    successText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+  });
+};

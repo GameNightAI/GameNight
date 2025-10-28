@@ -1,12 +1,13 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import React, { useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Calendar, MapPin, Clock } from 'lucide-react-native';
 import { format } from 'date-fns';
 
 import { EVENT_VOTING_OPTIONS, EVENT_ICON_MAP, EventVoteType, getEventIconColor, getEventVoteBgColor, getEventVoteBorderColor } from './eventVotingOptions';
 import { PollEvent } from '@/types/poll';
 import { TruncatedText } from './TruncatedText';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 interface EventDateCardProps {
   eventDate: PollEvent;
@@ -29,21 +30,20 @@ export const EventDateCard = ({
   displayLocation,
   displayTime
 }: EventDateCardProps) => {
-  const { width } = useWindowDimensions();
-  const isMobile = width < 500;
-  const isSmallScreen = width < 400;
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
 
   const getButtonStyle = (voteType: EventVoteType) => {
     const isSelected = selectedVote === voteType;
     return [
       styles.voteButton,
-      isSmallScreen && styles.voteButtonSmall,
       {
-        backgroundColor: getEventVoteBgColor(voteType, isSelected),
-        borderColor: getEventVoteBorderColor(voteType, isSelected),
+        backgroundColor: getEventVoteBgColor(voteType, isSelected, colors),
+        borderColor: getEventVoteBorderColor(voteType, isSelected, colors),
         borderWidth: isSelected ? 3 : 2,
-        shadowColor: isSelected ? getEventVoteBorderColor(voteType, isSelected) : 'transparent',
+        shadowColor: isSelected ? getEventVoteBorderColor(voteType, isSelected, colors) : 'transparent',
         shadowOpacity: isSelected ? 0.25 : 0,
         shadowRadius: isSelected ? 8 : 0,
         elevation: isSelected ? 4 : 0,
@@ -54,111 +54,91 @@ export const EventDateCard = ({
   const date = new Date(eventDate.event_date);
 
   return (
-    <Animated.View entering={FadeIn.delay(index * 100)} style={styles.card}>
-      {/* Main content area */}
-      <View style={[styles.mainContent, isMobile && styles.mainContentMobile]}>
-        {/* Date info and details row */}
-        <View style={[styles.dateInfoRow, isMobile && styles.dateInfoRowMobile]}>
-          <View style={styles.dateIcon}>
-            <Calendar size={isSmallScreen ? 20 : 24} color="#8b5cf6" />
-          </View>
-          <View style={[styles.dateInfo, isMobile && styles.dateInfoMobile]}>
-            <Text style={[styles.dateText, isSmallScreen && styles.dateTextSmall]}>
-              {format(date, 'EEEE, MMMM d, yyyy')}
-            </Text>
-            <View style={styles.dateDetails}>
-              <View style={styles.dateDetailRow}>
-                <MapPin size={isSmallScreen ? 12 : 14} color="#6b7280" />
-                <TruncatedText
-                  text={displayLocation}
-                  maxLength={35}
-                  textStyle={[styles.dateDetailText, isSmallScreen && styles.dateDetailTextSmall]}
-                  buttonTextStyle={[styles.truncateButtonText, isSmallScreen && styles.truncateButtonTextSmall]}
-                />
-              </View>
-              <View style={styles.dateDetailRow}>
-                <Clock size={isSmallScreen ? 12 : 14} color="#6b7280" />
-                <Text style={[styles.dateDetailText, isSmallScreen && styles.dateDetailTextSmall]}>
-                  {displayTime}
-                </Text>
-              </View>
+    <View style={styles.card}>
+      {/* Date info and details */}
+      <View style={styles.dateInfoRow}>
+        <View style={styles.dateIcon}>
+          <Calendar size={24} color={colors.accent} />
+        </View>
+        <View style={styles.dateInfo}>
+          <Text style={styles.dateText}>
+            {format(date, 'EEEE, MMMM d, yyyy')}
+          </Text>
+          <View style={styles.dateDetails}>
+            <View style={styles.dateDetailRow}>
+              <MapPin size={14} color={colors.textMuted} />
+              <TruncatedText
+                text={displayLocation}
+                maxLength={35}
+                textStyle={styles.dateDetailText}
+                buttonTextStyle={styles.truncateButtonText}
+              />
+            </View>
+            <View style={styles.dateDetailRow}>
+              <Clock size={14} color={colors.textMuted} />
+              <Text style={styles.dateDetailText}>
+                {displayTime}
+              </Text>
             </View>
           </View>
         </View>
-
-        {/* Voting buttons row - moved below date info for mobile */}
-        <View style={[styles.voteButtonsContainer, isMobile && styles.voteButtonsContainerMobile]}>
-          {EVENT_VOTING_OPTIONS.map(option => {
-            const IconComponent = EVENT_ICON_MAP[option.icon];
-            return (
-              <View key={option.value} style={styles.voteButtonWrapper}>
-                <TouchableOpacity
-                  style={getButtonStyle(option.value)}
-                  onPress={() => onVote(eventDate.id, option.value)}
-                  disabled={disabled}
-                >
-                  <IconComponent
-                    size={isSmallScreen ? 16 : 20}
-                    color={getEventIconColor(option.value, selectedVote === option.value)}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.voteButtonLabel}>{option.label}</Text>
-                {voteCounts && (
-                  <Text style={styles.voteCount}>
-                    {option.value === 2 ? voteCounts.yes :
-                      option.value === 1 ? voteCounts.maybe :
-                        voteCounts.no}
-                  </Text>
-                )}
-              </View>
-            );
-          })}
-        </View>
       </View>
-    </Animated.View>
+
+      {/* Voting buttons */}
+      <View style={styles.voteButtonsContainer}>
+        {EVENT_VOTING_OPTIONS.map(option => {
+          const IconComponent = EVENT_ICON_MAP[option.icon];
+          return (
+            <View key={option.value} style={styles.voteButtonWrapper}>
+              <TouchableOpacity
+                style={getButtonStyle(option.value)}
+                onPress={() => {
+                  onVote(eventDate.id, option.value);
+                  announceForAccessibility(`Voted ${option.label} for event on ${displayTime}`);
+                }}
+                disabled={disabled}
+                hitSlop={touchTargets.vote}
+                accessibilityLabel={`Vote ${option.label.toLowerCase()} for this event date`}
+                accessibilityRole="button"
+                accessibilityHint={`Select ${option.label.toLowerCase()} as your availability for this event date`}
+              >
+                <IconComponent
+                  size={20}
+                  color={getEventIconColor(option.value, selectedVote === option.value, colors)}
+                />
+              </TouchableOpacity>
+              <Text style={styles.voteButtonLabel}>{option.label}</Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.tints.neutral,
     borderRadius: 12,
-    marginBottom: 16,
-    padding: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-  mainContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  mainContentMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 12,
-  },
   dateInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    gap: 12,
-    justifyContent: 'flex-start',
-  },
-  dateInfoRowMobile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    marginBottom: 16,
   },
   dateIcon: {
     width: 48,
     height: 48,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.tints.accent,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -167,86 +147,65 @@ const styles = StyleSheet.create({
   dateInfo: {
     flex: 1,
   },
-  dateInfoMobile: {
-    flex: 1,
-    marginRight: 0,
-  },
   dateText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.primary,
     marginBottom: 4,
-  },
-  dateTextSmall: {
-    fontSize: 13,
-    marginBottom: 2,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   dateDetails: {
-    gap: 4,
+    marginVertical: -2,
   },
   dateDetailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    marginBottom: 4,
   },
   dateDetailText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-  },
-  dateDetailTextSmall: {
-    fontSize: 11,
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
+    marginLeft: 6,
   },
   voteButtonsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
   },
   voteButtonWrapper: {
     alignItems: 'center',
-    gap: 4,
-  },
-  voteButtonsContainerMobile: {
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    marginHorizontal: 4,
   },
   voteButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   voteButtonLabel: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 10,
-    color: '#666666',
-    marginTop: 2,
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption2,
+    color: colors.textMuted,
+    marginTop: 4,
     textAlign: 'center',
   },
   voteCount: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 10,
-    color: '#1a2b5f',
-    marginTop: 1,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption2,
+    color: colors.primary,
+    marginTop: 2,
     textAlign: 'center',
   },
-  voteButtonSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
   truncateButtonText: {
-    color: '#0070f3',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.accent,
+    fontSize: typography.fontSize.caption1,
+    fontFamily: typography.getFontFamily('semibold'),
     textDecorationLine: 'underline',
-  },
-  truncateButtonTextSmall: {
-    fontSize: 10,
   },
 });

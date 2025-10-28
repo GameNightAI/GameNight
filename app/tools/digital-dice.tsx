@@ -1,6 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Dimensions, Platform, Switch } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Platform, Switch } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Dice6, RotateCcw, Plus, Minus, X, Settings } from 'lucide-react-native';
+import ToolsFooter from '@/components/ToolsFooter';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
@@ -19,7 +25,6 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-const { height: screenHeight } = Dimensions.get('window');
 
 interface DiceResult {
   id: number;
@@ -27,9 +32,17 @@ interface DiceResult {
   sides: number;
 }
 
-const STANDARD_DICE_SIDES = [2, 4, 6, 8, 10, 12, 20, 100];
+const STANDARD_DICE_SIDES = [4, 6, 8, 10, 12, 20];
 
 export default function DigitalDiceScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+  const { screenHeight } = useDeviceType();
+
+  const styles = useMemo(() => getStyles(colors, typography, touchTargets, screenHeight, insets), [colors, typography, touchTargets, screenHeight, insets]);
+  const footerHeight = 60 + Math.max(8, Platform.OS === 'web' ? 0 : insets.bottom);
   const [sides, setSides] = useState(6);
   const [numberOfDice, setNumberOfDice] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
@@ -90,8 +103,9 @@ export default function DigitalDiceScreen() {
       runOnJS(setResults)(newResults);
       runOnJS(setIsRolling)(false);
       runOnJS(setShowResults)(true);
+      runOnJS(announceForAccessibility)(`Rolled ${numberOfDice} dice. Results: ${newResults.map(d => d.value).join(', ')}. Total: ${newResults.reduce((sum, dice) => sum + dice.value, 0)}`);
     }, 1000);
-  }, [sides, numberOfDice]);
+  }, [sides, numberOfDice, announceForAccessibility]);
 
   const resetDice = () => {
     setResults([]);
@@ -121,6 +135,56 @@ export default function DigitalDiceScreen() {
 
   const totalValue = results.reduce((sum, dice) => sum + dice.value, 0);
 
+  // Rolling Animation Component - now only shows one die
+  const RollingDice = useCallback(() => {
+    // const rotation = useSharedValue(0);
+    // const scale = useSharedValue(1);
+
+    // const animatedStyle = useAnimatedStyle(() => {
+    //   return {
+    //     transform: [
+    //       { rotate: `${rotation.value}deg` },
+    //       { scale: scale.value },
+    //     ],
+    //   };
+    // });
+
+    // useEffect(() => {
+    //   // Start rotation animation
+    //   rotation.value = withRepeat(
+    //     withTiming(360, { duration: 1000, easing: Easing.linear }),
+    //     -1,
+    //     false
+    //   );
+
+    //   // Start scale animation
+    //   scale.value = withSequence(
+    //     withTiming(1.2, { duration: 200 }),
+    //     withRepeat(
+    //       withTiming(0.8, { duration: 300, easing: Easing.inOut(Easing.ease) }),
+    //       2,
+    //       true
+    //     ),
+    //     withTiming(1, { duration: 200 })
+    //   );
+    // }, []);
+
+    return (
+      <Animated.View style={[styles.rollingDice]}>
+        <Dice6 size={48} color="#10b981" />
+      </Animated.View>
+    );
+  }, [styles]);
+
+  const RollingDiceAnimation = useCallback(() => {
+    return (
+      <View style={styles.rollingDiceContainer}>
+        <RollingDice />
+      </View>
+    );
+  }, [styles, RollingDice]);
+
+
   return (
     <View style={styles.container}>
       {/* Background Image */}
@@ -144,6 +208,9 @@ export default function DigitalDiceScreen() {
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setShowCustomModal(false)}
+                hitSlop={touchTargets.getHitSlop(20)}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
               >
                 <X size={20} color="#666666" />
               </TouchableOpacity>
@@ -166,6 +233,8 @@ export default function DigitalDiceScreen() {
               <TouchableOpacity
                 style={styles.modalCancelButton}
                 onPress={() => setShowCustomModal(false)}
+                accessibilityLabel="Cancel custom dice sides"
+                accessibilityRole="button"
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -177,6 +246,8 @@ export default function DigitalDiceScreen() {
                 ]}
                 onPress={handleCustomSides}
                 disabled={!customSides || parseInt(customSides) < 2 || parseInt(customSides) > 1000}
+                accessibilityLabel="Confirm custom dice sides"
+                accessibilityRole="button"
               >
                 <Text style={styles.modalConfirmText}>Confirm</Text>
               </TouchableOpacity>
@@ -229,8 +300,7 @@ export default function DigitalDiceScreen() {
 
             {numberOfDice > 1 && (
               <View style={styles.totalContainer}>
-                <Text style={styles.totalLabel}>Total:</Text>
-                <Text style={styles.totalValue}>{totalValue}</Text>
+                <Text style={styles.totalLabel}>Total: {totalValue}</Text>
               </View>
             )}
 
@@ -238,6 +308,8 @@ export default function DigitalDiceScreen() {
               <TouchableOpacity
                 style={styles.rollAgainButton}
                 onPress={rollDice}
+                accessibilityLabel="Roll dice again"
+                accessibilityRole="button"
               >
                 <RotateCcw size={20} color="#ffffff" />
                 <Text style={styles.rollAgainText}>Roll Again</Text>
@@ -246,6 +318,8 @@ export default function DigitalDiceScreen() {
               <TouchableOpacity
                 style={styles.closeResultsButton}
                 onPress={resetDice}
+                accessibilityLabel="Close results"
+                accessibilityRole="button"
               >
                 <Text style={styles.closeResultsText}>Close</Text>
               </TouchableOpacity>
@@ -263,7 +337,6 @@ export default function DigitalDiceScreen() {
       >
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.title}>Digital Dice</Text>
           <Text style={styles.subtitle}>Roll virtual dice for your board games</Text>
         </View>
 
@@ -281,6 +354,8 @@ export default function DigitalDiceScreen() {
                     sides === sideOption && styles.sideOptionSelected
                   ]}
                   onPress={() => handleSidesSelection(sideOption)}
+                  accessibilityLabel={`Select ${sideOption} sided dice`}
+                  accessibilityRole="button"
                 >
                   <Text style={[
                     styles.sideOptionText,
@@ -298,6 +373,8 @@ export default function DigitalDiceScreen() {
                   !STANDARD_DICE_SIDES.includes(sides) && styles.sideOptionSelected
                 ]}
                 onPress={() => setShowCustomModal(true)}
+                accessibilityLabel="Select custom number of sides"
+                accessibilityRole="button"
               >
                 <Text style={[
                   styles.sideOptionText,
@@ -317,6 +394,8 @@ export default function DigitalDiceScreen() {
                 style={[styles.adjustButton, numberOfDice <= 1 && styles.adjustButtonDisabled]}
                 onPress={() => adjustNumberOfDice(false)}
                 disabled={numberOfDice <= 1}
+                accessibilityLabel="Decrease number of dice"
+                accessibilityRole="button"
               >
                 <Minus size={20} color={numberOfDice <= 1 ? "#cccccc" : "#10b981"} />
               </TouchableOpacity>
@@ -330,6 +409,8 @@ export default function DigitalDiceScreen() {
                 style={[styles.adjustButton, numberOfDice >= 10 && styles.adjustButtonDisabled]}
                 onPress={() => adjustNumberOfDice(true)}
                 disabled={numberOfDice >= 10}
+                accessibilityLabel="Increase number of dice"
+                accessibilityRole="button"
               >
                 <Plus size={20} color={numberOfDice >= 10 ? "#cccccc" : "#10b981"} />
               </TouchableOpacity>
@@ -338,11 +419,10 @@ export default function DigitalDiceScreen() {
 
           {/* Preview */}
           <View style={styles.previewSection}>
-            <Text style={styles.previewLabel}>Preview</Text>
             <View style={styles.previewContainer}>
               {Array.from({ length: numberOfDice }, (_, index) => (
                 <View key={index} style={styles.previewDice}>
-                  <Dice6 size={24} color="#10b981" />
+                  <Dice6 size={32} color="#10b981" />
                 </View>
               ))}
             </View>
@@ -356,558 +436,544 @@ export default function DigitalDiceScreen() {
             style={[styles.rollButton, isRolling && styles.rollButtonDisabled]}
             onPress={rollDice}
             disabled={isRolling}
+            accessibilityLabel={isRolling ? "Rolling dice" : "Roll dice"}
+            accessibilityRole="button"
           >
-            <Dice6 size={24} color="#ffffff" />
+            <Dice6 size={28} color="#ffffff" />
             <Text style={styles.rollButtonText}>
               {isRolling ? 'Rolling...' : 'Roll Dice'}
             </Text>
           </TouchableOpacity>
 
           {/* Settings Button */}
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => setShowSettings(true)}
-          >
-            <Settings size={20} color="#666666" />
-            <Text style={styles.settingsButtonText}>Settings</Text>
-          </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => setShowSettings(true)}
+              accessibilityLabel="Open settings"
+              accessibilityRole="button"
+            >
+              <Settings size={20} color="#666666" />
+              <Text style={styles.settingsButtonText}>Settings</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
       {/* Settings Modal */}
-      <Modal
-        visible={showSettings}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSettings(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Dice Settings</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowSettings(false)}
-              >
-                <X size={20} color="#666666" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Haptic Feedback</Text>
-                <Text style={styles.settingDescription}>
-                  {Platform.OS === 'web'
-                    ? 'Haptic feedback is not available on web'
-                    : 'Feel vibrations when rolling dice'
-                  }
-                </Text>
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={showSettings}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSettings(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Dice Settings</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowSettings(false)}
+                >
+                  <X size={20} color="#666666" />
+                </TouchableOpacity>
               </View>
-              <Switch
-                value={hapticEnabled}
-                onValueChange={toggleHaptic}
-                disabled={Platform.OS === 'web'}
-                trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
-                thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
-              />
+
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Haptic Feedback</Text>
+                  <Text style={styles.settingDescription}>
+                    Feel vibrations when rolling dice
+                  </Text>
+                </View>
+                <Switch
+                  value={hapticEnabled}
+                  onValueChange={toggleHaptic}
+                  trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
+                  thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
+                  accessibilityLabel="Toggle haptic feedback"
+                  accessibilityRole="switch"
+                />
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
+      <ToolsFooter currentScreen="tools" />
     </View>
   );
 }
 
-// Rolling Animation Component - now only shows one die
-function RollingDiceAnimation() {
-  return (
-    <View style={styles.rollingDiceContainer}>
-      <RollingDice />
-    </View>
-  );
-}
+function getStyles(colors: any, typography: any, touchTargets: any, screenHeight: number, insets: any) {
+  return StyleSheet.create({
+    // === CONTAINER & LAYOUT ===
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    backgroundImage: {
+      position: 'absolute',
+      width: '100%',
+      height: 200,
+    },
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 200,
+      backgroundColor: colors.primary + 'D9', // 85% opacity
+    },
+    scrollContainer: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    header: {
+      paddingTop: 10,
+      paddingHorizontal: 20,
+      paddingBottom: 10,
+      minHeight: 60,
+      justifyContent: 'center',
+    },
+    subtitle: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.headline,
+      color: colors.card,
+      textAlign: 'center',
+    },
+    content: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+      padding: 20,
+      minHeight: screenHeight * 0.7,
+    },
+    configSection: {
+      marginBottom: 20,
+    },
+    configLabel: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.text,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    configRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 8,
+    },
+    sidesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+    },
+    sideOption: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      minWidth: 60,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.border,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      margin: 6,
+    },
+    sideOptionSelected: {
+      borderColor: colors.success,
+      backgroundColor: colors.tints.success,
+    },
+    sideOptionText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+    },
+    sideOptionTextSelected: {
+      color: colors.success,
+    },
+    customSideOption: {
+      minWidth: 80,
+    },
 
-function RollingDice() {
-  const rotation = useSharedValue(0);
-  const scale = useSharedValue(1);
+    // === ADJUST BUTTONS ===
+    adjustButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 24,
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.border,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    adjustButtonDisabled: {
+      backgroundColor: colors.border,
+    },
+    valueContainer: {
+      alignItems: 'center',
+      minWidth: 80,
+    },
+    valueText: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title2,
+      color: colors.text,
+      marginBottom: 4,
+    },
+    valueSubtext: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
+    valueLabel: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { rotate: `${rotation.value}deg` },
-        { scale: scale.value },
-      ],
-    };
+    // === PREVIEW SECTION ===
+    previewSection: {
+      marginTop: 4,
+      marginBottom: 12,
+    },
+    previewContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    previewDice: {
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      padding: 12,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginHorizontal: 4,
+    },
+    previewText: {
+      fontFamily: typography.getFontFamily('semi-bold'),
+      fontSize: typography.fontSize.body,
+      color: colors.text,
+      paddingTop: 16,
+      textAlign: 'center',
+      alignSelf: 'center',
+    },
+    previewLabel: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.text,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    rollButton: {
+      backgroundColor: colors.success,
+      borderRadius: 16,
+      padding: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 4,
+      minHeight: 44,
+    },
+    rollButtonDisabled: {
+      opacity: 0.7,
+    },
+    rollButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title3,
+      color: colors.card,
+      marginLeft: 8,
+    },
+    settingsButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 12,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 44,
+    },
+    settingsButtonText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+      marginLeft: 8,
+    },
+
+    // === MODAL OVERLAYS ===
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.shadow + '80', // 50% opacity
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 8,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.title2,
+      color: colors.text,
+    },
+    modalCloseButton: {
+      padding: 4,
+    },
+    modalDescription: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+      marginBottom: 20,
+    },
+    customInput: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 24,
+      minHeight: 44,
+    },
+    modalActions: {
+      flexDirection: 'row',
+    },
+    modalCancelButton: {
+      flex: 1,
+      backgroundColor: colors.border,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
+      minHeight: 44,
+    },
+    modalCancelText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+    },
+    modalConfirmButton: {
+      flex: 1,
+      backgroundColor: colors.success,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
+      minHeight: 44,
+      marginLeft: 12,
+    },
+    modalConfirmButtonDisabled: {
+      opacity: 0.5,
+    },
+    modalConfirmText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.card,
+    },
+
+    // === ROLLING ANIMATION ===
+    rollingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.primary + 'F5', // 95% opacity
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    },
+    rollingDiceContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    rollingText: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title1,
+      color: colors.card,
+    },
+    rollingDice: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    resultsOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.primary + 'F5', // 95% opacity
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      padding: 20,
+    },
+    resultsCard: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+      maxHeight: '90%',
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 8,
+    },
+    resultsTitle: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title2,
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 20,
+    },
+    resultsScroll: {
+      maxHeight: 280,
+    },
+    resultsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+    },
+    resultsActions: {
+      flexDirection: 'row',
+      marginTop: 24,
+    },
+    rollAgainButton: {
+      flex: 1,
+      backgroundColor: colors.success,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+    },
+    rollAgainText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.card,
+      marginLeft: 8,
+    },
+    closeResultsButton: {
+      backgroundColor: colors.border,
+      borderRadius: 12,
+      padding: 16,
+      paddingHorizontal: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: 44,
+      marginLeft: 12,
+    },
+    closeResultsText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+    },
+    resultDice: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: 12,
+      alignItems: 'center',
+      minWidth: 75,
+      marginBottom: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
+      marginHorizontal: 4,
+    },
+    resultValue: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title2,
+      color: colors.text,
+      marginTop: 8,
+      marginBottom: 0,
+    },
+    diceValue: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title2,
+      color: colors.text,
+      marginTop: 8,
+      marginBottom: 0,
+    },
+    totalContainer: {
+      marginTop: 16,
+      paddingTop: 16,
+      borderTopWidth: 2,
+      borderTopColor: colors.border,
+    },
+    totalLabel: {
+      fontFamily: typography.getFontFamily('bold'),
+      fontSize: typography.fontSize.title2,
+      color: colors.text,
+      textAlign: 'center',
+      paddingBottom: 16,
+      borderBottomWidth: 2,
+      borderBottomColor: colors.border,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    settingInfo: {
+      flex: 1,
+      marginRight: 16,
+    },
+    settingTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.text,
+      marginBottom: 4,
+    },
+    settingDescription: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+      lineHeight: typography.lineHeight.normal * typography.fontSize.footnote,
+    },
   });
-
-  React.useEffect(() => {
-    // Slower rotation animation - increased duration from 250ms to 800ms
-    rotation.value = withRepeat(
-      withTiming(360, { duration: 800, easing: Easing.linear }),
-      -1,
-      false
-    );
-
-    // Slower scale animation - increased duration from 125ms to 400ms per cycle
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.2, { duration: 400 }),
-        withTiming(1, { duration: 400 })
-      ),
-      -1,
-      true
-    );
-  }, []);
-
-  return (
-    <Animated.View style={[styles.rollingDice, animatedStyle]}>
-      <Dice6 size={48} color="#10b981" />
-    </Animated.View>
-  );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-  },
-  backgroundImage: {
-    position: 'absolute',
-    width: '100%',
-    height: 200,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
-    backgroundColor: 'rgba(26, 43, 95, 0.85)',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    minHeight: screenHeight,
-  },
-  header: {
-    paddingTop: 40,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    minHeight: 120,
-    justifyContent: 'center',
-  },
-  title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: Math.min(32, screenHeight * 0.04),
-    color: '#ffffff',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: Math.min(16, screenHeight * 0.02),
-    color: '#ffffff',
-    marginTop: 8,
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: 20,
-    padding: 20,
-    paddingBottom: 40,
-    minHeight: screenHeight * 0.7,
-  },
-  configSection: {
-    marginBottom: 32,
-  },
-  configLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  sidesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  sideOption: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    minWidth: 60,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e1e5ea',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sideOptionSelected: {
-    borderColor: '#10b981',
-    backgroundColor: '#ecfdf5',
-  },
-  customSideOption: {
-    minWidth: 80,
-  },
-  sideOptionText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#666666',
-  },
-  sideOptionTextSelected: {
-    color: '#10b981',
-  },
-  configRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-  },
-  adjustButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  adjustButtonDisabled: {
-    backgroundColor: '#f5f5f5',
-  },
-  valueContainer: {
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  valueText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 32,
-    color: '#1a2b5f',
-  },
-  valueSubtext: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginTop: -4,
-  },
-  previewSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  previewLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
-    marginBottom: 16,
-  },
-  previewContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  previewDice: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  previewText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  rollButton: {
-    backgroundColor: '#10b981',
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-    marginTop: 20,
-  },
-  rollButtonDisabled: {
-    opacity: 0.7,
-  },
-  rollButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#ffffff',
-    marginLeft: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  modalDescription: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
-    marginBottom: 20,
-  },
-  customInput: {
-    backgroundColor: '#f7f9fc',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#333333',
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    marginBottom: 24,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#666666',
-  },
-  modalConfirmButton: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  modalConfirmButtonDisabled: {
-    opacity: 0.5,
-  },
-  modalConfirmText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-  },
-  rollingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 43, 95, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  rollingDiceContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  rollingDice: {
-    // Removed marginHorizontal since we only have one die now
-  },
-  rollingText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#ffffff',
-  },
-  resultsOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 43, 95, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: 20,
-  },
-  resultsCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  resultsTitle: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#1a2b5f',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  resultsScroll: {
-    maxHeight: 200,
-  },
-  resultsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 16,
-    paddingVertical: 8,
-  },
-  resultDice: {
-    alignItems: 'center',
-    backgroundColor: '#ecfdf5',
-    borderRadius: 12,
-    padding: 16,
-    minWidth: 80,
-  },
-  resultValue: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 20,
-    color: '#10b981',
-    marginTop: 8,
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  totalLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
-    marginRight: 8,
-  },
-  totalValue: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#10b981',
-  },
-  resultsActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  rollAgainButton: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rollAgainText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-    marginLeft: 8,
-  },
-  closeResultsButton: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    padding: 16,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeResultsText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#666666',
-  },
-  settingsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
-  settingsButtonText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginLeft: 8,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
-  },
-});

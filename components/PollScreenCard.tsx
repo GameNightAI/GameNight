@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { VOTING_OPTIONS, ICON_MAP, getIconColor } from './votingOptions';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { decode } from 'html-entities';
 
 interface GameVoteSummary {
   name: string;
@@ -13,6 +16,9 @@ interface PollScreenCardProps {
 }
 
 export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
+  const { colors, typography } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   // Calculate scores and sort
   const scoredResults = games.map(game => ({
     ...game,
@@ -74,16 +80,17 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
         // Alternate row shading for desktop/web
         const rowStyle = [
           styles.gameRowColumns,
-          Platform.OS === 'web' && idx % 2 === 1 ? styles.altRow : null,
+          styles.baseRow,
+          idx % 2 === 0 ? styles.altRow : null,
           Platform.OS === 'web' ? styles.gameRowDesktop : null,
         ];
         return (
           <View key={idx} style={rowStyle}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <Text style={styles.rankNumber}>{game.rank}.</Text>
-              <Text style={styles.gameName}>{game.name}</Text>
+              <Text style={styles.gameName}>{decode(game.name)}</Text>
               {game.tie && (
-                <Text style={{ color: '#888', fontSize: 12, marginLeft: 4 }}>(tie)</Text>
+                <Text style={styles.tieLabel}>(tie)</Text>
               )}
             </View>
             {VOTING_OPTIONS.map(option => (
@@ -94,16 +101,25 @@ export function PollScreenCard({ games, onViewDetails }: PollScreenCardProps) {
           </View>
         );
       })}
-      <TouchableOpacity style={styles.detailsButton} onPress={onViewDetails}>
+      <TouchableOpacity
+        style={styles.detailsButton}
+        onPress={() => {
+          onViewDetails();
+          announceForAccessibility('Opening detailed poll results');
+        }}
+        accessibilityLabel="View detailed poll results"
+        accessibilityRole="button"
+        accessibilityHint="Opens the detailed results view"
+      >
         <Text style={styles.detailsButtonText}>View Detailed Results</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginTop: 12,
@@ -112,18 +128,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
-    // Condense width for desktop/web
-    ...(Platform.OS === 'web' ? {
-      maxWidth: 420,
-      minWidth: 320,
-      width: '100%',
-      alignSelf: 'center',
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? { maxWidth: 420, minWidth: 320, width: '100%', alignSelf: 'center' }
+      : {}),
   },
   header: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.primary,
     marginBottom: 8,
   },
   gameRow: {
@@ -133,32 +145,23 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   gameName: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 15,
-    color: '#333',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption2, // Font for game name in dropdown on poll screen
+    color: colors.text,
     flex: 1,
-  },
-  votesRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  voteType: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#444',
-    marginLeft: 8,
   },
   detailsButton: {
     marginTop: 12,
-    backgroundColor: '#1d4ed8',
+    backgroundColor: colors.primary,
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
+    minHeight: 44,
   },
   detailsButtonText: {
-    color: '#fff',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
+    color: '#ffffff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
   },
   headerRow: {
     flexDirection: 'row',
@@ -167,6 +170,7 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     paddingRight: 0,
     minHeight: Platform.OS === 'web' ? 28 : undefined,
+    paddingVertical: 4,
   },
   labelsRow: {
     flexDirection: 'row',
@@ -175,6 +179,7 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     paddingRight: 0,
     minHeight: Platform.OS === 'web' ? 20 : undefined,
+    paddingVertical: 2,
   },
   gameRowColumns: {
     flexDirection: 'row',
@@ -183,11 +188,15 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'web' ? 4 : 0,
     paddingHorizontal: Platform.OS === 'web' ? 2 : 0,
   },
+  baseRow: {
+    backgroundColor: colors.card,
+    borderRadius: 6,
+  },
   gameRowDesktop: {
     minHeight: 32,
   },
   altRow: {
-    backgroundColor: '#f6f8fa', // subtle gray for alternating rows
+    backgroundColor: colors.tints.neutral,
     borderRadius: 6,
   },
   voteCol: {
@@ -197,27 +206,32 @@ const styles = StyleSheet.create({
   },
   voteIcon: {
     fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#444',
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.text,
   },
   voteValue: {
-    fontSize: 15,
-    fontFamily: 'Poppins-Regular',
-    color: '#222',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.text,
   },
   voteTypeLabel: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 10,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption2,
+    color: colors.textMuted,
     marginTop: 2,
     textAlign: 'center',
   },
   rankNumber: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#666',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.textMuted,
     marginRight: 8,
     minWidth: 22,
     textAlign: 'right',
+  },
+  tieLabel: {
+    color: colors.textMuted,
+    fontSize: typography.fontSize.caption2,
+    marginLeft: 4,
   },
 });

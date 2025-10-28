@@ -11,7 +11,7 @@ export async function GET(request: Request) {
       return new Response('Username is required', { status: 400 });
     }
 
-    const bggUrl = `https://boardgamegeek.com/xmlapi2/collection?username=${encodeURIComponent(username)}&subtype=${subtype}&own=${own}`;
+    const bggUrl = `/.netlify/functions/bgg-api/collection?username=${encodeURIComponent(username)}&subtype=${subtype}&own=${own}`;
     
     const response = await fetch(bggUrl);
     const responseText = await response.text();

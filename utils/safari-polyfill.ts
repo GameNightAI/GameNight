@@ -1,7 +1,9 @@
 // Safari-specific polyfills and compatibility fixes
+import { Platform } from 'react-native';
 
-// Check if running in Safari
+// Check if running in Safari (web only)
 export const isSafari = () => {
+  if (Platform.OS !== 'web') return false;
   if (typeof window === 'undefined') return false;
 
   const userAgent = window.navigator.userAgent;
@@ -10,6 +12,7 @@ export const isSafari = () => {
 
 // Safari-specific storage fixes
 export const safariStorageFix = () => {
+  if (Platform.OS !== 'web') return;
   if (!isSafari()) return;
 
   // Fix for Safari's aggressive storage clearing
@@ -93,9 +96,24 @@ export const safariEventFix = () => {
     // Prevent double-tap zoom on buttons
     document.addEventListener('touchend', (e) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'BUTTON' || target.closest('button')) {
+
+      // Skip if target doesn't exist or is not a proper HTML element
+      if (!target || !target.tagName) return;
+
+      // Skip React Native components (they don't have standard HTML attributes)
+      if (target.hasAttribute('data-clickable') ||
+        target.closest('[data-clickable]') ||
+        target.getAttribute('role') === 'button') {
+        return; // Let React Native handle these
+      }
+
+      // Only handle native HTML button elements
+      if (target.tagName === 'BUTTON') {
         e.preventDefault();
-        target.click();
+        // Only call click() if it's a proper HTML element with click method
+        if (typeof target.click === 'function') {
+          target.click();
+        }
       }
     }, { passive: false });
   }
@@ -143,6 +161,7 @@ export const safariInputZoomFix = () => {
 
 // Initialize all Safari fixes
 export const initializeSafariFixes = () => {
+  if (Platform.OS !== 'web') return;
   if (typeof window === 'undefined') return;
 
   safariStorageFix();
@@ -168,6 +187,7 @@ export const isPrivateBrowsing = async (): Promise<boolean> => {
 
 // Safari-specific session persistence
 export const persistSessionInSafari = () => {
+  if (Platform.OS !== 'web') return;
   if (!isSafari()) return;
 
   // Try to keep the session alive by periodically accessing storage

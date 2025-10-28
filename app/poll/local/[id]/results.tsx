@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRef } from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { usePollResults } from '@/hooks/usePollResults';
@@ -9,25 +10,53 @@ import { GameResultCard } from '@/components/PollGameResultCard';
 import { supabase } from '@/services/supabase';
 import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
 import { VOTING_OPTIONS } from '@/components/votingOptions';
+import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 export default function LocalPollResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [comments, setComments] = useState<{ voter_name: string; comment_text: string }[]>([]);
+  const { colors, typography, touchTargets } = useTheme();
+  const insets = useSafeAreaInsets();
+  const [comments, setComments] = useState<{ username: string; firstname: string; lastname: string; voter_name: string; comment_text: string }[]>([]);
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
+  const [creatorName, setCreatorName] = useState<string>('Loading...');
 
   const { poll, results, hasVoted, loading, error } = usePollResults(id as string | undefined);
+
+  // Move useMemo before any early returns to follow Rules of Hooks
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from('polls_profiles')
+        .select('username, firstname, lastname')
+        .eq('id', id)
+        .maybeSingle();
+      if (!error && data) {
+        const { username, firstname, lastname } = data;
+        setCreatorName(
+          firstname || lastname
+            ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
+            : username
+        );
+      }
+    })();
+  }, [id]);
 
   useEffect(() => {
     // Fetch poll comments
     const fetchComments = async () => {
       if (!id) return;
       const { data, error } = await supabase
-        .from('poll_comments')
-        .select('voter_name, comment_text')
+        .from('poll_comments_view')
+        .select('username, firstname, lastname, voter_name, comment_text')
         .eq('poll_id', id)
-        .order('id', { ascending: false });
+        .order('created_at', { ascending: false });
       if (!error && data) setComments(data);
     };
     fetchComments();
@@ -79,11 +108,11 @@ export default function LocalPollResultsScreen() {
   const getRankingIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Trophy size={24} color="#FFC300" />; // Higher-contrast gold
+        return <Trophy size={24} color={colors.warning} />; // Gold for 1st place
       case 2:
-        return <Medal size={24} color="#A6B1C2" />;
+        return <Medal size={24} color={colors.tints.neutral} />; // Silver for 2nd place
       case 3:
-        return <Award size={24} color="#CD7F32" />;
+        return <Award size={24} color={colors.tints.accent} />; // Bronze for 3rd place
       default:
         return null;
     }
@@ -92,13 +121,13 @@ export default function LocalPollResultsScreen() {
   const getRankingColor = (rank: number) => {
     switch (rank) {
       case 1:
-        return '#FFC300'; // Higher-contrast gold
+        return colors.warning; // Gold for 1st place
       case 2:
-        return '#A6B1C2';
+        return colors.textMuted; // Silver for 2nd place
       case 3:
-        return '#CD7F32';
+        return colors.accent; // Bronze for 3rd place
       default:
-        return '#666666';
+        return colors.border; // Muted for other places
     }
   };
 
@@ -109,36 +138,36 @@ export default function LocalPollResultsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/polls')}>
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/polls')}
+          accessibilityLabel="Back to Polls"
+          accessibilityRole="button"
+          accessibilityHint="Returns to the polls list"
+        >
           <Text style={styles.backLink}>&larr; Back to Polls</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Local Poll Results</Text>
         <Text style={styles.subtitle}>{poll?.title}</Text>
+        <Text style={styles.subtitle}>
+          Poll created by {creatorName}
+        </Text>
       </View>
       {/* --- Banner notification for new votes --- */}
       {newVotes && (
-        <View style={{
-          backgroundColor: '#fffbe6',
-          borderBottomWidth: 1,
-          borderBottomColor: '#ffe58f',
-          padding: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
-        }}>
-          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: 15 }}>
+        <View style={styles.newVotesBanner}>
+          <Text style={styles.newVotesText}>
             New votes have been cast! Pull to refresh or tap below.
           </Text>
-          <TouchableOpacity onPress={() => {
-            setNewVotes(false);
-            // Optionally, trigger a refetch of results here
-          }}>
-            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: 16 }}>Dismiss</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setNewVotes(false);
+              // Optionally, trigger a refetch of results here
+            }}
+            accessibilityLabel="Dismiss notification"
+            accessibilityRole="button"
+            accessibilityHint="Dismisses the new votes notification"
+          >
+            <Text style={styles.dismissButton}>Dismiss</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -183,10 +212,16 @@ export default function LocalPollResultsScreen() {
             {comments && comments.length > 0 && (
               <View style={styles.commentsContainer}>
                 <Text style={styles.commentsTitle}>Comments</Text>
-                {comments.map((c, idx) => (
-                  <View key={idx} style={styles.commentItem}>
-                    <Text style={styles.commentVoter}>{c.voter_name || 'Anonymous'}:</Text>
-                    <Text style={styles.commentText}>{c.comment_text}</Text>
+                {comments.map((comment, index) => (
+                  <View key={index} style={styles.commentItem}>
+                    <Text style={styles.commentVoter}>
+                      {comment.username
+                        ? (comment.firstname || comment.lastname
+                          ? `${censor([comment.firstname, comment.lastname].join(' ').trim())} (${comment.username})`
+                          : comment.username
+                        ) : censor(comment.voter_name) || 'Anonymous'}
+                    </Text>
+                    <Text style={styles.commentText}>{comment.comment_text}</Text>
                   </View>
                 ))}
               </View>
@@ -199,8 +234,11 @@ export default function LocalPollResultsScreen() {
         <TouchableOpacity
           style={styles.backToVotingButton}
           onPress={navigateToVoting}
+          accessibilityLabel="Back to Voting"
+          accessibilityRole="button"
+          accessibilityHint="Returns to voting screen"
         >
-          <Vote size={20} color="#ffffff" />
+          <Vote size={20} color={colors.card} />
           <Text style={styles.backToVotingButtonText}>
             Back to Voting
           </Text>
@@ -219,53 +257,53 @@ const getOrdinalSuffix = (num: number) => {
   return 'th';
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#1a2b5f',
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'Poppins-Bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#fff',
-    opacity: 0.8,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   scrollContent: {
-    paddingHorizontal: 8,
-    paddingBottom: 32,
-    width: '100%',
-    alignSelf: 'stretch',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  header: {
+    paddingTop: Math.max(40, insets.top),
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: colors.primary,
+  },
+  title: {
+    fontSize: typography.fontSize.title2,
+    fontFamily: typography.getFontFamily('bold'),
+    color: colors.card,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.card,
+    opacity: 0.8,
   },
   resultsHeader: {
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 2,
-    borderBottomColor: '#e1e5ea',
+    borderBottomColor: colors.border,
   },
   resultsTitle: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 20,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.primary,
+    marginTop: 6,
     marginBottom: 4,
   },
   resultsSubtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.textMuted,
   },
   resultItem: {
     marginBottom: 20,
@@ -287,24 +325,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rankingNumber: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 16,
-    color: '#ffffff',
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.body,
+    color: colors.card,
     marginLeft: 4,
   },
   rankingInfo: {
     flex: 1,
   },
   rankingLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.primary,
     marginBottom: 2,
   },
   scoreText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.textMuted,
   },
   emptyState: {
     flex: 1,
@@ -313,66 +351,97 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.body,
+    color: colors.textMuted,
     textAlign: 'center',
   },
   bottomActionsContainer: {
-    padding: 20,
-    paddingTop: 0,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   backToVotingButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    width: '100%',
+    alignSelf: 'stretch',
+    minHeight: 44,
   },
   backToVotingButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.card,
+    marginLeft: 8,
   },
   commentsContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#ff9654',
+    borderColor: colors.accent,
   },
   commentsTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.primary,
     marginBottom: 8,
   },
   commentItem: {
     marginBottom: 10,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.border,
   },
   commentVoter: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.accent,
     marginBottom: 2,
   },
   commentText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
   },
   backLink: {
-    color: '#1d4ed8',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
+    color: colors.accent,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
     marginBottom: 8,
     textDecorationLine: 'underline',
     alignSelf: 'flex-start',
+  },
+  newVotesBanner: {
+    backgroundColor: colors.tints.warningBg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.tints.warningBorder,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  newVotesText: {
+    color: colors.warning,
+    fontFamily: typography.getFontFamily('bold'),
+    fontSize: typography.fontSize.subheadline,
+  },
+  dismissButton: {
+    color: colors.primary,
+    fontFamily: typography.getFontFamily('bold'),
+    marginLeft: 16,
+    fontSize: typography.fontSize.subheadline,
   },
 });

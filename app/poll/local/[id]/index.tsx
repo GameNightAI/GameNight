@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Toast from 'react-native-toast-message';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
 import { VoteType, VOTE_TYPE_TO_SCORE, SCORE_TO_VOTE_TYPE, getVoteTypeKeyFromScore, VOTING_OPTIONS } from '@/components/votingOptions';
@@ -9,15 +10,8 @@ import { VoterNameInput } from '@/components/PollVoterNameInput';
 import { GameCard } from '@/components/PollGameCard';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
-
-// Helper function to get complexity description
-function getComplexityDescription(complexity: number): string {
-  if (complexity < 1.5) return 'Light';
-  if (complexity < 2.5) return 'Medium Light';
-  if (complexity < 3.5) return 'Medium';
-  if (complexity < 4.5) return 'Medium Heavy';
-  return 'Heavy';
-}
+import { useTheme } from '@/hooks/useTheme';
+import { censor } from '@/utils/profanityFilter';
 
 // Custom hook for local voting that bypasses user authentication
 const useLocalPollData = (pollId: string | string[] | undefined) => {
@@ -26,6 +20,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingVotes, setPendingVotes] = useState<Record<number, number>>({});
+  const [creatorName, setCreatorName] = useState<string | null>(null);
 
   useEffect(() => {
     if (pollId) loadLocalPoll(pollId.toString());
@@ -54,6 +49,23 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
 
       setPoll(pollData);
 
+      // Fetch creator info
+      if (pollData?.user_id) {
+        const { data: profileData, error: creatorError } = await supabase
+          .from('profiles')
+          .select('username, firstname, lastname')
+          .eq('id', pollData.user_id)
+          .maybeSingle();
+        if (!creatorError && profileData) {
+          const { username, firstname, lastname } = profileData;
+          setCreatorName(
+            firstname || lastname
+              ? `${censor([firstname, lastname].join(' ').trim())} (${username})`
+              : username
+          );
+        }
+      }
+
       // Get the games in this poll
       const { data: pollGames, error: gamesError } = await supabase
         .from('poll_games')
@@ -75,7 +87,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
 
       // Get the actual game details from games table
       const { data: gamesData, error: gameDetailsError } = await supabase
-        .from('games')
+        .from('games_view')
         .select('*')
         .in('id', gameIds);
 
@@ -109,7 +121,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
         const voteData = {
           votes: {} as Record<string, number>,
           voters: gameVotes.map(v => ({
-            name: v.voter_name || 'Anonymous',
+            name: censor(v.voter_name) || 'Anonymous',
             vote_type: v.vote_type as VoteType,
           })),
         };
@@ -127,23 +139,24 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
 
         return {
           id: game.id,
-          name: game.name || 'Unknown Game',
-          yearPublished: game.year_published || null,
-          thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
-          image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
-          min_players: game.min_players || 1,
-          max_players: game.max_players || 1,
-          playing_time: game.playing_time || 0,
-          minPlaytime: game.minplaytime || 0,
-          maxPlaytime: game.maxplaytime || 0,
-          description: game.description || '',
-          minAge: game.min_age || 0,
-          is_cooperative: game.is_cooperative || false,
-          complexity: game.complexity || 1,
-          complexity_tier: game.complexity_tier || 1,
-          complexity_desc: game.complexity ? getComplexityDescription(game.complexity) : '',
-          average: game.average ?? null,
-          bayesaverage: game.bayesaverage ?? null,
+          name: game.name,
+          yearPublished: game.year_published,
+          // Use BGG's "NO IMAGE AVAILABLE" as a fallback
+          thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+          min_players: game.min_players,
+          max_players: game.max_players,
+          playing_time: game.playing_time,
+          minPlaytime: game.minplaytime,
+          maxPlaytime: game.maxplaytime,
+          description: game.description,
+          minAge: game.min_age,
+          is_cooperative: game.is_cooperative,
+          complexity: game.complexity,
+          complexity_tier: game.complexity_tier,
+          complexity_desc: game.complexity_desc,
+          average: game.average,
+          bayesaverage: game.bayesaverage,
           votes: voteData,
           userVote: null, // Always null for local voting
         };
@@ -166,6 +179,7 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
     error,
     pendingVotes,
     setPendingVotes,
+    creatorName,
     reload: () => pollId && loadLocalPoll(pollId.toString()),
   };
 };
@@ -173,6 +187,8 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
 export default function LocalPollScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { colors, typography, touchTargets } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const {
     poll,
@@ -181,6 +197,7 @@ export default function LocalPollScreen() {
     error,
     pendingVotes,
     setPendingVotes,
+    creatorName,
     reload,
   } = useLocalPollData(id);
 
@@ -243,7 +260,28 @@ export default function LocalPollScreen() {
         setSubmitting(false);
         return;
       }
-      const finalName = trimmedName;
+      let finalName = trimmedName;
+
+      // Check for existing votes with this name and deduplicate if needed
+      const { data: existingVotes, error: checkError } = await supabase
+        .from('votes')
+        .select('voter_name')
+        .eq('poll_id', id)
+        .ilike('voter_name', finalName)
+        .is('user_id', null)
+        .order('created_at', { ascending: true });
+
+      if (!checkError && existingVotes && existingVotes.length > 0) {
+        // Count exact matches (case-insensitive, trimmed)
+        const exactMatches = existingVotes.filter(v =>
+          v.voter_name?.trim().toLowerCase() === finalName.toLowerCase()
+        ).length;
+
+        if (exactMatches > 0) {
+          finalName = `${finalName} (${exactMatches + 1})`;
+        }
+      }
+
       for (const [gameIdStr, score] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
         const { data: existing, error: selectError } = await supabase
@@ -309,65 +347,87 @@ export default function LocalPollScreen() {
     router.push({ pathname: '/poll/local/[id]/results', params: { id: id as string } });
   };
 
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!poll) return <ErrorState message="Poll not found." onRetry={reload} />;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/polls')}>
-          <Text style={styles.backLink}>&larr; Back to Polls</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>
-          {poll?.title === 'Vote on games' && games && games.length > 0
-            ? `Vote on games (${games.length} game${games.length === 1 ? '' : 's'})`
-            : poll?.title}
-        </Text>
-        {!!poll?.description && <Text style={styles.description}>{poll.description}</Text>}
-        <Text style={styles.subtitle}>Local Voting Mode: Enter your name, vote, and pass the device to the next voter!</Text>
-      </View>
-      <VoterNameInput
-        value={voterName}
-        onChange={(text) => {
-          setVoterName(text);
-          if (nameError) setNameError(false);
-        }}
-        hasError={nameError}
-      />
-      <View style={styles.gamesContainer}>
-        {games.length === 0 ? (
-          <Text style={styles.noGamesText}>No games found in this poll.</Text>
-        ) : (
-          games.map((game, i) => (
-            <GameCard
-              key={game.id}
-              game={game as any}
-              index={i}
-              selectedVote={pendingVotes[game.id] !== undefined && pendingVotes[game.id] !== null ? SCORE_TO_VOTE_TYPE[pendingVotes[game.id]] as VoteType : undefined}
-              onVote={handleVote}
-              disabled={submitting}
-            />
-          ))
-        )}
-      </View>
-      <View style={styles.commentContainer}>
-        <Text style={styles.commentLabel}>Comments (optional):</Text>
-        <TextInput
-          style={styles.commentInput}
-          value={comment}
-          onChangeText={setComment}
-          placeholder="Add any comments about your vote..."
-          multiline
-          editable={!submitting}
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/polls')}
+            accessibilityLabel="Back to Polls"
+            accessibilityRole="button"
+            accessibilityHint="Returns to the polls list"
+          >
+            <Text style={styles.backLink}>&larr; Back to Polls</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>
+            {poll?.title === 'Vote on games' && games && games.length > 0
+              ? `Vote on games (${games.length} game${games.length === 1 ? '' : 's'})`
+              : poll?.title}
+          </Text>
+          {!!poll?.description && <Text style={styles.description}>{poll.description}</Text>}
+          {creatorName && (
+            <Text style={styles.creatorSubtitle}>Poll created by {creatorName}</Text>
+          )}
+          <Text style={styles.subtitle}>Local Voting Mode: Enter your name, vote, and pass the device to the next voter!</Text>
+        </View>
+
+        <VoterNameInput
+          value={voterName}
+          onChange={(text) => {
+            setVoterName(text);
+            if (nameError) setNameError(false);
+          }}
+          hasError={nameError}
         />
-      </View>
-      <View style={{ paddingHorizontal: 0, width: '100%', alignSelf: 'stretch' }}>
+
+        <View style={styles.gamesContainer}>
+          {games.length === 0 ? (
+            <Text style={styles.noGamesText}>No games found in this poll.</Text>
+          ) : (
+            games.map((game, i) => (
+              <GameCard
+                key={game.id}
+                game={game as any}
+                index={i}
+                selectedVote={pendingVotes[game.id] !== undefined && pendingVotes[game.id] !== null ? SCORE_TO_VOTE_TYPE[pendingVotes[game.id]] as VoteType : undefined}
+                onVote={handleVote}
+                disabled={submitting}
+              />
+            ))
+          )}
+        </View>
+
+        <View style={styles.commentContainer}>
+          <Text style={styles.commentLabel}>Comments (optional):</Text>
+          <TextInput
+            style={styles.commentInput}
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Add any comments about your vote..."
+            multiline
+            editable={!submitting}
+            accessibilityLabel="Comments input"
+            accessibilityHint="Optional field to add comments about your vote"
+          />
+        </View>
+      </ScrollView>
+
+      {/* Fixed bottom button container */}
+      <View style={styles.fixedBottomContainer}>
         <View style={styles.submitVotesContainer}>
           <TouchableOpacity
             style={styles.submitVotesButton}
             onPress={submitAllVotes}
             disabled={submitting}
+            accessibilityLabel={submitting ? 'Submitting votes' : 'Submit My Votes'}
+            accessibilityRole="button"
+            accessibilityHint={submitting ? 'Votes are being submitted' : 'Submits your votes for this poll'}
           >
             <Text style={styles.submitVotesButtonText}>
               {submitting ? 'Submitting...' : 'Submit My Votes'}
@@ -379,59 +439,112 @@ export default function LocalPollScreen() {
             <TouchableOpacity
               style={styles.viewResultsButton}
               onPress={navigateToResults}
+              accessibilityLabel="View Results"
+              accessibilityRole="button"
+              accessibilityHint="Shows the current voting results for this poll"
             >
               <Text style={styles.viewResultsButtonText}>View Results</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7f9fc' },
-  header: { padding: 20, backgroundColor: '#1a2b5f' },
-  title: { fontSize: 24, fontFamily: 'Poppins-Bold', color: '#fff', marginBottom: 8 },
-  description: { fontSize: 16, fontFamily: 'Poppins-Regular', color: '#fff', marginBottom: 12 },
-  subtitle: { fontSize: 14, fontFamily: 'Poppins-Regular', color: '#fff', opacity: 0.8 },
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20, // Add padding to prevent content from being hidden behind fixed buttons
+  },
+  header: {
+    paddingTop: Math.max(40, insets.top),
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: colors.primary
+  },
+  title: {
+    fontSize: typography.fontSize.title2,
+    fontFamily: typography.getFontFamily('bold'),
+    color: colors.card,
+    marginBottom: 8
+  },
+  description: {
+    fontSize: typography.fontSize.callout,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.card,
+    marginBottom: 12
+  },
+  creatorSubtitle: {
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.accent,
+    marginBottom: 8
+  },
+  subtitle: {
+    fontSize: typography.fontSize.footnote,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.card,
+    opacity: 0.8
+  },
   gamesContainer: {
-    paddingTop: 20,
+    paddingTop: 6,
     paddingLeft: 20,
     paddingRight: 20,
     paddingBottom: 0,
   },
   noGamesText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('normal'),
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 32,
+  },
+  fixedBottomContainer: {
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingBottom: 20, // Safe area padding
   },
   submitVotesContainer: {
     paddingTop: 10,
     paddingLeft: 20,
     paddingRight: 20,
     paddingBottom: 0,
-    width: '100%', alignSelf: 'stretch'
+    width: '100%',
+    alignSelf: 'stretch'
   },
   submitVotesButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
     width: '100%',
     alignSelf: 'stretch',
+    minHeight: 44,
   },
   submitVotesButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.card,
   },
-  bottomActionsContainer: { width: '100%', alignSelf: 'stretch', marginTop: 8 },
+  bottomActionsContainer: {
+    width: '100%',
+    alignSelf: 'stretch',
+    marginTop: 8
+  },
   viewResultsContainer: {
-    marginTop: 8, marginBottom: 8, marginLeft: 0, marginRight: 0, paddingLeft: 20,
-    paddingRight: 20, width: '100%', alignSelf: 'stretch'
+    marginTop: 8,
+    paddingLeft: 20,
+    paddingRight: 20,
+    width: '100%',
+    alignSelf: 'stretch'
   },
   commentContainer: {
     marginTop: 4,
@@ -440,44 +553,42 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   commentLabel: {
-    fontSize: 15,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.primary,
     marginBottom: 4,
   },
   commentInput: {
     minHeight: 48,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 8,
     padding: 10,
-    fontSize: 15,
-    fontFamily: 'Poppins-Regular',
-    backgroundColor: '#fff',
-    color: '#1a2b5f',
+    fontSize: typography.fontSize.subheadline,
+    fontFamily: typography.getFontFamily('normal'),
+    backgroundColor: colors.background,
+    color: colors.text,
   },
   viewResultsButton: {
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
     width: '100%',
     alignSelf: 'stretch',
+    minHeight: 44,
   },
   viewResultsButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.card,
   },
   backLink: {
-    color: '#1d4ed8',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
+    color: colors.accent,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
     marginBottom: 8,
     textDecorationLine: 'underline',
     alignSelf: 'flex-start',
   },
-}); 
+});

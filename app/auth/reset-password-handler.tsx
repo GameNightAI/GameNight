@@ -1,15 +1,30 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { supabase } from '@/services/supabase';
+import { useTheme } from '@/hooks/useTheme';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 export default function ResetPasswordHandler() {
   const router = useRouter();
   const [logs, setLogs] = useState<string[]>([]);
+  const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [statusMessage, setStatusMessage] = useState('Processing password reset...');
+  const { colors, typography, touchTargets, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
+
+  const styles = getStyles(colors, typography);
 
   const addLog = (message: string) => {
     console.log(message);
-    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+    // Only show logs in development
+    if (__DEV__) {
+      setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+    }
   };
 
   useEffect(() => {
@@ -29,7 +44,11 @@ export default function ResetPasswordHandler() {
 
         if (allParams.error) {
           addLog(`❌ Error: ${allParams.error} (${allParams.error_code || 'no_code'})`);
-          router.replace(`/auth/reset-password?error=${allParams.error}`);
+          setStatus('error');
+          setStatusMessage('Invalid reset link. Please request a new one.');
+          setTimeout(() => {
+            router.replace(`/auth/reset-password?error=${allParams.error}`);
+          }, 2000);
           return;
         }
 
@@ -42,7 +61,11 @@ export default function ResetPasswordHandler() {
           await handlePKCEFlow(allParams.code);
         } else {
           addLog('❌ No valid tokens found');
-          router.replace('/auth/reset-password?error=no_tokens');
+          setStatus('error');
+          setStatusMessage('No valid reset tokens found. Please use the link from your email.');
+          setTimeout(() => {
+            router.replace('/auth/reset-password?error=no_tokens');
+          }, 2000);
         }
       }
     };
@@ -64,10 +87,18 @@ export default function ResetPasswordHandler() {
 
         if (data.session) {
           addLog(`✅ Session created for ${data.user?.email}`);
-          router.replace('/auth/update-password');
+          setStatus('success');
+          setStatusMessage('Reset link verified! Redirecting to password update...');
+          setTimeout(() => {
+            router.replace('/auth/update-password');
+          }, 1500);
         } else {
           addLog('❌ Session creation failed');
-          router.replace('/auth/reset-password?error=no_session');
+          setStatus('error');
+          setStatusMessage('Session creation failed. Please try again.');
+          setTimeout(() => {
+            router.replace('/auth/reset-password?error=no_session');
+          }, 2000);
         }
       } catch (err) {
         addLog(`💥 Implicit flow error: ${err}`);
@@ -89,10 +120,18 @@ export default function ResetPasswordHandler() {
 
         if (data.session) {
           addLog(`✅ PKCE session created for ${data.user?.email}`);
-          router.replace('/auth/update-password');
+          setStatus('success');
+          setStatusMessage('Reset link verified! Redirecting to password update...');
+          setTimeout(() => {
+            router.replace('/auth/update-password');
+          }, 1500);
         } else {
           addLog('❌ PKCE session creation failed');
-          router.replace('/auth/reset-password?error=no_pkce_session');
+          setStatus('error');
+          setStatusMessage('Session creation failed. Please try again.');
+          setTimeout(() => {
+            router.replace('/auth/reset-password?error=no_pkce_session');
+          }, 2000);
         }
       } catch (err) {
         addLog(`💥 PKCE flow error: ${err}`);
@@ -104,51 +143,174 @@ export default function ResetPasswordHandler() {
   }, [router]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Processing Password Reset</Text>
-      <Text style={styles.subtitle}>Analyzing reset link...</Text>
+    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+          {/*<View style={styles.header}>
+             <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <Text style={styles.logoText}>👥</Text>
+              </View>
+              <Text style={styles.title}>Klack</Text>
+            </View>
+            <Text style={styles.subtitle}>
+              The ultimate tool for organizing your next game night
+            </Text>
+          </View>*/}
 
-      <View style={styles.logContainer}>
-        {logs.map((log, index) => (
-          <Text key={index} style={styles.logText}>
-            {log}
-          </Text>
-        ))}
+          <View style={styles.formContainer}>
+            <Text style={styles.formTitle}>Processing Password Reset</Text>
+            <Text style={styles.formSubtitle}>{statusMessage}</Text>
+
+            <View style={styles.statusContainer}>
+              {status === 'processing' && (
+                <View style={styles.statusItem}>
+                  <ActivityIndicator size="large" color={colors.accent} />
+                  <Text style={styles.statusText}>Verifying reset link...</Text>
+                </View>
+              )}
+
+              {status === 'success' && (
+                <View style={styles.statusItem}>
+                  <CheckCircle color={colors.success} size={32} />
+                  <Text style={styles.statusText}>Reset link verified!</Text>
+                </View>
+              )}
+
+              {status === 'error' && (
+                <View style={styles.statusItem}>
+                  <XCircle color={colors.error} size={32} />
+                  <Text style={styles.statusText}>Verification failed</Text>
+                </View>
+              )}
+            </View>
+
+            {__DEV__ && logs.length > 0 && (
+              <View style={styles.logContainer}>
+                <Text style={styles.logTitle}>Debug Logs:</Text>
+                {logs.map((log, index) => (
+                  <Text key={index} style={styles.logText}>
+                    {log}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
-    padding: 20,
-    paddingTop: 60,
+    backgroundColor: colors.background,
+  },
+  contentWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    minHeight: Math.max(360, Math.min(520, (typeof window !== 'undefined' ? window.innerHeight : 700) * 0.6)),
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: colors.card,
+  },
+  logoText: {
+    fontSize: 20,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1a2b5f',
+    fontFamily: 'Poppins-Bold',
     textAlign: 'center',
-    marginBottom: 10,
+    color: colors.text,
+    fontSize: typography.fontSize.title1,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: 'Poppins-Regular',
     textAlign: 'center',
-    marginBottom: 20,
+    opacity: 0.9,
+    lineHeight: 22,
+    maxWidth: 280,
+    color: colors.text,
+    fontSize: typography.fontSize.body,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  formTitle: {
+    fontFamily: typography.getFontFamily('bold'),
+    textAlign: 'center',
+    marginBottom: 8,
+    color: colors.text,
+    fontSize: typography.fontSize.title2,
+  },
+  formSubtitle: {
+    fontFamily: typography.getFontFamily('normal'),
+    textAlign: 'center',
+    marginBottom: 32,
+    color: colors.textMuted,
+    fontSize: typography.fontSize.body,
+  },
+  statusContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  statusItem: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  statusText: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.callout,
+    color: colors.text,
+    marginTop: 12,
+    textAlign: 'center',
   },
   logContainer: {
-    backgroundColor: '#f0f0f0',
-    padding: 15,
+    backgroundColor: colors.tints.neutral,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 8,
-    maxHeight: 400,
+    padding: 16,
+    maxHeight: 200,
+  },
+  logTitle: {
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.text,
+    marginBottom: 8,
   },
   logText: {
-    fontSize: 12,
-    color: '#333',
-    marginBottom: 5,
-    fontFamily: 'monospace',
+    fontSize: typography.fontSize.caption2,
+    color: colors.textMuted,
+    marginBottom: 4,
+    fontFamily: typography.getFontFamily('normal'),
   },
 });

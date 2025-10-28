@@ -8,7 +8,7 @@ scratch.tsx
 .expo/
 dist/
 web-build/
-# expo-env.d.ts
+expo-env.d.ts
 
 # native
 *.orig.*
@@ -31,7 +31,7 @@ yarn-error.*
 *.pem
 
 # local env files
-# .env*.local
+.env*.local
 
 # typescript
 *.tsbuildinfo
@@ -45,3 +45,14 @@ expo-env.d.ts
 
 # Local Netlify folder
 .netlify
+ios/
+android/
+
+# Logs & script output
+*.log
+*.csv
+
+# Editor temporary files
+*.swp
+*.swo
+*~

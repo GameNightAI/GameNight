@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, FlatList, TextInput, Platform, Pressable } from 'react-native';
-import { useDebouncedWindowDimensions } from '@/hooks/useDebouncedWindowDimensions';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, FlatList, TextInput, Platform, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Edit, Calendar } from 'lucide-react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
 import { Poll, PollEvent } from '@/types/poll';
@@ -14,13 +11,12 @@ import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import CreateEventModal from '@/components/CreateEventModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
-import { PollsEmptyState } from '@/components/PollsEmptyState';
-import { PollScreenCard } from '@/components/PollScreenCard';
-import { usePollResults } from '@/hooks/usePollResults';
+import { EmptyStateEvents } from '@/components/EmptyStateEvents';
 import { useEventResults } from '@/hooks/useEventResults';
 import { format } from 'date-fns';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
-const { width } = Dimensions.get('window');
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -46,14 +42,23 @@ interface EventWithVoteCount extends Poll {
   eventOptions: PollEvent[];
 }
 
+// Profile type for creator information
+interface Profile {
+  id: string;
+  username: string;
+  firstname?: string;
+  lastname?: string;
+}
+
 export default function EventsScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
   const [events, setEvents] = useState<EventWithVoteCount[]>([]);
   const [allEvents, setAllEvents] = useState<EventWithVoteCount[]>([]);
   const [otherUsersEvents, setOtherUsersEvents] = useState<EventWithVoteCount[]>([]);
-  const [creatorMap, setCreatorMap] = useState<Record<string, string>>({});
+  const [creatorMap, setCreatorMap] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('all');
@@ -62,13 +67,8 @@ export default function EventsScreen() {
   const [showShareLink, setShowShareLink] = useState<string | null>(null);
   const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const { width: screenWidth, height } = useDebouncedWindowDimensions();
-  const isMobile = screenWidth < 768;
-  const isSmallMobile = screenWidth < 380 || height < 700;
   const [openResultsEventId, setOpenResultsEventId] = useState<string | null>(null);
 
-  // Use fallback values for web platform
-  const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
 
   // Memoize the loadEvents function to prevent unnecessary re-creations
   const loadEvents = useCallback(async () => {
@@ -102,17 +102,17 @@ export default function EventsScreen() {
 
 
       // Not created yet. Future feature.
-      // Fetch creator usernames/emails for all unique user_ids
+      // Fetch creator profiles for all unique user_ids
       const userIds = Array.from(new Set((allEventsData || []).map(e => e.user_id)));
-      let creatorMap: Record<string, string> = {};
+      let creatorMap: Record<string, Profile> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, username, email')
+          .select('id, username, firstname, lastname')
           .in('id', userIds);
         if (profiles) {
           profiles.forEach((profile: any) => {
-            creatorMap[profile.id] = profile.email || profile.username || profile.id;
+            creatorMap[profile.id] = profile;
           });
         }
       }
@@ -175,26 +175,7 @@ export default function EventsScreen() {
     }
   }, [activeTab, otherUsersEvents.length]);
 
-  // Memoize the scaled style function to prevent recalculation on every render
-  const getScaledStyle = useCallback((baseStyle: any, scale: number = 1) => {
-    if (!isSmallMobile) return baseStyle;
-    return {
-      ...baseStyle,
-      fontSize: baseStyle.fontSize ? baseStyle.fontSize * scale : undefined,
-      paddingHorizontal: baseStyle.paddingHorizontal ? baseStyle.paddingHorizontal * scale : undefined,
-      paddingVertical: baseStyle.paddingVertical ? baseStyle.paddingVertical * scale : undefined,
-      padding: baseStyle.padding ? baseStyle.padding * scale : undefined,
-      marginBottom: baseStyle.marginBottom ? baseStyle.marginBottom * scale : undefined,
-      marginTop: baseStyle.marginTop ? baseStyle.marginTop * scale : undefined,
-      marginLeft: baseStyle.marginLeft ? baseStyle.marginLeft * scale : undefined,
-      marginRight: baseStyle.marginRight ? baseStyle.marginRight * scale : undefined,
-      gap: baseStyle.gap ? baseStyle.gap * scale : undefined,
-      borderRadius: baseStyle.borderRadius ? baseStyle.borderRadius * scale : undefined,
-      minWidth: baseStyle.minWidth ? baseStyle.minWidth * scale : undefined,
-      width: baseStyle.width ? baseStyle.width * scale : undefined,
-      height: baseStyle.height ? baseStyle.height * scale : undefined,
-    };
-  }, [isSmallMobile]);
+  // Removed scaled styling helper for simplicity and HIG clarity
 
   // Memoize current events to prevent unnecessary re-renders
   const currentEvents = useMemo(() => {
@@ -204,8 +185,8 @@ export default function EventsScreen() {
   const handleShare = useCallback(async (eventId: string) => {
     // Use a proper base URL for React Native
     const baseUrl = Platform.select({
-      web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
-      default: 'https://gamenyte.netlify.app', // Replace with your actual domain
+      web: typeof window !== 'undefined' ? window.location.origin : 'https://klack.netlify.app',
+      default: 'https://klack.netlify.app',
     });
 
     const shareUrl = `${baseUrl}/event/${eventId}`;
@@ -232,6 +213,7 @@ export default function EventsScreen() {
         // Mobile-specific sharing
         await Clipboard.setStringAsync(shareUrl);
         setShowCopiedConfirmation(true);
+        announceForAccessibility('Event link copied to clipboard');
         setTimeout(() => {
           setShowCopiedConfirmation(false);
         }, 2000);
@@ -242,6 +224,7 @@ export default function EventsScreen() {
       try {
         await Clipboard.setStringAsync(shareUrl);
         setShowCopiedConfirmation(true);
+        announceForAccessibility('Event link copied to clipboard');
         setTimeout(() => {
           setShowCopiedConfirmation(false);
         }, 2000);
@@ -266,6 +249,7 @@ export default function EventsScreen() {
 
       setEventToDelete(null);
       await loadEvents();
+      announceForAccessibility('Event deleted successfully');
     } catch (err) {
       console.error('Error deleting event:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete event');
@@ -374,10 +358,10 @@ export default function EventsScreen() {
               }
             };
             let displayTime;
-            if (event.use_same_time && (event.start_time || event.end_time)) {
-              displayTime = getDisplayTime(event.start_time, event.end_time);
+            if (event?.use_same_time && (event?.start_time || event?.end_time)) {
+              displayTime = getDisplayTime(event.start_time || null, event.end_time || null);
             } else {
-              displayTime = getDisplayTime(eventDate.start_time, eventDate.end_time);
+              displayTime = getDisplayTime(eventDate.start_time || null, eventDate.end_time || null);
             }
 
             return (
@@ -413,6 +397,8 @@ export default function EventsScreen() {
     );
   }, [router]);
 
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+
   if (loading) {
     return <LoadingState />;
   }
@@ -426,44 +412,44 @@ export default function EventsScreen() {
   return (
     <View style={styles.container}>
       {currentEvents.length > 0 && (
-        <View style={getScaledStyle(styles.header, 0.75)}>
+        <View style={styles.header}>
           <TouchableOpacity
-            style={getScaledStyle(styles.createButton, 0.75)}
+            style={styles.createButton}
             onPress={() => setCreateModalVisible(true)}
           >
-            <Plus size={isSmallMobile ? 15 : 20} color="#ffffff" />
-            <Text style={getScaledStyle(styles.createButtonText, 0.75)}>Create Event</Text>
+            <Plus size={16} color="#ffffff" />
+            <Text style={styles.createButtonText}>Create Event</Text>
           </TouchableOpacity>
-          <View style={getScaledStyle(styles.tabsWrapper, 0.75)}>
-            <View style={getScaledStyle(styles.tabContainer, 0.75)}>
+          <View style={styles.tabsWrapper}>
+            <View style={styles.tabContainer}>
               <TouchableOpacity
-                style={[getScaledStyle(styles.tab, 0.75), activeTab === 'all' && getScaledStyle(styles.activeTab, 0.75)]}
+                style={[styles.tab, activeTab === 'all' && styles.activeTab]}
                 onPress={() => setActiveTab('all')}
               >
-                <Text style={[getScaledStyle(styles.tabText, 0.75), activeTab === 'all' && getScaledStyle(styles.activeTabText, 0.75)]}>
+                <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
                   All Events ({allEvents.length})
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[getScaledStyle(styles.tab, 0.75), activeTab === 'created' && getScaledStyle(styles.activeTab, 0.75)]}
+                style={[styles.tab, activeTab === 'created' && styles.activeTab]}
                 onPress={() => setActiveTab('created')}
               >
-                <Text style={[getScaledStyle(styles.tabText, 0.75), activeTab === 'created' && getScaledStyle(styles.activeTabText, 0.75)]}>
+                <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
                   My Events ({events.length})
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
-                  getScaledStyle(styles.tab, 0.75),
-                  activeTab === 'invited' && getScaledStyle(styles.activeTab, 0.75),
+                  styles.tab,
+                  activeTab === 'invited' && styles.activeTab,
                   otherUsersEvents.length === 0 && styles.disabledTab
                 ]}
                 onPress={() => otherUsersEvents.length > 0 && setActiveTab('invited')}
                 disabled={otherUsersEvents.length === 0}
               >
                 <Text style={[
-                  getScaledStyle(styles.tabText, 0.75),
-                  activeTab === 'invited' && getScaledStyle(styles.activeTabText, 0.75),
+                  styles.tabText,
+                  activeTab === 'invited' && styles.activeTabText,
                   otherUsersEvents.length === 0 && styles.disabledTabText
                 ]}>
                   Voted In ({otherUsersEvents.length})
@@ -477,29 +463,38 @@ export default function EventsScreen() {
 
 
       {showShareLink && (
-        <Animated.View
-          entering={FadeIn.duration(200)}
-          style={getScaledStyle(styles.shareLinkContainer, 0.75)}
+        <View
+          style={styles.shareLinkContainer}
+          accessibilityLabel="Share link panel"
+          accessibilityRole="summary"
         >
-          <View style={getScaledStyle(styles.shareLinkHeader, 0.75)}>
-            <Text style={getScaledStyle(styles.shareLinkTitle, 0.75)}>Share Link</Text>
+          <View style={styles.shareLinkHeader}>
+            <Text style={styles.shareLinkTitle}>Share Link</Text>
             <TouchableOpacity
+              accessibilityLabel="Close share link"
+              accessibilityRole="button"
+              accessibilityHint="Closes the share link panel"
               onPress={() => setShowShareLink(null)}
-              style={getScaledStyle(styles.closeShareLinkButton, 0.75)}
+              style={styles.closeShareLinkButton}
+              hitSlop={touchTargets.small}
             >
-              <X size={isSmallMobile ? 15 : 20} color="#666666" />
+              <X size={12} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
-          <View style={getScaledStyle(styles.shareLinkContent, 0.75)}>
+          <View style={styles.shareLinkContent}>
             <TextInput
-              style={getScaledStyle(styles.shareLinkInput, 0.75)}
+              style={styles.shareLinkInput}
               value={showShareLink}
               editable={false}
               selectTextOnFocus
             />
             <TouchableOpacity
-              style={getScaledStyle(styles.copyButton, 0.75)}
+              style={styles.copyButton}
+              accessibilityLabel="Copy share link"
+              accessibilityRole="button"
+              accessibilityHint="Copies the event link to your clipboard"
+              hitSlop={touchTargets.small}
               onPress={async () => {
                 try {
                   // Copy only the link value, not the text input content
@@ -514,122 +509,110 @@ export default function EventsScreen() {
               }}
             >
               {showCopiedConfirmation ? (
-                <Check size={isSmallMobile ? 15 : 20} color="#4CAF50" />
+                <Check size={16} color={colors.success} />
               ) : (
-                <Copy size={isSmallMobile ? 15 : 20} color="#ff9654" />
+                <Copy size={16} color={colors.accent} />
               )}
             </TouchableOpacity>
           </View>
 
           {showCopiedConfirmation && (
-            <Text style={getScaledStyle(styles.copiedConfirmation, 0.75)}>Link copied to clipboard!</Text>
+            <Text style={styles.copiedConfirmation}>Link copied to clipboard!</Text>
           )}
-        </Animated.View>
+        </View>
       )}
 
       <FlatList
         data={currentEvents}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => {
+        renderItem={({ item }) => {
           const isDropdownOpen = openResultsEventId === item.id;
           return (
-            <Animated.View
-              entering={FadeIn.delay(index * 100)}
-              style={getScaledStyle(styles.eventCard, 0.75)}
+            <View
+              style={styles.eventCard}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <View style={styles.eventHeaderRow}>
                 <Pressable
                   style={({ hovered }) => [
-                    getScaledStyle(styles.eventTitleContainer, 0.75),
-                    hovered && Platform.OS === 'web' ? getScaledStyle(styles.eventTitleContainerHover, 0.75) : null,
+                    styles.eventTitleContainer,
+                    hovered && Platform.OS === 'web' ? styles.eventTitleContainerHover : null,
                   ]}
+                  accessibilityLabel={`Open event ${item.title}`}
+                  accessibilityRole="link"
+                  accessibilityHint="Opens the event details"
                   onPress={() => router.push({ pathname: '/event/[id]', params: { id: item.id } })}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isSmallMobile ? 1.5 : 2 }}>
-                    <Text style={[getScaledStyle(styles.eventTitle, 0.75), { textDecorationLine: 'underline', color: '#1a2b5f', fontSize: isSmallMobile ? 13.5 : 18, paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0, flexShrink: 1 }]} numberOfLines={2}>{item.title}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: isSmallMobile ? 9 : 12 }}>
-                      <Calendar size={isSmallMobile ? 12 : 16} color="#8d8d8d" style={{ paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0, marginRight: isSmallMobile ? 3 : 4 }} />
-                      <Text style={[getScaledStyle(styles.eventDate, 0.75), { paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0 }]} numberOfLines={1}>
-                        {new Date(item.created_at).toLocaleDateString()}
-                      </Text>
-                    </View>
+                  <View style={styles.eventTitleRow}>
+                    <Text style={styles.eventTitleWithIcon} numberOfLines={1}>
+                      {item.title.length > 35 ? `${item.title.substring(0, 35)}...` : item.title}
+                    </Text>
+                  </View>
+                  <View style={styles.eventDateContainer}>
+                    <Calendar size={16} color={colors.textMuted} style={styles.eventDateIcon} />
+                    <Text style={styles.eventDateText} numberOfLines={1}>
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </Text>
                   </View>
                   {item.description && (
-                    <Text style={getScaledStyle(styles.eventDescription, 0.75)}>{item.description}</Text>
+                    <Text style={styles.eventDescription}>{item.description}</Text>
                   )}
                   {/* Show event options count */}
-                  <Text style={getScaledStyle(styles.eventOptionsCount, 0.75)}>
+                  <Text style={styles.eventOptionsCount}>
                     {item.eventOptions.length} date{item.eventOptions.length !== 1 ? 's' : ''} available
                   </Text>
                 </Pressable>
-                <View style={{ alignItems: 'flex-end', minWidth: isSmallMobile ? 30 : 40 }}>
+                <View style={styles.eventActionsContainer}>
                   {item.user_id === currentUserId && (
                     <TouchableOpacity
-                      style={getScaledStyle(styles.deleteCircle, 0.75)}
+                      style={styles.deleteButton}
+                      hitSlop={touchTargets.small}
+                      accessibilityLabel={`Delete event ${item.title}`}
+                      accessibilityRole="button"
+                      accessibilityHint="Permanently deletes this event"
                       onPress={() => setEventToDelete(item)}
                     >
-                      <Text style={{ fontSize: isSmallMobile ? 15 : 20, color: '#e74c3c', fontWeight: 'bold' }}>×</Text>
+                      <X size={12} color={colors.error} />
                     </TouchableOpacity>
                   )}
                 </View>
               </View>
               {/* Action buttons */}
-              {isMobile ? (
-                <>
-                  <View style={{ flexDirection: 'row', gap: isSmallMobile ? 6 : 8, marginTop: isSmallMobile ? 9 : 12 }}>
-                    <TouchableOpacity style={getScaledStyle(styles.shareButtonMobile, 0.75)} onPress={() => handleShare(item.id)}>
-                      <Share2 size={isSmallMobile ? 13.5 : 18} color="#ff9654" />
-                      <Text style={getScaledStyle(styles.shareLinkButtonTextMobile, 0.75)}>Share</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <TouchableOpacity
-                    style={getScaledStyle(styles.resultsButtonMobile, 0.75)}
-                    onPress={() => setOpenResultsEventId(isDropdownOpen ? null : item.id)}
-                  >
-                    <BarChart3 size={isSmallMobile ? 13.5 : 18} color="#2563eb" />
-                    <Text style={getScaledStyle(styles.resultsButtonTextMobile, 0.75)}>
-                      View Results
-                    </Text>
-                  </TouchableOpacity>
-                  {isDropdownOpen && (
-                    <View style={{ marginTop: isSmallMobile ? 6 : 8 }}>
-                      <EventResultsDropdown eventId={item.id} />
-                    </View>
-                  )}
-                </>
-              ) : (
-                <View style={{ flexDirection: 'row', gap: isSmallMobile ? 9 : 12, marginTop: isSmallMobile ? 13.5 : 18 }}>
-                  <TouchableOpacity style={getScaledStyle(styles.shareButtonDesktop, 0.75)} onPress={() => handleShare(item.id)}>
-                    <Share2 size={isSmallMobile ? 13.5 : 18} color="#ff9654" />
-                    <Text style={getScaledStyle(styles.shareLinkButtonTextDesktop, 0.75)}>Share</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={getScaledStyle(styles.resultsButtonDesktop, 0.75)}
-                    onPress={() => setOpenResultsEventId(isDropdownOpen ? null : item.id)}
-                  >
-                    <BarChart3 size={isSmallMobile ? 13.5 : 18} color="#2563eb" />
-                    <Text style={getScaledStyle(styles.resultsButtonTextDesktop, 0.75)}>
-                      Results
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {/* Dropdown for desktop, below event card */}
-              {!isMobile && isDropdownOpen && (
-                <View style={{ marginTop: isSmallMobile ? 6 : 8 }}>
+              <View style={styles.actionRow}>
+                <TouchableOpacity style={styles.shareButtonDesktop} onPress={() => handleShare(item.id)}
+                  accessibilityLabel={`Share event ${item.title}`}
+                  accessibilityRole="button"
+                  accessibilityHint="Shares the event link">
+                  <Share2 size={18} color={colors.accent} style={{ marginRight: 8 }} />
+                  <Text style={styles.shareLinkButtonTextDesktop}>Share</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.resultsButtonDesktop}
+                  accessibilityLabel={`View results for ${item.title}`}
+                  accessibilityRole="button"
+                  accessibilityHint="Shows voting results for this event"
+                  onPress={() => setOpenResultsEventId(isDropdownOpen ? null : item.id)}
+                >
+                  <BarChart3 size={18} color={colors.primary} style={{ marginRight: 8 }} />
+                  <Text style={styles.resultsButtonTextDesktop}>
+                    Results
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {/* Dropdown below event card (unified) */}
+              {isDropdownOpen && (
+                <View style={styles.dropdownContainer}>
                   <EventResultsDropdown eventId={item.id} />
                 </View>
               )}
-            </Animated.View>
+            </View>
           );
         }}
         contentContainerStyle={[
-          getScaledStyle(styles.listContent, 0.75),
-          { paddingBottom: 80 + safeAreaBottom },
-          currentEvents.length === 0 && { flex: 1, justifyContent: 'center' }
+          styles.listContent,
+          currentEvents.length === 0 && styles.emptyListContent
         ]}
         ListEmptyComponent={
-          <PollsEmptyState onCreate={() => setCreateModalVisible(true)} />
+          <EmptyStateEvents onCreate={() => setCreateModalVisible(true)} />
         }
       />
 
@@ -654,330 +637,375 @@ export default function EventsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-    paddingHorizontal: 8,
-  },
-  header: {
-    padding: 20,
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 8,
-    marginRight: 8,
-  },
-  createButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ffffff',
-  },
-  tabsWrapper: {
-    width: '100%',
-    marginTop: 8,
-    alignItems: 'flex-start',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 4,
-    flexShrink: 1,
-  },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  activeTab: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  tabText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  activeTabText: {
-    color: '#1a2b5f',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  disabledTab: {
-    opacity: 0.5,
-    pointerEvents: 'none',
-  },
-  disabledTabText: {
-    color: '#9ca3af',
-  },
-  shareLinkContainer: {
-    margin: 20,
-    marginTop: 0,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  shareLinkHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  shareLinkTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-  },
-  closeShareLinkButton: {
-    padding: 4,
-  },
-  shareLinkContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  shareLinkInput: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-    borderRadius: 8,
-    padding: 12,
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#333333',
-  },
-  copyButton: {
-    padding: 8,
-    backgroundColor: '#fff5ef',
-    borderRadius: 8,
-  },
-  copiedConfirmation: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#4CAF50',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  listContent: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 80, // Base padding for tab bar
-  },
-  eventCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  eventTitleContainer: {
-    flex: 1,
-    minWidth: 220,
-    justifyContent: 'center',
-    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
-    transitionProperty: Platform.OS === 'web' ? 'background' : undefined,
-    transitionDuration: Platform.OS === 'web' ? '0.2s' : undefined,
-  },
-  eventTitleContainerHover: {
-    backgroundColor: '#f3f4f6',
-  },
-  eventTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-    marginBottom: 4,
-    paddingTop: 8, // Add padding to shift title down
-  },
-  eventDescription: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 8,
-  },
-  eventDate: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#8d8d8d',
-  },
-  eventOptionsCount: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#10b981',
-    marginTop: 4,
-  },
-  deleteCircle: {
-    backgroundColor: '#fff5f5',
-    borderRadius: 999,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-    marginTop: 0, // Reduce margin so X sits higher
-  },
-  shareButtonDesktop: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff5ef',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  shareLinkButtonTextDesktop: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#ff9654',
-  },
+const getStyles = (colors: any, typography: any) => {
+  // Theme-aware translucent tints to differentiate buttons from card
+  const accentTint = colors.tints.accent;
+  const primaryTint = colors.tints.primary;
+  const errorTint = colors.tints.error;
 
-  resultsButtonDesktop: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f6ff',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  resultsButtonTextDesktop: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#2563eb',
-  },
-  shareButtonMobile: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff5ef',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  shareLinkButtonTextMobile: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#ff9654',
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: 16,
+    },
+    header: {
+      paddingTop: 12,
+      paddingHorizontal: 0,
+      flexDirection: 'column',
+      justifyContent: 'flex-start',
+      alignItems: 'flex-start',
+      flexWrap: 'wrap',
+    },
+    createButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      minHeight: 44,
+      marginRight: 8,
+    },
+    createButtonText: {
+      marginLeft: 4,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: '#ffffff',
+    },
+    tabsWrapper: {
+      width: '100%',
+      marginTop: 8,
+      marginBottom: 8,
+      alignItems: 'flex-start',
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      paddingVertical: 4,
+      paddingHorizontal: 0,
+      flexShrink: 1,
+    },
+    tab: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 6,
+      minHeight: 44,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    activeTab: {
+      backgroundColor: colors.tints.primary,
+      //borderColor: colors.primary,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    tabText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+    },
+    activeTabText: {
+      color: colors.primary,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    disabledTab: {
+      opacity: 0.5,
+      pointerEvents: 'none',
+      backgroundColor: colors.tints.neutral,
+      borderColor: colors.border,
+    },
+    disabledTabText: {
+      color: colors.textMuted,
+    },
+    eventHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+    },
+    eventTitleRow: {
+      marginBottom: 2,
+    },
+    eventTitleWithIcon: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.primary,
+      textDecorationLine: 'underline',
+      paddingTop: 8,
+      marginBottom: 0,
+      flexShrink: 1,
+    },
+    eventDateContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    eventDateIcon: {
+      paddingTop: 8,
+      marginBottom: 0,
+      marginRight: 4,
+    },
+    eventDateText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+      paddingTop: 8,
+      marginBottom: 0,
+    },
+    eventActionsContainer: {
+      alignItems: 'flex-end',
+      minWidth: 40,
+    },
+    dropdownContainer: {
+      marginTop: 8,
+    },
+    shareLinkContainer: {
+      marginHorizontal: 0,
+      marginVertical: 12,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      width: '100%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    shareLinkHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    shareLinkTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.primary,
+    },
+    closeShareLinkButton: {
+      padding: 4,
+      borderRadius: 12,
+    },
+    shareLinkContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    shareLinkInput: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      padding: 12,
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+    },
+    copyButton: {
+      paddingTop: 14,
+      paddingBottom: 8,
+      paddingLeft: 12,
+      paddingRight: 2,
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      minHeight: 44,
+    },
+    copiedConfirmation: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.success,
+      marginTop: 8,
+      textAlign: 'center',
+    },
+    listContent: {
+      paddingHorizontal: 0,
+      paddingTop: 0,
+      paddingBottom: 60, // Base padding for tab bar
+    },
+    emptyListContent: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingTop: 40,
+      paddingHorizontal: 20,
+    },
+    eventCard: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    eventTitleContainer: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    eventTitleContainerHover: {
+      backgroundColor: colors.background,
+    },
+    eventTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.primary,
+      marginBottom: 4,
+      paddingTop: 8, // Add padding to shift title down
+    },
+    eventDescription: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.textMuted,
+      marginBottom: 8,
+    },
+    eventDate: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+    },
+    eventOptionsCount: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.success,
+      marginTop: 4,
+    },
+    deleteButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 4,
+      borderRadius: 12,
+      marginLeft: 8,
+      backgroundColor: errorTint,
+    },
+    shareButtonDesktop: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: accentTint,
+      borderRadius: 10,
+      paddingVertical: 12,
+      justifyContent: 'center',
+      minHeight: 44,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    shareLinkButtonTextDesktop: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.accent,
+    },
 
-  resultsButtonMobile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f6ff',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 10,
-  },
-  resultsButtonTextMobile: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#2563eb',
-  },
-  // Event Results Dropdown Styles
-  eventResultsContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
-  eventResultsTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-    marginBottom: 16,
-  },
-  // Table Styles
-  eventTableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
-  eventTableHeaderDate: {
-    flex: 2,
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-  },
-  eventTableHeaderVote: {
-    flex: 1,
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    textAlign: 'center',
-  },
-  eventTableRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f3f4',
-    alignItems: 'center',
-  },
-  eventTableDateCell: {
-    flex: 2,
-  },
-  eventTableDateText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-    marginBottom: 2,
-  },
-  eventTableDateSubtext: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
-  },
-  eventTableVoteCell: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  eventTableVoteCount: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-  },
-  viewDetailsButton: {
-    backgroundColor: '#ff9654',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  viewDetailsButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: 'white',
-  },
-}); 
+    resultsButtonDesktop: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: primaryTint,
+      borderRadius: 10,
+      paddingVertical: 12,
+      justifyContent: 'center',
+      minHeight: 44,
+      marginLeft: 8,
+      marginBottom: 8,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 18,
+    },
+    resultsButtonTextDesktop: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.primary,
+    },
+
+    // Event Results Dropdown Styles
+    eventResultsContainer: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    eventResultsTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.primary,
+      marginBottom: 16,
+    },
+    // Table Styles
+    eventTableHeader: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    eventTableHeaderDate: {
+      flex: 2,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.primary,
+    },
+    eventTableHeaderVote: {
+      flex: 1,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.primary,
+      textAlign: 'center',
+    },
+    eventTableRow: {
+      flexDirection: 'row',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      alignItems: 'center',
+    },
+    eventTableDateCell: {
+      flex: 2,
+    },
+    eventTableDateText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.primary,
+      marginBottom: 2,
+    },
+    eventTableDateSubtext: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption2,
+      color: colors.textMuted,
+    },
+    eventTableVoteCell: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    eventTableVoteCount: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+    },
+    viewDetailsButton: {
+      backgroundColor: colors.accent,
+      borderRadius: 8,
+      padding: 12,
+      alignItems: 'center',
+      marginTop: 12,
+      minHeight: 44,
+    },
+    viewDetailsButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: '#ffffff',
+    },
+  });
+};

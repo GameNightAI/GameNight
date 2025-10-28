@@ -1,9 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Animated, Platform, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, Modal } from 'react-native';
+import { useMemo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import { format, isAfter, addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth, isSameDay, isBefore, startOfDay, min, max } from 'date-fns';
-import { CreateEventDetails } from './CreateEventDetails';
 import { DateReviewModal } from './DateReviewModal';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -34,22 +39,34 @@ interface EventOptions {
 }
 
 export default function CreateEventModal({ visible, onClose, onSuccess, pollId }: CreateEventModalProps) {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
+  const insets = useSafeAreaInsets();
+  const { isMobile, screenWidth, screenHeight } = useDeviceType();
   const router = useRouter();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(visible);
   const [eventName, setEventName] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [eventLocation, setEventLocation] = useState('');
   const [defaultEventName, setDefaultEventName] = useState('');
-  const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [showDateReviewModal, setShowDateReviewModal] = useState(false);
+  // Create default 1:00 PM time
+  const createDefaultTime = () => {
+    const defaultTime = new Date();
+    defaultTime.setHours(13, 0, 0, 0); // 1:00 PM
+    return defaultTime;
+  };
+
   const [eventOptions, setEventOptions] = useState<EventOptions>({
     location: '',
-    startTime: null,
-    endTime: null,
+    startTime: createDefaultTime(),
+    endTime: createDefaultTime(),
   });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [loading, setLoading] = useState(false);
-  const animation = useRef(new Animated.Value(0)).current;
 
   const resetForm = () => {
     setEventName('');
@@ -58,24 +75,18 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     setDefaultEventName('');
     setEventOptions({
       location: '',
-      startTime: null,
-      endTime: null,
+      startTime: createDefaultTime(),
+      endTime: createDefaultTime(),
     });
     setSelectedDates([]);
     setCurrentMonth(new Date()); // Reset calendar to current month
-    setShowEventDetailsModal(false);
     setShowDateReviewModal(false);
   };
 
   useEffect(() => {
     if (visible) {
-      Animated.timing(animation, {
-        toValue: 1,
-        duration: 120, // Fast animation
-        useNativeDriver: true,
-      }).start();
+      announceForAccessibility?.('Create event modal opened');
     } else {
-      animation.setValue(0);
       // Reset form when modal closes
       resetForm();
     }
@@ -85,22 +96,22 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
   useEffect(() => {
     if (selectedDates.length === 0) {
       setDefaultEventName('');
-      if (!eventName || eventName.startsWith('GameNyte - ')) {
+      if (!eventName || eventName.startsWith('Klack: ')) {
         setEventName('');
       }
     } else if (selectedDates.length === 1) {
       const date = selectedDates[0];
-      const newDefaultName = `GameNyte - ${format(date, 'MMM/dd')}`;
+      const newDefaultName = `Klack: ${format(date, 'MMM/dd')}`;
       setDefaultEventName(newDefaultName);
-      if (!eventName || eventName.startsWith('GameNyte - ')) {
+      if (!eventName || eventName.startsWith('Klack: ')) {
         setEventName(newDefaultName);
       }
     } else {
       const minDate = min(selectedDates);
       const maxDate = max(selectedDates);
-      const newDefaultName = `GameNyte - ${format(minDate, 'MMM.dd')} - ${format(maxDate, 'MMM.dd')}`;
+      const newDefaultName = `Klack: ${format(minDate, 'MMM.dd')} - ${format(maxDate, 'MMM.dd')}`;
       setDefaultEventName(newDefaultName);
-      if (!eventName || eventName.startsWith('GameNyte - ')) {
+      if (!eventName || eventName.startsWith('Klack: ')) {
         setEventName(newDefaultName);
       }
     }
@@ -160,11 +171,6 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     return selectedDates.some(d => isSameDay(d, date));
   };
 
-  const handleEventDetailsSave = (name: string, description: string, location: string) => {
-    setEventName(name);
-    setEventDescription(description);
-    setEventLocation(location);
-  };
 
   const handleCreate = async (finalEventOptions: EventOptions) => {
     if (!eventName) {
@@ -249,63 +255,47 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
     }
   };
 
+  const styles = useMemo(() => getStyles(colors, typography, insets, isMobile, screenWidth, screenHeight), [colors, typography, insets, isMobile, screenWidth, screenHeight]);
+
   if (!visible) return null;
 
   const calendarDays = getCalendarDays();
 
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
-        <Animated.View
-          style={[
-            styles.dialog,
-            {
-              opacity: animation,
-              transform: [
-                {
-                  scale: animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.95, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
+        <View
+          style={styles.dialog}
         >
           <View style={styles.header}>
             <Text style={styles.title}>
-              {pollId ? 'Create Event for Poll' : 'Create Event'}
+
+              {/*{pollId ? 'Set for Poll' : 'Create Event'}*/}
+              Select Available Dates
             </Text>
             <TouchableOpacity
-              style={styles.closeButton}
-              onPress={onClose}
+              style={[styles.closeButton]}
+              onPress={() => { onClose(); announceForAccessibility?.('Event creation cancelled'); }}
               accessibilityLabel="Close"
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityHint="Closes the create event modal"
+              hitSlop={touchTargets.sizeTwenty}
             >
-              <Text style={styles.closeButtonText}>✕</Text>
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <TouchableOpacity
-              onPress={() => setShowEventDetailsModal(true)}
-              style={styles.input}
-            >
-              <Text style={eventName ? styles.eventNameText : styles.placeholderText}>
-                {eventName || 'Enter Event Details (Optional)'}
-              </Text>
-              <View style={styles.eventDetailsPreview}>
-                <Text style={styles.eventDescriptionText} numberOfLines={2}>
-                  {eventDescription || ''}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.clickToEditText}>
-              Click to edit details
-            </Text>
-
-            <Text style={styles.availabilityLabel}>Set Available Dates</Text>
-            <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/*<Text style={styles.availabilityLabel}>Set Available Dates</Text>
+            <Text style={styles.availabilitySublabel}>Tap dates when you're available to play</Text>*/}
 
             {/* Calendar Container */}
             <View style={styles.calendarContainer}>
@@ -313,18 +303,24 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
               <View style={styles.monthNavigation}>
                 <TouchableOpacity
                   style={styles.monthNavButton}
-                  onPress={() => navigateMonth('prev')}
+                  onPress={() => { navigateMonth('prev'); announceForAccessibility?.(`Month changed to ${format(subMonths(currentMonth, 1), 'MMMM yyyy')}`); }}
+                  accessibilityLabel="Previous month"
+                  accessibilityHint="Navigates to the previous month"
+                  hitSlop={touchTargets.small}
                 >
-                  <ChevronLeft size={20} color="#666666" />
+                  <ChevronLeft size={20} color={colors.textMuted} />
                 </TouchableOpacity>
-                <Text style={styles.monthText}>
+                <Text style={styles.monthText} accessibilityRole="header">
                   {format(currentMonth, 'MMMM yyyy')}
                 </Text>
                 <TouchableOpacity
                   style={styles.monthNavButton}
-                  onPress={() => navigateMonth('next')}
+                  onPress={() => { navigateMonth('next'); announceForAccessibility?.(`Month changed to ${format(addMonths(currentMonth, 1), 'MMMM yyyy')}`); }}
+                  accessibilityLabel="Next month"
+                  accessibilityHint="Navigates to the next month"
+                  hitSlop={touchTargets.small}
                 >
-                  <ChevronRight size={20} color="#666666" />
+                  <ChevronRight size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
 
@@ -370,8 +366,12 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
                             !isCurrentMonth && styles.otherMonthDay,
                             isPast && styles.pastDay,
                           ]}
-                          onPress={() => !isPast && toggleDateSelection(date)}
+                          onPress={() => { if (!isPast) { toggleDateSelection(date); announceForAccessibility?.(`${format(date, 'MMM d')} ${isSelected ? 'deselected' : 'selected'}`); } }}
                           disabled={isPast}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${format(date, 'EEEE, MMMM d')}${isPast ? ', unavailable' : ''}`}
+                          accessibilityHint={isPast ? undefined : 'Toggles date selection'}
+                          hitSlop={touchTargets.small}
                         >
                           <Text
                             style={[
@@ -391,283 +391,253 @@ export default function CreateEventModal({ visible, onClose, onSuccess, pollId }
               </View>
             </View>
 
+          </ScrollView>
+
+          <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.createButton, selectedDates.length === 0 && styles.createButtonDisabled]}
-              onPress={() => selectedDates.length > 0 && setShowDateReviewModal(true)}
+              onPress={() => { if (selectedDates.length > 0) { setShowDateReviewModal(true); announceForAccessibility?.('Review selected dates'); } }}
               disabled={selectedDates.length === 0}
+              accessibilityLabel="Review selected dates"
+              accessibilityHint="Opens the review screen to finalize event details"
+              hitSlop={touchTargets.small}
             >
               <Text style={styles.createButtonText}>Select Dates</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+            <TouchableOpacity onPress={() => { onClose(); announceForAccessibility?.('Event creation cancelled'); }} style={styles.cancelButton} accessibilityLabel="Cancel" accessibilityHint="Closes the create event modal" hitSlop={touchTargets.small}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-          </ScrollView>
-        </Animated.View>
+          </View>
+        </View>
+
+        {/* Date Review Modal */}
+        <DateReviewModal
+          visible={showDateReviewModal}
+          onClose={() => setShowDateReviewModal(false)}
+          onFinalize={handleCreate}
+          selectedDates={selectedDates}
+          eventOptions={eventOptions}
+          defaultLocation={eventLocation}
+          pollId={pollId}
+          eventName={eventName}
+          eventDescription={eventDescription}
+          eventLocation={eventLocation}
+          defaultEventName={defaultEventName}
+          onEventDetailsSave={(name, description, location) => {
+            setEventName(name);
+            setEventDescription(description);
+            setEventLocation(location);
+          }}
+        />
       </View>
-
-      {/* Event Details Modal */}
-      <CreateEventDetails
-        isVisible={showEventDetailsModal}
-        onClose={() => setShowEventDetailsModal(false)}
-        onSave={handleEventDetailsSave}
-        currentEventName={eventName}
-        currentDescription={eventDescription}
-        currentLocation={eventLocation}
-      />
-
-      {/* Date Review Modal */}
-      <DateReviewModal
-        visible={showDateReviewModal}
-        onClose={() => setShowDateReviewModal(false)}
-        onFinalize={handleCreate}
-        selectedDates={selectedDates}
-        eventOptions={eventOptions}
-        defaultLocation={eventLocation}
-        pollId={pollId}
-      />
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: Platform.OS === 'web' ? 20 : 10,
-  },
-  dialogContainer: {
-    maxWidth: 400,
-    maxHeight: '85%',
-    width: '100%',
-    height: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dialog: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    position: 'relative',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    maxHeight: '85%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e5ea',
-  },
-  title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#1a2b5f',
-    flex: 1,
-    textAlign: 'center',
-  },
-  closeButton: {
-    padding: 4,
-    borderRadius: 8,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
-  closeButtonText: {
-    fontSize: 16,
-    color: '#666666',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  input: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-  },
+const getStyles = (colors: any, typography: any, insets: any, isMobile: boolean, screenWidth: number, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(500, Math.min(600, screenHeight * 0.75));
 
-  createButton: {
-    backgroundColor: '#0070f3',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 16,
-    alignItems: 'center'
-  },
-  createButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  cancelButton: {
-    marginTop: 12,
-    alignItems: 'center'
-  },
+  return StyleSheet.create({
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      paddingTop: Math.max(16, insets.top),
+      paddingBottom: Math.max(16, insets.bottom),
+      paddingHorizontal: 16,
+    },
+    dialogContainer: {
+      maxWidth: 300,
+      maxHeight: '95%',
+      width: '100%',
+      height: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    dialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      width: isMobile ? '100%' : '90%',
+      maxWidth: isMobile ? 500 : Math.min(800, screenWidth * 0.8),
+      minHeight: responsiveMinHeight,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      maxHeight: '100%',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    title: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.headline,
+      color: colors.text,
+      flex: 1,
+      textAlign: 'center',
+    },
+    closeButton: {
+      paddingHorizontal: 4,
+    },
+    content: {
+      flex: 1,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    footer: {
+      paddingTop: 8,
+      paddingBottom: 8,
+      paddingLeft: 16,
+      paddingRight: 16,
+      backgroundColor: colors.card,
+    },
+    createButton: {
+      backgroundColor: colors.primary,
+      padding: 12,
+      borderRadius: 8,
+      alignItems: 'center'
+    },
+    createButtonDisabled: {
+      backgroundColor: colors.border,
+    },
+    cancelButton: {
+      marginTop: 12,
+      alignItems: 'center',
+      paddingVertical: 4,
+      paddingHorizontal: 12,
+    },
 
-  eventNameText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#888',
-  },
-  eventDetailsPreview: {
-    marginTop: 4,
-    paddingTop: 0,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    minHeight: 0,
-  },
-  eventDescriptionText: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 2,
-  },
-  clickToEditText: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 0,
-    fontStyle: 'italic',
-  },
-  availabilityLabel: {
-    marginTop: 16,
-    marginBottom: 4,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  availabilitySublabel: {
-    marginBottom: 8,
-    fontSize: 14,
-    color: '#666666',
-    fontFamily: 'Poppins-Regular',
-  },
-  createButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-  },
-  cancelButtonText: {
-    color: '#ff9654',
-    fontWeight: 'bold',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-  },
-  calendarContainer: {
-    marginTop: 16,
-    marginBottom: 16,
-    padding: 10,
-    backgroundColor: '#f7f7fa',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    width: '100%',
-    maxWidth: 350, // Fixed maximum width
-    alignSelf: 'center',
-    overflow: 'hidden', // Prevent overflow
-  },
-  monthNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  monthNavButton: {
-    padding: 5,
-  },
-  monthText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  dayHeaders: {
-    flexDirection: 'row',
-    marginBottom: 5,
-    width: '100%',
-  },
-  dayHeader: {
-    flex: 1, // Equal width for each header
-    height: 30, // Reduced height for headers
-    textAlign: 'center',
-    lineHeight: 30,
-    backgroundColor: '#e1e5ea',
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
-    borderRightWidth: 1,
-    borderRightColor: '#d1d5db',
-  },
-  dayHeaderText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#1a2b5f',
-  },
-  lastDayHeader: {
-    borderRightWidth: 0, // Remove border from last header
-  },
-  calendarGrid: {
-    width: '100%', // Use full width of container
-    height: 250, // Fixed height for 5 rows (50 * 5 = 250)
-  },
-  calendarRow: {
-    flexDirection: 'row',
-    width: '100%',
-    height: 50, // Fixed height per row (250 ÷ 5 = 50)
-  },
-  calendarDay: {
-    flex: 1, // Equal width for each day cell
-    height: 50, // Match row height
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    position: 'relative',
-  },
-  otherMonthDay: {
-    opacity: 0.5,
-  },
-  pastDay: {
-    backgroundColor: '#f0f0f0',
-    borderColor: '#f0f0f0',
-  },
-  selectedDay: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
-  },
-  dayText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  otherMonthDayText: {
-    color: '#888',
-  },
-  pastDayText: {
-    color: '#888',
-  },
-  selectedDayText: {
-    color: 'white',
-  },
-});
+
+    availabilityLabel: {
+      marginTop: 16,
+      marginBottom: 4,
+      fontSize: typography.fontSize.callout,
+      color: colors.text,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    availabilitySublabel: {
+      marginBottom: 8,
+      fontSize: typography.fontSize.body,
+      color: colors.textMuted,
+      fontFamily: typography.getFontFamily('normal'),
+    },
+    createButtonText: {
+      color: '#ffffff',
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+    },
+    cancelButtonText: {
+      color: colors.accent,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+    },
+    calendarContainer: {
+      padding: 10,
+      backgroundColor: colors.background,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      width: '100%',
+      maxWidth: 350, // Fixed maximum width
+      alignSelf: 'center',
+      overflow: 'hidden', // Prevent overflow
+    },
+    monthNavigation: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    monthNavButton: {
+      padding: 5,
+    },
+    monthText: {
+      fontSize: typography.fontSize.headline,
+      color: colors.text,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    dayHeaders: {
+      flexDirection: 'row',
+      marginBottom: 5,
+      width: '100%',
+    },
+    dayHeader: {
+      flex: 1, // Equal width for each header
+      height: 30, // Reduced height for headers
+      textAlign: 'center',
+      lineHeight: 30,
+      backgroundColor: colors.border,
+      fontSize: typography.fontSize.caption1,
+      color: colors.text,
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    dayHeaderText: {
+      fontSize: typography.fontSize.caption1,
+      color: colors.text,
+    },
+    lastDayHeader: {
+      borderRightWidth: 0, // Remove border from last header
+    },
+    calendarGrid: {
+      width: '100%', // Use full width of container
+      height: 220, // Fixed height for 5 rows (44 * 5 = 220)
+    },
+    calendarRow: {
+      flexDirection: 'row',
+      width: '100%',
+      height: 44, // Fixed height per row (220 ÷ 5 = 44)
+    },
+    calendarDay: {
+      flex: 1, // Equal width for each day cell
+      height: 44, // Match row height
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      position: 'relative',
+    },
+    otherMonthDay: {
+      opacity: 0.5,
+    },
+    pastDay: {
+      backgroundColor: colors.background,
+      borderColor: colors.background,
+    },
+    selectedDay: {
+      backgroundColor: colors.success,
+      borderColor: colors.success,
+    },
+    dayText: {
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+    },
+    otherMonthDayText: {
+      color: colors.textMuted,
+    },
+    pastDayText: {
+      color: colors.textMuted,
+    },
+    selectedDayText: {
+      color: '#ffffff',
+    },
+  });
+};

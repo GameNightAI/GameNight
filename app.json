@@ -1,37 +1,38 @@
 {
   "expo": {
-    "name": "GameNyte",
-    "slug": "gamenyte",
-    "version": "1.0.0",
+    "name": "Klack",
+    "slug": "klack",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "gamenyte",
+    "scheme": "klack",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gamenyte.app",
+      "bundleIdentifier": "com.klack.app",
       "buildNumber": "1",
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLName": "gamenyte",
+            "CFBundleURLName": "klack",
             "CFBundleURLSchemes": [
-              "gamenyte"
+              "klack"
             ]
           }
-        ]
+        ],
+        "NSCameraUsageDescription": "Klack needs camera access to take photos of your board game collection for AI analysis.",
+        "NSPhotoLibraryUsageDescription": "Klack needs photo library access to select existing photos of your board game collection."
       }
     },
     "android": {
-      "package": "com.gamenyte.app",
+      "package": "com.klack.app",
       "versionCode": 1,
       "intentFilters": [
         {
           "action": "VIEW",
           "data": [
             {
-              "scheme": "gamenyte"
+              "scheme": "klack"
             }
           ],
           "category": [
@@ -52,7 +53,8 @@
       "web"
     ],
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "react-native-legal"
     ],
     "experiments": {
       "typedRoutes": true

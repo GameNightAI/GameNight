@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Alert, Image } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, TextStyle, ViewStyle, TouchableOpacity, ScrollView, TextInput, Alert, Image, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Plus, Check, Users, ChevronDown, ChevronUp, Clock, Brain, Users as Users2, Baby, AlertTriangle, SquarePen } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
-import { Game } from '@/types/game';
 import Toast from 'react-native-toast-message';
+import { decode } from 'html-entities';
+
 import { CreatePollModal } from './CreatePollModal';
 import { CreatePollDetails } from './CreatePollDetails';
 import { sortGamesByTitle } from '@/utils/sortingUtils';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
+import { Game } from '@/types/game';
 
 interface EditPollModalProps {
   isVisible: boolean;
@@ -26,6 +33,14 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   pollTitle,
   pollDescription,
 }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
+  const { screenHeight } = useDeviceType();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
+
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [availableGames, setAvailableGames] = useState<Game[]>([]);
   const [originalPollGames, setOriginalPollGames] = useState<Game[]>([]);
@@ -93,12 +108,14 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     try {
       const { data: votes, error } = await supabase
         .from('votes')
-        .select('voter_name')
+        .select('user_id, voter_name')
         .eq('poll_id', pollId);
 
       if (!error && votes) {
-        // Count unique voters (distinct voter_name values)
-        const uniqueVoters = new Set(votes.map((vote: any) => vote.voter_name).filter((name: any) => name));
+        // Count unique voters
+        const uniqueVoters = new Set(
+          votes.map((vote: any) => vote.user_id || vote.voter_name)
+        );
         const voterCount = uniqueVoters.size;
 
         setHasExistingVotes(voterCount > 0);
@@ -137,25 +154,26 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
           // Map games data to the expected format (same as usePollData.ts)
           const currentGames = gamesData.map(game => ({
             id: game.id,
-            name: game.name || 'Unknown Game',
-            thumbnail: game.image_url || 'https://via.placeholder.com/150?text=No+Image',
-            image: game.image_url || 'https://via.placeholder.com/300?text=No+Image',
-            min_players: game.min_players || 1,
-            max_players: game.max_players || 1,
-            min_exp_players: game.min_players || 1,
-            max_exp_players: game.max_players || 1,
-            playing_time: game.playing_time || 0,
-            yearPublished: game.year_published || null,
-            description: game.description || '',
-            minAge: game.min_age || 0,
-            is_cooperative: game.is_cooperative || false,
-            is_teambased: game.is_teambased || false,
-            complexity: game.complexity || 1,
-            minPlaytime: game.minplaytime || 0,
-            maxPlaytime: game.maxplaytime || 0,
-            complexity_tier: game.complexity_tier || 1,
-            complexity_desc: game.complexity_desc || '',
-            bayesaverage: game.bayesaverage ?? null,
+            name: game.name,
+            thumbnail: game.thumbnail || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+            image: game.image_url || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg',
+            min_players: game.min_players,
+            max_players: game.max_players,
+            min_exp_players: game.min_players,
+            max_exp_players: game.max_players,
+            playing_time: game.playing_time,
+            yearPublished: game.year_published,
+            description: game.description,
+            minAge: game.min_age,
+            is_cooperative: game.is_cooperative,
+            is_teambased: game.is_teambased,
+            complexity: game.complexity,
+            minPlaytime: game.minplaytime,
+            maxPlaytime: game.maxplaytime,
+            complexity_tier: game.complexity_tier,
+            complexity_desc: game.complexity_desc,
+            bayesaverage: game.bayesaverage,
+            expansions: [],
           }));
 
           setOriginalPollGames(currentGames);
@@ -184,8 +202,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         thumbnail: game.thumbnail,
         min_players: game.min_players,
         max_players: game.max_players,
-        min_exp_players: game.min_players || 0,
-        max_exp_players: game.max_players || 0,
+        min_exp_players: game.min_players,
+        max_exp_players: game.max_players,
         playing_time: game.playing_time,
         yearPublished: game.year_published,
         description: game.description,
@@ -198,7 +216,8 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         maxPlaytime: game.maxplaytime,
         complexity_tier: game.complexity_tier,
         complexity_desc: game.complexity_desc,
-        bayesaverage: game.bayesaverage ?? null,
+        bayesaverage: game.bayesaverage,
+        expansions: [],
       }));
 
       // Sort games alphabetically by title, ignoring articles
@@ -304,6 +323,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
         }
       }
 
+      announceForAccessibility('Poll changes saved successfully');
       Toast.show({
         type: 'success',
         text1: 'Poll updated successfully!',
@@ -324,6 +344,7 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   const toggleGameSelection = (game: Game) => {
     setSelectedGames(current => {
       const isSelected = current.some(g => g.id === game.id);
+      announceForAccessibility(`${decode(game.name)} ${isSelected ? 'deselected' : 'selected'}`);
       if (isSelected) {
         return current.filter(g => g.id !== game.id);
       } else {
@@ -332,169 +353,217 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
     });
   };
 
+  const styles = useMemo(() => getStyles(colors, typography, insets, screenHeight), [colors, typography, insets, screenHeight]);
+
   if (!isVisible) return null;
 
   return (
     <>
-      <View style={styles.overlay}>
-        <View style={styles.modal}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Edit Poll</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color="#666666" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Warning about existing votes */}
-          {hasExistingVotes && !warningDismissed && (
-            <View style={styles.warningHeader}>
-              <AlertTriangle size={20} color="#f59e0b" />
-              <Text style={styles.warningHeaderText}>
-                This poll already has {voterCount} voter{voterCount !== 1 ? 's' : ''}
-              </Text>
+      <Modal
+        visible={isVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Edit Poll</Text>
               <TouchableOpacity
-                style={styles.warningDismissButton}
-                onPress={() => setWarningDismissed(true)}
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityLabel="Close"
+                accessibilityHint="Closes the edit poll modal"
+                hitSlop={touchTargets.small}
               >
-                <X size={16} color="#92400e" />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Custom confirmation dialog */}
-          {showConfirmation && (
-            <View style={styles.confirmationOverlay}>
-              <View style={styles.confirmationDialog}>
-                <Text style={styles.confirmationTitle}>Warning: Existing Votes</Text>
-                <Text style={styles.confirmationMessage}>
-                  {confirmationAction === 'save'
-                    ? 'This poll already has votes. Are you sure you want to continue?'
-                    : 'This poll already has votes. Continue to add games?'
-                  }
-                </Text>
-                <View style={styles.confirmationButtons}>
-                  <TouchableOpacity
-                    style={styles.confirmationButtonCancel}
-                    onPress={() => {
-                      setShowConfirmation(false);
-                    }}
-                  >
-                    <Text style={styles.confirmationButtonTextCancel}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.confirmationButtonContinue}
-                    onPress={() => {
-                      setShowConfirmation(false);
-                      if (confirmationAction === 'save') {
-                        performSave();
-                      } else {
-                        setShowCreatePollModal(true);
-                      }
-                    }}
-                  >
-                    <Text style={styles.confirmationButtonTextContinue}>
-                      {confirmationAction === 'save' ? 'Continue' : 'Add Games'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
-
-          <ScrollView style={styles.content}>
-            <View style={styles.descriptionSection}>
-              <TouchableOpacity
-                style={[styles.descriptionButton, (dynamicPollDescription || isTitleManuallyChanged) && styles.descriptionButtonActive]}
-                onPress={() => setIsDetailsModalVisible(true)}
-              >
-                <View style={styles.descriptionButtonContent}>
-                  <View style={styles.descriptionButtonLeft}>
-                    <Text style={styles.descriptionButtonLabel}>Edit Title & Description</Text>
-                  </View>
-                  <View style={styles.descriptionButtonRight}>
-                    <View style={[styles.descriptionButtonIndicator, { opacity: (dynamicPollDescription || isTitleManuallyChanged) ? 1 : 0 }]}>
-                      <Text style={styles.descriptionButtonIndicatorText}>✓</Text>
-                    </View>
-                    <SquarePen size={20} color="#666666" />
-                  </View>
-                </View>
+                <X size={16} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
-            {originalPollGames.length > 0 && (
-              <View style={styles.currentGamesSection}>
-                <Text style={styles.sublabel}>
-                  Uncheck to remove from poll
+            {/* Warning about existing votes */}
+            {hasExistingVotes && !warningDismissed && (
+              <View style={styles.warningHeader} accessibilityRole="alert">
+                <AlertTriangle size={20} color={colors.warning} />
+                <Text style={styles.warningHeaderText}>
+                  This poll already has {voterCount} voter{voterCount !== 1 ? 's' : ''}
                 </Text>
-
-                {originalPollGames.map(game => {
-                  const isSelected = selectedGames.some(g => g.id === game.id);
-                  return (
-                    <TouchableOpacity
-                      key={game.id}
-                      style={[
-                        styles.gameItem,
-                        isSelected && styles.gameItemSelected
-                      ]}
-                      onPress={() => toggleGameSelection(game)}
-                    >
-                      <Image
-                        source={{ uri: game.thumbnail || game.image || 'https://via.placeholder.com/60?text=No+Image' }}
-                        style={styles.gameThumbnail}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.gameInfo}>
-                        <Text style={styles.gameName}>{game.name}</Text>
-                        <Text style={styles.playerCount}>
-                          {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
-                        </Text>
-                      </View>
-                      <View style={[
-                        styles.checkbox,
-                        isSelected && styles.checkboxSelected
-                      ]}>
-                        {isSelected && (
-                          <Check size={16} color="#ffffff" />
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                <TouchableOpacity
+                  style={styles.warningDismissButton}
+                  onPress={() => setWarningDismissed(true)}
+                  accessibilityLabel="Dismiss warning"
+                  accessibilityHint="Dismisses the existing votes warning"
+                  hitSlop={touchTargets.small}
+                >
+                  <X size={16} color={colors.textMuted} />
+                </TouchableOpacity>
               </View>
             )}
 
-            <TouchableOpacity
-              style={styles.addGamesButton}
-              onPress={() => {
-                if (hasExistingVotes) {
-                  setConfirmationAction('addGames');
-                  setShowConfirmation(true);
-                } else {
-                  setShowCreatePollModal(true);
-                }
-              }}
-            >
-              <Plus size={20} color="#1d4ed8" />
-              <Text style={styles.addGamesButtonText}>
-                {originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
+            {/* Custom confirmation dialog */}
+            {showConfirmation && (
+              <View style={styles.confirmationOverlay}>
+                <View style={styles.confirmationDialog}>
+                  <Text style={styles.confirmationTitle}>Warning: Existing Votes</Text>
+                  <Text style={styles.confirmationMessage}>
+                    {confirmationAction === 'save'
+                      ? 'This poll already has votes. Are you sure you want to continue?'
+                      : 'This poll already has votes. Continue to add games?'
+                    }
+                  </Text>
+                  <View style={styles.confirmationButtons}>
+                    <TouchableOpacity
+                      style={styles.confirmationButtonCancel}
+                      onPress={() => {
+                        setShowConfirmation(false);
+                      }}
+                      accessibilityLabel="Cancel"
+                      accessibilityHint="Cancels the current action and closes the confirmation dialog"
+                      hitSlop={touchTargets.small}
+                    >
+                      <Text style={styles.confirmationButtonTextCancel}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.confirmationButtonContinue}
+                      onPress={() => {
+                        setShowConfirmation(false);
+                        if (confirmationAction === 'save') {
+                          performSave();
+                        } else {
+                          announceForAccessibility('Opening add games modal');
+                          setShowCreatePollModal(true);
+                        }
+                      }}
+                      accessibilityLabel={confirmationAction === 'save' ? 'Continue' : 'Add Games'}
+                      accessibilityHint={confirmationAction === 'save' ? 'Continues with saving poll changes' : 'Opens the add games modal'}
+                      hitSlop={touchTargets.small}
+                    >
+                      <Text style={styles.confirmationButtonTextContinue}>
+                        {confirmationAction === 'save' ? 'Continue' : 'Add Games'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )}
 
-          <View style={styles.footer}>
-            {error && <Text style={styles.errorText}>{error}</Text>}
-            <TouchableOpacity
-              style={[styles.saveButton, loading || selectedGames.length === 0 ? styles.saveButtonDisabled : undefined]}
-              onPress={handleSaveChanges}
-              disabled={loading || selectedGames.length === 0}
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
             >
-              <Text style={styles.saveButtonText}>
-                {loading ? 'Saving...' : 'Save Changes'}
-              </Text>
-            </TouchableOpacity>
+              <View style={styles.descriptionSection}>
+                <TouchableOpacity
+                  style={[styles.descriptionButton, (dynamicPollDescription || isTitleManuallyChanged) && styles.descriptionButtonActive]}
+                  onPress={() => {
+                    announceForAccessibility('Opening poll details editor');
+                    setIsDetailsModalVisible(true);
+                  }}
+                  accessibilityLabel="Edit Title & Description"
+                  accessibilityHint="Opens the poll title and description editor"
+                  hitSlop={touchTargets.small}
+                >
+                  <View style={styles.descriptionButtonContent}>
+                    <View style={styles.descriptionButtonLeft}>
+                      <Text style={styles.descriptionButtonLabel}>Edit Title & Description</Text>
+                    </View>
+                    <View style={styles.descriptionButtonRight}>
+                      <View style={[styles.descriptionButtonIndicator, { opacity: (dynamicPollDescription || isTitleManuallyChanged) ? 1 : 0 }]}>
+                        <Text style={styles.descriptionButtonIndicatorText}>✓</Text>
+                      </View>
+                      <SquarePen size={20} color={colors.textMuted} />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {originalPollGames.length > 0 && (
+                <View style={styles.currentGamesSection}>
+                  <Text style={styles.sublabel}>
+                    Uncheck to remove from poll
+                  </Text>
+
+                  {originalPollGames.map(game => {
+                    const decodedName = decode(game.name);
+                    const isSelected = selectedGames.some(g => g.id === game.id);
+                    return (
+                      <TouchableOpacity
+                        key={game.id}
+                        style={[
+                          styles.gameItem,
+                          isSelected && styles.gameItemSelected
+                        ]}
+                        onPress={() => toggleGameSelection(game)}
+                        accessibilityLabel={`${decodedName}, ${game.min_players}-${game.max_players} players`}
+                        accessibilityHint={isSelected ? "Tap to remove from poll" : "Tap to keep in poll"}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isSelected }}
+                        hitSlop={touchTargets.small}
+                      >
+                        <Image
+                          source={{ uri: game.thumbnail || game.image || 'https://cf.geekdo-images.com/zxVVmggfpHJpmnJY9j-k1w__imagepagezoom/img/RO6wGyH4m4xOJWkgv6OVlf6GbrA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1657689.jpg' }}
+                          style={styles.gameThumbnail}
+                          resizeMode="cover"
+                          accessibilityLabel={`${decodedName} thumbnail`}
+                        />
+                        <View style={styles.gameInfo}>
+                          <Text style={styles.gameName}>{decodedName}</Text>
+                          <Text style={styles.playerCount}>
+                            {game.min_players}-{game.max_players} players • {game.playing_time ? `${game.playing_time} min` : game.minPlaytime && game.maxPlaytime ? (game.minPlaytime === game.minPlaytime ? `${game.minPlaytime} min` : `${game.minPlaytime}-${game.maxPlaytime} min`) : game.minPlaytime || game.maxPlaytime ? `${game.minPlaytime || game.maxPlaytime} min` : 'Unknown time'}
+                          </Text>
+                        </View>
+                        <View style={[
+                          styles.checkbox,
+                          isSelected && styles.checkboxSelected
+                        ]}>
+                          {isSelected && (
+                            <Check size={16} color="#ffffff" />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={styles.addGamesButton}
+                onPress={() => {
+                  if (hasExistingVotes) {
+                    setConfirmationAction('addGames');
+                    setShowConfirmation(true);
+                  } else {
+                    announceForAccessibility('Opening add games modal');
+                    setShowCreatePollModal(true);
+                  }
+                }}
+                accessibilityLabel={originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
+                accessibilityHint="Opens the add games modal to select additional games"
+                hitSlop={touchTargets.small}
+              >
+                <Plus size={20} color={colors.primary} />
+                <Text style={styles.addGamesButtonText}>
+                  {originalPollGames.length === 0 ? 'Add Games to Poll' : 'Add More Games'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <View style={styles.footer}>
+              {error && <Text style={styles.errorText}>{error}</Text>}
+              <TouchableOpacity
+                style={[styles.saveButton, loading || selectedGames.length === 0 ? styles.saveButtonDisabled : undefined]}
+                onPress={handleSaveChanges}
+                disabled={loading || selectedGames.length === 0}
+                accessibilityLabel={loading ? 'Saving...' : 'Save Changes'}
+                accessibilityHint="Saves the poll changes and closes the editor"
+                hitSlop={touchTargets.small}
+              >
+                <Text style={styles.saveButtonText}>
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      </Modal>
 
       {/* CreatePollModal for adding more games */}
       <CreatePollModal
@@ -532,296 +601,305 @@ export const EditPollModal: React.FC<EditPollModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  modal: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    width: '90%',
-    maxWidth: 600,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-    paddingTop: 0,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  title: {
-    fontSize: 20,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  warningHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef3c7',
-    borderTopWidth: 1,
-    borderTopColor: '#f59e0b',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f59e0b',
-    padding: 16,
-    margin: 0,
-    gap: 12,
-  },
-  warningHeaderText: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#92400e',
-  },
-  warningDismissButton: {
-    padding: 4,
-    borderRadius: 4,
-    backgroundColor: 'rgba(146, 64, 14, 0.1)',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 10,
-  },
-  descriptionSection: {
-    marginBottom: 10,
-    width: '100%',
-    paddingTop: 4,
-  },
-  descriptionButton: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e1e5ea',
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 8,
-  },
-  descriptionButtonActive: {
-    borderColor: '#ff9654',
-    backgroundColor: '#fff5ef',
-  },
-  descriptionButtonContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  descriptionButtonLeft: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  descriptionButtonRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  descriptionButtonLabel: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-  },
-  descriptionButtonIndicator: {
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  descriptionButtonIndicatorText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  currentGamesSection: {
-    marginBottom: 0,
-    marginTop: 0,
-  },
-  sublabel: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
-    marginBottom: 12,
-  },
-  addGamesButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f8fafc',
-    borderWidth: 2,
-    borderColor: '#1d4ed8',
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 8,
-    gap: 8,
-  },
-  addGamesButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1d4ed8',
-  },
-  gameItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#ffffff',
-  },
-  gameThumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginRight: 12,
-  },
-  gameItemSelected: {
-    borderColor: '#1d4ed8',
-    backgroundColor: '#eff6ff',
-  },
-  gameInfo: {
-    flex: 1,
-  },
-  gameName: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
-    marginBottom: 2,
-  },
-  playerCount: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#d1d5db',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: '#1d4ed8',
-    borderColor: '#1d4ed8',
-  },
-  footer: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  errorText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#ef4444',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  saveButton: {
-    backgroundColor: '#1d4ed8',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#9ca3af',
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
-  },
-  confirmationOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2000,
-  },
-  confirmationDialog: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 24,
-    margin: 20,
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  confirmationTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
-    marginBottom: 12,
-  },
-  confirmationMessage: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666666',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  confirmationButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  confirmationButtonCancel: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: '#f3f4f6',
-  },
-  confirmationButtonTextCancel: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#6b7280',
-  },
-  confirmationButtonContinue: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: '#1d4ed8',
-  },
-  confirmationButtonTextContinue: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
-  },
-});
+const getStyles = (colors: any, typography: any, insets: any, screenHeight: number) => {
+  const responsiveMinHeight = Math.max(500, Math.min(650, screenHeight * 0.75));
+
+  return StyleSheet.create({
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      paddingTop: Math.max(16, insets.top),
+      paddingBottom: Math.max(16, insets.bottom),
+      paddingHorizontal: 16,
+    },
+    modal: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      width: '90%',
+      maxWidth: 600,
+      maxHeight: '90%',
+      minHeight: responsiveMinHeight,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 8,
+      paddingTop: 0,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    title: {
+      fontSize: typography.fontSize.headline,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.text,
+      marginLeft: 12,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    warningHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.tints.warning,
+      borderTopWidth: 1,
+      borderTopColor: colors.warning,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.warning,
+      padding: 16,
+      margin: 0,
+    },
+    warningHeaderText: {
+      flex: 1,
+      fontSize: typography.fontSize.callout,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.textMuted,
+      marginLeft: 12,
+    },
+    warningDismissButton: {
+      padding: 4,
+      borderRadius: 4,
+      backgroundColor: colors.tints.warning,
+    },
+    content: {
+      flex: 1,
+      padding: 20,
+      paddingTop: 10,
+    },
+    descriptionSection: {
+      marginBottom: 10,
+      width: '100%',
+      paddingTop: 4,
+    },
+    descriptionButton: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 10,
+      marginTop: 8,
+    },
+    descriptionButtonActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.tints.accent,
+    },
+    descriptionButtonContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    descriptionButtonLeft: {
+      flex: 1,
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+    },
+    descriptionButtonRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    descriptionButtonLabel: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+    },
+    descriptionButtonIndicator: {
+      backgroundColor: colors.success,
+      borderRadius: 10,
+      width: 20,
+      height: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+      marginRight: 6,
+    },
+    descriptionButtonIndicatorText: {
+      color: '#ffffff',
+      fontSize: typography.fontSize.caption1,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    currentGamesSection: {
+      marginBottom: 0,
+      marginTop: 0,
+    },
+    sublabel: {
+      fontSize: typography.fontSize.subheadline,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.textMuted,
+      marginBottom: 8,
+    },
+    sectionTitle: {
+      fontSize: typography.fontSize.subheadline,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.text,
+      marginBottom: 12,
+    },
+    addGamesButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      borderStyle: 'dashed',
+      borderRadius: 8,
+      padding: 16,
+      marginTop: 8,
+    },
+    addGamesButtonText: {
+      fontSize: typography.fontSize.subheadline,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.primary,
+      marginLeft: 8,
+    },
+    gameItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      marginBottom: 8,
+      backgroundColor: colors.card,
+    },
+    gameThumbnail: {
+      width: 60,
+      height: 60,
+      borderRadius: 8,
+      backgroundColor: colors.background,
+      marginRight: 12,
+    },
+    gameItemSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.tints.primary,
+    },
+    gameInfo: {
+      flex: 1,
+    },
+    gameName: {
+      fontSize: typography.fontSize.callout,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.text,
+      marginBottom: 2,
+    },
+    playerCount: {
+      fontSize: typography.fontSize.caption1,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.textMuted,
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    footer: {
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    errorText: {
+      fontSize: typography.fontSize.callout,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.error,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    saveButtonDisabled: {
+      backgroundColor: colors.textMuted,
+    },
+    saveButtonText: {
+      fontSize: typography.fontSize.subheadline,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: '#ffffff',
+    },
+    confirmationOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.tints.neutral,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 2000,
+    },
+    confirmationDialog: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 24,
+      margin: 20,
+      maxWidth: 400,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    confirmationTitle: {
+      fontSize: typography.fontSize.title3,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.text,
+      marginBottom: 12,
+    },
+    confirmationMessage: {
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('normal'),
+      color: colors.textMuted,
+      marginBottom: 20,
+      lineHeight: 20,
+    },
+    confirmationButtons: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    confirmationButtonCancel: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 6,
+      backgroundColor: colors.background,
+    },
+    confirmationButtonTextCancel: {
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: colors.textMuted,
+    },
+    confirmationButtonContinue: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 6,
+      backgroundColor: colors.primary,
+      marginLeft: 12,
+    },
+    confirmationButtonTextContinue: {
+      fontSize: typography.fontSize.body,
+      fontFamily: typography.getFontFamily('semibold'),
+      color: '#ffffff',
+    },
+  });
+};

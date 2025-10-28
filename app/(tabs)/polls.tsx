@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Platform, Pressable } from 'react-native';
-import { useDebouncedWindowDimensions } from '@/hooks/useDebouncedWindowDimensions';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Plus, Share2, Trash2, X, Copy, Check, BarChart3, Users, Edit } from 'lucide-react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 import { supabase } from '@/services/supabase';
 import { Poll } from '@/types/poll';
@@ -15,11 +14,12 @@ import { ErrorState } from '@/components/ErrorState';
 import { CreatePollModal } from '@/components/CreatePollModal';
 import { EditPollModal } from '@/components/EditPollModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
-import { PollsEmptyState } from '@/components/PollsEmptyState';
+import { EmptyStatePolls } from '@/components/EmptyStatePolls';
 import { Calendar, Shield } from 'lucide-react-native';
 import { PollScreenCard } from '@/components/PollScreenCard';
 import { usePollResults } from '@/hooks/usePollResults';
 import { Game } from '@/types/game';
+import { useTheme } from '@/hooks/useTheme';
 
 type TabType = 'all' | 'created' | 'other';
 
@@ -28,17 +28,26 @@ interface PollWithVoteCount extends Poll {
   voteCount: number;
 }
 
+// Profile type for creator information
+interface Profile {
+  id: string;
+  username: string;
+  firstname?: string;
+  lastname?: string;
+}
+
 export default function PollsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
   const [polls, setPolls] = useState<PollWithVoteCount[]>([]);
 
   // Use fallback values for web platform
-  const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
   const [allPolls, setAllPolls] = useState<PollWithVoteCount[]>([]);
   const [otherUsersPolls, setOtherUsersPolls] = useState<PollWithVoteCount[]>([]);
-  const [creatorMap, setCreatorMap] = useState<Record<string, string>>({});
+  const [creatorMap, setCreatorMap] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -49,9 +58,6 @@ export default function PollsScreen() {
   const [showCopiedConfirmation, setShowCopiedConfirmation] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const { width, height } = useDebouncedWindowDimensions();
-  const isMobile = width < 768;
-  const isSmallMobile = width < 380 || height < 700;
   const [openResultsPollId, setOpenResultsPollId] = useState<string | null>(null);
   const [newVotes, setNewVotes] = useState(false);
   const subscriptionRef = useRef<any>(null);
@@ -90,13 +96,13 @@ export default function PollsScreen() {
       if (pollIds.length > 0) {
         const { data: numberOfVoters, error: numberOfVotersError } = await supabase
           .from('votes')
-          .select('poll_id, voter_name');
+          .select('poll_id, user_id, voter_name');
         if (!numberOfVotersError && numberOfVoters) {
           const pollVoters: Record<string, Set<string>> = {};
           numberOfVoters.forEach((row: any) => {
-            if (row.poll_id && row.voter_name) {
+            if (row.poll_id && (row.user_id || row.voter_name)) {
               if (!pollVoters[row.poll_id]) pollVoters[row.poll_id] = new Set();
-              pollVoters[row.poll_id].add(row.voter_name);
+              pollVoters[row.poll_id].add(row.user_id || row.voter_name);
             }
           });
           Object.keys(pollVoters).forEach(pid => {
@@ -105,17 +111,17 @@ export default function PollsScreen() {
         }
       }
 
-      // Fetch creator usernames/emails for all unique user_ids
+      // Fetch creator profiles for all unique user_ids
       const userIds = Array.from(new Set((allPollsData || []).map(p => p.user_id)));
-      let creatorMap: Record<string, string> = {};
+      let creatorMap: Record<string, Profile> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, username, email')
+          .select('id, username, firstname, lastname')
           .in('id', userIds);
         if (profiles) {
           profiles.forEach((profile: any) => {
-            creatorMap[profile.id] = profile.email || profile.username || profile.id;
+            creatorMap[profile.id] = profile;
           });
         }
       }
@@ -129,8 +135,8 @@ export default function PollsScreen() {
       // Get polls from other users that the current user has voted in
       const { data: userVotes, error: votesError } = await supabase
         .from('votes')
-        .select('poll_id, voter_name')
-        .eq('voter_name', user.email || 'Anonymous');
+        .select('poll_id')
+        .eq('user_id', user.id);
 
       if (votesError) throw votesError;
 
@@ -214,26 +220,7 @@ export default function PollsScreen() {
     };
   }, []);
 
-  // Memoize the scaled style function to prevent recalculation on every render
-  const getScaledStyle = useCallback((baseStyle: any, scale: number = 1) => {
-    if (!isSmallMobile) return baseStyle;
-    return {
-      ...baseStyle,
-      fontSize: baseStyle.fontSize ? baseStyle.fontSize * scale : undefined,
-      paddingHorizontal: baseStyle.paddingHorizontal ? baseStyle.paddingHorizontal * scale : undefined,
-      paddingVertical: baseStyle.paddingVertical ? baseStyle.paddingVertical * scale : undefined,
-      padding: baseStyle.padding ? baseStyle.padding * scale : undefined,
-      marginBottom: baseStyle.marginBottom ? baseStyle.marginBottom * scale : undefined,
-      marginTop: baseStyle.marginTop ? baseStyle.marginTop * scale : undefined,
-      marginLeft: baseStyle.marginLeft ? baseStyle.marginLeft * scale : undefined,
-      marginRight: baseStyle.marginRight ? baseStyle.marginRight * scale : undefined,
-      gap: baseStyle.gap ? baseStyle.gap * scale : undefined,
-      borderRadius: baseStyle.borderRadius ? baseStyle.borderRadius * scale : undefined,
-      minWidth: baseStyle.minWidth ? baseStyle.minWidth * scale : undefined,
-      width: baseStyle.width ? baseStyle.width * scale : undefined,
-      height: baseStyle.height ? baseStyle.height * scale : undefined,
-    };
-  }, [isSmallMobile]);
+  // Removed scaled styling helper for simplicity and HIG clarity
 
   // Memoize current polls to prevent unnecessary re-renders
   const currentPolls = useMemo(() => {
@@ -243,8 +230,8 @@ export default function PollsScreen() {
   const handleShare = useCallback(async (pollId: string) => {
     // Use a proper base URL for React Native
     const baseUrl = Platform.select({
-      web: typeof window !== 'undefined' ? window.location.origin : 'https://gamenyte.netlify.app',
-      default: 'https://gamenyte.netlify.app', // Replace with your actual domain
+      web: typeof window !== 'undefined' ? window.location.origin : 'https://klack.netlify.app',
+      default: 'https://klack.netlify.app', // Replace with your actual domain
     });
 
     const shareUrl = `${baseUrl}/poll/${pollId}`;
@@ -271,6 +258,7 @@ export default function PollsScreen() {
         // Mobile-specific sharing
         await Clipboard.setStringAsync(shareUrl);
         setShowCopiedConfirmation(true);
+        announceForAccessibility('Poll link copied to clipboard');
         setTimeout(() => {
           setShowCopiedConfirmation(false);
         }, 2000);
@@ -281,6 +269,7 @@ export default function PollsScreen() {
       try {
         await Clipboard.setStringAsync(shareUrl);
         setShowCopiedConfirmation(true);
+        announceForAccessibility('Poll link copied to clipboard');
         setTimeout(() => {
           setShowCopiedConfirmation(false);
         }, 2000);
@@ -305,6 +294,7 @@ export default function PollsScreen() {
 
       setPollToDelete(null);
       await loadPolls();
+      announceForAccessibility('Poll deleted successfully');
     } catch (err) {
       console.error('Error deleting poll:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete poll');
@@ -321,7 +311,7 @@ export default function PollsScreen() {
     const { results, loading, error } = usePollResults(pollId);
     if (loading) return <LoadingState />;
     if (error) return <ErrorState message={error} onRetry={() => { }} />;
-    if (!results || results.length === 0) return <Text style={{ padding: 16, color: '#888' }}>No votes yet.</Text>;
+    if (!results || results.length === 0) return <Text style={styles.noVotesText}>No votes yet.</Text>;
 
     // Transform the data to match PollScreenCard's expected format
     const transformedGames = results.map(result => {
@@ -345,6 +335,8 @@ export default function PollsScreen() {
     );
   }, [router]);
 
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+
   if (loading) {
     return <LoadingState />;
   }
@@ -359,44 +351,44 @@ export default function PollsScreen() {
   return (
     <View style={styles.container}>
       {currentPolls.length > 0 && (
-        <View style={getScaledStyle(styles.header, 0.75)}>
+        <View style={styles.header}>
           <TouchableOpacity
-            style={getScaledStyle(styles.createButton, 0.75)}
+            style={styles.createButton}
             onPress={() => setCreateModalVisible(true)}
           >
-            <Plus size={isSmallMobile ? 15 : 20} color="#ffffff" />
-            <Text style={getScaledStyle(styles.createButtonText, 0.75)}>Create Poll</Text>
+            <Plus size={16} color="#ffffff" />
+            <Text style={styles.createButtonText}>Create Poll</Text>
           </TouchableOpacity>
-          <View style={getScaledStyle(styles.tabsWrapper, 0.75)}>
-            <View style={getScaledStyle(styles.tabContainer, 0.75)}>
+          <View style={styles.tabsWrapper}>
+            <View style={styles.tabContainer}>
               <TouchableOpacity
-                style={[getScaledStyle(styles.tab, 0.75), activeTab === 'all' && getScaledStyle(styles.activeTab, 0.75)]}
+                style={[styles.tab, activeTab === 'all' && styles.activeTab]}
                 onPress={() => setActiveTab('all')}
               >
-                <Text style={[getScaledStyle(styles.tabText, 0.75), activeTab === 'all' && getScaledStyle(styles.activeTabText, 0.75)]}>
+                <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
                   All Polls ({allPolls.length})
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[getScaledStyle(styles.tab, 0.75), activeTab === 'created' && getScaledStyle(styles.activeTab, 0.75)]}
+                style={[styles.tab, activeTab === 'created' && styles.activeTab]}
                 onPress={() => setActiveTab('created')}
               >
-                <Text style={[getScaledStyle(styles.tabText, 0.75), activeTab === 'created' && getScaledStyle(styles.activeTabText, 0.75)]}>
+                <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
                   My Polls ({polls.length})
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
-                  getScaledStyle(styles.tab, 0.75),
-                  activeTab === 'other' && getScaledStyle(styles.activeTab, 0.75),
+                  styles.tab,
+                  activeTab === 'other' && styles.activeTab,
                   otherUsersPolls.length === 0 && styles.disabledTab
                 ]}
                 onPress={() => otherUsersPolls.length > 0 && setActiveTab('other')}
                 disabled={otherUsersPolls.length === 0}
               >
                 <Text style={[
-                  getScaledStyle(styles.tabText, 0.75),
-                  activeTab === 'other' && getScaledStyle(styles.activeTabText, 0.75),
+                  styles.tabText,
+                  activeTab === 'other' && styles.activeTabText,
                   otherUsersPolls.length === 0 && styles.disabledTabText
                 ]}>
                   Voted In ({otherUsersPolls.length})
@@ -409,80 +401,65 @@ export default function PollsScreen() {
 
       {/* --- Banner notification for new votes --- */}
       {newVotes && (
-        <View style={{
-          backgroundColor: '#fffbe6',
-          borderBottomWidth: 1,
-          borderBottomColor: '#ffe58f',
-          padding: isSmallMobile ? 10.5 : 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
-        }}>
-          <Text style={{ color: '#b45309', fontWeight: 'bold', fontSize: isSmallMobile ? 11.25 : 15 }}>
-            New votes have been cast! Refresh to dismiss.
-          </Text>
-          <TouchableOpacity onPress={() => {
-            setNewVotes(false);
-          }}>
-            <Text style={{ color: '#2563eb', fontWeight: 'bold', marginLeft: isSmallMobile ? 12 : 16 }}>Dismiss</Text>
+        <View style={styles.bannerContainer}>
+          <Text style={styles.bannerText}>New votes have been cast! Refresh to dismiss.</Text>
+          <TouchableOpacity onPress={() => setNewVotes(false)} accessibilityLabel="Dismiss new votes banner" accessibilityRole="button">
+            <Text style={styles.bannerDismiss}>Dismiss</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {showShareLink && (
-        <Animated.View
-          entering={FadeIn.duration(200)}
-          style={getScaledStyle(styles.shareLinkContainer, 0.75)}
-        >
-          <View style={getScaledStyle(styles.shareLinkHeader, 0.75)}>
-            <Text style={getScaledStyle(styles.shareLinkTitle, 0.75)}>Share Link</Text>
+        <View style={styles.shareLinkContainer} accessibilityLabel="Share link panel" accessibilityRole="summary">
+          <View style={styles.shareLinkHeader}>
+            <Text style={styles.shareLinkTitle}>Share Link</Text>
             <TouchableOpacity
+              accessibilityLabel="Close share link"
+              accessibilityRole="button"
+              accessibilityHint="Closes the share link panel"
               onPress={() => setShowShareLink(null)}
-              style={getScaledStyle(styles.closeShareLinkButton, 0.75)}
+              style={styles.closeShareLinkButton}
+              hitSlop={touchTargets.small}
             >
-              <X size={isSmallMobile ? 15 : 20} color="#666666" />
+              <X size={12} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
-          <View style={getScaledStyle(styles.shareLinkContent, 0.75)}>
+          <View style={styles.shareLinkContent}>
             <TextInput
-              style={getScaledStyle(styles.shareLinkInput, 0.75)}
+              style={styles.shareLinkInput}
               value={showShareLink}
               editable={false}
               selectTextOnFocus
             />
             <TouchableOpacity
-              style={getScaledStyle(styles.copyButton, 0.75)}
+              style={styles.copyButton}
+              accessibilityLabel="Copy share link"
+              accessibilityRole="button"
+              accessibilityHint="Copies the poll link to your clipboard"
+              hitSlop={touchTargets.small}
               onPress={async () => {
                 try {
-                  // Copy only the link value, not the text input content
                   await Clipboard.setStringAsync(showShareLink || '');
                   setShowCopiedConfirmation(true);
-                  setTimeout(() => {
-                    setShowCopiedConfirmation(false);
-                  }, 2000);
+                  setTimeout(() => setShowCopiedConfirmation(false), 2000);
                 } catch (err) {
                   console.log('Error copying to clipboard:', err);
                 }
               }}
             >
               {showCopiedConfirmation ? (
-                <Check size={isSmallMobile ? 15 : 20} color="#4CAF50" />
+                <Check size={16} color={colors.success} />
               ) : (
-                <Copy size={isSmallMobile ? 15 : 20} color="#ff9654" />
+                <Copy size={16} color={colors.accent} />
               )}
             </TouchableOpacity>
           </View>
 
           {showCopiedConfirmation && (
-            <Text style={getScaledStyle(styles.copiedConfirmation, 0.75)}>Link copied to clipboard!</Text>
+            <Text style={styles.copiedConfirmation}>Link copied to clipboard!</Text>
           )}
-        </Animated.View>
+        </View>
       )}
 
       <FlatList
@@ -491,151 +468,107 @@ export default function PollsScreen() {
         renderItem={({ item, index }) => {
           const isDropdownOpen = openResultsPollId === item.id;
           return (
-            <Animated.View
-              entering={FadeIn.delay(index * 100)}
-              style={getScaledStyle(styles.pollCard, 0.75)}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <View style={styles.pollCard}>
+              <View style={styles.pollHeaderRow}>
                 <Pressable
                   style={({ hovered }) => [
-                    getScaledStyle(styles.pollTitleContainer, 0.75),
-                    hovered && Platform.OS === 'web' ? getScaledStyle(styles.pollTitleContainerHover, 0.75) : null,
+                    styles.pollTitleContainer,
+                    hovered && Platform.OS === 'web' ? styles.pollTitleContainerHover : null,
                   ]}
+                  accessibilityLabel={`Open poll ${item.title}`}
+                  accessibilityRole="link"
+                  accessibilityHint="Opens the poll details"
                   onPress={() => router.push({ pathname: '/poll/[id]', params: { id: item.id } })}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isSmallMobile ? 1.5 : 2 }}>
-                    <Text style={[getScaledStyle(styles.pollTitle, 0.75), { textDecorationLine: 'underline', color: '#1a2b5f', fontSize: isSmallMobile ? 13.5 : 18, paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0, flexShrink: 1 }]} numberOfLines={2}>{item.title}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: isSmallMobile ? 9 : 12 }}>
-                      <Calendar size={isSmallMobile ? 12 : 16} color="#8d8d8d" style={{ paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0, marginRight: isSmallMobile ? 3 : 4 }} />
-                      <Text style={[getScaledStyle(styles.pollDate, 0.75), { paddingTop: isSmallMobile ? 6 : 8, marginBottom: 0 }]} numberOfLines={1}>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.pollTitle, styles.pollTitleLink]} numberOfLines={2}>{item.title}</Text>
+                    <View style={styles.titleMetaRow}>
+                      <Calendar size={16} color={colors.textMuted} style={styles.titleCalendarIcon} />
+                      <Text style={styles.pollDateInline} numberOfLines={1}>
                         {new Date(item.created_at).toLocaleDateString()}
                       </Text>
                     </View>
                   </View>
                   {item.description && (
-                    <Text style={getScaledStyle(styles.pollDescription, 0.75)}>{item.description}</Text>
+                    <Text style={styles.pollDescription}>{item.description}</Text>
                   )}
                 </Pressable>
-                <View style={{ alignItems: 'flex-end', minWidth: isSmallMobile ? 30 : 40 }}>
+                <View style={styles.actionsRightColumn}>
                   {item.user_id === currentUserId && (
                     <TouchableOpacity
-                      style={getScaledStyle(styles.deleteCircle, 0.75)}
+                      style={styles.deleteButton}
+                      hitSlop={touchTargets.small}
+                      accessibilityLabel={`Delete poll ${item.title}`}
+                      accessibilityRole="button"
+                      accessibilityHint="Permanently deletes this poll"
                       onPress={() => setPollToDelete(item)}
                     >
-                      <Text style={{ fontSize: isSmallMobile ? 15 : 20, color: '#e74c3c', fontWeight: 'bold' }}>×</Text>
+                      <X size={12} color={colors.error} />
                     </TouchableOpacity>
                   )}
                 </View>
               </View>
-              {/* Action buttons */}
-              {isMobile ? (
-                <>
-                  <View style={{ flexDirection: 'row', gap: isSmallMobile ? 6 : 8, marginTop: isSmallMobile ? 9 : 12 }}>
-                    <TouchableOpacity style={getScaledStyle(styles.shareButtonMobile, 0.75)} onPress={() => handleShare(item.id)}>
-                      <Share2 size={isSmallMobile ? 13.5 : 18} color="#ff9654" />
-                      <Text style={getScaledStyle(styles.shareLinkButtonTextMobile, 0.75)}>Share</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={getScaledStyle(styles.localVoteButtonMobile, 0.75)} onPress={() => router.push(`/poll/local/${item.id}`)}>
-                      <Users size={isSmallMobile ? 13.5 : 18} color="#10b981" />
-                      <Text style={getScaledStyle(styles.localVoteButtonTextMobile, 0.75)}>In-Person</Text>
-                    </TouchableOpacity>
-                    {item.user_id === currentUserId && (
-                      <TouchableOpacity style={getScaledStyle(styles.editButtonMobile, 0.75)} onPress={() => handleEditPoll(item)}>
-                        <Edit size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
-                        <Text style={getScaledStyle(styles.editButtonTextMobile, 0.75)}>Edit</Text>
-                      </TouchableOpacity>
-                    )}
-                    {/* <TouchableOpacity style={getScaledStyle(styles.duplicateButtonMobile, 0.75)} onPress={() => handleDuplicatePoll(item.id)}>
-                      <Copy size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
-                      <Text style={getScaledStyle(styles.duplicateButtonTextMobile, 0.75)}>Duplicate</Text>
-                    </TouchableOpacity> */}
-                  </View>
+              {/* Unified action row with wrap */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity style={styles.shareButton} onPress={() => handleShare(item.id)}
+                  accessibilityLabel={`Share poll ${item.title}`}
+                  accessibilityRole="button"
+                  accessibilityHint="Shares the poll link">
+                  <Share2 size={18} color={colors.accent} style={styles.iconRight} />
+                  <Text style={styles.shareLinkButtonText}>Share</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.localVoteButton} onPress={() => router.push(`/poll/local/${item.id}`)}
+                  accessibilityLabel={`In-Person voting for ${item.title}`}
+                  accessibilityRole="button"
+                  accessibilityHint="Opens local in-person voting">
+                  <Users size={18} color={colors.success} style={styles.iconRight} />
+                  <Text style={styles.localVoteButtonText}>Local</Text>
+                </TouchableOpacity>
+
+                {item.user_id === currentUserId && (
                   <TouchableOpacity
-                    style={[
-                      getScaledStyle(styles.resultsButtonMobile, 0.75),
-                      item.voteCount === 0 && { backgroundColor: '#e5e7eb' }
-                    ]}
-                    onPress={() => setOpenResultsPollId(isDropdownOpen ? null : item.id)}
-                    disabled={item.voteCount === 0}
+                    style={styles.editButton}
+                    accessibilityLabel={`Edit poll ${item.title}`}
+                    accessibilityRole="button"
+                    accessibilityHint="Edits this poll"
+                    onPress={() => handleEditPoll(item)}
                   >
-                    <BarChart3 size={isSmallMobile ? 13.5 : 18} color={item.voteCount === 0 ? '#6b7280' : '#2563eb'} />
-                    <Text
-                      style={[
-                        getScaledStyle(styles.resultsButtonTextMobile, 0.75),
-                        item.voteCount === 0 && { color: '#6b7280' }
-                      ]}
-                    >
-                      View Results ({item.voteCount})
-                    </Text>
+                    <Edit size={18} color={colors.textMuted} style={styles.iconRight} />
+                    <Text style={styles.editButtonText}>Edit</Text>
                   </TouchableOpacity>
-                  {isDropdownOpen && (
-                    <View style={{ marginTop: isSmallMobile ? 6 : 8 }}>
-                      <PollResultsDropdown pollId={item.id} />
-                    </View>
-                  )}
-                </>
-              ) : (
-                <View style={{ flexDirection: 'row', gap: isSmallMobile ? 9 : 12, marginTop: isSmallMobile ? 13.5 : 18 }}>
-                  <TouchableOpacity style={getScaledStyle(styles.shareButtonDesktop, 0.75)} onPress={() => handleShare(item.id)}>
-                    <Share2 size={isSmallMobile ? 13.5 : 18} color="#ff9654" />
-                    <Text style={getScaledStyle(styles.shareLinkButtonTextDesktop, 0.75)}>Share</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={getScaledStyle(styles.localVoteButtonDesktop, 0.75)} onPress={() => router.push(`/poll/local/${item.id}`)}>
-                    <Users size={isSmallMobile ? 13.5 : 18} color="#10b981" />
-                    <Text style={getScaledStyle(styles.localVoteButtonTextDesktop, 0.75)}>In-Person</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      getScaledStyle(styles.resultsButtonDesktop, 0.75),
-                      item.voteCount === 0 && { backgroundColor: '#e5e7eb' }
-                    ]}
-                    onPress={() => setOpenResultsPollId(isDropdownOpen ? null : item.id)}
-                    disabled={item.voteCount === 0}
-                  >
-                    <BarChart3 size={isSmallMobile ? 13.5 : 18} color={item.voteCount === 0 ? '#6b7280' : '#2563eb'} />
-                    <Text
-                      style={[
-                        getScaledStyle(styles.resultsButtonTextDesktop, 0.75),
-                        item.voteCount === 0 && { color: '#6b7280' }
-                      ]}
-                    >
-                      Results ({item.voteCount})
-                    </Text>
-                  </TouchableOpacity>
-                  {item.user_id === currentUserId && (
-                    <TouchableOpacity
-                      style={getScaledStyle(styles.editButtonDesktop, 0.75)}
-                      onPress={() => handleEditPoll(item)}
-                    >
-                      <Edit size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
-                      <Text style={getScaledStyle(styles.editButtonTextDesktop, 0.75)}>Edit</Text>
-                    </TouchableOpacity>
-                  )}
-                  {/*<TouchableOpacity
-                    style={getScaledStyle(styles.duplicateButtonDesktop, 0.75)}
-                    onPress={() => handleDuplicatePoll(item.id)}
-                  >
-                    <Copy size={isSmallMobile ? 13.5 : 18} color="#4b5563" />
-                    <Text style={getScaledStyle(styles.duplicateButtonTextDesktop, 0.75)}>Duplicate</Text>
-                  </TouchableOpacity> */}
-                </View>
-              )}
-              {/* Dropdown for desktop, below poll card */}
-              {!isMobile && isDropdownOpen && (
-                <View style={{ marginTop: isSmallMobile ? 6 : 8 }}>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.resultsButton, item.voteCount === 0 && styles.resultsButtonDisabled]}
+                accessibilityLabel={`View results for ${item.title}`}
+                accessibilityRole="button"
+                accessibilityHint="Shows voting results for this poll"
+                onPress={() => setOpenResultsPollId(isDropdownOpen ? null : item.id)}
+                disabled={item.voteCount === 0}
+              >
+                <BarChart3 size={18} color={item.voteCount === 0 ? colors.textMuted : colors.primary} style={styles.iconRight} />
+                <Text style={[styles.resultsButtonText, item.voteCount === 0 && styles.resultsButtonTextDisabled]}>
+                  View Results ({item.voteCount})
+                </Text>
+              </TouchableOpacity>
+
+              {/* Dropdown below poll card */}
+              {isDropdownOpen && (
+                <View style={styles.dropdownContainer}>
                   <PollResultsDropdown pollId={item.id} />
                 </View>
               )}
-            </Animated.View>
+            </View>
           );
         }}
         contentContainerStyle={[
-          getScaledStyle(styles.listContent, 0.75),
-          { paddingBottom: 80 + safeAreaBottom },
-          currentPolls.length === 0 && { flex: 1, justifyContent: 'center' }
+          styles.listContent,
+          currentPolls.length === 0 && styles.emptyListContent
         ]}
         ListEmptyComponent={
-          <PollsEmptyState onCreate={() => setCreateModalVisible(true)} />
+          <EmptyStatePolls onCreate={() => setCreateModalVisible(true)} />
         }
       />
 
@@ -680,426 +613,408 @@ export default function PollsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-    paddingHorizontal: 8,
-  },
-  header: {
-    padding: 20,
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  tabsWrapper: {
-    width: '100%',
-    marginTop: 8,
-    alignItems: 'flex-start',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 4,
-    flexShrink: 1,
-  },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  activeTab: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  tabText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  activeTabText: {
-    color: '#1a2b5f',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ff9654',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 8,
-    marginRight: 8,
-  },
-  createButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ffffff',
-  },
-  shareLinkContainer: {
-    margin: 20,
-    marginTop: 0,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  shareLinkHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  shareLinkTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-  },
-  closeShareLinkButton: {
-    padding: 4,
-  },
-  shareLinkContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  shareLinkInput: {
-    flex: 1,
-    backgroundColor: '#f7f9fc',
-    borderRadius: 8,
-    padding: 12,
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#333333',
-  },
-  copyButton: {
-    padding: 8,
-    backgroundColor: '#fff5ef',
-    borderRadius: 8,
-  },
-  copiedConfirmation: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#4CAF50',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  listContent: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 80, // Base padding for tab bar
-  },
-  pollCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  pollMainRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    width: '100%',
-  },
-  pollTitleContainer: {
-    flex: 1,
-    minWidth: 220,
-    justifyContent: 'center',
-    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
-    transitionProperty: Platform.OS === 'web' ? 'background' : undefined,
-    transitionDuration: Platform.OS === 'web' ? '0.2s' : undefined,
-  },
-  pollTitleContainerHover: {
-    backgroundColor: '#f3f4f6',
-  },
-  pollTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
-    marginBottom: 4,
-    paddingTop: 8, // Add padding to shift title down
-  },
-  pollDescription: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 8,
-  },
-  pollDate: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#8d8d8d',
-  },
-  pollActions: {
-    flex: 1,
-    minWidth: 220,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 0,
-    gap: 8,
-  },
-  deleteButton: {
-    padding: 8,
-    backgroundColor: '#fff5f5',
-    borderRadius: 8,
-  },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff5ef',
-    borderRadius: 8,
-    padding: 8,
-    minWidth: 100,
-    flexShrink: 1,
-  },
-  resultsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 8,
-    marginLeft: 4,
-    minWidth: 110,
-    flexShrink: 1,
-  },
-  resultsButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#4b5563',
-    marginLeft: 4,
-  },
-  localVoteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ecfdf5',
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 8,
-    gap: 4,
-  },
-  localVoteButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#10b981',
-  },
-  shareLinkButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
-    marginLeft: 4,
-  },
-  voteCountBadge: {
-    marginLeft: 8,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 999,
-    minWidth: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  voteCountText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#1a2b5f',
-  },
-  deleteCircle: {
-    backgroundColor: '#fff5f5',
-    borderRadius: 999,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-    marginTop: 0, // Reduce margin so X sits higher
-  },
-  shareButtonDesktop: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff5ef',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  shareLinkButtonTextDesktop: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#ff9654',
-  },
-  localVoteButtonDesktop: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ecfdf5',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  localVoteButtonTextDesktop: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#10b981',
-  },
-  resultsButtonDesktop: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f6ff',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  resultsButtonTextDesktop: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#2563eb',
-  },
-  shareButtonMobile: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff5ef',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  shareLinkButtonTextMobile: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#ff9654',
-  },
-  localVoteButtonMobile: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ecfdf5',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  localVoteButtonTextMobile: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#10b981',
-  },
-  resultsButtonMobile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f6ff',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 10,
-  },
-  resultsButtonTextMobile: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#2563eb',
-  },
-  responseCountBadge: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 999,
-    minWidth: 28,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  responseCountText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
-  },
-  editButtonDesktop: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  editButtonTextDesktop: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#4b5563',
-  },
-  editButtonMobile: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  editButtonTextMobile: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#4b5563',
-  },
-  duplicateButtonDesktop: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  duplicateButtonTextDesktop: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#4b5563',
-  },
-  duplicateButtonMobile: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  duplicateButtonTextMobile: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#4b5563',
-  },
-  disabledTab: {
-    opacity: 0.5,
-    pointerEvents: 'none',
-  },
-  disabledTabText: {
-    color: '#9ca3af',
-  },
-});
+const getStyles = (colors: any, typography: any) => {
+  const accentTint = colors.tints.accent;
+  const primaryTint = colors.tints.primary;
+  const successTint = colors.tints.success;
+  const neutralTint = colors.tints.neutral;
+  const errorTint = colors.tints.error;
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: 16,
+    },
+    header: {
+      paddingTop: 12,
+      paddingHorizontal: 0,
+      flexDirection: 'column',
+      justifyContent: 'flex-start',
+      alignItems: 'flex-start',
+      flexWrap: 'wrap',
+    },
+    tabsWrapper: {
+      width: '100%',
+      marginTop: 8,
+      marginBottom: 8,
+      alignItems: 'flex-start',
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      paddingVertical: 4,
+      paddingHorizontal: 0,
+      flexShrink: 1,
+    },
+    tab: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 6,
+      minHeight: 44,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    activeTab: {
+      backgroundColor: colors.tints.primary,
+      //borderColor: colors.primary,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    tabText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+    },
+    activeTabText: {
+      color: colors.primary,
+      fontFamily: typography.getFontFamily('semibold'),
+    },
+    disabledTab: {
+      opacity: 0.5,
+      pointerEvents: 'none',
+      backgroundColor: colors.tints.neutral,
+      borderColor: colors.border,
+    },
+    disabledTabText: {
+      color: colors.textMuted,
+    },
+    createButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      minHeight: 44,
+      marginRight: 8,
+    },
+    createButtonText: {
+      marginLeft: 4,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: '#ffffff',
+    },
+    shareLinkContainer: {
+      marginHorizontal: 0,
+      marginVertical: 12,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      width: '100%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    shareLinkHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    shareLinkTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.callout,
+      color: colors.primary,
+    },
+    closeShareLinkButton: {
+      padding: 4,
+      borderRadius: 12,
+    },
+    shareLinkContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    shareLinkInput: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      padding: 12,
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.text,
+    },
+    copyButton: {
+      paddingTop: 14,
+      paddingBottom: 8,
+      paddingLeft: 12,
+      paddingRight: 2,
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      minHeight: 44,
+    },
+    copiedConfirmation: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.success,
+      marginTop: 8,
+      textAlign: 'center',
+    },
+    emptyListContent: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingTop: 40,
+      paddingHorizontal: 20,
+    },
+    listContent: {
+      paddingHorizontal: 0,
+      paddingTop: 0,
+      paddingBottom: 60, // Base padding for tab bar
+    },
+    pollCard: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      marginHorizontal: 0,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    pollMainRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'flex-start',
+      width: '100%',
+    },
+    pollHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+    },
+    pollTitleContainer: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    pollTitleContainerHover: {
+      backgroundColor: colors.background,
+    },
+    pollTitle: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.body,
+      color: colors.primary,
+      marginBottom: 4,
+      paddingTop: 8, // Add padding to shift title down
+    },
+    pollTitleLink: {
+      textDecorationLine: 'underline',
+      marginBottom: 0,
+      flexShrink: 1,
+      color: colors.primary,
+      fontSize: 18,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 2,
+    },
+    titleMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginLeft: 12,
+    },
+    titleCalendarIcon: {
+      paddingTop: 8,
+      marginBottom: 0,
+      marginRight: 4,
+    },
+    pollDateInline: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+      paddingTop: 8,
+      marginBottom: 0,
+    },
+    pollDescription: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.textMuted,
+      marginBottom: 8,
+    },
+    actionsRightColumn: {
+      alignItems: 'flex-end',
+      minWidth: 40,
+    },
+    pollDate: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.caption1,
+      color: colors.textMuted,
+    },
+    pollActions: {
+      flex: 1,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginTop: 0,
+    },
+    deleteButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 4,
+      borderRadius: 12,
+      backgroundColor: errorTint,
+      marginLeft: 8,
+    },
+    shareButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: accentTint,
+      borderRadius: 10,
+      padding: 8,
+      minHeight: 44,
+      flex: 1,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    resultsButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: primaryTint,
+      borderRadius: 10,
+      minHeight: 44,
+      padding: 8,
+      minWidth: 110,
+      flexShrink: 1,
+      marginRight: 8,
+      marginBottom: 8,
+      width: '100%',
+    },
+    resultsButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.primary,
+      marginLeft: 4,
+    },
+    resultsButtonDisabled: {
+      backgroundColor: colors.border,
+    },
+    resultsButtonTextDisabled: {
+      color: colors.textMuted,
+    },
+    localVoteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: successTint,
+      padding: 8,
+      borderRadius: 10,
+      minHeight: 44,
+      flex: 1,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    localVoteButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.success,
+    },
+    shareLinkButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.accent,
+      marginLeft: 4,
+    },
+    voteCountBadge: {
+      marginLeft: 8,
+      backgroundColor: neutralTint,
+      borderRadius: 999,
+      minWidth: 28,
+      height: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 8,
+    },
+    voteCountText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.primary,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 18,
+    },
+    iconRight: {
+      marginRight: 8,
+    },
+    dropdownContainer: {
+      marginTop: 8,
+    },
+    noVotesText: {
+      padding: 16,
+      color: colors.textMuted,
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.body,
+      textAlign: 'center',
+    },
+    editButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: neutralTint,
+      borderRadius: 10,
+      minHeight: 44,
+      padding: 8,
+      flex: 1,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    editButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+    },
+    responseCountBadge: {
+      backgroundColor: neutralTint,
+      borderRadius: 999,
+      minWidth: 28,
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+    },
+    responseCountText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.primary,
+    },
+    bannerContainer: {
+      backgroundColor: colors.tints.warningBg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.tints.warningBorder,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+    },
+    bannerText: {
+      color: colors.warning,
+      fontWeight: 'bold',
+      fontSize: typography.fontSize.subheadline,
+    },
+    bannerDismiss: {
+      color: colors.primary,
+      fontWeight: 'bold',
+      marginLeft: 16,
+    },
+  });
+};

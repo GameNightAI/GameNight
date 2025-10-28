@@ -1,8 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView, Animated as RNAnimated } from 'react-native';
-import { Users, Clock, X, ChevronDown, ChevronUp, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus, Loader2 } from 'lucide-react-native';
-import Animated, { FadeOut, FadeIn, SlideInDown, SlideOutUp } from 'react-native-reanimated';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, ScrollView, ActivityIndicator } from 'react-native';
+import { Users, Clock, X, ChevronDown, Calendar, Star, Baby, Brain, ChevronRight, Plus, Minus } from 'lucide-react-native';
+import Animated, { FadeOut } from 'react-native-reanimated';
 import { supabase } from '@/services/supabase';
+import { decode } from 'html-entities';
+
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 import { Game, Expansion } from '@/types/game';
 
@@ -36,108 +40,56 @@ interface GameItemProps {
   onExpansionUpdate?: () => void;
 }
 
-function decodeHTML(html: string): string {
-  var txt = document.createElement("textarea");
-  txt.innerHTML = html;
-  return txt.value;
-}
-
-// Fast spinning loader component
-const FastSpinningLoader: React.FC<{ size?: number; color?: string }> = ({ size = 12, color = "#666666" }) => {
-  const spinValue = useRef(new RNAnimated.Value(0)).current;
-
-  useEffect(() => {
-    const spin = RNAnimated.loop(
-      RNAnimated.timing(spinValue, {
-        toValue: 1,
-        duration: 500, // Fast: 500ms per rotation
-        useNativeDriver: true,
-      })
-    );
-    spin.start();
-    return () => spin.stop();
-  }, [spinValue]);
-
-  const rotate = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  return (
-    <RNAnimated.View style={{ transform: [{ rotate }] }}>
-      <Loader2 size={size} color={color} />
-    </RNAnimated.View>
-  );
-};
-
-
 export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionUpdate }) => {
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showUnownedExpansions, setShowUnownedExpansions] = useState(false);
   const [updatingExpansion, setUpdatingExpansion] = useState<number | null>(null);
 
+  const styles = getStyles(colors, typography);
+
   const toggleExpanded = () => {
-    setIsExpanded(currentIsExpanded => !currentIsExpanded); // Callback function since it depends on the current state
+    setIsExpanded(currentIsExpanded => {
+      const newExpanded = !currentIsExpanded;
+      announceForAccessibility(newExpanded ? 'Game details expanded' : 'Game details collapsed');
+      return newExpanded;
+    });
   };
 
-  const handleExpansionToggle = async (expansionId: number, isOwned: boolean) => {
+  const handleExpansionToggle = async (expansion: Expansion) => {
     try {
-      setUpdatingExpansion(expansionId);
+      setUpdatingExpansion(expansion.id);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      if (isOwned) {
+      if (expansion.is_owned) {
         // Remove expansion from collection
         const { error } = await supabase
           .from('collections')
           .delete()
-          .eq('bgg_game_id', expansionId)
+          .eq('bgg_game_id', expansion.id)
           .eq('user_id', user.id);
 
         if (error) throw error;
       } else {
         // Add expansion to collection
-        // First, we need to get the expansion details from the BGG API
-        const response = await fetch(`https://boardgamegeek.com/xmlapi2/thing?id=${expansionId}&stats=1`);
-        const xmlText = await response.text();
-
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-
-        const item = xmlDoc.querySelector('item');
-        if (!item) throw new Error('Expansion not found');
-
-        const name = item.querySelector('name[type="primary"]')?.getAttribute('value') ||
-          item.querySelector('name')?.getAttribute('value') || 'Unknown';
-        const thumbnail = item.querySelector('thumbnail')?.textContent || '';
-        const minPlayers = parseInt(item.querySelector('minplayers')?.textContent || '1');
-        const maxPlayers = parseInt(item.querySelector('maxplayers')?.textContent || '4');
-        const playingTime = parseInt(item.querySelector('playingtime')?.textContent || '60');
-        const yearPublished = parseInt(item.querySelector('yearpublished')?.textContent || '0');
-
-        const expansionData = {
-          user_id: user.id,
-          bgg_game_id: expansionId,
-          name: name,
-          thumbnail: thumbnail,
-          min_players: minPlayers,
-          max_players: maxPlayers,
-          playing_time: playingTime,
-          year_published: yearPublished,
-        };
-
         const { error: insertError } = await supabase
           .from('collections')
-          .upsert(expansionData);
-
+          .insert({
+            user_id: user.id,
+            bgg_game_id: expansion.id,
+            name: expansion.name,
+            min_players: expansion.min_players,
+            max_players: expansion.max_players,
+            thumbnail: expansion.thumbnail,
+          });
         if (insertError) throw insertError;
       }
 
       // Call the callback to refresh the collection
-      if (onExpansionUpdate) {
-        onExpansionUpdate();
-      }
+      onExpansionUpdate?.();
     } catch (err) {
       console.error('Error updating expansion:', err);
     } finally {
@@ -190,15 +142,19 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
             styles.expansionButton,
             exp.is_owned ? styles.removeButton : styles.addButton
           ]}
-          onPress={() => handleExpansionToggle(exp.id, exp.is_owned)}
+          hitSlop={touchTargets.small}
+          onPress={() => handleExpansionToggle(exp)}
           disabled={updatingExpansion === exp.id}
+          accessibilityLabel={exp.is_owned ? "Remove expansion" : "Add expansion"}
+          accessibilityRole="button"
+          accessibilityHint={exp.is_owned ? "Remove this expansion from your collection" : "Add this expansion to your collection"}
         >
           {updatingExpansion === exp.id ? (
-            <FastSpinningLoader size={12} color="#666666" />
+            <ActivityIndicator size="small" color={colors.textMuted} />
           ) : exp.is_owned ? (
-            <Minus size={12} color="#e74c3c" />
+            <Minus size={12} color={colors.error} />
           ) : (
-            <Plus size={12} color="#10b981" />
+            <Plus size={12} color={colors.success} />
           )}
         </TouchableOpacity>
         <Text
@@ -207,7 +163,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
             : styles.infoText
           }
         >
-          {exp.name}
+          {decode(exp.name)}
         </Text>
       </View>
     );
@@ -251,14 +207,21 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
       <TouchableOpacity
         style={styles.deleteButton}
         onPress={() => onDelete(game.id)}
+        hitSlop={touchTargets.small}
+        accessibilityLabel="Delete game"
+        accessibilityRole="button"
+        accessibilityHint="Remove this game from your collection"
       >
-        <X size={16} color="#e74c3c" />
+        <X size={12} color={colors.error} />
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.mainContent}
         onPress={toggleExpanded}
         activeOpacity={0.85}
+        accessibilityLabel={isExpanded ? "Collapse game details" : "Expand game details"}
+        accessibilityRole="button"
+        accessibilityHint="Tap to view more information about this game"
       >
         <Image
           source={{ uri: game.thumbnail }}
@@ -269,22 +232,22 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
         <View style={styles.contentContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={2}>
-              {decodeHTML(game.name)}
+              {decode(game.name)}
             </Text>
           </View>
 
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
-              <Users size={16} color="#666666" />
+              <Users size={16} color={colors.textMuted} />
               <Text style={styles.infoText}>
                 {playerCountText}
               </Text>
             </View>
           </View>
 
-          <View style={[styles.infoRow, { marginTop: 4 }]}>
+          <View style={styles.infoRowWithMargin}>
             <View style={styles.infoItem}>
-              <Clock size={16} color="#666666" />
+              <Clock size={16} color={colors.textMuted} />
               <Text style={styles.infoText}>
                 {getPlayTimeDisplay(game)}
               </Text>
@@ -295,43 +258,39 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
         <View style={styles.chevronContainer}>
           <Text style={styles.infoText}>Info</Text>
           {isExpanded ? (
-            <ChevronDown size={24} color="#ff9654" />
+            <ChevronDown size={24} color={colors.accent} />
           ) : (
-            <ChevronRight size={24} color="#ff9654" />
+            <ChevronRight size={24} color={colors.accent} />
           )}
         </View>
       </TouchableOpacity>
 
       {isExpanded && (
-        <Animated.View
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(150)}
-          style={styles.expandedContent}
-        >
+        <View style={styles.expandedContent}>
           <View style={styles.detailsContainer}>
             <View style={styles.detailRow}>
               <View style={styles.detailItem}>
-                <Calendar size={16} color="#ff9654" />
+                <Calendar size={16} color={colors.accent} />
                 <Text style={styles.detailLabel}>Publication Year</Text>
                 <Text style={styles.detailValue}>
-                  {game.yearPublished ? (game.yearPublished >= 0 ? game.yearPublished : -game.yearPublished + ' BCE') : 'Unknown'}
+                  {game.yearPublished ? (game.yearPublished >= 0 ? game.yearPublished : -game.yearPublished + ' BCE') : 'N/A'}
                 </Text>
               </View>
 
               <View style={styles.detailItem}>
-                <Brain size={16} color="#8b5cf6" />
+                <Brain size={16} color={colors.primary} />
                 <Text style={styles.detailLabel}>Weight</Text>
                 <Text style={styles.detailValue}>
                   {game.complexity ?
                     `${game.complexity.toFixed(1)}${game.complexity_desc ? ` (${game.complexity_desc})` : ''}`
-                    : 'Unknown'}
+                    : 'N/A'}
                 </Text>
               </View>
             </View>
 
             <View style={styles.detailRow}>
               <View style={styles.detailItem}>
-                <Star size={16} color="#10b981" />
+                <Star size={16} color={colors.success} />
                 <Text style={styles.detailLabel}>Community Score</Text>
                 <Text style={styles.detailValue}>
                   {game.average ? game.average.toFixed(1) : 'N/A'}
@@ -339,7 +298,7 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
               </View>
 
               <View style={styles.detailItem}>
-                <Baby size={16} color="#e74c3c" />
+                <Baby size={16} color={colors.error} />
                 <Text style={styles.detailLabel}>Minimum Age</Text>
                 <Text style={styles.detailValue}>
                   {game.minAge ? `${game.minAge}` : 'N/A'}
@@ -362,19 +321,19 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
             {expansionList}
 
           </View>
-        </Animated.View>
+        </View>
       )}
     </Animated.View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any) => StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     marginBottom: 16,
     padding: 12,
-    shadowColor: '#000',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -386,7 +345,7 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     zIndex: 1,
-    backgroundColor: '#fff0f0',
+    backgroundColor: colors.error + '20', // 20% opacity
     borderRadius: 12,
     padding: 4,
   },
@@ -394,13 +353,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
   },
   thumbnail: {
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.border,
   },
   contentContainer: {
     flex: 1,
@@ -415,11 +373,11 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.body,
+    color: colors.text,
     flex: 1,
-    lineHeight: 20,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
   chevronContainer: {
     marginLeft: 'auto',
@@ -427,7 +385,6 @@ const styles = StyleSheet.create({
     marginTop: 55,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 0,
   },
   expandIcon: {
     marginLeft: 8,
@@ -441,89 +398,95 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    gap: 16,
     marginBottom: 2,
+  },
+  infoRowWithMargin: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginBottom: 2,
+    marginTop: 4,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 16,
   },
   infoText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.textMuted,
     marginLeft: 4,
   },
   infoTextEmphasis: {
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    color: colors.text,
   },
   expandedContent: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.border,
   },
   detailsContainer: {
-    gap: 16,
+    // gap replaced with marginBottom on detailRow
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
+    marginBottom: 16,
   },
   detailItem: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#f7f9fc',
+    backgroundColor: colors.background,
     padding: 12,
     borderRadius: 8,
+    marginHorizontal: 8,
   },
   detailLabel: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    color: '#666666',
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.caption1,
+    color: colors.textMuted,
     marginTop: 4,
     textAlign: 'center',
   },
   detailValue: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.text,
     marginTop: 2,
     textAlign: 'center',
   },
   expButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     marginHorizontal: 8,
     paddingHorizontal: 8,
     //paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ff9654',
+    borderColor: colors.accent,
   },
   expButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
-    //marginLeft: 8,
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.accent,
   },
   bggButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
     alignSelf: 'center',
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#ff9654',
+    borderColor: colors.accent,
   },
   bggButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#ff9654',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.accent,
     textAlign: 'center',
   },
   expansionList: {
@@ -533,33 +496,28 @@ const styles = StyleSheet.create({
   expansionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 8,
     paddingHorizontal: 8,
     marginVertical: 2,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.border,
     borderRadius: 6,
   },
   expansionButton: {
-    width: 18,
-    height: 18,
-    borderRadius: 14,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
   },
   addButton: {
-    backgroundColor: '#d1fae5',
+    backgroundColor: colors.success + '20', // 20% opacity
     borderWidth: 1,
-    borderColor: '#10b981',
+    borderColor: colors.success,
   },
   removeButton: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: colors.error + '20', // 20% opacity
     borderWidth: 1,
-    borderColor: '#e74c3c',
-  },
-  expansionButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 12,
-    color: '#666666',
+    borderColor: colors.error,
   },
 });

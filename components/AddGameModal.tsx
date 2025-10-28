@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Camera, RefreshCw, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -11,6 +12,9 @@ import { SyncModal } from './SyncModal';
 import { Game } from '@/types/game';
 import { supabase } from '@/services/supabase';
 import { fetchGames } from '@/services/bggApi';
+import { useTheme } from '@/hooks/useTheme';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { useBodyScrollLock } from '@/utils/scrollLock';
 
 const sampleImage1 = require('@/assets/images/sample-game-1.png');
 
@@ -28,17 +32,50 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   userCollectionIds = [],
 }) => {
   const router = useRouter();
+  const { colors, typography, touchTargets } = useTheme();
+  const { announceForAccessibility } = useAccessibility();
+  const insets = useSafeAreaInsets();
+
+  // Lock body scroll on web when modal is visible
+  useBodyScrollLock(isVisible);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [savedBggUsername, setSavedBggUsername] = useState<string | null>(null);
 
   const {
     modalState,
     modalActions,
   } = useAddGameModalFlow();
+
+  const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
+
+  // Load saved BGG username from profile
+  useEffect(() => {
+    const loadBggUsername = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('bgg_username')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          setSavedBggUsername(profileData?.bgg_username || null);
+        }
+      } catch (err) {
+        console.error('Error loading BGG username:', err);
+      }
+    };
+
+    if (isVisible) {
+      loadBggUsername();
+    }
+  }, [isVisible]);
 
   const showFullSizeImage = (imageSource: any) => {
     setFullSizeImageSource(imageSource);
@@ -61,6 +98,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const handleCloseModal = () => {
     modalActions.reset();
     onClose();
+    announceForAccessibility('Add game modal closed');
   };
 
   const handleBackToSelect = () => {
@@ -70,6 +108,28 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const handleGameAdded = (game: Game) => {
     onGameAdded();
     setSearchModalVisible(false);
+  };
+
+  const handleUpdateProfile = async (username: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ bgg_username: username })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setSavedBggUsername(username);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      throw err;
+    }
   };
 
   const handleSync = async (username: string) => {
@@ -143,8 +203,15 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     <View style={styles.dialog}>
       <View style={styles.header}>
         <Text style={styles.title}>Add Game(s)</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={handleCloseModal}>
-          <X size={20} color="#666666" />
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={handleCloseModal}
+          accessibilityLabel="Close modal"
+          accessibilityRole="button"
+          accessibilityHint="Closes the add game modal"
+          hitSlop={touchTargets.sizeTwenty}
+        >
+          <X size={20} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -157,14 +224,27 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           <View style={styles.sampleImageContainer}>
             <TouchableOpacity
               style={styles.sampleImageTouchable}
-              onPress={() => showFullSizeImage(sampleImage1)}
+              onPress={() => {
+                showFullSizeImage(sampleImage1);
+                announceForAccessibility('Opening sample image in full size');
+              }}
+              accessibilityLabel="View sample image"
+              accessibilityRole="button"
+              accessibilityHint="Opens the sample image in full size view"
             >
               <Image source={sampleImage1} style={styles.sampleImage} />
             </TouchableOpacity>
           </View>
           <TouchableOpacity
             style={styles.analyzeButton}
-            onPress={() => modalActions.next()}
+            onPress={() => {
+              modalActions.next();
+              announceForAccessibility('Opening photo analysis modal');
+            }}
+            accessibilityLabel="Add games with a photo"
+            accessibilityRole="button"
+            accessibilityHint="Opens camera to take a photo of board games"
+            hitSlop={touchTargets.standard}
           >
             <Camera size={20} color="#fff" />
             <Text style={styles.analyzeButtonText}>Add Games With A Photo</Text>
@@ -173,7 +253,14 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
         <TouchableOpacity
           style={styles.searchButton}
-          onPress={() => setSearchModalVisible(true)}
+          onPress={() => {
+            setSearchModalVisible(true);
+            announceForAccessibility('Opening game search modal');
+          }}
+          accessibilityLabel="Search for games"
+          accessibilityRole="button"
+          accessibilityHint="Opens search modal to find and add games"
+          hitSlop={touchTargets.small}
         >
           <Search size={16} color="#fff" />
           <Text style={styles.searchButtonText}>Search for Games</Text>
@@ -181,10 +268,17 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
         <TouchableOpacity
           style={styles.syncButton}
-          onPress={() => setSyncModalVisible(true)}
+          onPress={() => {
+            setSyncModalVisible(true);
+            announceForAccessibility('Opening BGG sync modal');
+          }}
+          accessibilityLabel="Sync with BoardGameGeek"
+          accessibilityRole="button"
+          accessibilityHint="Opens modal to sync your BoardGameGeek collection"
+          hitSlop={touchTargets.small}
         >
           <RefreshCw size={16} color="#fff" />
-          <Text style={styles.syncButtonText}>Sync with BGG</Text>
+          <Text style={styles.syncButtonText}>Import from BGG</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -215,7 +309,14 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           />
           <TouchableOpacity
             style={styles.fullSizeCloseButton}
-            onPress={hideFullSizeImage}
+            onPress={() => {
+              hideFullSizeImage();
+              announceForAccessibility('Sample image closed');
+            }}
+            accessibilityLabel="Close full size image"
+            accessibilityRole="button"
+            accessibilityHint="Closes the full size image view"
+            hitSlop={touchTargets.sizeTwenty}
           >
             <X size={20} color="#ffffff" />
           </TouchableOpacity>
@@ -274,7 +375,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           isVisible={syncModalVisible}
           onClose={() => setSyncModalVisible(false)}
           onSync={handleSync}
+          onUpdateProfile={handleUpdateProfile}
           loading={syncing}
+          savedBggUsername={savedBggUsername}
         />
       </>
     );
@@ -306,19 +409,23 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         isVisible={syncModalVisible}
         onClose={() => setSyncModalVisible(false)}
         onSync={handleSync}
+        onUpdateProfile={handleUpdateProfile}
         loading={syncing}
+        savedBggUsername={savedBggUsername}
       />
     </>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Platform.OS === 'ios' ? 20 : 10,
+    paddingTop: Math.max(20, insets.top),
+    paddingBottom: Math.max(20, insets.bottom),
+    paddingHorizontal: 20,
   },
   webOverlay: {
     position: 'fixed',
@@ -326,16 +433,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: 20,
+    paddingVertical: 0,
+    paddingHorizontal: 20,
   },
   dialog: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
-    padding: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     width: '100%',
     maxWidth: 500,
     maxHeight: '85%',
@@ -349,63 +458,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   closeButton: {
-    padding: 4,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#1a2b5f',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.headline,
+    color: colors.text,
   },
   description: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 20,
+    fontFamily: typography.getFontFamily('normal'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.textMuted,
+    marginBottom: 8,
   },
   analyzeContainer: {
-    marginBottom: 0,
+    marginBottom: 8,
   },
   analyzeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ff9654',
+    backgroundColor: colors.accent,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ff9654',
+    borderColor: colors.accent,
   },
   analyzeButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.subheadline,
+    color: colors.card,
     marginLeft: 8,
   },
   searchButton: {
-    backgroundColor: '#6c757d',
-    // borderWidth: 1,
-    borderColor: '#ff9654',
+    backgroundColor: colors.textMuted,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 8,
   },
   searchButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 12,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.card,
     marginLeft: 8,
   },
   syncButton: {
-    backgroundColor: '#6c757d',
-    //borderWidth: 1,
-    borderColor: '#ff9654',
+    backgroundColor: colors.textMuted,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -414,12 +522,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   syncButtonText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 12,
-    color: '#fff',
+    fontFamily: typography.getFontFamily('semibold'),
+    fontSize: typography.fontSize.footnote,
+    color: colors.card,
     marginLeft: 8,
   },
-
   sampleImageContainer: {
     alignItems: 'center',
     marginBottom: 10,
@@ -430,7 +537,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 0,
     borderWidth: 0,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
     marginBottom: 8,
   },
   sampleImage: {
@@ -440,7 +547,7 @@ const styles = StyleSheet.create({
   },
   fullSizeOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: colors.tints.neutral,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -448,7 +555,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '90%',
     height: '80%',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -461,12 +568,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.tints.neutral,
     borderRadius: 20,
     padding: 8,
   },
   buttonsContainer: {
     flexDirection: 'column',
-    gap: 16,
   },
 });
