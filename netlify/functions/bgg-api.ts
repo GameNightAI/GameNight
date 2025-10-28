@@ -1,6 +1,6 @@
-import { Config, HandlerContext, Handler, HandlerEvent } from '@netlify/functions';
+import { stream, Config, HandlerContext, Handler, HandlerEvent } from '@netlify/functions';
 
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = stream(async (event: HandlerEvent, context: HandlerContext) => {
   // const { command } = context.params;
   console.log(event);
   const apiKey = process.env.BGG_API_AUTH_TOKEN;
@@ -16,12 +16,15 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     }},
   );
   console.log(response);
+  // const text = response.text();
+  // console.log(text);
   return {
+    headers: {'content-type': 'text/event-stream'},
     // ...response,
     statusCode: response.status,
-    body: response.text(),
+    body: response.body,
   };
-};
+});
 
 // export const config: Config = {
 //   path: "/bgg-api/:command"
