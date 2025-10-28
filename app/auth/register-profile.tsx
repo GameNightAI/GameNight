@@ -22,7 +22,7 @@ export default function RegisterProfileScreen() {
   const params = useLocalSearchParams();
   const { colors, typography, touchTargets, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { screenHeight } = useDeviceType();
+  const { screenHeight, isDesktop } = useDeviceType();
 
   useEffect(() => {
     // Check if we have params (new registration) or if user is authenticated (resume)
@@ -233,9 +233,9 @@ export default function RegisterProfileScreen() {
   const styles = getStyles(colors, typography, isDark);
 
   return (
-    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top} style={{ flex: 1 }}>
       <View style={styles.container}>
-        <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+        <View style={[styles.contentWrapper, { paddingTop: insets.top }]}>
           {/*<View style={styles.header}>
             <View style={styles.logoContainer}>
               <View style={styles.logoIcon}>
@@ -309,6 +309,8 @@ export default function RegisterProfileScreen() {
               </View>
             </View>
 
+            {!isDesktop && <View style={styles.spacer} />}
+
             <TouchableOpacity
               style={styles.privacyNotice}
               onPress={() => setPrivacyExpanded(!privacyExpanded)}
@@ -381,15 +383,16 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
   },
   contentWrapper: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingTop: 0,
+    paddingBottom: 0,
     minHeight: Math.max(380, Math.min(560, (typeof window !== 'undefined' ? window.innerHeight : 700) * 0.62)),
   },
   header: {
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingBottom: 0,
     alignItems: 'center',
   },
   logoContainer: {
@@ -516,10 +519,13 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     flex: 1,
     marginRight: 4,
   },
+  spacer: {
+    height: 16,
+  },
   privacyNotice: {
     paddingRight: 16,
     paddingBottom: 0,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   privacyHeader: {
     fontFamily: typography.getFontFamily('semibold'),

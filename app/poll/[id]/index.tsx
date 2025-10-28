@@ -175,14 +175,15 @@ export default function PollScreen() {
           .from('votes')
           .select('voter_name')
           .eq('poll_id', id)
-          .ilike('voter_name', finalName)
-          .is('user_id', null)
-          .order('created_at', { ascending: true });
+          .is('user_id', null);
 
         if (!checkError && existingVotes && existingVotes.length > 0) {
+          // Get unique voter names to avoid counting multiple vote records per voter
+          const uniqueVoterNames = [...new Set(existingVotes.map(v => v.voter_name))];
+
           // Count exact matches (case-insensitive, trimmed)
-          const exactMatches = existingVotes.filter(v =>
-            v.voter_name?.trim().toLowerCase() === finalName.toLowerCase()
+          const exactMatches = uniqueVoterNames.filter(name =>
+            name?.trim().toLowerCase() === finalName.toLowerCase()
           ).length;
 
           if (exactMatches > 0) {

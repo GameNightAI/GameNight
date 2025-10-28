@@ -518,7 +518,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
     flex: 1,
     fontFamily: typography.getFontFamily('normal'),
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    //paddingHorizontal: 12,
     color: colors.text,
     fontSize: typography.fontSize.footnote,
     backgroundColor: 'transparent',
@@ -526,6 +526,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean) => StyleSheet.
   eyeIcon: {
     padding: 8,
     marginLeft: 8,
+    flexShrink: 0,
   },
   button: {
     backgroundColor: colors.accent,
