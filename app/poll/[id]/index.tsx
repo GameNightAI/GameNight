@@ -170,25 +170,35 @@ export default function PollScreen() {
       })();
 
       // Check for existing votes with this name and deduplicate if needed
+      // Only apply deduplication if NOT from same device (detected via saved username)
       if (!user && finalName) {
-        const { data: existingVotes, error: checkError } = await supabase
-          .from('votes')
-          .select('voter_name')
-          .eq('poll_id', id)
-          .ilike('voter_name', finalName)
-          .is('user_id', null)
-          .order('created_at', { ascending: true });
+        const savedUsername = await getUsername();
+        const isSameDevice = savedUsername &&
+          savedUsername.trim().toLowerCase() === finalName.toLowerCase();
 
-        if (!checkError && existingVotes && existingVotes.length > 0) {
-          // Count exact matches (case-insensitive, trimmed)
-          const exactMatches = existingVotes.filter(v =>
-            v.voter_name?.trim().toLowerCase() === finalName.toLowerCase()
-          ).length;
+        // Only deduplicate if not from same device
+        if (!isSameDevice) {
+          const { data: existingVotes, error: checkError } = await supabase
+            .from('votes')
+            .select('voter_name')
+            .eq('poll_id', id)
+            .is('user_id', null);
 
-          if (exactMatches > 0) {
-            finalName = `${finalName} (${exactMatches + 1})`;
+          if (!checkError && existingVotes && existingVotes.length > 0) {
+            // Get unique voter names to avoid counting multiple vote records per voter
+            const uniqueVoterNames = [...new Set(existingVotes.map(v => v.voter_name))];
+
+            // Count exact matches (case-insensitive, trimmed)
+            const exactMatches = uniqueVoterNames.filter(name =>
+              name?.trim().toLowerCase() === finalName.toLowerCase()
+            ).length;
+
+            if (exactMatches > 0) {
+              finalName = `${finalName} (${exactMatches + 1})`;
+            }
           }
         }
+        // If isSameDevice, keep finalName as-is to update existing votes
       }
       // Check if the voter has previously voted on any game in this poll
       const { data: previousVotes, error: previousVotesError } = await supabase

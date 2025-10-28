@@ -1,7 +1,7 @@
 //On Android, test if the keyboard covers the form when the user taps on a text input - we can add behavior="height" to handle the issue
 
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { ArrowRight, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,8 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -44,6 +46,12 @@ export default function RegisterScreen() {
         return;
       }
 
+      // Password confirmation validation
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+
       // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
@@ -70,98 +78,132 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
       <View style={styles.container}>
-        <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoIcon}>
-                <Text style={styles.logoText}>👥</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <View style={styles.logoIcon}>
+                  <Text style={styles.logoText}>👥</Text>
+                </View>
+                <Text style={styles.title}>Klack</Text>
               </View>
-              <Text style={styles.title}>Klack</Text>
-            </View>
-            <Text style={styles.subtitle}>
-              The ultimate tool for organizing your next game night
-            </Text>
-          </View>
-
-          <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>Create Account</Text>
-            <Text style={styles.formSubtitle}>Enter your email and password to get started</Text>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.inputWrapper}>
-                {/* <Mail color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="Enter your email address"
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  accessibilityLabel="Email address"
-                  accessibilityHint="Enter your email address"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.inputWrapper}>
-                {/* <Lock color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
-                <TextInput
-                  style={styles.input}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Choose a password"
-                  placeholderTextColor={colors.textMuted}
-                  secureTextEntry={!showPassword}
-                  accessibilityLabel="Password"
-                  accessibilityHint="Enter your password"
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                  hitSlop={touchTargets.standard}
-                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-                  accessibilityRole="button"
-                >
-                  {showPassword ? (
-                    <EyeOff color={colors.textMuted} size={20} />
-                  ) : (
-                    <Eye color={colors.textMuted} size={20} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {error && (
-              <Text style={styles.errorText}>{error}</Text>
-            )}
-
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              hitSlop={touchTargets.standard}
-              onPress={handleContinue}
-              disabled={loading}
-              accessibilityLabel={loading ? "Validating account" : "Continue to profile setup"}
-              accessibilityRole="button"
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Validating...' : 'Continue'}
+              <Text style={styles.subtitle}>
+                The ultimate tool for organizing your next game night
               </Text>
-              <ArrowRight color={colors.card} size={20} />
-            </TouchableOpacity>
+            </View>
 
-            <Link href="/auth/login" asChild>
-              <TouchableOpacity style={styles.loginLink} hitSlop={touchTargets.standard}>
-                <Text style={styles.loginText}>
-                  Already have an account? <Text style={styles.signInText}>Sign in</Text>
+            <View style={styles.formContainer}>
+              <Text style={styles.formTitle}>Create Account</Text>
+              <Text style={styles.formSubtitle}>Enter your email and password to get started</Text>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Email</Text>
+                <View style={styles.inputWrapper}>
+                  {/* <Mail color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
+                  <TextInput
+                    style={styles.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="Enter your email address"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    accessibilityLabel="Email address"
+                    accessibilityHint="Enter your email address"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Password</Text>
+                <View style={styles.inputWrapper}>
+                  {/* <Lock color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
+                  <TextInput
+                    style={styles.input}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Choose a password"
+                    placeholderTextColor={colors.textMuted}
+                    secureTextEntry={!showPassword}
+                    accessibilityLabel="Password"
+                    accessibilityHint="Enter your password"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                    hitSlop={touchTargets.standard}
+                    accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                    accessibilityRole="button"
+                  >
+                    {showPassword ? (
+                      <EyeOff color={colors.textMuted} size={20} />
+                    ) : (
+                      <Eye color={colors.textMuted} size={20} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Re-enter your password"
+                    placeholderTextColor={colors.textMuted}
+                    secureTextEntry={!showConfirmPassword}
+                    accessibilityLabel="Confirm password"
+                    accessibilityHint="Re-enter your password to confirm"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIcon}
+                    hitSlop={touchTargets.standard}
+                    accessibilityLabel={showConfirmPassword ? "Hide password" : "Show password"}
+                    accessibilityRole="button"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff color={colors.textMuted} size={20} />
+                    ) : (
+                      <Eye color={colors.textMuted} size={20} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {error && (
+                <Text style={styles.errorText}>{error}</Text>
+              )}
+
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                hitSlop={touchTargets.standard}
+                onPress={handleContinue}
+                disabled={loading}
+                accessibilityLabel={loading ? "Validating account" : "Continue to profile setup"}
+                accessibilityRole="button"
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Validating...' : 'Continue'}
                 </Text>
+                <ArrowRight color={colors.card} size={20} />
               </TouchableOpacity>
-            </Link>
+
+              <Link href="/auth/login" asChild>
+                <TouchableOpacity style={styles.loginLink} hitSlop={touchTargets.standard}>
+                  <Text style={styles.loginText}>
+                    Already have an account? <Text style={styles.signInText}>Sign in</Text>
+                  </Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
     </KeyboardAvoidingView>
   );
@@ -178,7 +220,6 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 40,
-    minHeight: Math.max(360, Math.min(520, screenHeight * 0.6)),
   },
   header: {
     paddingHorizontal: 24,
@@ -222,7 +263,8 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
     maxWidth: 400,
     backgroundColor: colors.card,
     borderRadius: 20,
-    padding: 32,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -239,7 +281,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
   formSubtitle: {
     fontFamily: typography.getFontFamily('normal'),
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 16,
     color: colors.textMuted,
     fontSize: typography.fontSize.body,
   },
@@ -271,7 +313,7 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
     flex: 1,
     fontFamily: typography.getFontFamily('normal'),
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    //paddingHorizontal: 12,
     color: colors.text,
     fontSize: typography.fontSize.footnote,
     backgroundColor: 'transparent',

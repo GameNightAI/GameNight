@@ -12,6 +12,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { useTheme } from '@/hooks/useTheme';
 import { censor } from '@/utils/profanityFilter';
+import { getUsername } from '@/utils/storage';
 
 // Custom hook for local voting that bypasses user authentication
 const useLocalPollData = (pollId: string | string[] | undefined) => {
@@ -263,24 +264,34 @@ export default function LocalPollScreen() {
       let finalName = trimmedName;
 
       // Check for existing votes with this name and deduplicate if needed
-      const { data: existingVotes, error: checkError } = await supabase
-        .from('votes')
-        .select('voter_name')
-        .eq('poll_id', id)
-        .ilike('voter_name', finalName)
-        .is('user_id', null)
-        .order('created_at', { ascending: true });
+      // Only apply deduplication if NOT from same device (detected via saved username)
+      const savedUsername = await getUsername();
+      const isSameDevice = savedUsername &&
+        savedUsername.trim().toLowerCase() === finalName.toLowerCase();
 
-      if (!checkError && existingVotes && existingVotes.length > 0) {
-        // Count exact matches (case-insensitive, trimmed)
-        const exactMatches = existingVotes.filter(v =>
-          v.voter_name?.trim().toLowerCase() === finalName.toLowerCase()
-        ).length;
+      // Only deduplicate if not from same device
+      if (!isSameDevice) {
+        const { data: existingVotes, error: checkError } = await supabase
+          .from('votes')
+          .select('voter_name')
+          .eq('poll_id', id)
+          .is('user_id', null);
 
-        if (exactMatches > 0) {
-          finalName = `${finalName} (${exactMatches + 1})`;
+        if (!checkError && existingVotes && existingVotes.length > 0) {
+          // Get unique voter names to avoid counting multiple vote records per voter
+          const uniqueVoterNames = [...new Set(existingVotes.map(v => v.voter_name))];
+
+          // Count exact matches (case-insensitive, trimmed)
+          const exactMatches = uniqueVoterNames.filter(name =>
+            name?.trim().toLowerCase() === finalName.toLowerCase()
+          ).length;
+
+          if (exactMatches > 0) {
+            finalName = `${finalName} (${exactMatches + 1})`;
+          }
         }
       }
+      // If isSameDevice, keep finalName as-is to update existing votes
 
       for (const [gameIdStr, score] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);

@@ -35,9 +35,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('Error getting initial session:', error);
-          // If there's an error getting the session, clear everything
-          // Don't await to prevent blocking app startup
+          // Check if this is a refresh token error
+          const isRefreshTokenError =
+            error.message?.toLowerCase().includes('refresh token') ||
+            error.message?.toLowerCase().includes('invalid refresh token') ||
+            (error.name === 'AuthApiError' && error.message?.includes('Refresh Token'));
+
+          if (isRefreshTokenError) {
+            console.log('Stale refresh token detected on startup - clearing auth state (mobile app restart)');
+          } else {
+            console.error('Error getting initial session:', error);
+          }
+
+          // Clear auth state without blocking app startup
           clearAuthState().catch(console.error);
         } else {
           setSession(currentSession);
@@ -45,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        // Don't await to prevent blocking app startup
+        // Clear auth state without blocking app startup
         clearAuthState().catch(console.error);
       } finally {
         setLoading(false);
