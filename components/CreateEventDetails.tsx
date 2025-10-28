@@ -102,9 +102,6 @@ export const CreateEventDetails: React.FC<CreateEventDetailsProps> = ({
               </View>
 
               <Text style={[styles.label, styles.locationLabel]}>Location (Optional)</Text>
-              <Text style={styles.sublabel}>
-                Enter Location Details
-              </Text>
               <TextInput
                 style={styles.locationInput}
                 value={location}
@@ -218,12 +215,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], typography: Re
       fontSize: typography.fontSize.callout,
       color: colors.text,
       marginBottom: 8,
-    },
-    sublabel: {
-      fontFamily: typography.getFontFamily('normal'),
-      fontSize: typography.fontSize.subheadline,
-      color: colors.textMuted,
-      marginBottom: 6,
     },
     titleInput: {
       fontFamily: typography.getFontFamily('normal'),

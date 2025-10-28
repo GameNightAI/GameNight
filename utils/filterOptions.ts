@@ -20,7 +20,24 @@ export const playerOptions: FilterOption[] = Array.from({ length: 14 }, (_, i) =
     label: value
   }));
 
-// Play time options with min/max ranges
+// Play time options for minimum dropdown (includes 0)
+export const minTimeOptions: FilterOption[] = [
+  { value: 0, label: '0 min' },
+  { value: 30, label: '30 min' },
+  { value: 60, label: '60 min' },
+  { value: 90, label: '90 min' },
+  { value: 120, label: '120+ min' },
+];
+
+// Play time options for maximum dropdown (excludes 0)
+export const maxTimeOptions: FilterOption[] = [
+  { value: 30, label: '30 min' },
+  { value: 60, label: '60 min' },
+  { value: 90, label: '90 min' },
+  { value: 120, label: '120+ min' },
+];
+
+// Legacy timeOptions for backwards compatibility (will be removed)
 export const timeOptions: FilterOption[] = [
   { value: 1, min: 1, max: 30, label: '30 min or less' },
   { value: 31, min: 31, max: 60, label: '31-60 min' },
@@ -118,62 +135,43 @@ function playerRangesIntersect(game: Game, filterMin: number | null | undefined,
   return gameMaxPlayers >= filterMin! && (gameMinPlayers <= filterMax! || filterMax === 15);
 }
 
+
 /**
- * Helper: Get game's play time value
- * Prefers playing_time, falls back to maxPlaytime or minPlaytime
+ * Helper: Get game's play time range
+ * Uses minPlaytime/maxPlaytime if available, falls back to playing_time as both min and max
  */
-function getGamePlayTime(game: Game): number | null {
+function getGamePlayTimeRange(game: Game): { min: number; max: number } | null {
+  // Primary: Use minPlaytime and maxPlaytime for range
+  if (typeof game.minPlaytime === 'number' && typeof game.maxPlaytime === 'number' &&
+    game.minPlaytime > 0 && game.maxPlaytime > 0) {
+    return { min: game.minPlaytime, max: game.maxPlaytime };
+  }
+
+  // Fallback: Use playing_time as both min and max
   if (typeof game.playing_time === 'number' && game.playing_time > 0) {
-    return game.playing_time;
+    return { min: game.playing_time, max: game.playing_time };
   }
-  if (typeof game.maxPlaytime === 'number' && game.maxPlaytime > 0) {
-    return game.maxPlaytime;
-  }
-  if (typeof game.minPlaytime === 'number' && game.minPlaytime > 0) {
-    return game.minPlaytime;
-  }
-  return null;
+
+  return null; // No time data available
 }
 
 /**
- * Helper: Extract actual min value from stored option.value
- * For playTime/minAge, we store option.value but need to extract option.min for filtering
- */
-function extractPlayTimeMin(storedValue: number | null | undefined): number | null | undefined {
-  if (storedValue == null) return storedValue;
-  const option = timeOptions.find(opt => opt.value === storedValue);
-  return option?.min ?? storedValue;
-}
-
-/**
- * Helper: Extract actual max value from stored option.value
- * For playTime/minAge, we store option.value but need to extract option.max for filtering
- */
-function extractPlayTimeMax(storedValue: number | null | undefined): number | null | undefined {
-  if (storedValue == null) return storedValue;
-  const option = timeOptions.find(opt => opt.value === storedValue);
-  return option?.max ?? storedValue;
-}
-
-/**
- * Helper: Check if game's play time falls within filter range
- * Note: Filter min/max are option.value, we extract the actual min/max ranges
+ * Helper: Check if game's play time range overlaps with filter range
+ * Uses inclusive overlap logic: ranges overlap if gameMax >= userMin AND gameMin <= userMax
  */
 function gameMatchesPlayTime(game: Game, filterMin: number | null | undefined, filterMax: number | null | undefined): boolean {
   // If no filter range specified, include all games
   if (filterMin == null && filterMax == null) return true;
 
-  const gameTime = getGamePlayTime(game);
-  if (gameTime == null) return false; // No time data, exclude
+  const gameRange = getGamePlayTimeRange(game);
+  if (gameRange == null) return false; // No time data, exclude
 
-  // Extract actual min/max from stored option.value
-  const actualMin = extractPlayTimeMin(filterMin);
-  const actualMax = extractPlayTimeMax(filterMax);
+  // Handle 120+ case - treat as any game with max >= 120
+  const userMin = filterMin ?? 0;
+  const userMax = filterMax === 120 ? Infinity : (filterMax ?? Infinity);
 
-  // Check if game time falls within filter range
-  const min = actualMin ?? 0;
-  const max = actualMax ?? Infinity;
-  return gameTime >= min && gameTime <= max;
+  // Inclusive range overlap logic: ranges overlap if gameMax >= userMin AND gameMin <= userMax
+  return gameRange.max >= userMin && gameRange.min <= userMax;
 }
 
 /**

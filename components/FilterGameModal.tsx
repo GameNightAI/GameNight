@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
 import { useDeviceType } from '@/hooks/useDeviceType';
-import { FilterState, NumericRange, FilterOption, playerOptions, timeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
+import { FilterState, NumericRange, FilterOption, playerOptions, minTimeOptions, maxTimeOptions, ageOptions, typeOptions, complexityOptions } from '@/utils/filterOptions';
 
 interface FilterGameModalProps {
   isVisible: boolean;
@@ -520,12 +520,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
   const extractForValidation = useCallback((key: keyof FilterState, field: 'min' | 'max', value: number | null | undefined): number | null | undefined => {
     if (value == null) return value;
 
-    // For playTime, look up the option and extract min or max
+    // For playTime, use direct values (no longer need to extract from timeOptions)
     if (key === 'playTime') {
-      const option = timeOptions.find(opt => opt.value === value);
-      if (option) {
-        return field === 'min' ? option.min : option.max;
-      }
+      return value;
     }
 
     // For minAge, look up the option and extract min or max
@@ -742,10 +739,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
           </View>
           <View style={styles.dropdownRow}>
             <FilterDropdown
-              //placeholder="30 min or less"
               placeholder="Min"
               value={draftFilters.playTime?.min}
-              options={timeOptions}
+              options={minTimeOptions}
               onChange={(val) => updateRangeFilter('playTime', 'min', val)}
               colors={colors}
               typography={typography}
@@ -754,10 +750,9 @@ export const FilterGameModal: React.FC<FilterGameModalProps> = ({
             />
             <View style={{ width: 16 }} />
             <FilterDropdown
-              //placeholder="More than 120 min"
               placeholder="Max"
               value={draftFilters.playTime?.max}
-              options={timeOptions}
+              options={maxTimeOptions}
               onChange={(val) => updateRangeFilter('playTime', 'max', val)}
               colors={colors}
               typography={typography}
