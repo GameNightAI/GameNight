@@ -8,13 +8,15 @@ export const handler: Handler = async (req: Request, context: Context) => {
   const apiString = urlSplit[urlSplit.length - 1];
   // req.url = `https://boardgamegeek.com/xmlapi2/${apiString}`;
   // req.headers.append('Authorization', `Bearer ${apiKey}`);
-  return await fetch(
+  const response = await fetch(
     `https://boardgamegeek.com/xmlapi2/${apiString}`, {
     headers: {
       ...req.headers,
       Authorization: `Bearer ${apiKey}`,
     }},
   );
+  console.log(response);
+  return response;
 };
 
 export const config: Config = {
