@@ -2,6 +2,7 @@ import { Config, Context, Handler } from '@netlify/functions';
 
 export const handler: Handler = async (req: Request, context: Context) => {
   // const { command } = context.params;
+  console.log(req);
   const apiKey = process.env.BGG_API_AUTH_TOKEN;
   const urlSplit = req.url.split('/.netlify/functions/bgg-api/');
   const apiString = urlSplit[urlSplit.length - 1];
