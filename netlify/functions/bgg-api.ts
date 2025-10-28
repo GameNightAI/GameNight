@@ -16,7 +16,10 @@ export const handler: Handler = async (req: Request, context: Context) => {
     }},
   );
   console.log(response);
-  return response;
+  return {
+    ...response,
+    statusCode: response.status,
+  };
 };
 
 export const config: Config = {
