@@ -75,7 +75,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
   const fetchSearchResults = useCallback(async (term: string) => {
     try {
       // Perform an API request based on the search term
-      const isLocalhost = window?.location.hostname === 'localhost';
+      const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
       const apiHost = isLocalhost ? 'https://klack-dev.netlify.app' : '';
       const response = await fetch(`${apiHost}/.netlify/functions/bgg-api/search?query=${encodeURIComponent(term)}&type=boardgame`);
 
