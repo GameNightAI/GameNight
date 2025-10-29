@@ -264,7 +264,7 @@ const bggApiCaller = async function* (csvParser) {
       try {
         bggResponse = await fetch(
           `${BGG_API_URL}${ids.join(',')}`,
-          { headers: { Authorization: `Bearer ${BGG_API_AUTH_TOKEN}` }},
+          { headers: { 'Authorization': `Bearer ${BGG_API_AUTH_TOKEN}` }},
         );
       } catch (error) {
         cError(`Network error: ${error} - Waiting ${SLEEP_TIME} seconds before resubmitting request...`);
