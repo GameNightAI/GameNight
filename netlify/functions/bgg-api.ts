@@ -19,8 +19,10 @@ export const handler: Handler = stream( async (event: HandlerEvent) => {
 
   return {
     headers: {
+      ...response.headers,
       'Content-Type': 'text/event-stream',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': 'http://localhost:8081/',
+      'Vary': 'Origin',
     },
     statusCode: response.status,
     body: response.body,
