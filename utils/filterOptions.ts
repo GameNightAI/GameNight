@@ -121,6 +121,10 @@ function playerRangesIntersect(game: Game, filterMin: number | null | undefined,
 
   // If only filterMax specified, check if any count in range [filterMax, filterMax] works
   if (filterMin == null && filterMax != null) {
+    // Unknown max (0/null) → treat as unbounded; include if game's min ≤ filterMax
+    if (gameMaxPlayers <= 0) {
+      return gameMinPlayers <= filterMax;
+    }
     return gameSupportsPlayerCount(game, filterMax);
   }
 
