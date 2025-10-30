@@ -224,7 +224,7 @@ export default function PollsScreen() {
   // Show toast when new votes arrive
   useEffect(() => {
     if (newVotes) {
-      Toast.show({ type: 'info', text1: 'New votes received', text2: 'Pull to refresh' });
+      Toast.show({ type: 'info', text1: 'New votes received', text2: 'Refresh to update' });
       setNewVotes(false);
     }
   }, [newVotes]);

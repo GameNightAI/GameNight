@@ -101,28 +101,46 @@ export const GameItem: React.FC<GameItemProps> = ({ game, onDelete, onExpansionU
   const useMaxExpPlayers = game.max_exp_players > game.max_players;
   const minPlayers = useMinExpPlayers ? game.min_exp_players : game.min_players;
   const maxPlayers = useMaxExpPlayers ? game.max_exp_players : game.max_players;
+
+  const hasMin = !!minPlayers && minPlayers > 0;
+  const hasMax = !!maxPlayers && maxPlayers > 0;
+
   const playerCountText = (
-    maxPlayers > 0
-      ? (
-        <>
-          <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
-            {minPlayers}
-          </Text>
-          {minPlayers !== maxPlayers && (
-            <>
-              <Text>-</Text>
-              <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
-                {maxPlayers}
-              </Text>
-            </>
-          )}
-          <Text>
-            {` player${maxPlayers === 1 ? '' : 's'}`}
-          </Text>
-        </>
-      ) : (
-        'N/A'
-      )
+    hasMin && hasMax ? (
+      <>
+        <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+          {minPlayers}
+        </Text>
+        {minPlayers !== maxPlayers && (
+          <>
+            <Text>-</Text>
+            <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+              {maxPlayers}
+            </Text>
+          </>
+        )}
+        <Text>
+          {` player${(hasMax ? maxPlayers : minPlayers) === 1 ? '' : 's'}`}
+        </Text>
+      </>
+    ) : hasMin ? (
+      <>
+        <Text style={useMinExpPlayers ? styles.infoTextEmphasis : null}>
+          {minPlayers}+
+        </Text>
+        <Text> players</Text>
+      </>
+    ) : hasMax ? (
+      <>
+        <Text>Up to </Text>
+        <Text style={useMaxExpPlayers ? styles.infoTextEmphasis : null}>
+          {maxPlayers}
+        </Text>
+        <Text>{` player${maxPlayers === 1 ? '' : 's'}`}</Text>
+      </>
+    ) : (
+      'N/A'
+    )
   );
 
   const ownedExpansionCount = game.expansions.filter((exp: Expansion) => exp.is_owned).length
