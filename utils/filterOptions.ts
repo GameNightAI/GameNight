@@ -139,6 +139,16 @@ function playerRangesIntersect(game: Game, filterMin: number | null | undefined,
     return gameMaxPlayers >= filterMin;
   }
 
+  // Both specified with finite Max; handle unknown game max (0/null) as unbounded
+  if (filterMin != null && filterMax != null && filterMax !== 15) {
+    if (gameMaxPlayers <= 0) {
+      // No max info: include if game's minimum is within user's upper bound
+      return gameMinPlayers <= filterMax;
+    }
+    // Standard overlap
+    return gameMaxPlayers >= filterMin && gameMinPlayers <= filterMax;
+  }
+
   // Standard overlap: Game range [gameMin, gameMax] intersects with filter range [filterMin, filterMax]
   return gameMaxPlayers >= (filterMin ?? 0) && gameMinPlayers <= (filterMax ?? Infinity);
 }
