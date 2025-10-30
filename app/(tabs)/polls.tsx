@@ -20,6 +20,7 @@ import { PollScreenCard } from '@/components/PollScreenCard';
 import { usePollResults } from '@/hooks/usePollResults';
 import { Game } from '@/types/game';
 import { useTheme } from '@/hooks/useTheme';
+import Toast from 'react-native-toast-message';
 
 type TabType = 'all' | 'created' | 'other';
 
@@ -220,6 +221,14 @@ export default function PollsScreen() {
     };
   }, []);
 
+  // Show toast when new votes arrive
+  useEffect(() => {
+    if (newVotes) {
+      Toast.show({ type: 'info', text1: 'New votes received', text2: 'Refresh to update' });
+      setNewVotes(false);
+    }
+  }, [newVotes]);
+
   // Removed scaled styling helper for simplicity and HIG clarity
 
   // Memoize current polls to prevent unnecessary re-renders
@@ -399,15 +408,7 @@ export default function PollsScreen() {
         </View>
       )}
 
-      {/* --- Banner notification for new votes --- */}
-      {newVotes && (
-        <View style={styles.bannerContainer}>
-          <Text style={styles.bannerText}>New votes have been cast! Refresh to dismiss.</Text>
-          <TouchableOpacity onPress={() => setNewVotes(false)} accessibilityLabel="Dismiss new votes banner" accessibilityRole="button">
-            <Text style={styles.bannerDismiss}>Dismiss</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+
 
       {showShareLink && (
         <View style={styles.shareLinkContainer} accessibilityLabel="Share link panel" accessibilityRole="summary">
@@ -992,29 +993,6 @@ const getStyles = (colors: any, typography: any) => {
       fontSize: typography.fontSize.subheadline,
       color: colors.primary,
     },
-    bannerContainer: {
-      backgroundColor: colors.tints.warningBg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.tints.warningBorder,
-      padding: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
-    },
-    bannerText: {
-      color: colors.warning,
-      fontWeight: 'bold',
-      fontSize: typography.fontSize.subheadline,
-    },
-    bannerDismiss: {
-      color: colors.primary,
-      fontWeight: 'bold',
-      marginLeft: 16,
-    },
+
   });
 };

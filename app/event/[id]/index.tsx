@@ -1,7 +1,7 @@
 // event/EventScreen.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
@@ -20,6 +20,8 @@ import {
   getUsername,
 } from '@/utils/storage';
 import { censor } from '@/utils/profanityFilter';
+import { getOrCreateAnonId } from '@/utils/anon';
+import { buildTaggedName } from '@/utils/nameTag';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -69,6 +71,8 @@ export default function EventScreen() {
   const [hasPreviousVotes, setHasPreviousVotes] = useState(false);
   const [storageInitialized, setStorageInitialized] = useState(false);
   const [comment, setComment] = useState('');
+  const [newEventVotes, setNewEventVotes] = useState(false);
+  const subscriptionRef = useRef<any>(null);
 
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
@@ -103,12 +107,14 @@ export default function EventScreen() {
           return;
         }
 
-        // Use trimmedName in the query for non-logged-in users
+        // For anonymous users, match by device-tagged name
+        const anonId = await getOrCreateAnonId();
+        const storedName = buildTaggedName(trimmedName, anonId);
         const { data: previousVotes, error: previousVotesError } = await supabase
           .from('votes_events')
           .select('id')
           .in('poll_event_id', eventDates.map(d => d.id))
-          .eq('voter_name', trimmedName);
+          .eq('voter_name', storedName);
 
         if (previousVotesError) {
           console.warn('Error checking previous votes:', previousVotesError);
@@ -231,6 +237,44 @@ export default function EventScreen() {
     loadEvent();
   }, [id]);
 
+  // Real-time listener for event votes
+  useEffect(() => {
+    if (!id || eventDates.length === 0) return;
+
+    const dateIds = new Set(eventDates.map(d => d.id));
+    const channel = supabase
+      .channel('votes-events-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes_events',
+        },
+        (payload: any) => {
+          const pollEventId = payload?.new?.poll_event_id || payload?.record?.poll_event_id;
+          if (pollEventId && dateIds.has(pollEventId)) {
+            setNewEventVotes(true);
+          }
+        }
+      )
+      .subscribe();
+    subscriptionRef.current = channel;
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
+  }, [id, eventDates]);
+
+  // Show toast when new event votes arrive
+  useEffect(() => {
+    if (newEventVotes) {
+      Toast.show({ type: 'info', text1: 'New event votes received', text2: 'Refresh to update' });
+      setNewEventVotes(false);
+    }
+  }, [newEventVotes]);
+
   // Load votes for the event
   const loadVotes = async (eventId: string, userId?: string) => {
     try {
@@ -259,6 +303,13 @@ export default function EventScreen() {
         counts[date.id] = { yes: 0, no: 0, maybe: 0 };
       });
 
+      // Build device-tagged name for current anonymous input to recognize this user's prior votes
+      let taggedName: string | null = null;
+      if (!userId && voterName && voterName.trim()) {
+        const anonId = await getOrCreateAnonId();
+        taggedName = buildTaggedName(voterName.trim(), anonId);
+      }
+
       votesData?.forEach(vote => {
         const dateId = vote.poll_event_id;
         if (counts[dateId]) {
@@ -271,7 +322,7 @@ export default function EventScreen() {
 
         // Track user's votes - check both user_id and voter_name
         const isUserVote = (userId && vote.user_id === userId) ||
-          (!userId && voterName && vote.voter_name === voterName.trim());
+          (!userId && taggedName && vote.voter_name === taggedName);
 
         if (isUserVote) {
           userVoteMap[dateId] = vote.vote_type as EventVoteType;
@@ -336,36 +387,11 @@ export default function EventScreen() {
         return user.username || user.id || '';
       })();
 
-      // Check for existing votes with this name and deduplicate if needed
-      // Only apply deduplication if NOT from same device (detected via saved username)
+      // Build device-tagged name for anonymous users
+      let storedName: string | null = null;
       if (!user && finalName) {
-        const savedUsername = await getUsername();
-        const isSameDevice = savedUsername &&
-          savedUsername.trim().toLowerCase() === finalName.toLowerCase();
-
-        // Only deduplicate if not from same device
-        if (!isSameDevice) {
-          const { data: existingVotes, error: checkError } = await supabase
-            .from('votes_events')
-            .select('voter_name, poll_events!inner(poll_id)')
-            .eq('poll_events.poll_id', id)
-            .is('user_id', null);
-
-          if (!checkError && existingVotes && existingVotes.length > 0) {
-            // Get unique voter names to avoid counting multiple vote records per voter
-            const uniqueVoterNames = [...new Set(existingVotes.map(v => v.voter_name))];
-
-            // Count exact matches (case-insensitive, trimmed)
-            const exactMatches = uniqueVoterNames.filter(name =>
-              name?.trim().toLowerCase() === finalName.toLowerCase()
-            ).length;
-
-            if (exactMatches > 0) {
-              finalName = `${finalName} (${exactMatches + 1})`;
-            }
-          }
-        }
-        // If isSameDevice, keep finalName as-is to update existing votes
+        const anonId = await getOrCreateAnonId();
+        storedName = buildTaggedName(finalName, anonId);
       }
 
       // Check if the voter has previously voted on any date in this event
@@ -375,7 +401,7 @@ export default function EventScreen() {
         .in('poll_event_id', eventDates.map(d => d.id))
         .eq(
           user ? 'user_id' : 'voter_name',
-          user ? user.id : finalName
+          user ? user.id : (storedName as string)
         );
 
       if (previousVotesError) {
@@ -409,7 +435,7 @@ export default function EventScreen() {
             .insert({
               poll_event_id: eventId,
               vote_type: voteType,
-              voter_name: user ? null : finalName,
+              voter_name: user ? null : (storedName as string),
               user_id: user ? user.id : null,
             });
           if (insertError) {
@@ -436,7 +462,7 @@ export default function EventScreen() {
       if (comment.trim()) {
         const { error: commentError } = await supabase.from('poll_comments').insert({
           poll_id: id,
-          voter_name: user ? null : finalName,
+          voter_name: user ? null : (storedName as string),
           user_id: user ? user.id : null,
           comment_text: comment.trim(),
         });

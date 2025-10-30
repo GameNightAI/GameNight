@@ -69,6 +69,14 @@ export default function PollResultsScreen() {
     }
   }, [voteUpdated]);
 
+  // Show toast when new votes arrive
+  useEffect(() => {
+    if (newVotes) {
+      Toast.show({ type: 'info', text1: 'New votes received', text2: 'Refresh to update' });
+      setNewVotes(false);
+    }
+  }, [newVotes]);
+
   if (loading) return <LoadingState />;
 
   if (error) {
@@ -128,25 +136,7 @@ export default function PollResultsScreen() {
         <Text style={styles.subtitle}>{poll?.title}</Text>
         <Text style={styles.subtitle}>Poll created by {creatorName}</Text>
       </View>
-      {/* --- Banner notification for new votes --- */}
-      {newVotes && (
-        <View style={styles.newVotesBanner}>
-          <Text style={styles.newVotesText}>
-            New votes have been cast! Pull to refresh or tap below.
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              setNewVotes(false);
-              reload(); // Trigger a refetch of results
-            }}
-            accessibilityLabel="Dismiss notification"
-            accessibilityRole="button"
-            accessibilityHint="Dismisses the new votes notification"
-          >
-            <Text style={styles.dismissButton}>Dismiss</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+
 
       {!user && (
         <View style={styles.signUpContainer}>
@@ -441,33 +431,7 @@ const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.crea
     alignSelf: 'flex-start',
     lineHeight: typography.lineHeight.normal * typography.fontSize.body,
   },
-  newVotesBanner: {
-    backgroundColor: colors.tints.warningBg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.tints.warningBorder,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  newVotesText: {
-    color: colors.warning,
-    fontFamily: typography.getFontFamily('bold'),
-    fontSize: typography.fontSize.subheadline,
-    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
-  },
-  dismissButton: {
-    color: colors.primary,
-    fontFamily: typography.getFontFamily('bold'),
-    marginLeft: 16,
-    fontSize: typography.fontSize.subheadline,
-    lineHeight: typography.lineHeight.normal * typography.fontSize.body,
-  },
+
 });
 
 

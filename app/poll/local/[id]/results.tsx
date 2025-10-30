@@ -12,6 +12,7 @@ import { Trophy, Medal, Award, Vote } from 'lucide-react-native';
 import { VOTING_OPTIONS } from '@/components/votingOptions';
 import { useTheme } from '@/hooks/useTheme';
 import { censor } from '@/utils/profanityFilter';
+import Toast from 'react-native-toast-message';
 
 export default function LocalPollResultsScreen() {
   const router = useRouter();
@@ -89,6 +90,14 @@ export default function LocalPollResultsScreen() {
     };
   }, [id]);
 
+  // Show toast when new votes arrive
+  useEffect(() => {
+    if (newVotes) {
+      Toast.show({ type: 'info', text1: 'New votes received', text2: 'Refresh to update' });
+      setNewVotes(false);
+    }
+  }, [newVotes]);
+
   if (loading) return <LoadingState />;
 
   if (error) {
@@ -152,25 +161,7 @@ export default function LocalPollResultsScreen() {
           Poll created by {creatorName}
         </Text>
       </View>
-      {/* --- Banner notification for new votes --- */}
-      {newVotes && (
-        <View style={styles.newVotesBanner}>
-          <Text style={styles.newVotesText}>
-            New votes have been cast! Pull to refresh or tap below.
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              setNewVotes(false);
-              // Optionally, trigger a refetch of results here
-            }}
-            accessibilityLabel="Dismiss notification"
-            accessibilityRole="button"
-            accessibilityHint="Dismisses the new votes notification"
-          >
-            <Text style={styles.dismissButton}>Dismiss</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+
 
       <ScrollView
         style={styles.scrollView}
@@ -419,29 +410,5 @@ const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.crea
     textDecorationLine: 'underline',
     alignSelf: 'flex-start',
   },
-  newVotesBanner: {
-    backgroundColor: colors.tints.warningBg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.tints.warningBorder,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  newVotesText: {
-    color: colors.warning,
-    fontFamily: typography.getFontFamily('bold'),
-    fontSize: typography.fontSize.subheadline,
-  },
-  dismissButton: {
-    color: colors.primary,
-    fontFamily: typography.getFontFamily('bold'),
-    marginLeft: 16,
-    fontSize: typography.fontSize.subheadline,
-  },
+
 });
