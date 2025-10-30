@@ -124,15 +124,23 @@ function playerRangesIntersect(game: Game, filterMin: number | null | undefined,
     return gameSupportsPlayerCount(game, filterMax);
   }
 
-  // If only filterMin specified, check if any count in range [filterMin, filterMin] works
+  // If only filterMin specified, include games that can support at least filterMin players
   if (filterMin != null && filterMax == null) {
-    return gameSupportsPlayerCount(game, filterMin);
+    // Unknown max (0/null) → treat as unbounded; include if game's min <= filterMin
+    if (gameMaxPlayers <= 0) {
+      return gameMinPlayers <= filterMin;
+    }
+    return gameMaxPlayers >= filterMin;
   }
 
   // Both specified: check if ranges intersect
-  // Game range [gameMin, gameMax] intersects with filter range [filterMin, filterMax]
-  // if gameMax >= filterMin AND gameMin <= filterMax (or filterMax === 15 for "15+")
-  return gameMaxPlayers >= filterMin! && (gameMinPlayers <= filterMax! || filterMax === 15);
+  // If filterMax is 15 (representing 15+), treat as unbounded upper range and only enforce minimum
+  if (filterMin != null && filterMax === 15) {
+    return gameMaxPlayers >= filterMin;
+  }
+
+  // Standard overlap: Game range [gameMin, gameMax] intersects with filter range [filterMin, filterMax]
+  return gameMaxPlayers >= (filterMin ?? 0) && gameMinPlayers <= (filterMax ?? Infinity);
 }
 
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import { EventDateResultCard } from '@/components/EventDateResultCard';
 import { useEventResults } from '@/hooks/useEventResults';
 import { useTheme } from '@/hooks/useTheme';
 import { censor } from '@/utils/profanityFilter';
+import Toast from 'react-native-toast-message';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -78,6 +79,8 @@ export default function EventResultsScreen() {
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<any>(null);
+  const [newEventVotes, setNewEventVotes] = useState(false);
+  const subscriptionRef = useRef<any>(null);
 
   const { event, eventDates, dateResults, comments, creatorName, loading, error, reload } = useEventResults(id);
 
@@ -92,6 +95,43 @@ export default function EventResultsScreen() {
     };
     getUser();
   }, []);
+
+  // Real-time listener for event votes
+  useEffect(() => {
+    if (!id || !eventDates || eventDates.length === 0) return;
+    const dateIds = new Set(eventDates.map((d: any) => d.id));
+    const channel = supabase
+      .channel('votes-events-results-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes_events',
+        },
+        (payload: any) => {
+          const pollEventId = payload?.new?.poll_event_id || payload?.record?.poll_event_id;
+          if (pollEventId && dateIds.has(pollEventId)) {
+            setNewEventVotes(true);
+          }
+        }
+      )
+      .subscribe();
+    subscriptionRef.current = channel;
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
+  }, [id, eventDates]);
+
+  // Show toast when new event votes arrive
+  useEffect(() => {
+    if (newEventVotes) {
+      Toast.show({ type: 'info', text1: 'New event votes received', text2: 'Refresh to update' });
+      setNewEventVotes(false);
+    }
+  }, [newEventVotes]);
 
 
   if (loading) return <LoadingState />;
