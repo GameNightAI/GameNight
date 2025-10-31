@@ -121,18 +121,40 @@ function playerRangesIntersect(game: Game, filterMin: number | null | undefined,
 
   // If only filterMax specified, check if any count in range [filterMax, filterMax] works
   if (filterMin == null && filterMax != null) {
+    // Unknown max (0/null) → treat as unbounded; include if game's min ≤ filterMax
+    if (gameMaxPlayers <= 0) {
+      return gameMinPlayers <= filterMax;
+    }
     return gameSupportsPlayerCount(game, filterMax);
   }
 
-  // If only filterMin specified, check if any count in range [filterMin, filterMin] works
+  // If only filterMin specified, include games that can support at least filterMin players
   if (filterMin != null && filterMax == null) {
-    return gameSupportsPlayerCount(game, filterMin);
+    // Unknown max (0/null) → treat as unbounded; include if game's min <= filterMin
+    if (gameMaxPlayers <= 0) {
+      return gameMinPlayers <= filterMin;
+    }
+    return gameMaxPlayers >= filterMin;
   }
 
   // Both specified: check if ranges intersect
-  // Game range [gameMin, gameMax] intersects with filter range [filterMin, filterMax]
-  // if gameMax >= filterMin AND gameMin <= filterMax (or filterMax === 15 for "15+")
-  return gameMaxPlayers >= filterMin! && (gameMinPlayers <= filterMax! || filterMax === 15);
+  // If filterMax is 15 (representing 15+), treat as unbounded upper range and only enforce minimum
+  if (filterMin != null && filterMax === 15) {
+    return gameMaxPlayers >= filterMin;
+  }
+
+  // Both specified with finite Max; handle unknown game max (0/null) as unbounded
+  if (filterMin != null && filterMax != null && filterMax !== 15) {
+    if (gameMaxPlayers <= 0) {
+      // No max info: include if game's minimum is within user's upper bound
+      return gameMinPlayers <= filterMax;
+    }
+    // Standard overlap
+    return gameMaxPlayers >= filterMin && gameMinPlayers <= filterMax;
+  }
+
+  // Standard overlap: Game range [gameMin, gameMax] intersects with filter range [filterMin, filterMax]
+  return gameMaxPlayers >= (filterMin ?? 0) && gameMinPlayers <= (filterMax ?? Infinity);
 }
 
 

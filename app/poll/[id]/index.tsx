@@ -13,7 +13,8 @@ import { GameCard } from '@/components/PollGameCard';
 import { PollResultsButton } from '@/components/PollResultsButton';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
-// import { getOrCreateAnonId } from '@/utils/anon';
+import { getOrCreateAnonId } from '@/utils/anon';
+import { buildTaggedName } from '@/utils/nameTag';
 import {
   saveUsername,
   getUsername,
@@ -22,7 +23,6 @@ import {
 } from '@/utils/storage';
 // import { BarChart3 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
-import { censor } from '@/utils/profanityFilter';
 
 export default function PollScreen() {
   const { id } = useLocalSearchParams();
@@ -85,12 +85,14 @@ export default function PollScreen() {
           return;
         }
 
-        // Use trimmedName in the query for non-logged-in users
+        // Match on device-tagged name for non-logged-in users
+        const anonId = await getOrCreateAnonId();
+        const storedName = buildTaggedName(trimmedName, anonId);
         const { data: previousVotes, error: previousVotesError } = await supabase
           .from('votes')
           .select('id')
           .eq('poll_id', pollId)
-          .eq('voter_name', trimmedName);
+          .eq('voter_name', storedName);
 
         if (previousVotesError) {
           console.warn('Error checking previous votes:', previousVotesError);
@@ -169,36 +171,11 @@ export default function PollScreen() {
         return user.username || user.id || '';
       })();
 
-      // Check for existing votes with this name and deduplicate if needed
-      // Only apply deduplication if NOT from same device (detected via saved username)
+      // Build device-tagged name for anonymous users
+      let storedName: string | null = null;
       if (!user && finalName) {
-        const savedUsername = await getUsername();
-        const isSameDevice = savedUsername &&
-          savedUsername.trim().toLowerCase() === finalName.toLowerCase();
-
-        // Only deduplicate if not from same device
-        if (!isSameDevice) {
-          const { data: existingVotes, error: checkError } = await supabase
-            .from('votes')
-            .select('voter_name')
-            .eq('poll_id', id)
-            .is('user_id', null);
-
-          if (!checkError && existingVotes && existingVotes.length > 0) {
-            // Get unique voter names to avoid counting multiple vote records per voter
-            const uniqueVoterNames = [...new Set(existingVotes.map(v => v.voter_name))];
-
-            // Count exact matches (case-insensitive, trimmed)
-            const exactMatches = uniqueVoterNames.filter(name =>
-              name?.trim().toLowerCase() === finalName.toLowerCase()
-            ).length;
-
-            if (exactMatches > 0) {
-              finalName = `${finalName} (${exactMatches + 1})`;
-            }
-          }
-        }
-        // If isSameDevice, keep finalName as-is to update existing votes
+        const anonId = await getOrCreateAnonId();
+        storedName = buildTaggedName(finalName, anonId);
       }
       // Check if the voter has previously voted on any game in this poll
       const { data: previousVotes, error: previousVotesError } = await supabase
@@ -207,7 +184,7 @@ export default function PollScreen() {
         .eq('poll_id', id)
         .eq(
           user ? 'user_id' : 'voter_name',
-          user ? user.id : finalName
+          user ? user.id : (storedName as string)
         );
 
       if (previousVotesError) {
@@ -244,7 +221,7 @@ export default function PollScreen() {
               poll_id: id,
               game_id: gameId,
               vote_type: score,
-              voter_name: user ? null : finalName,
+              voter_name: user ? null : (storedName as string),
               user_id: user ? user.id : null,
             });
           if (insertError) {
@@ -280,7 +257,7 @@ export default function PollScreen() {
       if (comment.trim()) {
         const { error: commentError } = await supabase.from('poll_comments').insert({
           poll_id: id,
-          voter_name: user ? null : finalName,
+          voter_name: user ? null : (storedName as string),
           user_id: user ? user.id : null,
           comment_text: comment.trim(),
         });

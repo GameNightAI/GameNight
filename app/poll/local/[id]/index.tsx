@@ -13,6 +13,8 @@ import { ErrorState } from '@/components/ErrorState';
 import { useTheme } from '@/hooks/useTheme';
 import { censor } from '@/utils/profanityFilter';
 import { getUsername } from '@/utils/storage';
+import { getOrCreateAnonId } from '@/utils/anon';
+import { buildTaggedName, stripDeviceTag, addOrdinalSuffixes } from '@/utils/nameTag';
 
 // Custom hook for local voting that bypasses user authentication
 const useLocalPollData = (pollId: string | string[] | undefined) => {
@@ -118,11 +120,14 @@ const useLocalPollData = (pollId: string | string[] | undefined) => {
       const formattedGames = gamesData.map(game => {
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
-        // Use the same mapping logic as usePollResults
+        // Build display names for local voters (strip device tag, then add ordinal suffixes, then censor)
+        const rawNames = gameVotes.map(v => stripDeviceTag(v.voter_name));
+        const displayNames = addOrdinalSuffixes(rawNames).map(name => censor(name));
+
         const voteData = {
           votes: {} as Record<string, number>,
-          voters: gameVotes.map(v => ({
-            name: censor(v.voter_name) || 'Anonymous',
+          voters: gameVotes.map((v, i) => ({
+            name: displayNames[i] || 'Anonymous',
             vote_type: v.vote_type as VoteType,
           })),
         };
@@ -261,37 +266,9 @@ export default function LocalPollScreen() {
         setSubmitting(false);
         return;
       }
-      let finalName = trimmedName;
-
-      // Check for existing votes with this name and deduplicate if needed
-      // Only apply deduplication if NOT from same device (detected via saved username)
-      const savedUsername = await getUsername();
-      const isSameDevice = savedUsername &&
-        savedUsername.trim().toLowerCase() === finalName.toLowerCase();
-
-      // Only deduplicate if not from same device
-      if (!isSameDevice) {
-        const { data: existingVotes, error: checkError } = await supabase
-          .from('votes')
-          .select('voter_name')
-          .eq('poll_id', id)
-          .is('user_id', null);
-
-        if (!checkError && existingVotes && existingVotes.length > 0) {
-          // Get unique voter names to avoid counting multiple vote records per voter
-          const uniqueVoterNames = [...new Set(existingVotes.map(v => v.voter_name))];
-
-          // Count exact matches (case-insensitive, trimmed)
-          const exactMatches = uniqueVoterNames.filter(name =>
-            name?.trim().toLowerCase() === finalName.toLowerCase()
-          ).length;
-
-          if (exactMatches > 0) {
-            finalName = `${finalName} (${exactMatches + 1})`;
-          }
-        }
-      }
-      // If isSameDevice, keep finalName as-is to update existing votes
+      const finalName = trimmedName;
+      const anonId = await getOrCreateAnonId();
+      const storedName = buildTaggedName(finalName, anonId);
 
       for (const [gameIdStr, score] of Object.entries(pendingVotes)) {
         const gameId = parseInt(gameIdStr, 10);
@@ -300,7 +277,7 @@ export default function LocalPollScreen() {
           .select('id, vote_type')
           .eq('poll_id', id)
           .eq('game_id', gameId)
-          .eq('voter_name', finalName);
+          .eq('voter_name', storedName);
         if (selectError) throw selectError;
         if (existing && existing.length > 0) {
           const vote = existing[0];
@@ -316,7 +293,7 @@ export default function LocalPollScreen() {
             poll_id: id,
             game_id: gameId,
             vote_type: score,
-            voter_name: finalName,
+            voter_name: storedName,
           });
           if (insertError) throw insertError;
         }
@@ -324,7 +301,7 @@ export default function LocalPollScreen() {
       if (comment.trim()) {
         const { error: commentError } = await supabase.from('poll_comments').insert({
           poll_id: id,
-          voter_name: finalName,
+          voter_name: storedName,
           comment_text: comment.trim(),
         });
         if (commentError) {

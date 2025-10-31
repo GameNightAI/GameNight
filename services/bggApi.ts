@@ -3,11 +3,13 @@ import { Game } from '@/types/game';
 
 export async function fetchGames(username: string): Promise<Game[]> {
   
+  const isLocalhost = window?.location.hostname === 'localhost';
+  const apiHost = isLocalhost ? 'https://klack-dev.netlify.app' : '';
   let response;
-  
+
   while (1) {  
     // Request to trigger collection fetch
-    response = await fetch(`/.netlify/functions/bgg-api/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
+    response = await fetch(`${apiHost}/.netlify/functions/bgg-api/collection?username=${encodeURIComponent(username)}&subtype=boardgame&own=1&stats=1`);
     const status = response.status;
 
     if ([

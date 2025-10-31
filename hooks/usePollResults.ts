@@ -5,6 +5,7 @@ import { Game } from '@/types/game';
 import { VOTING_OPTIONS, getVoteTypeKeyFromScore } from '@/components/votingOptions';
 import { getVoteUpdatedFlag, removeVoteUpdatedFlag } from '@/utils/storage';
 import { censor } from '@/utils/profanityFilter';
+import { stripDeviceTag, addOrdinalSuffixes } from '@/utils/nameTag';
 
 interface GameVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
@@ -193,14 +194,22 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
       const formattedGames = gamesData.map(game => {
         const gameVotes = votes?.filter(v => v.game_id === game.id) || [];
 
+        // Build display names: logged-in users as before; anonymous strip device tag first
+        const rawDisplayNames = gameVotes.map(v => (
+          v.username
+            ? ((v.firstname || v.lastname)
+              ? `${censor([v.firstname, v.lastname].join(' ').trim())} (${v.username})`
+              : v.username)
+            : stripDeviceTag(v.voter_name)
+        ));
+
+        // Add ordinal suffixes for repeated base names (display only), then censor anon names
+        const displayNames = addOrdinalSuffixes(rawDisplayNames).map(name => censor(name));
+
         const voteData: GameVotes = {
           votes: {} as Record<string, number>,
-          voters: gameVotes.map(v => ({
-            name: v.username
-              ? (v.firstname || v.lastname
-                ? `${censor([v.firstname, v.lastname].join(' ').trim())} (${v.username})`
-                : v.username
-              ) : censor(v.voter_name) || 'Anonymous',
+          voters: gameVotes.map((v, i) => ({
+            name: displayNames[i] || 'Anonymous',
             vote_type: v.vote_type,
           })) || [],
         };
