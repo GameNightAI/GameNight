@@ -46,7 +46,7 @@ def get_zip_url():
   post = session.post(
     LOGIN_URL,
     data = json.dumps({'credentials': {'username': USERNAME, 'password': PASSWORD}}),
-    headers = {'content-type': 'application/json'}
+    headers = {'content-type': 'application/json'},
   )
   response = session.get(BGG_CSV_URL)
   soup = BeautifulSoup(response.text, 'lxml')
