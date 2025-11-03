@@ -3,8 +3,12 @@ import { Game } from '@/types/game';
 
 export async function fetchGames(username: string): Promise<Game[]> {
   
-  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-  const apiHost = isLocalhost ? 'https://klack-dev.netlify.app' : '';
+  let apiHost = '';
+  if (typeof window === 'undefined'
+    || !['klack.netlify.app', 'klack-dev.netlify.app'].includes(window.location.hostname)
+  ) {
+    apiHost = 'https://klack-dev.netlify.app';
+  }
   let response;
 
   while (1) {  

@@ -22,6 +22,7 @@ def make_link(text, prefix=URL_PREFIX):
     return f'{prefix}/{text}'
 
 def get_license_from_github_url(url):
+  # TODO: Get the license from the correct version (some package versions are ancient)
   lics = []
   response = requests.get(make_link(url))
   soup = BeautifulSoup(response.text, 'lxml')
@@ -53,7 +54,7 @@ f'''## {package['name']}
 Version: {package['version']}
 {f'\nURL: {package.get('url')}' if package.get('url') else ''}
 {f'\nAuthor: {package.get('author')}' if package.get('author') else ''}
-{f'\n{package.get('content')}\n\n' if package.get('content') else ''}
+{f'\n\n{package.get('content')}\n\n' if package.get('content') else ''}
 Description: {package.get('description')}
 {f'\nFile: {package.get('file')}\n' if package.get('file') else ''}
 Type: {package.get('type') or 'N/A'}
@@ -61,7 +62,6 @@ Type: {package.get('type') or 'N/A'}
 
 ---
 
-  
 ''')
 
 def main2():
