@@ -5,7 +5,7 @@ export async function fetchGames(username: string): Promise<Game[]> {
   
   let apiHost = '';
   if (typeof window === 'undefined'
-    || !['klack.netlify.app', 'klack-dev.netlify.app'].includes(window.location.hostname)
+    || !window.location.hostname.endsWith('.netlify.app')
   ) {
     apiHost = 'https://klack-dev.netlify.app';
   }

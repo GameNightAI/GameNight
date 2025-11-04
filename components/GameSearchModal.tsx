@@ -77,7 +77,7 @@ export const GameSearchModal: React.FC<GameSearchModalProps> = ({
       // Perform an API request based on the search term
       let apiHost = '';
       if (typeof window === 'undefined'
-        || !['klack.netlify.app', 'klack-dev.netlify.app'].includes(window.location.hostname)
+        || !window.location.hostname.endsWith('.netlify.app')
       ) {
         apiHost = 'https://klack-dev.netlify.app';
       }
