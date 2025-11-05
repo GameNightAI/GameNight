@@ -28,7 +28,8 @@ export default function ResetPasswordScreen() {
     }
 
     // Fallback for mobile
-    return 'https://klack.netlify.app';
+    // TODO: Set this to production URL once we are ready to push to prod.
+    return 'https://klack-dev.netlify.app';
   };
 
   // Check for error parameters from redirects
