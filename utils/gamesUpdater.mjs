@@ -371,7 +371,7 @@ const main = async () => {
 
   const csvParser = parse({ columns: true });
 
-  // Unzip boardgames_ranks_YYYY-MM-DD.zip
+  // Unzip boardgames_ranks_YYYY-MM-DD.zip and pipe to csvParser
   yauzl.fromBuffer(zipBuffer, { lazyEntries: true }, (err, zipfile) => {
     log(`Extracting ${zipFilename}...`);
     if (err) throw err;
