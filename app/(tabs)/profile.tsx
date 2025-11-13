@@ -221,6 +221,17 @@ export default function ProfileScreen() {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
+            onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/PRIVACY_POLICY.md')}
+          >
+            <Text style={styles.actionButtonText}>
+              Privacy Policy
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
             accessibilityLabel="Log out"
             accessibilityRole="button"
             accessibilityHint="Logs you out and returns to the login screen"
