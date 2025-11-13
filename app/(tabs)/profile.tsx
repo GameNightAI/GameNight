@@ -10,7 +10,6 @@ import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
 
 import { supabase } from '@/services/supabase';
 import EditProfileModal from '@/components/EditProfileModal';
-import { Touchable } from 'react-native/types_generated/index';
 
 const discordSymbolLight = require('@/assets/images/Discord-Symbol-Blurple.svg');
 const discordSymbolDark = require('@/assets/images/Discord-Symbol-Blurple.svg');
