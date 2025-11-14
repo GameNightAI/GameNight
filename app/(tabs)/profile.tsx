@@ -191,13 +191,13 @@ export default function ProfileScreen() {
           <View style={styles.contactContainer}>
             <Text style={styles.contactText}>
               Questions, issues, or feature requests?{'\n'}
-              For any support needs, contact klackapp@gmail.com or join our Discord server.
+              For any support needs, contact support@klack-app.com or join our Discord server.
             </Text>
             { /*<TouchableOpacity
               accessibilityLabel="Email support"
               accessibilityRole="button"
               accessibilityHint="Opens your email app to contact support"
-              onPress={() => Linking.openURL('mailto:klackapp@gmail.com')}
+              onPress={() => Linking.openURL('mailto:support@klack-app.com')}
               style={styles.iconButton}
             >
               <Mail size={28} color={colors.textMuted} />
@@ -222,9 +222,26 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/PRIVACY_POLICY.md')}
+            accessibilityLabel="Privacy Policy"
+            accessibilityRole="button"
+            accessibilityHint="Opens Klack's privacy policy in your browser"
           >
             <Text style={styles.actionButtonText}>
               Privacy Policy
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/licenses.md')}
+            accessibilityLabel="Open-source software licenses"
+            accessibilityRole="button"
+            accessibilityHint="Opens licenses of open-source software used by Klack in your browser"
+          >
+            <Text style={styles.actionButtonText}>
+              Open-source software licenses
             </Text>
           </TouchableOpacity>
         </View>
