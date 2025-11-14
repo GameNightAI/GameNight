@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { useRouter, useLocalSearchParams, Link } from 'expo-router';
 import { ArrowLeft, User, UserPlus } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
@@ -311,7 +311,7 @@ export default function RegisterProfileScreen() {
 
             {!isDesktop && <View style={styles.spacer} />}
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.privacyNotice}
               onPress={() => setPrivacyExpanded(!privacyExpanded)}
               accessibilityRole="button"
@@ -329,7 +329,7 @@ export default function RegisterProfileScreen() {
                   </Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {error && (
               <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
@@ -361,6 +361,22 @@ export default function RegisterProfileScreen() {
               <ArrowLeft color={colors.textMuted} size={20} />
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
+
+            <Text style={styles.loginText}>
+              By clicking "Create Account" you agree to our{' '}
+              <Text
+                style={styles.signInText}
+                onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/PRIVACY_POLICY.md')}
+                accessibilityLabel="Privacy Policy"
+                accessibilityRole="button"
+                accessibilityHint="Opens Klack's privacy policy in your browser"
+              >
+                privacy policy
+              </Text>
+              {' '}and acknowledge that you have read our{' '}
+              <Text>terms of service</Text>
+              .
+            </Text>
 
             <Link href="/auth/login" asChild>
               <TouchableOpacity style={styles.loginLink} hitSlop={touchTargets.standard}>
