@@ -235,6 +235,20 @@ export default function ProfileScreen() {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
+            onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/licenses.md')}
+            accessibilityLabel="Open-source software licenses"
+            accessibilityRole="button"
+            accessibilityHint="Opens licenses of open-source software used by Klack in your browser"
+          >
+            <Text style={styles.actionButtonText}>
+              Open-source software licenses
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
             accessibilityLabel="Log out"
             accessibilityRole="button"
             accessibilityHint="Logs you out and returns to the login screen"
