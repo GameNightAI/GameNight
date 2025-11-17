@@ -378,13 +378,13 @@ export default function RegisterProfileScreen() {
               .
             </Text>
 
-            <Link href="/auth/login" asChild>
+            {/* <Link href="/auth/login" asChild>
               <TouchableOpacity style={styles.loginLink} hitSlop={touchTargets.standard}>
                 <Text style={styles.loginText}>
                   Already have an account? <Text style={styles.signInText}>Sign in</Text>
                 </Text>
               </TouchableOpacity>
-            </Link>
+            </Link> */}
           </View>
         </View>
       </View>
