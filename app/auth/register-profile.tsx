@@ -374,7 +374,15 @@ export default function RegisterProfileScreen() {
                 privacy policy
               </Text>
               {' '}and acknowledge that you have read our{' '}
-              <Text>terms of service</Text>
+              <Text
+                style={styles.signInText}
+                onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/TERMS_OF_SERVICE.md')}
+                accessibilityLabel="Terms of Service"
+                accessibilityRole="button"
+                accessibilityHint="Opens Klack's terms of service in your browser"
+              >
+                terms of service
+              </Text>
               .
             </Text>
 
