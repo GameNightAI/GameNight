@@ -109,7 +109,7 @@ The Klack Websites are controlled and offered by Klack from facilities in the Un
 
 # 11. Digital Millennium Copyright Act
 ## A. Think there is infringing content on Klack?
-If you are a copyright owner or an agent thereof and believe that any user submission or other content infringes upon your copyrights, you may submit a notification pursuant to the Digital Millennium Copyright Act ("DMCA") by providing us with the following information in writing (see 17 U.S.C. 512(c)(3) for further detail):
+If you are a copyright owner or an agent thereof and believe that any user submission or other content infringes upon your copyrights, you may submit a notification pursuant to the Digital Millennium Copyright Act ("DMCA") by providing us with the following information at support@klack-app.com (subject line: "DMCA Takedown Request") (see 17 U.S.C. 512(c)(3) for further detail):
 
 * (i) A physical or electronic signature of a person authorized to act on behalf of the owner of an exclusive right that is allegedly infringed;
 * (ii) Identification of the copyrighted work claimed to have been infringed, or, if multiple copyrighted works at a single online site are covered by a single notification, a representative list of such works at that site;
@@ -128,7 +128,7 @@ If you believe that your user submission or other content, which was removed (or
 * (iii) A statement that you have a good faith belief that the content was removed or disabled as a result of mistake or a misidentification of the content; and
 * (iv) Your name, address, telephone number, and e-mail address, a statement that you consent to the jurisdiction of the federal court in New York, New York, and a statement that you will accept service of process from the person who provided notification of the alleged infringement or an agent of such person.
 
-If a counter notification is received by the Copyright Agent, then Klack LLC may send a copy of the counter notification to the original complaining party informing that person that it may replace the removed content or cease disabling it within 10 business days. Unless the copyright owner files an action seeking a court order against the user who submitted the content, the removed content may be replaced, or access to it restored, in 10 to 14 business days following receipt of the counter notification, at the sole discretion of Klack LLC.
+If a counter notification is received, then Klack LLC may send a copy of the counter notification to the original complaining party informing that person that it may replace the removed content or cease disabling it within 10 business days. Unless the copyright owner files an action seeking a court order against the user who submitted the content, the removed content may be replaced, or access to it restored, in 10 to 14 business days following receipt of the counter notification, at the sole discretion of Klack LLC.
 
 # 12. WE DISCLAIM ANY WARRANTIES. YOUR USE OF OUR WEBSITES AND OUR CONTENT IS AT YOUR OWN RISK.
 You agree to assume all responsibility and risk for your use of the Klack Websites and our content. To the fullest extent permissible under applicable law, neither Klack nor its related parties make any express or implied warranties or representations whatsoever with respect to the Klack Websites or our content, including but not limited to any warranties of merchantability, non-infringement, and fitness for particular purpose, and all such warranties are expressly disclaimed.

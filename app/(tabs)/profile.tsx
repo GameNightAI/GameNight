@@ -221,6 +221,20 @@ export default function ProfileScreen() {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
+            onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/TERMS_OF_SERVICE.md')}
+            accessibilityLabel="Terms of Service"
+            accessibilityRole="button"
+            accessibilityHint="Opens Klack's terms of service in your browser"
+          >
+            <Text style={styles.actionButtonText}>
+              Terms of Service
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/PRIVACY_POLICY.md')}
             accessibilityLabel="Privacy Policy"
             accessibilityRole="button"
