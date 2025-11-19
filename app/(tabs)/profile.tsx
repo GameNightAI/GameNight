@@ -221,7 +221,7 @@ export default function ProfileScreen() {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/TERMS_OF_SERVICE.md')}
+            onPress={() => Linking.openURL('/TERMS_OF_SERVICE.html')}
             accessibilityLabel="Terms of Service"
             accessibilityRole="button"
             accessibilityHint="Opens Klack's terms of service in your browser"
@@ -235,7 +235,7 @@ export default function ProfileScreen() {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/PRIVACY_POLICY.md')}
+            onPress={() => Linking.openURL('/PRIVACY_POLICY.html')}
             accessibilityLabel="Privacy Policy"
             accessibilityRole="button"
             accessibilityHint="Opens Klack's privacy policy in your browser"
@@ -249,7 +249,7 @@ export default function ProfileScreen() {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/licenses.md')}
+            onPress={() => Linking.openURL('/licenses.html')}
             accessibilityLabel="Open-source software licenses"
             accessibilityRole="button"
             accessibilityHint="Opens licenses of open-source software used by Klack in your browser"
