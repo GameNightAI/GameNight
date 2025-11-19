@@ -9,7 +9,7 @@ All websites maintained by us, i.e., Klack LLC and our affiliates (collectively,
 ## C. By using the Klack Websites, you indicate to us that you agree to the Terms of Service. We will change these Terms of Service occasionally, so make sure you stay up to date.
 These Terms of Service apply to all users of the Klack Websites. Klack reserves the right to amend these Terms of Service at any time. Klack will email you of any such modifications. It is your responsibility to periodically check your email for any such modifications. Each modification to these Terms of Service shall become effective ten days after a notification of the modification is emailed. Your continued use of the Klack Websites after the modification of these Terms of Service becomes effective following this ten day period signifies your assent to and acceptance of the amended terms and provisions. If you do not agree to the announced changes, you have the option of deleting your account before the end of the 10 day period.
 
-## D. By using parts of our website, you indicate that you agree to the OpenAI terms of service.
+## D. By using parts of our website, you indicate that you agree to the OpenAI terms of use.
 Some features of the Klack Websites make use of OpenAI API services. To the extent that you use the features of the sites that involve OpenAI, you agree to be bound by the [OpenAI terms of use](https://openai.com/policies/terms-of-use/).
 
 # 2. We are not responsible for issues you have with third party websites and apps that we may link to. We are responsible for the Klack Websites.
