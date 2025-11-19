@@ -366,7 +366,7 @@ export default function RegisterProfileScreen() {
               By clicking "Create Account" you agree to our{' '}
               <Text
                 style={styles.signInText}
-                onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/PRIVACY_POLICY.md')}
+                onPress={() => Linking.openURL('/PRIVACY_POLICY.html')}
                 accessibilityLabel="Privacy Policy"
                 accessibilityRole="button"
                 accessibilityHint="Opens Klack's privacy policy in your browser"
@@ -376,7 +376,7 @@ export default function RegisterProfileScreen() {
               {' '}and acknowledge that you have read our{' '}
               <Text
                 style={styles.signInText}
-                onPress={() => Linking.openURL('https://github.com/GameNightAI/GameNight/blob/develop/TERMS_OF_SERVICE.md')}
+                onPress={() => Linking.openURL('/TERMS_OF_SERVICE.html')}
                 accessibilityLabel="Terms of Service"
                 accessibilityRole="button"
                 accessibilityHint="Opens Klack's terms of service in your browser"
