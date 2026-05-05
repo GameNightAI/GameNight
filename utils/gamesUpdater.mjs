@@ -186,9 +186,9 @@ const parseXml = function* (text) {
         }
       }
       // NULL out 0 for filtering purposes (0 means no value)
-      row.average = parseFloat(ratings?.average.value) || null;
-      row.bayesaverage = parseFloat(ratings?.bayesaverage.value) || null;
-      row.complexity = parseFloat(ratings?.averageweight.value) || null;
+      row.average = parseFloat(ratings?.average?.value) || null;
+      row.bayesaverage = parseFloat(ratings?.bayesaverage?.value) || null;
+      row.complexity = parseFloat(ratings?.averageweight?.value) || null;
       row.year_published = parseInt(game.yearpublished?.value) || null;
       row.minplaytime = parseInt(game.minplaytime?.value) || null;
       row.maxplaytime = parseInt(game.maxplaytime?.value) || null;
@@ -216,7 +216,7 @@ const parseXml = function* (text) {
     } catch (error) {
       cError(error);
       log('Game:')
-      log(game);
+      console.log(game);
       log('Full XML response:');
       log(text);
     }
