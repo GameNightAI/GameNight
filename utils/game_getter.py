@@ -13,6 +13,7 @@ import json
 from bs4 import BeautifulSoup
 import io
 from zipfile import ZipFile
+import html
 # from optparse import OptionParser
 
 LOGIN_URL = 'https://boardgamegeek.com/login/api/v1'
@@ -113,7 +114,7 @@ def parse_xml(text):
       thumbnail = game.findtext('thumbnail', default=''),
       # NULL out complexity=0 for filtering purposes, and in case we ever decide to do some math (0 means no votes)
       complexity = float(game.find('statistics').find('ratings').find('averageweight').attrib['value']) or '',
-      description = game.findtext('description', default='')[:DESCRIPTION_NCHARS],
+      description = html.unescape(game.findtext('description', default='')[:DESCRIPTION_NCHARS]),
       is_cooperative = has_taxonomy(game, 'boardgamemechanic', 'Cooperative Game'),
       is_teambased = has_taxonomy(game, 'boardgamemechanic', 'Team-Based Game'),
       # is_legacy = has_taxonomy(game, 'boardgamemechanic', 'Legacy Game'),
