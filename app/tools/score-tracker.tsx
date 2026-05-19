@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, FlatList, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus, Minus, Trophy, Users, RotateCcw, X, Pen, Check } from 'lucide-react-native';
 import Animated, { FadeIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
@@ -208,10 +208,15 @@ export default function ScoreTrackerScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
-              {players.map((player, index) => (
+            <FlatList
+              data={players}
+              keyExtractor={(item) => item.id}
+              style={styles.playersList}
+              contentContainerStyle={styles.playersListContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item: player, index }) => (
                 <Animated.View
-                  key={player.id}
                   entering={FadeIn.delay(index * 100)}
                   style={styles.playerItem}
                 >
@@ -247,9 +252,7 @@ export default function ScoreTrackerScreen() {
                     </View>
                   ) : (
                     <>
-                      <View style={styles.playerInfo}>
-                        <Text style={styles.playerName}>{player.name}</Text>
-                      </View>
+                      <Text style={styles.playerName}>{player.name}</Text>
                       <View style={styles.playerActions}>
                         <TouchableOpacity
                           style={styles.editPlayerButton}
@@ -273,14 +276,13 @@ export default function ScoreTrackerScreen() {
                     </>
                   )}
                 </Animated.View>
-              ))}
-            </ScrollView>
-
-            {players.length === 0 && (
-              <Text style={styles.emptyText}>
-                Add at least 2 players to start the game
-              </Text>
-            )}
+              )}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>
+                  Add at least 2 players to start the game
+                </Text>
+              }
+            />
           </View>
 
           {players.length >= 2 && (
@@ -367,8 +369,8 @@ export default function ScoreTrackerScreen() {
                   <View style={styles.scoreHeaderRow}>
                     <Text style={styles.scoreHeaderPlayer}>Player</Text>
                     <Text style={styles.scoreHeaderTotal}>Total</Text>
-                    {/* Show rounds in reverse order (latest first) */}
-                    {[...rounds].reverse().map(round => (
+                    {/* Show rounds in ascending order (R1 first) */}
+                    {rounds.map(round => (
                       <Text key={round.roundNumber} style={styles.scoreHeaderRound}>
                         R{round.roundNumber}
                       </Text>
@@ -391,8 +393,8 @@ export default function ScoreTrackerScreen() {
                           {player.total}
                         </Text>
                       </View>
-                      {/* Show scores in reverse order (latest first) */}
-                      {[...player.scores].reverse().map((score, scoreIndex) => (
+                      {/* Show scores in ascending order (R1 first) */}
+                      {player.scores.map((score, scoreIndex) => (
                         <View key={scoreIndex} style={styles.scoreRoundCell}>
                           <Text style={styles.scoreRoundText}>
                             {score}
@@ -435,43 +437,37 @@ export default function ScoreTrackerScreen() {
 
       <ScrollView style={styles.finishedContent} showsVerticalScrollIndicator={false}>
         <View style={styles.podiumSection}>
-          {/* 2nd Place - Left */}
           {sortedPlayers[1] && (
-            <Animated.View
+            <View
               key={sortedPlayers[1].id}
-              entering={FadeIn.delay(200)}
               style={[styles.podiumItem, styles.podiumSecond]}
             >
               <Text style={styles.podiumPositionSecond}>🥈</Text>
               <Text style={styles.podiumNameSecond}>{sortedPlayers[1].name}</Text>
               <Text style={styles.podiumScoreSecond}>{sortedPlayers[1].total}</Text>
-            </Animated.View>
+            </View>
           )}
 
-          {/* 1st Place - Center */}
           {sortedPlayers[0] && (
-            <Animated.View
+            <View
               key={sortedPlayers[0].id}
-              entering={FadeIn.delay(0)}
               style={[styles.podiumItem, styles.podiumFirst]}
             >
               <Text style={styles.podiumPositionFirst}>🥇</Text>
               <Text style={styles.podiumNameFirst}>{sortedPlayers[0].name}</Text>
               <Text style={styles.podiumScoreFirst}>{sortedPlayers[0].total}</Text>
-            </Animated.View>
+            </View>
           )}
 
-          {/* 3rd Place - Right */}
           {sortedPlayers[2] && (
-            <Animated.View
+            <View
               key={sortedPlayers[2].id}
-              entering={FadeIn.delay(400)}
               style={[styles.podiumItem, styles.podiumThird]}
             >
               <Text style={styles.podiumPositionThird}>🥉</Text>
               <Text style={styles.podiumNameThird}>{sortedPlayers[2].name}</Text>
               <Text style={styles.podiumScoreThird}>{sortedPlayers[2].total}</Text>
-            </Animated.View>
+            </View>
           )}
         </View>
 
@@ -479,16 +475,16 @@ export default function ScoreTrackerScreen() {
         <View style={styles.finalResultsSection}>
           <Text style={styles.finalResultsTitle}>Complete Results</Text>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={true}>
             <View style={styles.finalTable}>
               {/* Header */}
               <View style={styles.finalHeaderRow}>
-                <Text style={styles.finalHeaderCell}>Rank</Text>
-                <Text style={styles.finalHeaderCellPlayer}>Player</Text>
-                <Text style={styles.finalHeaderCellTotal}>Total</Text>
-                {/* Show rounds in reverse order (latest first) */}
-                {[...rounds].reverse().map(round => (
-                  <Text key={round.roundNumber} style={styles.finalHeaderCell}>
+                <Text style={styles.finalHeaderRank}>Rank</Text>
+                <Text style={styles.finalHeaderPlayer}>Player</Text>
+                <Text style={styles.finalHeaderTotal}>Total</Text>
+                {/* Show rounds in ascending order (R1 first) */}
+                {rounds.map(round => (
+                  <Text key={round.roundNumber} style={styles.finalHeaderRound}>
                     R{round.roundNumber}
                   </Text>
                 ))}
@@ -497,14 +493,20 @@ export default function ScoreTrackerScreen() {
               {/* Player Rows */}
               {sortedPlayers.map((player, index) => (
                 <View key={player.id} style={styles.finalPlayerRow}>
-                  <Text style={styles.finalRankCell}>#{index + 1}</Text>
-                  <Text style={styles.finalPlayerNameCell}>{player.name}</Text>
-                  <Text style={styles.finalTotalCell}>{player.total}</Text>
-                  {/* Show scores in reverse order (latest first) */}
-                  {[...player.scores].reverse().map((score, scoreIndex) => (
-                    <Text key={scoreIndex} style={styles.finalScoreCell}>
-                      {score}
-                    </Text>
+                  <View style={styles.finalRankCell}>
+                    <Text style={styles.finalRankText}>#{index + 1}</Text>
+                  </View>
+                  <View style={styles.finalPlayerNameCell}>
+                    <Text style={styles.finalPlayerNameText}>{player.name}</Text>
+                  </View>
+                  <View style={styles.finalTotalCell}>
+                    <Text style={styles.finalTotalText}>{player.total}</Text>
+                  </View>
+                  {/* Show scores in ascending order (R1 first) */}
+                  {player.scores.map((score, scoreIndex) => (
+                    <View key={scoreIndex} style={styles.finalScoreCell}>
+                      <Text style={styles.finalScoreText}>{score}</Text>
+                    </View>
                   ))}
                 </View>
               ))}
@@ -629,11 +631,12 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     // === INPUT CONTAINER ===
     inputContainer: {
       flexDirection: 'row',
-      marginBottom: 24,
+      marginBottom: 16,
     },
     input: {
       flex: 1,
       flexShrink: 1,
+      minWidth: 0,
       backgroundColor: colors.card,
       borderRadius: 12,
       padding: 16,
@@ -667,6 +670,10 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       flex: 1,
       maxHeight: 300,
     },
+    playersListContent: {
+      paddingBottom: 20,
+      flexGrow: 1,
+    },
     playerItem: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -690,6 +697,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     },
     editInput: {
       flex: 1,
+      minWidth: 0,
       backgroundColor: colors.background,
       borderRadius: 8,
       paddingHorizontal: 12,
@@ -737,9 +745,6 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       marginLeft: 8,
       backgroundColor: colors.tints.neutral,
     },
-    playerInfo: {
-      flex: 1,
-    },
     editPlayerButton: {
       width: 32,
       height: 32,
@@ -761,7 +766,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     emptyText: {
       textAlign: 'center',
       fontFamily: typography.getFontFamily('normal'),
-      fontSize: typography.fontSize.subheadline,
+      fontSize: typography.fontSize.body,
       color: colors.textMuted,
       marginTop: 32,
     },
@@ -1034,7 +1039,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       alignItems: 'flex-end',
       minHeight: 200,
       gap: 0,
-      flex: 1,
+      width: '100%',
     },
     podiumItem: {
       backgroundColor: colors.card,
@@ -1074,7 +1079,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     },
     podiumScoreFirst: {
       fontFamily: typography.getFontFamily('bold'),
-      fontSize: typography.fontSize.title1,
+      fontSize: typography.fontSize.title2,
       color: colors.warning,
     },
     // 2nd Place - Left (Medium)
@@ -1102,7 +1107,7 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
     },
     podiumScoreSecond: {
       fontFamily: typography.getFontFamily('bold'),
-      fontSize: typography.fontSize.title2,
+      fontSize: typography.fontSize.title3,
       color: colors.textMuted,
     },
     // 3rd Place - Right (Smallest)
@@ -1155,8 +1160,8 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       borderTopLeftRadius: 8,
       borderTopRightRadius: 8,
     },
-    finalHeaderCell: {
-      flex: 1,
+    finalHeaderRank: {
+      width: 60,
       padding: 12,
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.footnote,
@@ -1165,8 +1170,8 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       borderRightWidth: 1,
       borderRightColor: colors.border,
     },
-    finalHeaderCellPlayer: {
-      flex: 2,
+    finalHeaderPlayer: {
+      width: 120,
       padding: 12,
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.footnote,
@@ -1175,8 +1180,18 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       borderRightWidth: 1,
       borderRightColor: colors.border,
     },
-    finalHeaderCellTotal: {
-      flex: 1,
+    finalHeaderTotal: {
+      width: 100,
+      padding: 12,
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.text,
+      textAlign: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    finalHeaderRound: {
+      width: 50,
       padding: 12,
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.footnote,
@@ -1192,44 +1207,60 @@ function getStyles(colors: any, typography: any, touchTargets: any) {
       borderBottomColor: colors.border,
     },
     finalRankCell: {
-      flex: 1,
+      width: 60,
       padding: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    finalRankText: {
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.footnote,
       color: colors.text,
       textAlign: 'center',
+    },
+    finalPlayerNameCell: {
+      width: 120,
+      padding: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
       borderRightWidth: 1,
       borderRightColor: colors.border,
     },
-    finalPlayerNameCell: {
-      flex: 2,
-      padding: 12,
+    finalPlayerNameText: {
       fontFamily: typography.getFontFamily('normal'),
       fontSize: typography.fontSize.footnote,
       color: colors.text,
       textAlign: 'center',
+    },
+    finalTotalCell: {
+      width: 100,
+      padding: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
       borderRightWidth: 1,
       borderRightColor: colors.border,
     },
-    finalTotalCell: {
-      flex: 1,
-      padding: 12,
+    finalTotalText: {
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.footnote,
       color: colors.accent,
       textAlign: 'center',
+    },
+    finalScoreCell: {
+      width: 50,
+      padding: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
       borderRightWidth: 1,
       borderRightColor: colors.border,
     },
-    finalScoreCell: {
-      flex: 1,
-      padding: 12,
+    finalScoreText: {
       fontFamily: typography.getFontFamily('normal'),
       fontSize: typography.fontSize.footnote,
       color: colors.text,
       textAlign: 'center',
-      borderRightWidth: 1,
-      borderRightColor: colors.border,
     },
 
     // === NEW GAME BUTTON ===
