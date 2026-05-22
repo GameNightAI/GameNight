@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
+// remove Sentry import after testing in development */
+import * as Sentry from '@sentry/react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { LogOut, CreditCard as Edit2, ExternalLink, Mail, Edit3 } from 'lucide-react-native';
@@ -269,6 +271,21 @@ export default function ProfileScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* remove Sentry test error after testing in development */}
+        {__DEV__ && (
+          <View>
+            <TouchableOpacity
+              style={styles.actionButton}
+              accessibilityLabel="Send Sentry test error"
+              accessibilityRole="button"
+              accessibilityHint="Sends a test error to Sentry for development verification"
+              onPress={() => Sentry.captureException(new Error('First error'))}
+            >
+              <Text style={styles.actionButtonText}>Sentry test (dev only)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View>
           <TouchableOpacity
