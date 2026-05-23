@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
-// remove Sentry import after testing in development */
 import * as Sentry from '@sentry/react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -272,7 +271,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* remove Sentry test error after testing in development */}
         {__DEV__ && (
           <View>
             <TouchableOpacity
