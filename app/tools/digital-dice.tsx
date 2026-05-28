@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Dices, RotateCcw, Plus, Minus, X, Settings } from 'lucide-react-native';
+import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Dices, RotateCcw, Plus, Minus, X } from 'lucide-react-native';
 import ToolsFooter from '@/components/ToolsFooter';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -59,9 +59,7 @@ export default function DigitalDiceScreen() {
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customSides, setCustomSides] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
   useRegisterModalSurface('DigitalDice:CustomSides', showCustomModal);
-  useRegisterModalSurface('DigitalDice:Settings', showSettings);
 
   // Load haptic setting on mount
   useEffect(() => {
@@ -78,7 +76,7 @@ export default function DigitalDiceScreen() {
     loadHapticSetting();
   }, []);
 
-  // Save haptic setting when changed
+  // Used when Settings UI is re-enabled
   const toggleHaptic = async (value: boolean) => {
     setHapticEnabled(value);
     try {
@@ -450,62 +448,9 @@ export default function DigitalDiceScreen() {
               {isRolling ? 'Rolling...' : 'Roll Dice'}
             </Text>
           </TouchableOpacity>
-
-          {/* Settings Button */}
-          {Platform.OS !== 'web' && (
-            <TouchableOpacity
-              style={styles.settingsButton}
-              onPress={() => setShowSettings(true)}
-              accessibilityLabel="Open settings"
-              accessibilityRole="button"
-            >
-              <Settings size={20} color="#666666" />
-              <Text style={styles.settingsButtonText}>Settings</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </ScrollView>
 
-      {/* Settings Modal */}
-      {Platform.OS !== 'web' && (
-        <Modal
-          visible={showSettings}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowSettings(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Dice Settings</Text>
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={() => setShowSettings(false)}
-                >
-                  <X size={20} color="#666666" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.settingRow}>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>Haptic Feedback</Text>
-                  <Text style={styles.settingDescription}>
-                    Feel vibrations when rolling dice
-                  </Text>
-                </View>
-                <Switch
-                  value={hapticEnabled}
-                  onValueChange={toggleHaptic}
-                  trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
-                  thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
-                  accessibilityLabel="Toggle haptic feedback"
-                  accessibilityRole="switch"
-                />
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
       <ToolsFooter currentScreen="tools" />
     </View>
   );

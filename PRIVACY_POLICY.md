@@ -184,11 +184,11 @@ What we use your data for:
 
 ## e. Data Deletion Process
 
-1. **Account Deletion**: Contact us at support@klack-app.com to delete your account
+1. **Account Deletion**: Go to Profile → Delete Account in the app to permanently delete your account immediately. You can also contact us at support@klack-app.com for assistance.
 
-2. **Data Removal**: All personal data will be deleted within 30 days
+2. **Data Removal**: When you delete your account in the app, your personal data is removed immediately, including your profile, game collection, polls, events, votes, and comments.
 
-3. **Confirmation**: You will receive confirmation of deletion via email
+3. **Confirmation**: After in-app deletion, you are signed out and cannot log in with the same credentials unless you register again.
 
 # 6. Permissions
 
