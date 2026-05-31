@@ -5,6 +5,7 @@ import yauzl from 'yauzl'; // "yet another unzip library" for node
 import { parse } from 'csv-parse';
 import { asyncBatch, asyncToArray, asyncMap } from 'iter-tools';
 import { format } from 'date-fns';
+import { decode } from 'html-entities';
 
 // Environment variables
 const {
@@ -29,6 +30,7 @@ const SUPABASE_BATCH_SIZE = 1000; // number of rows per INSERT/UPSERT requests
   // (expansions will usually be slightly higher since we batch by base game)
 const STAGING_TO_PROD_RETRIES = 10; // Number of retries for (games_staging -> games)
   // and (expansions_staging -> expansions) (Games is somewhat likely to timeout, which may need to be adjusted.)
+const WRITE_DESCRIPTIONS = false;
 
 const timestamp = () => 
   format(new Date(), 'Pppp');
@@ -127,7 +129,7 @@ const parseXml = function* (text) {
       let names = arrayify(game.name);
       for (const { type, value } of names) {
         if (type === 'primary') {
-          row.name = value;
+          row.name = decode(value);
         }
       }
       
@@ -186,9 +188,9 @@ const parseXml = function* (text) {
         }
       }
       // NULL out 0 for filtering purposes (0 means no value)
-      row.average = parseFloat(ratings?.average.value) || null;
-      row.bayesaverage = parseFloat(ratings?.bayesaverage.value) || null;
-      row.complexity = parseFloat(ratings?.averageweight.value) || null;
+      row.average = parseFloat(ratings?.average?.value) || null;
+      row.bayesaverage = parseFloat(ratings?.bayesaverage?.value) || null;
+      row.complexity = parseFloat(ratings?.averageweight?.value) || null;
       row.year_published = parseInt(game.yearpublished?.value) || null;
       row.minplaytime = parseInt(game.minplaytime?.value) || null;
       row.maxplaytime = parseInt(game.maxplaytime?.value) || null;
@@ -199,7 +201,7 @@ const parseXml = function* (text) {
       row.image_url = game.image;
       row.thumbnail = game.thumbnail;
       row.audio_url = null; // We will probably never use this column
-      row.description = null; // Leaving blank until we have more database storage
+      row.description = WRITE_DESCRIPTIONS ? decode(game.description) : null; // Need more Supabase space for BGG descriptions
       row.is_cooperative = hasTaxonomy(game, 'boardgamemechanic', 'Cooperative Game');
       row.is_teambased = hasTaxonomy(game, 'boardgamemechanic', 'Team-Based Game');
       // BGG taxonomy
@@ -216,7 +218,7 @@ const parseXml = function* (text) {
     } catch (error) {
       cError(error);
       log('Game:')
-      log(game);
+      console.log(game);
       log('Full XML response:');
       log(text);
     }
