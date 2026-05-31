@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Linking, Platform, Alert } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { LogOut, CreditCard as Edit2, ExternalLink, Mail, Edit3 } from 'lucide-react-native';
+import { LogOut, Trash2, Edit3 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
@@ -11,6 +11,7 @@ import { useAccessibilityContext } from '@/contexts/AccessibilityContext';
 
 import { supabase } from '@/services/supabase';
 import EditProfileModal from '@/components/EditProfileModal';
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
 /**
  * Legal / licenses links use a full marketing-site origin on native (see legalPagesBaseUrl).
@@ -32,6 +33,7 @@ export default function ProfileScreen() {
     bgg_username: string | null;
   } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const { colors, typography, isDark } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled, getReducedMotionStyle } = useAccessibility();
   const { toggleTheme } = useAccessibilityContext();
@@ -40,6 +42,7 @@ export default function ProfileScreen() {
   // Use fallback values for web platform
   const safeAreaBottom = Platform.OS === 'web' ? 0 : insets.bottom;
   const [loading, setLoading] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const router = useRouter();
 
   const legalPagesBaseUrl = Platform.select({
@@ -74,6 +77,31 @@ export default function ProfileScreen() {
       loadUserData();
     }, [loadUserData])
   );
+
+  const handleDeleteAccount = async () => {
+    try {
+      setShowDeleteAccountDialog(false);
+      setDeletingAccount(true);
+
+      const { error } = await supabase.rpc('delete_user_account');
+      if (error) {
+        throw error;
+      }
+
+      await supabase.auth.signOut();
+      announceForAccessibility('Account deleted successfully');
+      router.replace('/auth/login');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      announceForAccessibility('Failed to delete account');
+      Alert.alert(
+        'Could not delete account',
+        'Something went wrong while deleting your account. Please try again or contact support@klack-app.com.',
+      );
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -136,11 +164,11 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.contentContainer, { paddingBottom: 80 + safeAreaBottom }]}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 80 + safeAreaBottom }]}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.profileHeader}>
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarLetter}>
@@ -232,6 +260,22 @@ export default function ProfileScreen() {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
+            accessibilityLabel="Log out"
+            accessibilityRole="button"
+            accessibilityHint="Logs you out and returns to the login screen"
+            onPress={handleLogout}
+            disabled={loading || deletingAccount}
+          >
+            <LogOut size={20} color={colors.error} />
+            <Text style={[styles.actionButtonText, styles.logoutButtonText]}>
+              {loading ? 'Logging out...' : 'Log Out'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => Linking.openURL(`${legalPagesBaseUrl}/TERMS_OF_SERVICE.html`)}
             accessibilityLabel="Terms of Service"
             accessibilityRole="button"
@@ -288,15 +332,15 @@ export default function ProfileScreen() {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
-            accessibilityLabel="Log out"
+            accessibilityLabel="Delete account"
             accessibilityRole="button"
-            accessibilityHint="Logs you out and returns to the login screen"
-            onPress={handleLogout}
-            disabled={loading}
+            accessibilityHint="Permanently deletes your account and all associated data"
+            onPress={() => setShowDeleteAccountDialog(true)}
+            disabled={loading || deletingAccount}
           >
-            <LogOut size={20} color={colors.error} />
+            <Trash2 size={20} color={colors.error} />
             <Text style={[styles.actionButtonText, styles.logoutButtonText]}>
-              {loading ? 'Logging out...' : 'Log Out'}
+              {deletingAccount ? 'Deleting account...' : 'Delete Account'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -318,6 +362,7 @@ export default function ProfileScreen() {
           © 2025 Klack LLC. All rights reserved.
         </Text>
       </View>
+      </ScrollView>
 
       {showEditModal && profile && (
         <EditProfileModal
@@ -328,7 +373,16 @@ export default function ProfileScreen() {
           loading={loading}
         />
       )}
-    </ScrollView>
+
+      <ConfirmationDialog
+        isVisible={showDeleteAccountDialog}
+        title="Delete Account?"
+        message="This permanently deletes your Klack account and all associated data, including your profile, game collection, polls, and events. This cannot be undone."
+        confirmButtonText="Delete Account"
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setShowDeleteAccountDialog(false)}
+      />
+    </View>
   );
 }
 
