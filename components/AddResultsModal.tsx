@@ -10,6 +10,7 @@ import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { useRegisterModalSurface } from '@/contexts/ModalSurfaceContext';
+import type { BoardGameDetection } from '@/services/analyzeImage';
 
 interface AddResultsModalProps {
   isVisible: boolean;
@@ -21,10 +22,9 @@ interface AddResultsModalProps {
     type: string;
   } | null;
   analysisResults: {
-    result: string;
-    boardGames: any[];
+    boardGames: BoardGameDetection[];
   } | null;
-  onGamesAdded?: () => void; // Add this callback prop
+  onGamesAdded?: () => void;
 }
 
 export const AddResultsModal: React.FC<AddResultsModalProps> = ({
@@ -588,8 +588,16 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
             </View>
           )}
 
+          {!loadingDatabase && parsedBoardGames.length > 0 && validDetectedGames.length === 0 && (
+            <View style={styles.resultCard}>
+              <Text style={styles.resultText}>
+                {`We detected ${parsedBoardGames.length} game(s) but couldn't match them in our database. Try manual search.`}
+              </Text>
+            </View>
+          )}
+
           {/* Sticky action buttons at bottom */}
-          {!loadingDatabase && parsedBoardGames && parsedBoardGames.length > 0 && (
+          {!loadingDatabase && validDetectedGames.length > 0 && (
             <View style={styles.stickyActionButtons}>
               <View style={styles.buttonRow}>
                 <TouchableOpacity

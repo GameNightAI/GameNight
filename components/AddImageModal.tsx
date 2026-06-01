@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,19 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { ArrowLeft, Camera, Upload, X } from 'lucide-react-native';
+import { ArrowLeft, Camera, Upload, X, RefreshCw } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { useRegisterModalSurface } from '@/contexts/ModalSurfaceContext';
+import { prepareAnalyzeImage } from '@/utils/prepareAnalyzeImage';
+import {
+  analyzeImage,
+  ANALYZE_WARM_EXPECTED_SECONDS,
+  type BoardGameDetection,
+} from '@/services/analyzeImage';
 
 /**
  * Image analyzer requests use a full deployed origin on native (see analyzerBaseUrl).
@@ -33,7 +40,10 @@ const sampleImage2 = require('@/assets/images/sample-game-2.png');
 interface AddImageModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onNext: (imageData: { uri: string; name: string; type: string }, analysisResults?: any) => void;
+  onNext: (
+    imageData: { uri: string; name: string; type: string },
+    analysisResults?: { boardGames: BoardGameDetection[] },
+  ) => void;
   onBack: () => void;
 }
 
@@ -75,7 +85,11 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [showRetry, setShowRetry] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(true);
+  const analyzeAbortRef = useRef<AbortController | null>(null);
+  const slowMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fullSizeImageVisible, setFullSizeImageVisible] = useState(false);
   const [fullSizeImageSource, setFullSizeImageSource] = useState<any>(null);
   const [instructionsModalVisible, setInstructionsModalVisible] = useState(false);
@@ -86,8 +100,19 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   useEffect(() => {
     if (isVisible) {
       setPickerVisible(true);
+    } else {
+      analyzeAbortRef.current?.abort();
     }
   }, [isVisible]);
+
+  useEffect(() => {
+    return () => {
+      analyzeAbortRef.current?.abort();
+      if (slowMessageTimerRef.current) {
+        clearTimeout(slowMessageTimerRef.current);
+      }
+    };
+  }, []);
 
   const showFullSizeImage = (imageSource: any) => {
     setFullSizeImageSource(imageSource);
@@ -152,6 +177,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         };
         setImage(imageData);
         setError(null);
+        setShowRetry(false);
         console.log('Image set successfully:', imageData);
       } else {
         console.log('Image picker was canceled or no assets selected');
@@ -176,103 +202,77 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
     setError(null);
   };
 
-  const handleAnalyze = async () => {
+  const runAnalyze = async () => {
     if (!image) return;
+
+    analyzeAbortRef.current?.abort();
+    const controller = new AbortController();
+    analyzeAbortRef.current = controller;
 
     setLoading(true);
     setError(null);
+    setShowRetry(false);
+    setStatusMessage('Preparing your photo…');
+    announceForAccessibility('Preparing your photo');
+
+    slowMessageTimerRef.current = setTimeout(() => {
+      setStatusMessage(`This can take up to ${ANALYZE_WARM_EXPECTED_SECONDS} seconds.`);
+    }, 3000);
 
     try {
-      const imageData = await fetch(image.uri);
-      const blob = await imageData.blob();
-      const base64 = await convertToBase64(blob);
+      const prepared = await prepareAnalyzeImage(image.uri);
 
-      // Native requires an absolute host; relative paths are web-only and can resolve to Metro.
-      const functionURL = `${analyzerBaseUrl}/.netlify/functions/analyze`;
+      setStatusMessage('Analyzing your photo…');
+      announceForAccessibility('Analyzing your photo');
 
-      const res = await fetch(functionURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const result = await analyzeImage({
+        imageBase64: prepared.imageBase64,
+        mimeType: prepared.mimeType,
+        analyzerBaseUrl,
+        signal: controller.signal,
+        onRetry: () => {
+          setStatusMessage('Still working, retrying…');
+          announceForAccessibility('Still working, retrying');
         },
-        body: JSON.stringify({
-          imageBase64: base64
-        }),
       });
 
-      // Check if response is ok before trying to parse JSON
-      if (!res.ok) {
-        let errorMessage = `Server error (${res.status})`;
-
-        try {
-          // Try to get error details from response
-          const errorResult = await res.json();
-          errorMessage = errorResult.error || errorMessage;
-        } catch (parseError) {
-          // If JSON parsing fails, use status text or default message
-          errorMessage = res.statusText || errorMessage;
-        }
-
-        throw new Error(errorMessage);
+      if (result.boardGames.length === 0) {
+        Toast.show({
+          type: 'info',
+          text1: 'No games found',
+          text2: 'Try another photo or check the tips.',
+        });
       }
 
-      let result;
-      try {
-        result = await res.json();
-      } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
-        throw new Error('Invalid response from server. Please try again.');
-      }
-
-      // Handle backend response structure
-      if (result.error) {
-        setError(result.error);
+      onNext(image, { boardGames: result.boardGames });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
         return;
       }
 
-      if (result.boardGames && result.boardGames.length > 0) {
-        // Format the board games data for display
-        const gamesList = result.boardGames.map((game: any) => `${game.title} (BGG ID: ${game.bgg_id})`).join('\n');
-        const formattedResult = `Found ${result.boardGames.length} game(s):\n\n${gamesList}`;
-
-        // Pass the image data and analysis results to the parent
-        onNext(image, {
-          ...result,
-          result: formattedResult
-        });
-      } else {
-        // No games found
-        const formattedResult = 'No board games detected in the image.';
-
-        // Pass the image data and analysis results to the parent
-        onNext(image, {
-          ...result,
-          result: formattedResult,
-          boardGames: []
-        });
-      }
-    } catch (err) {
       console.error('Analysis error:', err);
 
-      // Provide more specific error messages based on error type
-      let userErrorMessage = 'Failed to analyze image';
-
-      if (err instanceof Error) {
-        if (err.message.includes('500') || err.message.includes('Internal Server Error')) {
-          userErrorMessage = 'OpenAI service is temporarily unavailable. Please try again in a few minutes.';
-        } else if (err.message.includes('Invalid response')) {
-          userErrorMessage = 'Server returned an invalid response. Please try again.';
-        } else if (err.message.includes('Server error')) {
-          userErrorMessage = `Server error: ${err.message}`;
-        } else {
-          userErrorMessage = err.message;
-        }
-      }
-
+      const userErrorMessage = err instanceof Error ? err.message : 'Failed to analyze image';
       setError(userErrorMessage);
+      setShowRetry(true);
+      Toast.show({
+        type: 'error',
+        text1: 'Analysis failed',
+        text2: userErrorMessage,
+      });
+      announceForAccessibility(`Analysis failed. ${userErrorMessage}`);
     } finally {
+      if (slowMessageTimerRef.current) {
+        clearTimeout(slowMessageTimerRef.current);
+        slowMessageTimerRef.current = null;
+      }
       setLoading(false);
+      setStatusMessage(null);
     }
+  };
+
+  const handleAnalyze = () => {
+    runAnalyze();
   };
 
   const content = (
@@ -281,6 +281,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => {
+            analyzeAbortRef.current?.abort();
             onBack();
             announceForAccessibility('Returning to add game options');
           }}
@@ -295,6 +296,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => {
+            analyzeAbortRef.current?.abort();
             onClose();
             announceForAccessibility('Photo analysis modal closed');
           }}
@@ -412,7 +414,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
                 announceForAccessibility('Starting image analysis');
               }}
               disabled={loading}
-              accessibilityLabel="Analyze image"
+              accessibilityLabel="Detect games in image"
               accessibilityRole="button"
               accessibilityHint="Analyzes the selected image to detect board games"
               hitSlop={touchTargets.standard}
@@ -422,19 +424,46 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
               ) : (
                 <>
                   <Camera size={20} color="#fff" />
-                  <Text style={styles.analyzeButtonText}>Analyze Image</Text>
+                  <Text style={styles.analyzeButtonText}>Detect Games</Text>
                 </>
               )}
             </TouchableOpacity>
 
+            {loading && statusMessage && (
+              <Text style={styles.statusText}>{statusMessage}</Text>
+            )}
+
+            {error && (
+              <Text style={styles.errorText}>{error}</Text>
+            )}
+
+            {showRetry && !loading && (
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  runAnalyze();
+                  announceForAccessibility('Retrying image analysis');
+                }}
+                accessibilityLabel="Retry analysis"
+                accessibilityRole="button"
+                accessibilityHint="Retries analyzing the selected image"
+                hitSlop={touchTargets.standard}
+              >
+                <RefreshCw size={18} color="#fff" />
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            )}
+
             <View style={styles.previewButtons}>
               <TouchableOpacity
-                style={styles.retakeButton}
+                style={[styles.retakeButton, loading && styles.analyzeButtonDisabled]}
                 onPress={() => {
                   setImage(null);
                   setError(null);
+                  setShowRetry(false);
                   announceForAccessibility('Photo cleared, ready to select new image');
                 }}
+                disabled={loading}
                 accessibilityLabel="Change photo"
                 accessibilityRole="button"
                 accessibilityHint="Clears current photo to select a different one"
@@ -445,8 +474,6 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
             </View>
           </View>
         )}
-
-        {error && <Text style={styles.errorText}>{error}</Text>}
 
       </ScrollView>
     </View>
@@ -572,20 +599,6 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
   );
 };
 
-async function convertToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove the data URL prefix to get just the base64 string
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
 const getStyles = (colors: any, typography: any, insets: any, screenHeight: number) => {
   const responsiveMinHeight = Math.max(340, Math.min(540, screenHeight * 0.68));
 
@@ -710,8 +723,32 @@ const getStyles = (colors: any, typography: any, insets: any, screenHeight: numb
       fontFamily: typography.getFontFamily('normal'),
       fontSize: typography.fontSize.body,
       color: colors.error,
-      marginBottom: 16,
+      marginTop: 10,
+      marginBottom: 4,
       textAlign: 'center',
+    },
+    statusText: {
+      fontFamily: typography.getFontFamily('normal'),
+      fontSize: typography.fontSize.footnote,
+      color: colors.textMuted,
+      marginTop: 10,
+      textAlign: 'center',
+    },
+    retryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.textMuted,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      marginTop: 10,
+    },
+    retryButtonText: {
+      fontFamily: typography.getFontFamily('semibold'),
+      fontSize: typography.fontSize.subheadline,
+      color: colors.card,
+      marginLeft: 8,
     },
     analyzeButton: {
       flexDirection: 'row',
