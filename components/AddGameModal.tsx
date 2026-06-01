@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { AddImageModal } from './AddImageModal';
 import { AddResultsModal } from './AddResultsModal';
-import { useAddGameModalFlow } from '@/hooks/useAddGameModalFlow';
+import { useAddGameModalFlow, type AnalysisResults } from '@/hooks/useAddGameModalFlow';
 import { GameSearchModal } from './GameSearchModal';
 import { SyncModal } from './SyncModal';
 import { Game } from '@/types/game';
@@ -90,7 +90,10 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     setFullSizeImageSource(null);
   };
 
-  const handleImageAnalysisComplete = (imageData: { uri: string; name: string; type: string }, analysisResults?: any) => {
+  const handleImageAnalysisComplete = (
+    imageData: { uri: string; name: string; type: string },
+    analysisResults?: AnalysisResults,
+  ) => {
     modalActions.setImageData(imageData);
     if (analysisResults) {
       modalActions.setAnalysisResults(analysisResults);
