@@ -86,11 +86,10 @@ export default function EditProfileModal({
     try {
       setIsCheckingUsername(true);
       const { data: existingUser, error } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', newUsername.trim())
-        .neq('id', (await supabase.auth.getUser()).data.user?.id) // Exclude current user
-        .maybeSingle();
+        .rpc(
+          'check_for_existing_username',
+          {new_username: newUsername}
+        )
 
       if (error && error.code !== 'PGRST116') {
         console.error('Username check error:', error);
