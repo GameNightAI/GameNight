@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react';
+import type { BoardGameDetection } from '@/services/analyzeImage';
 
 export type ModalStep = 'select' | 'image' | 'results';
+
+export type AnalysisResults = {
+  boardGames: BoardGameDetection[];
+};
 
 interface ModalState {
   step: ModalStep;
@@ -9,10 +14,7 @@ interface ModalState {
     name: string;
     type: string;
   } | null;
-  analysisResults?: {
-    result: string;
-    boardGames: any[];
-  } | null;
+  analysisResults?: AnalysisResults | null;
 }
 
 interface ModalActions {

@@ -1,4 +1,4 @@
-**Last Updated**: November 13, 2025
+**Last Updated**: May 28, 2026
 
 **App Name**: *Klack*
 
@@ -42,13 +42,13 @@ We collect the following categories of information:
 
 ## d. Diagnostics
 
-* **Crash Data**: App crash logs and error reports
+* **Crash Data**: Crash reports, error messages, and stack traces when the App fails or encounters an unhandled error. We use **Sentry** (Functional Software, Inc.) to collect and analyze this information.
 
-* **Performance Data**: App launch times, response times, and system performance
+* **Performance Data**: App launch times, response times, and system performance (where collected by our monitoring tools)
 
-* **Other Diagnostics**: Server logs, network diagnostics, and technical metrics
+* **Other Diagnostics**: Technical context about errors (for example, app version, build number, device platform, and which screen or modal was open), provided through our error reporting service; server logs, network diagnostics, and other technical metrics
 
-* **Network Information**: IP addresses and connection details
+* **Network Information**: We do not intentionally send broad personal information to our error reporting service when privacy settings are enabled. Sentry may receive limited technical metadata necessary to deliver crash reports. See Sentry's privacy policy for details.
 
 # 3. Data Usage Purposes
 
@@ -75,6 +75,8 @@ What we use your data for:
 * **Usage Analysis**: Product interaction data to understand feature effectiveness
 
 * **Performance Monitoring**: Crash data and performance metrics for app improvement
+
+* **Error Monitoring**: Crash and error reports processed through Sentry to identify and fix defects
 
 * **Service Enhancement**: Search history and usage patterns to improve recommendations
 
@@ -144,6 +146,30 @@ What we use your data for:
 
 * **Data Location**: Global CDN
 
+## e. Sentry (Error Monitoring)
+
+* **Purpose**: Detect, diagnose, and fix crashes and application errors; improve app stability
+
+* **Data Shared**: When an error occurs, we may send:
+
+  * Error message and stack trace
+
+  * App version and build number
+
+  * Device type and operating system
+
+  * Pseudonymous **user ID** (your account ID) to correlate errors with your session — we do not send your email or name to Sentry
+
+  * Limited technical context (for example, which UI components were active) to help reproduce issues
+
+* **Data Not Sent**: We do not use session replay, in-app feedback widgets, or broad personal data collection through Sentry. We have disabled default collection of personally identifiable information where configurable in the App.
+
+* **Privacy Policy**: https://sentry.io/privacy/
+
+* **Data Location**: United States (Sentry SaaS)
+
+* **Retention**: Governed by Sentry's data retention settings and our project configuration
+
 # 5. Data Storage and Security
 
 ## a. Security Measures
@@ -170,6 +196,8 @@ What we use your data for:
 
 * **Logs**: Retained for 90 days for security and debugging purposes
 
+* **Crash and Error Reports**: Retained by Sentry according to their retention policy and our account settings, typically for a limited period for debugging purposes
+
 ## d. Your Rights
 
 * **Access**: Request a copy of your personal data
@@ -184,11 +212,11 @@ What we use your data for:
 
 ## e. Data Deletion Process
 
-1. **Account Deletion**: Contact us at support@klack-app.com to delete your account
+1. **Account Deletion**: Go to Profile → Delete Account in the app to permanently delete your account immediately. You can also contact us at support@klack-app.com for assistance.
 
-2. **Data Removal**: All personal data will be deleted within 30 days
+2. **Data Removal**: When you delete your account in the app, your personal data is removed immediately, including your profile, game collection, polls, events, votes, and comments.
 
-3. **Confirmation**: You will receive confirmation of deletion via email
+3. **Confirmation**: After in-app deletion, you are signed out and cannot log in with the same credentials unless you register again.
 
 # 6. Permissions
 
@@ -263,6 +291,8 @@ If you are a California resident, you have additional rights:
 * **Identifiers** (User ID, Device ID)
 
 * **Diagnostics** (Crash Data, Performance Data, Other Diagnostic Data)
+
+Crash and error reporting is provided by **Sentry**, a third-party processor, for app functionality and analytics related to stability.
 
 ## b. Purposes
 

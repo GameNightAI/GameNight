@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { AddImageModal } from './AddImageModal';
 import { AddResultsModal } from './AddResultsModal';
-import { useAddGameModalFlow } from '@/hooks/useAddGameModalFlow';
+import { useAddGameModalFlow, type AnalysisResults } from '@/hooks/useAddGameModalFlow';
 import { GameSearchModal } from './GameSearchModal';
 import { SyncModal } from './SyncModal';
 import { Game } from '@/types/game';
@@ -15,6 +15,7 @@ import { fetchGames } from '@/services/bggApi';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useRegisterModalSurface } from '@/contexts/ModalSurfaceContext';
 
 const sampleImage1 = require('@/assets/images/sample-game-1.png');
 
@@ -50,6 +51,8 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     modalState,
     modalActions,
   } = useAddGameModalFlow();
+
+  useRegisterModalSurface(`AddGameModal:${modalState.step}`, isVisible);
 
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
@@ -87,7 +90,10 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     setFullSizeImageSource(null);
   };
 
-  const handleImageAnalysisComplete = (imageData: { uri: string; name: string; type: string }, analysisResults?: any) => {
+  const handleImageAnalysisComplete = (
+    imageData: { uri: string; name: string; type: string },
+    analysisResults?: AnalysisResults,
+  ) => {
     modalActions.setImageData(imageData);
     if (analysisResults) {
       modalActions.setAnalysisResults(analysisResults);
@@ -383,6 +389,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     );
   }
 
+  // GameSearchModal and SyncModal must live inside this Modal on iOS/Android.
+  // Sibling Modal roots stack with undefined z-order; the add-game sheet can sit
+  // above the search/sync modals so taps update state but nothing appears on screen.
   return (
     <>
       <Modal
@@ -394,25 +403,25 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         <View style={styles.overlay}>
           {content}
         </View>
+        <GameSearchModal
+          isVisible={searchModalVisible}
+          onClose={() => setSearchModalVisible(false)}
+          mode="collection"
+          onGameAdded={handleGameAdded}
+          userCollectionIds={userCollectionIds}
+          title="Add to Collection"
+          searchPlaceholder="Search for games..."
+        />
+        <SyncModal
+          isVisible={syncModalVisible}
+          onClose={() => setSyncModalVisible(false)}
+          onSync={handleSync}
+          onUpdateProfile={handleUpdateProfile}
+          loading={syncing}
+          savedBggUsername={savedBggUsername}
+        />
       </Modal>
       {fullSizeImageModal}
-      <GameSearchModal
-        isVisible={searchModalVisible}
-        onClose={() => setSearchModalVisible(false)}
-        mode="collection"
-        onGameAdded={handleGameAdded}
-        userCollectionIds={userCollectionIds}
-        title="Add to Collection"
-        searchPlaceholder="Search for games..."
-      />
-      <SyncModal
-        isVisible={syncModalVisible}
-        onClose={() => setSyncModalVisible(false)}
-        onSync={handleSync}
-        onUpdateProfile={handleUpdateProfile}
-        loading={syncing}
-        savedBggUsername={savedBggUsername}
-      />
     </>
   );
 };

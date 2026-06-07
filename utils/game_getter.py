@@ -13,6 +13,7 @@ import json
 from bs4 import BeautifulSoup
 import io
 from zipfile import ZipFile
+import html
 # from optparse import OptionParser
 
 LOGIN_URL = 'https://boardgamegeek.com/login/api/v1'
@@ -22,11 +23,12 @@ OUTPUT_PATH = 'output.csv'
 EXPANSION_OUTPUT_PATH = 'expansion_output.csv'
 SLEEP_TIME = 5 # seconds to wait after receiving a urllib.request error
 DASH = '–' # NOT the hyphen character on the keyboard
-DESCRIPTION_NCHARS = 0 # number of description characters to store in the output, since we currently have a database size limit
+DESCRIPTION_NCHARS = 999999999 # number of description characters to store in the output, since we currently have a database size limit
 INCLUDE_BGG_TAXONOMY = True
 TAXONOMY_DELIMITER = '|'
 USERNAME = os.environ.get('BGG_USERNAME')
 PASSWORD = os.environ.get('BGG_PASSWORD')
+BGG_API_AUTH_TOKEN = os.environ.get('BGG_API_AUTH_TOKEN')
 
 def get_private_collection():
   session = requests.Session()
@@ -112,7 +114,7 @@ def parse_xml(text):
       thumbnail = game.findtext('thumbnail', default=''),
       # NULL out complexity=0 for filtering purposes, and in case we ever decide to do some math (0 means no votes)
       complexity = float(game.find('statistics').find('ratings').find('averageweight').attrib['value']) or '',
-      description = game.findtext('description', default='')[:DESCRIPTION_NCHARS],
+      description = html.unescape(game.findtext('description', default='')[:DESCRIPTION_NCHARS]),
       is_cooperative = has_taxonomy(game, 'boardgamemechanic', 'Cooperative Game'),
       is_teambased = has_taxonomy(game, 'boardgamemechanic', 'Team-Based Game'),
       # is_legacy = has_taxonomy(game, 'boardgamemechanic', 'Legacy Game'),
@@ -191,16 +193,16 @@ def main():
           row[col] = ''
     
     ids = ','.join(games.keys())
-    url = f'https://boardgamegeek.com/xmlapi2/thing?id={ids}&stats=1'
+    request = urllib.request.Request(
+      f'https://boardgamegeek.com/xmlapi2/thing?id={ids}&stats=1',
+      headers = {'Authorization': f'Bearer {BGG_API_AUTH_TOKEN}'}
+    )
     
     while 1:
       try:
-        response = urllib.request.urlopen(url)
+        response = urllib.request.urlopen(request)
       except urllib.error.HTTPError as err:
-        if err.code in [
-          429, # Too many requests
-          502, # Bad gateway
-        ]: 
+        if err.code == 429 or 500 <= err.code < 600:
           urllib_error_handler(err)
         else:
           raise

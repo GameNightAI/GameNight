@@ -1,9 +1,7 @@
-//On Android, test if the keyboard covers the form when the user taps on a text input - we can add behavior="height" to handle the issue
-
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, Image } from 'react-native';
+import { useState, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, Image, Keyboard, TouchableWithoutFeedback, Linking } from 'react-native';
 import { useRouter, Link } from 'expo-router';
-import { ArrowRight, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/services/supabase';
@@ -24,14 +22,48 @@ export default function RegisterScreen() {
   const { screenHeight } = useDeviceType();
 
   const styles = getStyles(colors, typography, isDark, screenHeight);
+  const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
 
-  const handleContinue = async () => {
+  const keyboardAvoidingBehavior =
+    Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined;
+
+  const legalPagesBaseUrl = Platform.select({
+    web: typeof window !== 'undefined' ? window.location.origin : 'https://klack.netlify.app',
+    default: 'https://klack.netlify.app',
+  });
+
+  const redirectToProfileCompletion = () => {
+    router.push({
+      pathname: '/auth/register-profile',
+      params: { fromSignup: '1' },
+    });
+  };
+
+  const ensurePlaceholderProfile = async (userId: string, normalizedEmail: string) => {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: userId,
+          username: normalizedEmail,
+          firstname: null,
+          lastname: null,
+        },
+        { onConflict: 'id' }
+      );
+    return profileError;
+  };
+
+  const handleCreateAccount = async () => {
+    Keyboard.dismiss();
     try {
       setLoading(true);
       setError(null);
+      const normalizedEmail = email.trim().toLowerCase();
 
       // Basic validation
-      if (!email || !password) {
+      if (!normalizedEmail || !password) {
         setError('Please fill in all fields');
         return;
       }
@@ -54,20 +86,113 @@ export default function RegisterScreen() {
 
       // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!emailRegex.test(normalizedEmail)) {
         setError('Please enter a valid email address');
         return;
       }
 
-      // Validation passed - proceed to profile completion
-      // Auth user creation will happen on the next screen
-      router.push({
-        pathname: '/auth/register-profile',
-        params: {
-          email,
-          password,
-        }
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          emailRedirectTo: Platform.OS === 'web' ? window.location.origin : 'klack://auth/callback',
+          data: {
+            email_confirm: true,
+          },
+        },
       });
+
+      if (authError) {
+        const isDuplicate =
+          authError.status === 422 ||
+          authError.message.includes('already registered') ||
+          authError.message.includes('User already registered') ||
+          authError.message.includes('duplicate key value');
+
+        if (isDuplicate) {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          });
+
+          if (signInError) {
+            setError(
+              'This email is already registered with a different password. Please try logging in or use password reset.'
+            );
+            return;
+          }
+
+          if (!signInData.user) {
+            setError('Failed to sign in. Please try again.');
+            return;
+          }
+
+          const userId = signInData.user.id;
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, username')
+            .eq('id', userId)
+            .maybeSingle();
+
+          const hasRealUsername =
+            profile?.username &&
+            profile.username.trim().toLowerCase() !== normalizedEmail;
+
+          if (hasRealUsername) {
+            setError('Account already exists and is complete. Please sign in instead.');
+            return;
+          }
+
+          const profileErr = await ensurePlaceholderProfile(userId, normalizedEmail);
+          if (profileErr) {
+            console.error('Profile placeholder error (duplicate path):', profileErr);
+            setError('Could not finish setup. Please try signing in.');
+            return;
+          }
+
+          redirectToProfileCompletion();
+          return;
+        }
+
+        if (authError.status === 400) {
+          setError('Invalid request. Please check your input and try again.');
+          return;
+        }
+        if (authError.status === 429) {
+          setError('Too many attempts. Please wait a moment and try again.');
+          return;
+        }
+        if (authError.status && typeof authError.status === 'number' && authError.status >= 500) {
+          setError('Server error. Please try again later.');
+          return;
+        }
+        setError(authError.message || 'Failed to create account. Please try again.');
+        return;
+      }
+
+      let userId = authData.user?.id ?? null;
+      if (!userId) {
+        const { data: { session } } = await supabase.auth.getSession();
+        userId = session?.user?.id ?? null;
+      }
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id ?? null;
+      }
+
+      if (!userId) {
+        setError('Account could not be created. Please try again or confirm your email if required.');
+        return;
+      }
+
+      const profileErr = await ensurePlaceholderProfile(userId, normalizedEmail);
+      if (profileErr) {
+        console.error('Profile placeholder error:', profileErr);
+        setError('Account created but profile setup failed. Try signing in to continue.');
+        return;
+      }
+
+      redirectToProfileCompletion();
     } catch (err) {
       console.error('Registration error:', err);
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -75,138 +200,183 @@ export default function RegisterScreen() {
       setLoading(false);
     }
   };
-  return (
-    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
-      <View style={styles.container}>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Image
-                  source={require('@/assets/images/klack-logo-40x40.png')}
-                  resizeMode="contain"
-                  style={styles.logoIcon}
-                />
-                <Text style={styles.title}>Klack</Text>
-              </View>
-              <Text style={styles.subtitle}>
-                The ultimate tool for organizing your next game night
-              </Text>
-            </View>
-
-            <View style={styles.formContainer}>
-              <Text style={styles.formTitle}>Create Account</Text>
-              <Text style={styles.formSubtitle}>Enter your email and password to get started</Text>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
-                <View style={styles.inputWrapper}>
-                  {/* <Mail color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
-                  <TextInput
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter your email address"
-                    placeholderTextColor={colors.textMuted}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    accessibilityLabel="Email address"
-                    accessibilityHint="Enter your email address"
+  const screenContent = (
+    <View style={styles.container}>
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          >
+            <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+              <View style={styles.header}>
+                <View style={styles.logoContainer}>
+                  <Image
+                    source={require('@/assets/images/klack-logo-40x40.png')}
+                    resizeMode="contain"
+                    style={styles.logoIcon}
                   />
+                  <Text style={styles.title}>Klack</Text>
                 </View>
               </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
-                <View style={styles.inputWrapper}>
-                  {/* <Lock color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
-                  <TextInput
-                    style={styles.input}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Choose a password"
-                    placeholderTextColor={colors.textMuted}
-                    secureTextEntry={!showPassword}
-                    accessibilityLabel="Password"
-                    accessibilityHint="Enter your password"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                    hitSlop={touchTargets.standard}
-                    accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-                    accessibilityRole="button"
-                  >
-                    {showPassword ? (
-                      <EyeOff color={colors.textMuted} size={20} />
-                    ) : (
-                      <Eye color={colors.textMuted} size={20} />
-                    )}
-                  </TouchableOpacity>
+              <View style={styles.formContainer}>
+                <Text style={styles.formTitle}>Create Account</Text>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Email</Text>
+                  <View style={styles.inputWrapper}>
+                    {/* <Mail color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
+                    <TextInput
+                      style={styles.input}
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="Enter your email address"
+                      placeholderTextColor={colors.textMuted}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      returnKeyType="next"
+                      submitBehavior="submit"
+                      onSubmitEditing={() => passwordInputRef.current?.focus()}
+                      accessibilityLabel="Email address"
+                      accessibilityHint="Enter your email address"
+                    />
+                  </View>
                 </View>
-              </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm Password</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.input}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    placeholder="Re-enter your password"
-                    placeholderTextColor={colors.textMuted}
-                    secureTextEntry={!showConfirmPassword}
-                    accessibilityLabel="Confirm password"
-                    accessibilityHint="Re-enter your password to confirm"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={styles.eyeIcon}
-                    hitSlop={touchTargets.standard}
-                    accessibilityLabel={showConfirmPassword ? "Hide password" : "Show password"}
-                    accessibilityRole="button"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff color={colors.textMuted} size={20} />
-                    ) : (
-                      <Eye color={colors.textMuted} size={20} />
-                    )}
-                  </TouchableOpacity>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Password</Text>
+                  <View style={styles.inputWrapper}>
+                    {/* <Lock color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
+                    <TextInput
+                      ref={passwordInputRef}
+                      style={styles.input}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="Choose a password"
+                      placeholderTextColor={colors.textMuted}
+                      secureTextEntry={!showPassword}
+                      returnKeyType="next"
+                      submitBehavior="submit"
+                      onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
+                      accessibilityLabel="Password"
+                      accessibilityHint="Enter your password"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeIcon}
+                      hitSlop={touchTargets.standard}
+                      accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                      accessibilityRole="button"
+                    >
+                      {showPassword ? (
+                        <EyeOff color={colors.textMuted} size={20} />
+                      ) : (
+                        <Eye color={colors.textMuted} size={20} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
 
-              {error && (
-                <Text style={styles.errorText}>{error}</Text>
-              )}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Confirm Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      ref={confirmPasswordInputRef}
+                      style={styles.input}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="Re-enter your password"
+                      placeholderTextColor={colors.textMuted}
+                      secureTextEntry={!showConfirmPassword}
+                      returnKeyType="done"
+                      onSubmitEditing={handleCreateAccount}
+                      accessibilityLabel="Confirm password"
+                      accessibilityHint="Re-enter your password to confirm"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={styles.eyeIcon}
+                      hitSlop={touchTargets.standard}
+                      accessibilityLabel={showConfirmPassword ? "Hide password" : "Show password"}
+                      accessibilityRole="button"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff color={colors.textMuted} size={20} />
+                      ) : (
+                        <Eye color={colors.textMuted} size={20} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                hitSlop={touchTargets.standard}
-                onPress={handleContinue}
-                disabled={loading}
-                accessibilityLabel={loading ? "Validating account" : "Continue to profile setup"}
-                accessibilityRole="button"
-              >
-                <Text style={styles.buttonText}>
-                  {loading ? 'Validating...' : 'Continue'}
-                </Text>
-                <ArrowRight color={colors.card} size={20} />
-              </TouchableOpacity>
+                {error && (
+                  <Text style={styles.errorText}>{error}</Text>
+                )}
 
-              <Link href="/auth/login" asChild>
-                <TouchableOpacity style={styles.loginLink} hitSlop={touchTargets.standard}>
-                  <Text style={styles.loginText}>
-                    Already have an account? <Text style={styles.signInText}>Sign in</Text>
+                <TouchableOpacity
+                  style={[styles.button, loading && styles.buttonDisabled]}
+                  hitSlop={touchTargets.standard}
+                  onPress={handleCreateAccount}
+                  disabled={loading}
+                  accessibilityLabel={loading ? 'Creating account' : 'Create account'}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.buttonText}>
+                    {loading ? 'Creating account...' : 'Create Account'}
                   </Text>
                 </TouchableOpacity>
-              </Link>
+
+                <Link href="/auth/login" asChild>
+                  <TouchableOpacity style={styles.loginLink} hitSlop={touchTargets.standard}>
+                    <Text style={styles.loginText}>
+                      Already have an account? <Text style={styles.signInText}>Sign in</Text>
+                    </Text>
+                  </TouchableOpacity>
+                </Link>
+
+                <Text style={styles.disclaimerText}>
+                  By creating an account you agree to our{' '}
+                  <Text
+                    style={styles.disclaimerLink}
+                    onPress={() => Linking.openURL(`${legalPagesBaseUrl}/PRIVACY_POLICY.html`)}
+                    accessibilityLabel="Privacy Policy"
+                    accessibilityRole="button"
+                    accessibilityHint="Opens Klack's privacy policy in your browser"
+                  >
+                    privacy policy
+                  </Text>
+                  {' '}and acknowledge that you have read our{' '}
+                  <Text
+                    style={styles.disclaimerLink}
+                    onPress={() => Linking.openURL(`${legalPagesBaseUrl}/TERMS_OF_SERVICE.html`)}
+                    accessibilityLabel="Terms of Service"
+                    accessibilityRole="button"
+                    accessibilityHint="Opens Klack's terms of service in your browser"
+                  >
+                    terms of service
+                  </Text>
+                  .
+                </Text>
+              </View>
             </View>
-          </View>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+  );
+
+  return (
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      keyboardVerticalOffset={insets.top + 20}
+      style={{ flex: 1 }}
+    >
+      {Platform.OS === 'web' ? (
+        screenContent
+      ) : (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          {screenContent}
+        </TouchableWithoutFeedback>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -225,13 +395,12 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
   },
   header: {
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingBottom: 10,
     alignItems: 'center',
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
   logoIcon: {
     width: 40,
@@ -250,15 +419,6 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
     textAlign: 'center',
     color: colors.text,
     fontSize: typography.fontSize.title1,
-  },
-  subtitle: {
-    fontFamily: 'Poppins-Regular',
-    textAlign: 'center',
-    opacity: 0.9,
-    lineHeight: 22,
-    maxWidth: 280,
-    color: colors.text,
-    fontSize: typography.fontSize.body,
   },
   formContainer: {
     width: '100%',
@@ -279,13 +439,6 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
     marginBottom: 8,
     color: colors.text,
     fontSize: typography.fontSize.title2,
-  },
-  formSubtitle: {
-    fontFamily: typography.getFontFamily('normal'),
-    textAlign: 'center',
-    marginBottom: 16,
-    color: colors.textMuted,
-    fontSize: typography.fontSize.body,
   },
   inputContainer: {
     marginBottom: 20,
@@ -340,7 +493,6 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
   },
   buttonText: {
     fontFamily: typography.getFontFamily('semibold'),
-    marginRight: 8,
     color: colors.card,
     fontSize: typography.fontSize.callout,
   },
@@ -363,5 +515,17 @@ const getStyles = (colors: any, typography: any, isDark: boolean, screenHeight: 
   signInText: {
     fontFamily: typography.getFontFamily('semibold'),
     color: colors.primary,
+  },
+  disclaimerText: {
+    marginTop: 20,
+    color: colors.textMuted,
+    fontSize: typography.fontSize.caption1,
+    fontFamily: typography.getFontFamily('normal'),
+    textAlign: 'center',
+    lineHeight: typography.lineHeight.normal * typography.fontSize.caption1,
+  },
+  disclaimerLink: {
+    color: colors.primary,
+    fontFamily: typography.getFontFamily('semibold'),
   },
 });

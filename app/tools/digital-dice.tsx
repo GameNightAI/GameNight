@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Dice6, RotateCcw, Plus, Minus, X, Settings } from 'lucide-react-native';
+import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Dices, RotateCcw, Plus, Minus, X } from 'lucide-react-native';
 import ToolsFooter from '@/components/ToolsFooter';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useDeviceType } from '@/hooks/useDeviceType';
+import { useRegisterModalSurface } from '@/contexts/ModalSurfaceContext';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
@@ -34,6 +35,13 @@ interface DiceResult {
 
 const STANDARD_DICE_SIDES = [4, 6, 8, 10, 12, 20];
 
+const DICE_FACE_ICONS = [Dice1, Dice2, Dice3, Dice4, Dice5, Dice6] as const;
+
+function getResultDiceIcon(value: number) {
+  if (value > 6) return Dices;
+  return DICE_FACE_ICONS[value - 1];
+}
+
 export default function DigitalDiceScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -51,7 +59,7 @@ export default function DigitalDiceScreen() {
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customSides, setCustomSides] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
+  useRegisterModalSurface('DigitalDice:CustomSides', showCustomModal);
 
   // Load haptic setting on mount
   useEffect(() => {
@@ -68,7 +76,7 @@ export default function DigitalDiceScreen() {
     loadHapticSetting();
   }, []);
 
-  // Save haptic setting when changed
+  // Used when Settings UI is re-enabled
   const toggleHaptic = async (value: boolean) => {
     setHapticEnabled(value);
     try {
@@ -171,7 +179,7 @@ export default function DigitalDiceScreen() {
 
     return (
       <Animated.View style={[styles.rollingDice]}>
-        <Dice6 size={48} color="#10b981" />
+        <Dices size={48} color="#10b981" />
       </Animated.View>
     );
   }, [styles]);
@@ -286,16 +294,19 @@ export default function DigitalDiceScreen() {
               contentContainerStyle={styles.resultsContainer}
               showsVerticalScrollIndicator={false}
             >
-              {results.map((dice, index) => (
-                <Animated.View
-                  key={dice.id}
-                  entering={ZoomIn.delay(index * 100).duration(300)}
-                  style={styles.resultDice}
-                >
-                  <Dice6 size={32} color="#10b981" />
-                  <Text style={styles.resultValue}>{dice.value}</Text>
-                </Animated.View>
-              ))}
+              {results.map((dice, index) => {
+                const ResultIcon = getResultDiceIcon(dice.value);
+                return (
+                  <Animated.View
+                    key={dice.id}
+                    entering={ZoomIn.delay(index * 100).duration(300)}
+                    style={styles.resultDice}
+                  >
+                    <ResultIcon size={32} color="#10b981" />
+                    <Text style={styles.resultValue}>{dice.value}</Text>
+                  </Animated.View>
+                );
+              })}
             </ScrollView>
 
             {numberOfDice > 1 && (
@@ -419,13 +430,6 @@ export default function DigitalDiceScreen() {
 
           {/* Preview */}
           <View style={styles.previewSection}>
-            <View style={styles.previewContainer}>
-              {Array.from({ length: numberOfDice }, (_, index) => (
-                <View key={index} style={styles.previewDice}>
-                  <Dice6 size={32} color="#10b981" />
-                </View>
-              ))}
-            </View>
             <Text style={styles.previewText}>
               Rolling {numberOfDice} {numberOfDice === 1 ? 'die' : 'dice'} with {sides} sides each
             </Text>
@@ -439,67 +443,14 @@ export default function DigitalDiceScreen() {
             accessibilityLabel={isRolling ? "Rolling dice" : "Roll dice"}
             accessibilityRole="button"
           >
-            <Dice6 size={28} color="#ffffff" />
+            <Dices size={28} color="#ffffff" />
             <Text style={styles.rollButtonText}>
               {isRolling ? 'Rolling...' : 'Roll Dice'}
             </Text>
           </TouchableOpacity>
-
-          {/* Settings Button */}
-          {Platform.OS !== 'web' && (
-            <TouchableOpacity
-              style={styles.settingsButton}
-              onPress={() => setShowSettings(true)}
-              accessibilityLabel="Open settings"
-              accessibilityRole="button"
-            >
-              <Settings size={20} color="#666666" />
-              <Text style={styles.settingsButtonText}>Settings</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </ScrollView>
 
-      {/* Settings Modal */}
-      {Platform.OS !== 'web' && (
-        <Modal
-          visible={showSettings}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowSettings(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Dice Settings</Text>
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={() => setShowSettings(false)}
-                >
-                  <X size={20} color="#666666" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.settingRow}>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>Haptic Feedback</Text>
-                  <Text style={styles.settingDescription}>
-                    Feel vibrations when rolling dice
-                  </Text>
-                </View>
-                <Switch
-                  value={hapticEnabled}
-                  onValueChange={toggleHaptic}
-                  trackColor={{ false: '#e1e5ea', true: '#ff9654' }}
-                  thumbColor={hapticEnabled ? '#ffffff' : '#f4f3f4'}
-                  accessibilityLabel="Toggle haptic feedback"
-                  accessibilityRole="switch"
-                />
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
       <ToolsFooter currentScreen="tools" />
     </View>
   );
@@ -652,25 +603,10 @@ function getStyles(colors: any, typography: any, touchTargets: any, screenHeight
       marginTop: 4,
       marginBottom: 12,
     },
-    previewContainer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    previewDice: {
-      backgroundColor: colors.background,
-      borderRadius: 8,
-      padding: 12,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginHorizontal: 4,
-    },
     previewText: {
       fontFamily: typography.getFontFamily('semi-bold'),
       fontSize: typography.fontSize.body,
       color: colors.text,
-      paddingTop: 16,
       textAlign: 'center',
       alignSelf: 'center',
     },

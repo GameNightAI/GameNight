@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform, Modal, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Check, X } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
@@ -9,6 +9,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
 import { useDeviceType } from '@/hooks/useDeviceType';
+import { useRegisterModalSurface } from '@/contexts/ModalSurfaceContext';
+import type { BoardGameDetection } from '@/services/analyzeImage';
 
 interface AddResultsModalProps {
   isVisible: boolean;
@@ -20,10 +22,9 @@ interface AddResultsModalProps {
     type: string;
   } | null;
   analysisResults: {
-    result: string;
-    boardGames: any[];
+    boardGames: BoardGameDetection[];
   } | null;
-  onGamesAdded?: () => void; // Add this callback prop
+  onGamesAdded?: () => void;
 }
 
 export const AddResultsModal: React.FC<AddResultsModalProps> = ({
@@ -41,6 +42,7 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
 
   // Lock body scroll on web when modal is visible
   useBodyScrollLock(isVisible);
+  useRegisterModalSurface('AddResultsModal', isVisible);
 
   const [selectedGames, setSelectedGames] = useState<Set<number>>(new Set());
   const [databaseResults, setDatabaseResults] = useState<any[] | null>(null);
@@ -586,8 +588,16 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
             </View>
           )}
 
+          {!loadingDatabase && parsedBoardGames.length > 0 && validDetectedGames.length === 0 && (
+            <View style={styles.resultCard}>
+              <Text style={styles.resultText}>
+                {`We detected ${parsedBoardGames.length} game(s) but couldn't match them in our database. Try manual search.`}
+              </Text>
+            </View>
+          )}
+
           {/* Sticky action buttons at bottom */}
-          {!loadingDatabase && parsedBoardGames && parsedBoardGames.length > 0 && (
+          {!loadingDatabase && validDetectedGames.length > 0 && (
             <View style={styles.stickyActionButtons}>
               <View style={styles.buttonRow}>
                 <TouchableOpacity
@@ -668,24 +678,21 @@ export const AddResultsModal: React.FC<AddResultsModalProps> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={() => {
-          if (showSuccessView) {
-            setShowSuccessView(false);
-            setSuccessMessage(null);
-            onClose();
-          }
-        }}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
-        >
-          {content}
-        </TouchableOpacity>
-      </TouchableOpacity>
+      <View style={styles.overlay}>
+        {showSuccessView && (
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              setShowSuccessView(false);
+              setSuccessMessage(null);
+              onClose();
+            }}
+            accessibilityLabel="Dismiss success dialog"
+            accessibilityRole="button"
+          />
+        )}
+        {content}
+      </View>
     </Modal>
   );
 };
@@ -718,7 +725,8 @@ const getStyles = (colors: any, typography: any, insets: any, screenHeight: numb
     dialog: {
       backgroundColor: colors.card,
       borderRadius: 12,
-      padding: 20,
+      paddingVertical: 20,
+      paddingHorizontal: 24,
       width: '100%',
       maxWidth: 500,
       maxHeight: '90%',
@@ -733,6 +741,7 @@ const getStyles = (colors: any, typography: any, insets: any, screenHeight: numb
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      width: '100%',
       marginBottom: 16,
     },
     backButton: {
@@ -746,9 +755,11 @@ const getStyles = (colors: any, typography: any, insets: any, screenHeight: numb
       alignItems: 'center',
     },
     title: {
+      flex: 1,
       fontFamily: typography.getFontFamily('semibold'),
       fontSize: typography.fontSize.headline,
       color: colors.text,
+      textAlign: 'center',
     },
     contentContainer: {
       flex: 1,
@@ -1002,10 +1013,9 @@ const getStyles = (colors: any, typography: any, insets: any, screenHeight: numb
       marginTop: 4,
     },
     successView: {
-      flex: 1,
+      width: '100%',
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 20,
     },
     successIconContainer: {
       width: 80,
@@ -1036,6 +1046,7 @@ const getStyles = (colors: any, typography: any, insets: any, screenHeight: numb
       lineHeight: 20,
     },
     okButton: {
+      width: '100%',
       backgroundColor: colors.text,
       paddingVertical: 12,
       paddingHorizontal: 24,

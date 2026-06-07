@@ -1,18 +1,50 @@
+import 'react-native-get-random-values';
 import 'react-native-reanimated';
-import { useEffect } from 'react';
-import { Redirect, Stack } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
-import Toast from 'react-native-toast-message';
+import Toast, { ErrorToast, InfoToast, SuccessToast } from 'react-native-toast-message';
 import { initializeSafariFixes, persistSessionInSafari } from '@/utils/safari-polyfill';
 import { AccessibilityProvider } from '@/contexts/AccessibilityContext';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ModalSurfaceProvider } from '@/contexts/ModalSurfaceContext';
+import { RootErrorBoundary } from '@/components/RootErrorBoundary';
 import '../styles/globals.css';
+import * as Sentry from '@sentry/react-native';
 
-export default function RootLayout() {
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  enabled: !!process.env.EXPO_PUBLIC_SENTRY_DSN,
+  environment: process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT ?? (__DEV__ ? 'development' : 'production'),
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: false,
+
+  // Enable Logs
+  enableLogs: false,
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
+
+const toastConfig = {
+  success: (props: React.ComponentProps<typeof SuccessToast>) => (
+    <SuccessToast {...props} text1NumberOfLines={2} text2NumberOfLines={4} />
+  ),
+  error: (props: React.ComponentProps<typeof ErrorToast>) => (
+    <ErrorToast {...props} text1NumberOfLines={2} text2NumberOfLines={4} />
+  ),
+  info: (props: React.ComponentProps<typeof InfoToast>) => (
+    <InfoToast {...props} text1NumberOfLines={2} text2NumberOfLines={4} />
+  ),
+};
+
+export default Sentry.wrap(function RootLayout() {
   useFrameworkReady();
   const colorScheme = useColorScheme();
 
@@ -47,21 +79,25 @@ export default function RootLayout() {
     <AuthProvider>
       <AccessibilityProvider>
         <SafeAreaProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen
-              name="(tabs)"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-          </Stack>
-          <Toast />
-          <StatusBar
-            style={colorScheme === 'dark' ? 'light' : 'dark'}
-            backgroundColor={colorScheme === 'dark' ? '#1a2b5f' : '#ffffff'}
-          />
+          <ModalSurfaceProvider>
+            <RootErrorBoundary>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen
+                  name="(tabs)"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+              </Stack>
+              <Toast config={toastConfig} />
+              <StatusBar
+                style={colorScheme === 'dark' ? 'light' : 'dark'}
+                backgroundColor={colorScheme === 'dark' ? '#1a2b5f' : '#ffffff'}
+              />
+            </RootErrorBoundary>
+          </ModalSurfaceProvider>
         </SafeAreaProvider>
       </AccessibilityProvider>
     </AuthProvider>
   );
-}
+});

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Mail, MailCheck } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,13 +22,21 @@ export default function ResetPasswordScreen() {
 
   const styles = getStyles(colors, typography, isDark, screenHeight);
 
-  const getBaseUrl = () => {
+  const keyboardAvoidingBehavior =
+    Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined;
+
+  const getPasswordResetRedirectUrl = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return window.location.origin;
+      return `${window.location.origin}/auth/update-password`;
     }
 
-    // Fallback for mobile
-    return 'https://klack.netlify.app';
+    // Native clients should return to the app via deep link.
+    if (Platform.OS !== 'web') {
+      return 'klack://auth/update-password';
+    }
+
+    // Fallback used in uncommon web environments where window is unavailable.
+    return 'https://klack.netlify.app/auth/update-password';
   };
 
   // Check for error parameters from redirects
@@ -55,6 +63,7 @@ export default function ResetPasswordScreen() {
   }, [params.error]);
 
   const handleResetPassword = async () => {
+    Keyboard.dismiss();
     try {
       setLoading(true);
       setError(null);
@@ -76,8 +85,18 @@ export default function ResetPasswordScreen() {
       // Clear any existing session before sending reset email
       await supabase.auth.signOut();
 
-      const redirectUrl = `${getBaseUrl()}/auth/update-password`;
-      console.log('Sending reset email with redirect URL:', redirectUrl);
+      const redirectUrl = getPasswordResetRedirectUrl();
+      const isValidRedirectUrl =
+        redirectUrl.startsWith('http://') ||
+        redirectUrl.startsWith('https://') ||
+        redirectUrl.startsWith('klack://');
+
+      if (!isValidRedirectUrl) {
+        setError('Unable to generate a valid reset link destination. Please try again.');
+        return;
+      }
+
+      console.log(`Sending reset email (${Platform.OS}) with redirect URL:`, redirectUrl);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: redirectUrl,
@@ -125,14 +144,15 @@ export default function ResetPasswordScreen() {
     }
   };
 
-  return (
-    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top + 20} style={{ flex: 1 }}>
-      <View style={styles.container}>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+  const screenContent = (
+    <View style={styles.container}>
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          >
+            <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
             <View style={styles.header}>
               <View style={styles.logoContainer}>
                 <View style={styles.logoIcon}>
@@ -162,6 +182,8 @@ export default function ResetPasswordScreen() {
                     autoCapitalize="none"
                     keyboardType="email-address"
                     autoComplete="email"
+                    returnKeyType="send"
+                    onSubmitEditing={handleResetPassword}
                     accessibilityLabel="Email address"
                     accessibilityHint="Enter your email address to receive reset link"
                   />
@@ -204,9 +226,24 @@ export default function ResetPasswordScreen() {
                 <Text style={styles.backText}>Back to Login</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </ScrollView>
-      </View>
+            </View>
+          </ScrollView>
+        </View>
+  );
+
+  return (
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      keyboardVerticalOffset={insets.top + 20}
+      style={{ flex: 1 }}
+    >
+      {Platform.OS === 'web' ? (
+        screenContent
+      ) : (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          {screenContent}
+        </TouchableWithoutFeedback>
+      )}
     </KeyboardAvoidingView>
   );
 }

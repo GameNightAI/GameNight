@@ -1,10 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  Platform,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Pressable,
+  Keyboard,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, Info, CheckCircle } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useBodyScrollLock } from '@/utils/scrollLock';
+import { useRegisterModalSurface } from '@/contexts/ModalSurfaceContext';
 
 interface SyncModalProps {
   isVisible: boolean;
@@ -33,12 +46,14 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   const [error, setError] = useState('');
   const [saveToProfile, setSaveToProfile] = useState(true);
   const [viewMode, setViewMode] = useState<'buttons' | 'input'>('buttons');
+  const inputRef = useRef<TextInput>(null);
   const { colors, typography, touchTargets } = useTheme();
   const { announceForAccessibility, isReduceMotionEnabled } = useAccessibility();
   const insets = useSafeAreaInsets();
 
   // Lock body scroll on web when modal is visible
   useBodyScrollLock(isVisible);
+  useRegisterModalSurface('SyncModal', isVisible);
 
   const styles = useMemo(() => getStyles(colors, typography, insets), [colors, typography, insets]);
 
@@ -68,7 +83,13 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     }
   }, [isVisible, savedBggUsername]);
 
+  const dismissKeyboard = () => {
+    inputRef.current?.blur();
+    Keyboard.dismiss();
+  };
+
   const handleSync = async () => {
+    dismissKeyboard();
     if (!username.trim()) {
       setError('Please enter a BoardGameGeek username');
       announceForAccessibility('Please enter a BoardGameGeek username');
@@ -90,6 +111,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
 
   const handleSyncSavedUsername = async () => {
     if (!savedBggUsername) return;
+    dismissKeyboard();
     setError('');
     try {
       await onSync(savedBggUsername);
@@ -101,6 +123,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
   };
 
   const handleImportAnother = () => {
+    dismissKeyboard();
     setViewMode('input');
     setUsername('');
     setSaveToProfile(true);
@@ -128,6 +151,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
 
       <View style={styles.inputContainer}>
         <TextInput
+          ref={inputRef}
           style={styles.input}
           placeholder="BGG Username"
           placeholderTextColor={colors.textMuted}
@@ -136,6 +160,9 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           autoCapitalize="none"
           autoCorrect={false}
           editable={!loading}
+          returnKeyType="done"
+          blurOnSubmit
+          onSubmitEditing={handleSync}
           accessibilityLabel="BoardGameGeek username"
           accessibilityHint="Enter your BoardGameGeek username"
         />
@@ -234,7 +261,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
         <Text style={styles.title}>Connect to BoardGameGeek</Text>
         <TouchableOpacity
           style={styles.closeButton}
-          onPress={() => { onClose(); announceForAccessibility('Sync modal closed'); }}
+          onPress={() => { dismissKeyboard(); onClose(); announceForAccessibility('Sync modal closed'); }}
           accessibilityLabel="Close"
           accessibilityRole="button"
           accessibilityHint="Closes the sync modal"
@@ -264,21 +291,36 @@ export const SyncModal: React.FC<SyncModalProps> = ({
     </View>
   );
 
+  const handleClose = () => {
+    dismissKeyboard();
+    onClose();
+  };
+
   return (
     <Modal
       visible={isVisible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
-        {content}
-      </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardAvoid}
+      >
+        <Pressable style={styles.overlay} onPress={Keyboard.dismiss}>
+          <Pressable onPress={() => {}}>
+            {content}
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const getStyles = (colors: any, typography: any, insets: any) => StyleSheet.create({
+  keyboardAvoid: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     backgroundColor: colors.tints.neutral,
