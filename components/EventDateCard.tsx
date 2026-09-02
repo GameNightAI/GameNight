@@ -54,17 +54,17 @@ export const EventDateCard = ({
   let date = new Date(eventDate.event_date);
   /* This is a bug fix for KLK-458 (Event scheduling shifting by a day).
 
-    new Date('2026-08-06') generates a Date object with this time:
-      Wed Aug 05 2026 20:00:00 GMT-0400 (Eastern Daylight Time)
-
-    Constructing a Date from a YYYY-MM-DD string like this sets
+    Constructing a JavaScript  Date from a YYYY-MM-DD string like this sets
     the time component to midnight UTC/GMT.
 
-    However when it's rendered by format(), the local time zone is used,
-    which in this case is 8 PM the previous day, EDT.
+    E.g., new Date('2026-08-06') generates a Date object with this time:
+        Wed Aug 05 2026 20:00:00 GMT-0400 (Eastern Daylight Time)
 
-     Therefore, we're adding date.getTimezoneOffset (in minutes) to date
-     in order to shift to midnight local time, ensuring the correct date is displayed.
+    When it's rendered by format(), the local time zone is used.
+    (In this case, 8 PM EDT the previous day.)
+
+    Therefore, we're adding date.getTimezoneOffset() (in minutes) to date
+    in order to shift to midnight local time, ensuring the correct date is displayed.
   */
   date = addMinutes(date, date.getTimezoneOffset());
 
