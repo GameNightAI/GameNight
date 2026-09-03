@@ -2,15 +2,22 @@
   "expo": {
     "name": "Klack: Game Night Planner",
     "slug": "klack",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "klack",
     "userInterfaceStyle": "automatic",
-    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.klack-app.klack",
+      "associatedDomains": [
+        "applinks:klack.netlify.app",
+        "applinks:klack-dev.netlify.app",
+        "webcredentials:klack.netlify.app",
+        "webcredentials:klack-dev.netlify.app",
+        "activitycontinuation:klack.netlify.app",
+        "activitycontinuation:klack-dev.netlify.app"
+      ],
       "buildNumber": "1",
       "infoPlist": {
         "CFBundleURLTypes": [
