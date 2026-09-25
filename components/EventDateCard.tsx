@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Calendar, MapPin, Clock } from 'lucide-react-native';
-import { format } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 
 import { EVENT_VOTING_OPTIONS, EVENT_ICON_MAP, EventVoteType, getEventIconColor, getEventVoteBgColor, getEventVoteBorderColor } from './eventVotingOptions';
 import { PollEvent } from '@/types/poll';
@@ -51,7 +51,22 @@ export const EventDateCard = ({
     ];
   };
 
-  const date = new Date(eventDate.event_date);
+  let date = new Date(eventDate.event_date);
+  /* This is a bug fix for KLK-458 (Event scheduling shifting by a day).
+
+    Constructing a JavaScript  Date from a YYYY-MM-DD string like this sets
+    the time component to midnight UTC/GMT.
+
+    E.g., new Date('2026-08-06') generates a Date object with this time:
+        Wed Aug 05 2026 20:00:00 GMT-0400 (Eastern Daylight Time)
+
+    When it's rendered by format(), the local time zone is used.
+    (In this case, 8 PM EDT the previous day.)
+
+    Therefore, we're adding date.getTimezoneOffset() (in minutes) to date
+    in order to shift to midnight local time, ensuring the correct date is displayed.
+  */
+  date = addMinutes(date, date.getTimezoneOffset());
 
   return (
     <View style={styles.card}>

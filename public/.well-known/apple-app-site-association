@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "X433ZSGJ4H.com.klack-app.klack",
+        "paths": [
+          "/auth/*",
+          "/polls/*",
+          "/events/*"
+        ]
+      }
+    ]
+  },
+  "activitycontinuation": {
+    "apps": ["X433ZSGJ4H.com.klack-app.klack"]
+  },
+  "webcredentials": {
+    "apps": ["X433ZSGJ4H.com.klack-app.klack"]
+  }
+}
