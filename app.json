@@ -18,7 +18,6 @@
         "activitycontinuation:klack.netlify.app",
         "activitycontinuation:klack-dev.netlify.app"
       ],
-      "buildNumber": "1",
       "infoPlist": {
         "CFBundleURLTypes": [
           {

@@ -1,13 +1,12 @@
 {
   "applinks": {
-    "apps": [],
     "details": [
       {
         "appID": "X433ZSGJ4H.com.klack-app.klack",
         "paths": [
           "/auth/*",
-          "/polls/*",
-          "/events/*"
+          "/poll/*",
+          "/event/*"
         ]
       }
     ]

@@ -52,9 +52,11 @@ export const EventDateCard = ({
   };
 
   let date = new Date(eventDate.event_date);
+
+  date = addMinutes(date, date.getTimezoneOffset());
   /* This is a bug fix for KLK-458 (Event scheduling shifting by a day).
 
-    Constructing a JavaScript  Date from a YYYY-MM-DD string like this sets
+    Constructing a JavaScript Date from a YYYY-MM-DD string like this sets
     the time component to midnight UTC/GMT.
 
     E.g., new Date('2026-08-06') generates a Date object with this time:
@@ -66,7 +68,6 @@ export const EventDateCard = ({
     Therefore, we're adding date.getTimezoneOffset() (in minutes) to date
     in order to shift to midnight local time, ensuring the correct date is displayed.
   */
-  date = addMinutes(date, date.getTimezoneOffset());
 
   return (
     <View style={styles.card}>
