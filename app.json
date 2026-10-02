@@ -2,7 +2,7 @@
   "expo": {
     "name": "Klack: Game Night Planner",
     "slug": "klack",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "klack",
@@ -12,11 +12,14 @@
       "bundleIdentifier": "com.klack-app.klack",
       "associatedDomains": [
         "applinks:klack.netlify.app",
-        "applinks:klack-dev.netlify.app",
         "webcredentials:klack.netlify.app",
-        "webcredentials:klack-dev.netlify.app",
         "activitycontinuation:klack.netlify.app",
-        "activitycontinuation:klack-dev.netlify.app"
+        "applinks:klack-dev.netlify.app",
+        "webcredentials:klack-dev.netlify.app",
+        "activitycontinuation:klack-dev.netlify.app",
+        "applinks:rszliwvoybdxipidynob.supabase.co",
+        "webcredentials:rszliwvoybdxipidynob.supabase.co",
+        "activitycontinuation:rszliwvoybdxipidynob.supabase.co"
       ],
       "infoPlist": {
         "CFBundleURLTypes": [
