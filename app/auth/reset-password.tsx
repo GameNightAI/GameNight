@@ -31,9 +31,9 @@ export default function ResetPasswordScreen() {
     }
 
     // Native clients should return to the app via deep link.
-    if (Platform.OS !== 'web') {
-      return 'klack://auth/update-password';
-    }
+    // if (Platform.OS !== 'web') {
+    //   return 'klack://auth/update-password';
+    // }
 
     // Fallback used in uncommon web environments where window is unavailable.
     return 'https://klack.netlify.app/auth/update-password';
