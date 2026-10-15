@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import { useMemo } from 'react';
 import { PollEvent } from '@/types/poll';
-import { format } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 import { TruncatedText } from './TruncatedText';
 
 interface EventVotes {
@@ -70,7 +70,23 @@ export function EventDateResultCard({
   };
   const votersByType = getVotersByType();
 
-  const date = new Date(eventDate.date.event_date);
+  let date = new Date(eventDate.date.event_date);
+
+  date = addMinutes(date, date.getTimezoneOffset());
+  /* This is a bug fix for KLK-459 (Day results on in-app voting are one off).
+
+    Constructing a JavaScript Date from a YYYY-MM-DD string like this sets
+    the time component to midnight UTC/GMT.
+
+    E.g., new Date('2026-08-06') generates a Date object with this time:
+        Wed Aug 05 2026 20:00:00 GMT-0400 (Eastern Daylight Time)
+
+    When it's rendered by format(), the local time zone is used.
+    (In this case, 8 PM EDT the previous day.)
+
+    Therefore, we're adding date.getTimezoneOffset() (in minutes) to date
+    in order to shift to midnight local time, ensuring the correct date is displayed.
+  */
 
   return (
     <View style={styles.card}>

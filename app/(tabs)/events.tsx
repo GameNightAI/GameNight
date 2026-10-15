@@ -13,7 +13,7 @@ import CreateEventModal from '@/components/CreateEventModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { EmptyStateEvents } from '@/components/EmptyStateEvents';
 import { useEventResults } from '@/hooks/useEventResults';
-import { format } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 import { useTheme } from '@/hooks/useTheme';
 import { useAccessibility } from '@/hooks/useAccessibility';
 
@@ -364,11 +364,29 @@ export default function EventsScreen() {
               displayTime = getDisplayTime(eventDate.start_time || null, eventDate.end_time || null);
             }
 
+            let date = new Date(eventDate.event_date);
+
+            date = addMinutes(date, date.getTimezoneOffset());
+            /* This is a bug fix for KLK-459 (Day results on in-app voting are one off).
+
+              Constructing a JavaScript Date from a YYYY-MM-DD string like this sets
+              the time component to midnight UTC/GMT.
+
+              E.g., new Date('2026-08-06') generates a Date object with this time:
+                  Wed Aug 05 2026 20:00:00 GMT-0400 (Eastern Daylight Time)
+
+              When it's rendered by format(), the local time zone is used.
+              (In this case, 8 PM EDT the previous day.)
+
+              Therefore, we're adding date.getTimezoneOffset() (in minutes) to date
+              in order to shift to midnight local time, ensuring the correct date is displayed.
+            */
+
             return (
               <View key={eventDate.id} style={styles.eventTableRow}>
                 <View style={styles.eventTableDateCell}>
                   <Text style={styles.eventTableDateText}>
-                    {format(new Date(eventDate.event_date), 'MMM d, yyyy')}
+                    {format(date, 'MMM d, yyyy')}
                   </Text>
                   <Text style={styles.eventTableDateSubtext}>
                     {displayTime}

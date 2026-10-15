@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, Keyboard, TouchableWithoutFeedback, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Mail, MailCheck } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -146,89 +146,91 @@ export default function ResetPasswordScreen() {
 
   const screenContent = (
     <View style={styles.container}>
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-          >
-            <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <View style={styles.logoIcon}>
-                  <Text style={styles.logoText}>👥</Text>
-                </View>
-                <Text style={styles.title}>Klack</Text>
-              </View>
-              <Text style={styles.subtitle}>
-                The ultimate tool for organizing your next game night
-              </Text>
-            </View>
-
-            <View style={styles.formContainer}>
-              <Text style={styles.formTitle}>Reset Password</Text>
-              <Text style={styles.formSubtitle}>Enter your email to receive a password reset link</Text>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
-                <View style={styles.inputWrapper}>
-                  {/* <Mail color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
-                  <TextInput
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter your email address"
-                    placeholderTextColor={colors.textMuted}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    autoComplete="email"
-                    returnKeyType="send"
-                    onSubmitEditing={handleResetPassword}
-                    accessibilityLabel="Email address"
-                    accessibilityHint="Enter your email address to receive reset link"
-                  />
-                </View>
-              </View>
-
-              {error && (
-                <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
-              )}
-
-              {success && (
-                <View style={styles.successContainer}>
-                  {/* <MailCheck color={colors.success} size={20} style={styles.successIcon} /> */}
-                  <Text style={styles.successText}>Reset email sent! Check your inbox.</Text>
-                </View>
-              )}
-
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                hitSlop={touchTargets.standard}
-                onPress={handleResetPassword}
-                disabled={loading}
-                accessibilityLabel={loading ? "Sending reset email" : "Send reset link"}
-                accessibilityRole="button"
-              >
-                {/* <MailCheck color={colors.card} size={20} /> */}
-                <Text style={styles.buttonText}>
-                  {loading ? 'Sending...' : 'Send Reset Link'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.backButton}
-                hitSlop={touchTargets.standard}
-                onPress={() => router.replace('/auth/login')}
-                accessibilityLabel="Back to login"
-                accessibilityRole="button"
-              >
-                <ArrowLeft color={colors.textMuted} size={20} />
-                <Text style={styles.backText}>Back to Login</Text>
-              </TouchableOpacity>
-            </View>
-            </View>
-          </ScrollView>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
+        <View style={[styles.contentWrapper, { paddingTop: insets.top + 20 }]}>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/klack-logo-40x40.png')}
+              resizeMode="contain"
+              style={styles.logoIcon}
+            />
+            <Text style={styles.title}>Klack</Text>
+          </View>
+          <Text style={styles.subtitle}>
+            The ultimate tool for organizing your next game night
+          </Text>
         </View>
+
+        <View style={styles.formContainer}>
+          <Text style={styles.formTitle}>Reset Password</Text>
+          <Text style={styles.formSubtitle}>Enter your email to receive a password reset link</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
+            <View style={styles.inputWrapper}>
+              {/* <Mail color={colors.textMuted} size={20} style={styles.inputIcon} /> */}
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter your email address"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                returnKeyType="send"
+                onSubmitEditing={handleResetPassword}
+                accessibilityLabel="Email address"
+                accessibilityHint="Enter your email address to receive reset link"
+              />
+            </View>
+          </View>
+
+          {error && (
+            <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
+          )}
+
+          {success && (
+            <View style={styles.successContainer}>
+              {/* <MailCheck color={colors.success} size={20} style={styles.successIcon} /> */}
+              <Text style={styles.successText}>Reset email sent! Check your inbox.</Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            hitSlop={touchTargets.standard}
+            onPress={handleResetPassword}
+            disabled={loading}
+            accessibilityLabel={loading ? "Sending reset email" : "Send reset link"}
+            accessibilityRole="button"
+          >
+            {/* <MailCheck color={colors.card} size={20} /> */}
+            <Text style={styles.buttonText}>
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.backButton}
+            hitSlop={touchTargets.standard}
+            onPress={() => router.replace('/auth/login')}
+            accessibilityLabel="Back to login"
+            accessibilityRole="button"
+          >
+            <ArrowLeft color={colors.textMuted} size={20} />
+            <Text style={styles.backText}>Back to Login</Text>
+          </TouchableOpacity>
+        </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 
   return (
