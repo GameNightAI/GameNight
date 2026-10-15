@@ -4,7 +4,6 @@
       {
         "appID": "X433ZSGJ4H.com.klack-app.klack",
         "paths": [
-          "/auth/*",
           "/poll/*",
           "/event/*"
         ]
