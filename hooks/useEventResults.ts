@@ -3,6 +3,7 @@ import { supabase } from '@/services/supabase';
 import { Poll, PollEvent } from '@/types/poll';
 import { EVENT_VOTING_OPTIONS } from '@/components/eventVotingOptions';
 import { censor } from '@/utils/profanityFilter';
+import { stripDeviceTag } from '@/utils/nameTag';
 
 interface EventVotes {
   votes: Record<string, number>; // voteType1: 3, voteType2: 1, etc.
@@ -157,9 +158,9 @@ export const useEventResults = (eventId: string | string[] | undefined) => {
           // Get voter name (prefer username, fallback to voter_name)
           const voterName = vote.username
             ? (vote.firstname || vote.lastname
-              ? `${[vote.firstname, vote.lastname].join(' ').trim()} (${vote.username})`
+              ? `${censor([vote.firstname, vote.lastname].join(' ').trim())} (${vote.username})`
               : vote.username
-            ) : vote.voter_name || 'Anonymous';
+            ) : censor(stripDeviceTag(vote.voter_name)) || 'Anonymous';
 
           voterMap[dateId].push({
             name: voterName,
