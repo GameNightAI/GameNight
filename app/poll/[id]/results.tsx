@@ -12,6 +12,7 @@ import Toast from 'react-native-toast-message';
 import { useRef } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { censor } from '@/utils/profanityFilter';
+import { stripDeviceTag } from '@/utils/nameTag';
 
 export default function PollResultsScreen() {
   const router = useRouter();
@@ -201,7 +202,7 @@ export default function PollResultsScreen() {
                         ? (c.firstname || c.lastname
                           ? `${censor([c.firstname, c.lastname].join(' ').trim())} (${c.username})`
                           : c.username
-                        ) : censor(c.voter_name) || 'Anonymous'
+                        ) : censor(stripDeviceTag(c.voter_name)) || 'Anonymous'
                     }:</Text>
                     <Text style={styles.commentText}>{c.comment_text}</Text>
                   </View>
