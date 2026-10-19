@@ -14,6 +14,7 @@ import { useEventResults } from '@/hooks/useEventResults';
 import { useTheme } from '@/hooks/useTheme';
 import { censor } from '@/utils/profanityFilter';
 import Toast from 'react-native-toast-message';
+import { stripDeviceTag } from '@/utils/nameTag';
 
 // Helper function to format time strings (HH:mm format) to readable format
 const formatTimeString = (timeString: string | null): string => {
@@ -256,7 +257,7 @@ export default function EventResultsScreen() {
                     ? (comment.firstname || comment.lastname
                       ? `${censor([comment.firstname, comment.lastname].join(' ').trim())} (${comment.username})`
                       : comment.username
-                    ) : censor(comment.voter_name) || 'Anonymous'}
+                    ) : censor(stripDeviceTag(comment.voter_name)) || 'Anonymous'}
                 </Text>
                 <Text style={styles.commentText}>{comment.comment_text}</Text>
               </View>

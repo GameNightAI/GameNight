@@ -200,7 +200,7 @@ export const usePollResults = (pollId: string | string[] | undefined) => {
             ? ((v.firstname || v.lastname)
               ? `${censor([v.firstname, v.lastname].join(' ').trim())} (${v.username})`
               : v.username)
-            : stripDeviceTag(v.voter_name)
+            : censor(stripDeviceTag(v.voter_name))
         ));
 
         // Add ordinal suffixes for repeated base names (display only), then censor anon names
